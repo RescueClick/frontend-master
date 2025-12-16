@@ -30,6 +30,7 @@ import { backendurl } from "../../../feature/urldata";
 
 const CustomerApplication = () => {
   // State for API data
+  
   const [applicationData, setApplicationData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -105,11 +106,30 @@ const CustomerApplication = () => {
           responseType: "blob",
         }
       );
+
+      // Check if response is an error (blob with JSON error message)
+      if (response.data.type === "application/json" || response.status >= 400) {
+        // Try to parse error message from blob
+        const text = await response.data.text();
+        let errorMessage = `Failed to load ${doc.docType}`;
+        try {
+          const errorJson = JSON.parse(text);
+          errorMessage = errorJson.message || errorMessage;
+        } catch (e) {
+          // If not JSON, use the text or default message
+          if (text && text.length < 200) {
+            errorMessage = text;
+          }
+        }
+        setModalMessage(errorMessage);
+        setShowModal(true);
+        setSelectedDoc(null);
+        return;
+      }
   
       // Prefer response.headers, fallback to blob.type
       let contentType =
         response.headers["content-type"] || response.data.type || "application/octet-stream";
-     
   
       // If axios already gives a blob, no need to wrap again
       const fileBlob = response.data instanceof Blob
@@ -121,11 +141,10 @@ const CustomerApplication = () => {
       // Decide if preview is an image
       const isImage =
         contentType.startsWith("image/") ||
-        ["photo", "selfie", "aadhar", "pan"].some((key) =>
+        ["photo", "selfie", "aadhar", "pan", "profile"].some((key) =>
           doc.docType?.toLowerCase().includes(key)
         );
   
-        
       setSelectedDoc({
         ...doc,
         previewUrl: url,
@@ -135,9 +154,53 @@ const CustomerApplication = () => {
       setShowModal(true);
     } catch (err) {
       console.error(`Error previewing ${doc.docType}:`, err);
-      setModalMessage(
-        `Failed to load ${doc.docType}. Please try downloading the document instead.`
-      );
+      console.error("Error details:", {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        message: err.message,
+      });
+      
+      // Try to extract error message from response
+      let errorMessage = `Failed to load ${doc.docType}. Please try downloading the document instead.`;
+      
+      if (err.response) {
+        // If response is a blob (error with blob responseType), try to parse it
+        if (err.response.data instanceof Blob) {
+          try {
+            const text = await err.response.data.text();
+            console.log("Error blob text:", text);
+            
+            // Try to parse as JSON
+            try {
+              const errorJson = JSON.parse(text);
+              errorMessage = errorJson.message || errorMessage;
+              if (errorJson.error) {
+                errorMessage += `: ${errorJson.error}`;
+              }
+            } catch (parseErr) {
+              // If not JSON, check if it's a readable error message
+              if (text && text.length < 500 && text.trim().length > 0) {
+                errorMessage = text;
+              }
+            }
+          } catch (blobErr) {
+            console.error("Error reading blob:", blobErr);
+            // Fall back to status text or default message
+            errorMessage = err.response.statusText || errorMessage;
+          }
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (typeof err.response.data === "string") {
+          errorMessage = err.response.data;
+        } else if (err.response.statusText) {
+          errorMessage = `${err.response.status} ${err.response.statusText}`;
+        }
+      } else if (err.message) {
+        errorMessage = `${err.message}. Please try downloading the document instead.`;
+      }
+      
+      setModalMessage(errorMessage);
       setShowModal(true);
       setSelectedDoc(null);
     } finally {
@@ -255,9 +318,6 @@ const CustomerApplication = () => {
         }
       );
 
-      // Debug: Log all response headers
-     
-
       // Get file extension from Content-Type header
       const contentType = response.headers["content-type"];
       let fileExtension = ".pdf"; // default fallback
@@ -289,7 +349,6 @@ const CustomerApplication = () => {
         }
       } else {
         // If no content-type header, try to detect from file content
-     
         const blob = new Blob([response.data]);
         const arrayBuffer = await blob.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
@@ -347,8 +406,6 @@ const CustomerApplication = () => {
         }
       }
 
-      
-
       // Create a download link with proper extension
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
@@ -358,11 +415,56 @@ const CustomerApplication = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-
-    
     } catch (err) {
       console.error(`Error downloading ${doc.docType}:`, err);
-      alert(`Failed to download ${doc.docType}`);
+      console.error("Error details:", {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        message: err.message,
+      });
+      
+      // Try to extract error message from response
+      let errorMessage = `Failed to download ${doc.docType}`;
+      
+      if (err.response) {
+        // If response is a blob (error with blob responseType), try to parse it
+        if (err.response.data instanceof Blob) {
+          try {
+            const text = await err.response.data.text();
+            console.log("Error blob text:", text);
+            
+            // Try to parse as JSON
+            try {
+              const errorJson = JSON.parse(text);
+              errorMessage = errorJson.message || errorMessage;
+              if (errorJson.error) {
+                errorMessage += `: ${errorJson.error}`;
+              }
+            } catch (parseErr) {
+              // If not JSON, check if it's a readable error message
+              if (text && text.length < 500 && text.trim().length > 0) {
+                errorMessage = text;
+              }
+            }
+          } catch (blobErr) {
+            console.error("Error reading blob:", blobErr);
+            // Fall back to status text or default message
+            errorMessage = err.response.statusText || errorMessage;
+          }
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (typeof err.response.data === "string") {
+          errorMessage = err.response.data;
+        } else if (err.response.statusText) {
+          errorMessage = `${err.response.status} ${err.response.statusText}`;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      alert(errorMessage);
+      setError(errorMessage);
     } finally {
       setDownloading(false);
     }

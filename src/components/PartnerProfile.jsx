@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 
 import {
   User,
@@ -19,6 +19,8 @@ import { useNavigate } from "react-router-dom";
 import { fetchPartnerProfile } from "../feature/thunks/partnerThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { clearAuthData, getAuthData } from "../utils/localStorage";
+import { useRealtimeData } from "../utils/useRealtimeData";
+import { backendurl } from "../feature/urldata";
 
 import axios from "axios"
 
@@ -34,9 +36,11 @@ const PartnerProfile = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    dispatch(fetchPartnerProfile());
-  }, []);
+  // Real-time profile updates with 60 second polling
+  useRealtimeData(fetchPartnerProfile, {
+    interval: 60000, // 60 seconds for profile (less frequent)
+    enabled: true,
+  });
 
 
 
@@ -51,18 +55,11 @@ const PartnerProfile = () => {
     alert(`${document} download initiated!`);
   };
 
-  const handleSettingsSubmit = async (type) => {
-    console.log(`Updating ${type}...`);
-    alert(`${type} updated successfully!`);
-
+  const handleSettingsSubmit = useCallback(async (type) => {
     try {
-  
-      console.log("Sending request with data:", settingsForm);
-  
-      const { partnerToken} = getAuthData(); // or however you store JWT
-      console.log("JWT token:", partnerToken);
-  
-      const response = await axios.post(
+      const { partnerToken } = getAuthData();
+      
+      await axios.post(
         `${backendurl}/auth/change-password`,
         {
           oldPassword: settingsForm.currentPassword,
@@ -75,30 +72,23 @@ const PartnerProfile = () => {
           },
         }
       );
-  
-      console.log("API response:", response.data);
 
-      // Close modal if needed
-      console.log("Closing change password modal");
-     
+      alert(`${type} updated successfully!`);
+      
+      // Reset form
+      setSettingsForm({
+        currentPassword: "",
+        password: "",
+        confirmPassword: "",
+      });
+      
+      // Optionally close modal
+      setIsSettingsOpen(false);
     } catch (err) {
       console.error("API error:", err.response?.data || err);
-    } finally {
-  
-      console.log("handleSubmit finished, loading set to false");
+      alert(err.response?.data?.message || "Failed to update password");
     }
-    
-
-    setSettingsForm({
-      currentPassword: "",
-      password: "",
-      confirmPassword: "",
-    
-    });
-
-
-
-  };
+  }, [settingsForm, setIsSettingsOpen]);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -134,12 +124,23 @@ const PartnerProfile = () => {
                 Profile Picture
               </h3>
 
-              <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors flex items-center space-x-2 text-sm"
-              >
-                <span>Setting</span>
-              </button>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors flex items-center space-x-2 text-sm"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Setting</span>
+                </button>
+
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center space-x-2 text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex items-start space-x-6">
@@ -442,16 +443,6 @@ const PartnerProfile = () => {
                 >
                   <Lock className="w-5 h-5 inline mr-2" />
                   Change Password
-                </button>
-
-           
-
-                <button
-                  onClick={() => { handleLogout()}}
-                  className="px-6 py-4 font-medium text-red-600 hover:text-red-700 transition-colors ml-auto"
-                >
-                  <LogOut className="w-5 h-5 inline mr-2" />
-                  Logout
                 </button>
               </div>
 

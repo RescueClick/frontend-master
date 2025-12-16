@@ -4,7 +4,7 @@ import { faPhone } from "@fortawesome/free-solid-svg-icons";
 // import { faWhatsapp } from "@fortawesome/free-solid-svg-icons";
 
 import { faFileAlt } from "@fortawesome/free-solid-svg-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 
 import {
@@ -33,6 +33,7 @@ import { getAuthData } from "../../../utils/localStorage";
 
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPartnerDashboard } from "../../../feature/thunks/partnerThunks";
+import { useRealtimeData } from "../../../utils/useRealtimeData";
 import { backendurl } from "../../../feature/urldata";
 import { useNavigate } from "react-router-dom";
 
@@ -79,7 +80,28 @@ const Dashboard = () => {
     };
 
     fetchAll();
+    
+    // Fetch banners every 5 minutes
+    const bannerInterval = setInterval(async () => {
+      try {
+        const { partnerToken } = getAuthData();
+        const bannersResult = await axios.get(`${backendurl}/partner/banners`, {
+          headers: { Authorization: `Bearer ${partnerToken}` },
+        });
+        setBanners(bannersResult.data?.banners || []);
+      } catch (err) {
+        console.error("Error fetching banners:", err);
+      }
+    }, 300000);
+    
+    return () => clearInterval(bannerInterval);
   }, [dispatch]);
+
+  // Real-time dashboard updates with 30 second polling (only after initial load)
+  useRealtimeData(fetchPartnerDashboard, {
+    interval: 30000, // 30 seconds
+    enabled: !loading, // Only enable after initial load completes
+  });
 
   const goToPrevious = () => {
     setIsAutoPlaying(false); // Pause auto-play when manually navigating
@@ -96,16 +118,6 @@ const Dashboard = () => {
     setCurrentIndex(index);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center">
-          <Loader2 className="w-12 h-12 animate-spin" />
-          <p className="mt-3 text-sm text-gray-600">Loading dashboard…</p>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -115,28 +127,30 @@ const Dashboard = () => {
     );
   }
 
-  const targetVsAchievement = Object.entries(data?.monthlyTargets || {}).map(
-    ([month, stats]) => {
-      const achievement = stats?.achieved || 0; // fallback to 0
-      const target = stats?.target || 0; // fallback to 0
-      let percentage =
-        target > 0 ? Math.round((achievement / target) * 100) : 0;
+  const targetVsAchievement = useMemo(() => {
+    return Object.entries(data?.monthlyTargets || {}).map(
+      ([month, stats]) => {
+        const achievement = stats?.achieved || 0; // fallback to 0
+        const target = stats?.target || 0; // fallback to 0
+        let percentage =
+          target > 0 ? Math.round((achievement / target) * 100) : 0;
 
-      // Cap percentage at 100% and add "+" if exceeded
-      if (percentage > 100) {
-        percentage = "100" + "+";
-      } else {
-        percentage = percentage + "%";
+        // Cap percentage at 100% and add "+" if exceeded
+        if (percentage > 100) {
+          percentage = "100" + "+";
+        } else {
+          percentage = percentage + "%";
+        }
+
+        return {
+          month,
+          target,
+          achievement,
+          percentage,
+        };
       }
-
-      return {
-        month,
-        target,
-        achievement,
-        percentage,
-      };
-    }
-  );
+    );
+  }, [data?.monthlyTargets]);
 
   const currentDate = new Date();
 

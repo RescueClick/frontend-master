@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   TrendingUp,
   Users,
@@ -14,6 +14,7 @@ import {
 import { fetchAsmDashboard } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useRealtimeData } from "../../../utils/useRealtimeData";
 
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -25,14 +26,14 @@ const Dashboard = () => {
     (state) => state.asm.dashboard
   );
 
- 
+  // Real-time dashboard updates with 30 second polling
+  useRealtimeData(fetchAsmDashboard, {
+    interval: 30000, // 30 seconds
+    enabled: true,
+  });
 
-  useEffect(() => {
-    dispatch(fetchAsmDashboard());
-  }, [dispatch]);
-
-  // Sample data
-  const metrics = [
+  // Memoized metrics
+  const metrics = useMemo(() => [
     {
       title: "Relationship Managers",
       value: data?.totals?.totalRMs || 0,
@@ -60,28 +61,32 @@ const Dashboard = () => {
       icon: IndianRupee,
       color: "text-amber-600",
     },
-  ];
+  ], [data?.totals]);
 
-  const targetVsAchievement = (data?.targets || []).map((item) => {
-    const target = item.target || 0; // keep 0
-    const achievement = item.achieved || 0;
-    const percentage =
-      target > 0 ? Math.round((achievement / target) * 100) : 0;
+  const targetVsAchievement = useMemo(() => {
+    return (data?.targets || []).map((item) => {
+      const target = item.target || 0; // keep 0
+      const achievement = item.achieved || 0;
+      const percentage =
+        target > 0 ? Math.round((achievement / target) * 100) : 0;
 
-    return {
-      month: item.month.substring(0, 3),
-      target,
-      achievement,
-      percentage,
-    };
-  });
+      return {
+        month: item.month.substring(0, 3),
+        target,
+        achievement,
+        percentage,
+      };
+    });
+  }, [data?.targets]);
 
-  const topPerformers = (data?.topPerformers || []).map((item, index) => ({
-    name: item.name,
-    revenue: `₹${item.totalRevenue}`, // you can format if needed
-    achievement: `${Math.floor(Math.random() * 50) + 90}%`, // mock achievement for now
-    rank: index + 1,
-  }));
+  const topPerformers = useMemo(() => {
+    return (data?.topPerformers || []).map((item, index) => ({
+      name: item.name,
+      revenue: `₹${item.totalRevenue}`, // you can format if needed
+      achievement: `${Math.floor(Math.random() * 50) + 90}%`, // mock achievement for now
+      rank: index + 1,
+    }));
+  }, [data?.topPerformers]);
 
   // const topPerformers = [
   //   { name: "Rajesh Kumar", revenue: "₹12.5Cr", achievement: "124%", rank: 1 },

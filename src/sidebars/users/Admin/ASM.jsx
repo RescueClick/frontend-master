@@ -10,6 +10,7 @@ import {
   reassignAllRmsFromAsm,
   activateAsm,
   assignAsmBulkTarget,
+  deleteAsm,
 } from "../../../feature/thunks/adminThunks";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -204,6 +205,31 @@ export default function ASM() {
 const handleLoginAs = (userId) => {
   loginAsUser(userId, navigate);
 };
+
+  const handleDeleteAsm = async (asmId) => {
+    const { adminToken } = getAuthData() || {};
+    if (!adminToken) {
+      toast.error("Missing admin token");
+      return;
+    }
+    const confirmed = window.confirm(
+      "Are you sure you want to permanently delete this ASM account?"
+    );
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      await dispatch(deleteAsm({ asmId })).unwrap();
+      toast.success("ASM deleted");
+      dispatch(fetchAsms(adminToken));
+    } catch (err) {
+      toast.error(
+        typeof err === "string" ? err : err?.message || "Failed to delete ASM"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   return (
@@ -460,6 +486,14 @@ const handleLoginAs = (userId) => {
                         >
                           <Eye size={14} />
                         </button>
+                        {c.status !== "ACTIVE" && (
+                          <button
+                            className="p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
+                            onClick={() => handleDeleteAsm(c._id)}
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

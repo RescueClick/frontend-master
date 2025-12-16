@@ -232,6 +232,26 @@ export const activateAsm = createAsyncThunk(
   }
 );
 
+// 🔹 Permanently delete an ASM (must be deactivated first)
+export const deleteAsm = createAsyncThunk(
+  "asm/deleteAsm",
+  async ({ asmId }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.delete(`${backendurl}/admin/asm/${asmId}`, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete ASM"
+      );
+    }
+  }
+);
+
 // 🔹 Async thunk to fetch ASM dashboard metrics
 export const fetchAnalyticsdashboard  = createAsyncThunk(
   "asm/fetchAnalyticsdashboard ",
@@ -585,6 +605,24 @@ export const activateRM = createAsyncThunk(
       return response.data.message; // ✅ Success message from backend
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Failed to activate RM");
+    }
+  }
+);
+
+// 🔹 Permanently delete an RM (must be deactivated first)
+export const deleteRm = createAsyncThunk(
+  "admin/deleteRm",
+  async (rmId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.delete(`${backendurl}/admin/rm/${rmId}`, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+      });
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to delete RM");
     }
   }
 );

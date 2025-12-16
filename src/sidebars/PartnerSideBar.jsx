@@ -108,8 +108,8 @@ const PartnerSideBar = () => {
     { name: "Dashboard", icon: LayoutGrid, path: "/partner/dashboard" },
     { name: "Customers", icon: Users, path: "/partner/customers" },
     { name: "Applications", icon: FileText, path: "/partner/applications" },
-  { name: "EmiCalculator", icon: Calculator, path: "/partner/EmiCalculator" },
-  { name: "KYCDetails", icon: IdCard, path: "/partner/KYCDetails" }
+  { name: "Emi Calculator", icon: Calculator, path: "/partner/EmiCalculator" },
+  { name: "KYC Details", icon: IdCard, path: "/partner/KYCDetails" }
   ];
 
   const unreadCount = notifications.filter((n) => !n.read).length;

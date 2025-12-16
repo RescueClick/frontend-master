@@ -3,7 +3,7 @@ import { Eye, Edit, Trash, Search, Download } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
-import { activateRM, assignPartnersToRM, fetchRMs } from "../../../feature/thunks/adminThunks";
+import { activateRM, assignPartnersToRM, deleteRm, fetchRMs } from "../../../feature/thunks/adminThunks";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 
@@ -199,6 +199,28 @@ const handleLoginAs = (userId) => {
 loginAsUser(userId, navigate);
 };
 
+  const handleDeleteRm = async (rmId) => {
+    const { adminToken } = getAuthData() || {};
+    if (!adminToken) {
+      alert("Missing admin token");
+      return;
+    }
+    const confirmed = window.confirm(
+      "Are you sure you want to permanently delete this RM account?"
+    );
+    if (!confirmed) return;
+
+    try {
+      await dispatch(deleteRm(rmId)).unwrap();
+      dispatch(fetchRMs(adminToken));
+      alert("RM deleted");
+    } catch (err) {
+      alert(
+        typeof err === "string" ? err : err?.message || "Failed to delete RM"
+      );
+    }
+  };
+
 
   return (
     <>
@@ -344,6 +366,14 @@ loginAsUser(userId, navigate);
                         >
                           <Eye size={14} />
                         </button>
+                        {rm.status !== "ACTIVE" && (
+                          <button
+                            className="cursor-pointer p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
+                            onClick={() => handleDeleteRm(rm._id)}
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

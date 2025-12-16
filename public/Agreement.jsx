@@ -154,7 +154,7 @@ const Agreement = () => {
           <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent rounded"></div>
           
           <h1 className="text-3xl font-extrabold text-emerald-600 mb-4 tracking-wide drop-shadow-sm">
-            TRUSTLINE FINTECH PRIVATE LIMITED
+            TRUSTLINE FINTECH
           </h1>
           <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-5 tracking-wide">
             PARTNERSHIP AGREEMENT

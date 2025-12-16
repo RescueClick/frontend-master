@@ -7,6 +7,7 @@ import {loginUser,
   assignRmToAsm, 
   reassignAllRmsFromAsm, 
   activateAsm, 
+  deleteAsm,
   fetchAnalyticsdashboard,   
   fetchAdminProfile,  
   fetchAdminDashboard, 
@@ -14,6 +15,7 @@ import {loginUser,
   getUnassignedPartners,
   getAllCustomers,
   fetchBanners,
+  deleteRm,
   loginAsUserThunk
 
  } from "../thunks/adminThunks"; 
@@ -114,6 +116,13 @@ const initialState = {
     success: false,
     data: null,
   },
+  // Delete ASM action state
+  deleteAsm: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
   // Dashboard metrics for a specific ASM
   Analyticsdashboard : {
     loading: false,
@@ -130,6 +139,14 @@ const initialState = {
   },
   
   dashboard: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+
+  // Delete RM action state
+  deleteRm: {
     loading: false,
     error: null,
     success: false,
@@ -346,6 +363,24 @@ const adminSlice = createSlice({
         state.activateAsm.success = false;
       });
 
+    // 🔹 Delete ASM
+    builder
+      .addCase(deleteAsm.pending, (state) => {
+        state.deleteAsm.loading = true;
+        state.deleteAsm.error = null;
+        state.deleteAsm.success = false;
+      })
+      .addCase(deleteAsm.fulfilled, (state, action) => {
+        state.deleteAsm.loading = false;
+        state.deleteAsm.data = action.payload;
+        state.deleteAsm.success = true;
+      })
+      .addCase(deleteAsm.rejected, (state, action) => {
+        state.deleteAsm.loading = false;
+        state.deleteAsm.error = action.payload;
+        state.deleteAsm.success = false;
+      });
+
     // 🔹 ASM Dashboard Metrics
     builder
       .addCase(fetchAnalyticsdashboard.pending, (state) => {
@@ -486,6 +521,24 @@ const adminSlice = createSlice({
         state.allBanners.loading = false;
         state.allBanners.error = action.payload;
       });
+
+      // 🔹 Delete RM
+      builder
+        .addCase(deleteRm.pending, (state) => {
+          state.deleteRm.loading = true;
+          state.deleteRm.error = null;
+          state.deleteRm.success = false;
+        })
+        .addCase(deleteRm.fulfilled, (state, action) => {
+          state.deleteRm.loading = false;
+          state.deleteRm.data = action.payload;
+          state.deleteRm.success = true;
+        })
+        .addCase(deleteRm.rejected, (state, action) => {
+          state.deleteRm.loading = false;
+          state.deleteRm.error = action.payload;
+          state.deleteRm.success = false;
+        });
 
       // 🔹 Login As (impersonation) Thunk
 builder

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   User,
   Phone,
@@ -11,6 +11,8 @@ import {
   Users,
   Home,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import axios from "axios";
@@ -119,15 +121,34 @@ export default function HomeLoanSalaried() {
   const [validationErrors, setValidationErrors] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [savedApplication, setSavedApplication] = useState(null);
+  const [showPassword, setShowPassword] = useState({
+    password: false,
+    confirmPassword: false,
+  });
+  const abortControllerRef = useRef(null);
 
+  // Cleanup function to cancel pending requests
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
+  
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "loanAmount" ? parseInt(value, 10) || 0 : value,
+      [name]:
+        name === "loanAmount"
+          ? value === ""      // if empty, keep empty string
+            ? ""
+            : parseInt(value, 10)
+          : value,
     }));
+  
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -136,6 +157,7 @@ export default function HomeLoanSalaried() {
       });
     }
   };
+  
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
@@ -156,15 +178,33 @@ export default function HomeLoanSalaried() {
     }
   };
 
+  // const handleFileChangeAddressProofs = (e) => {
+  //   const { name, files } = e.target;
+  //   if (files && files.length > 0) {
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       [name]: files[0], // now this updates newAddressProofs
+  //     }));
+  //   }
+  // };
+
   const handleFileChangeAddressProofs = (e) => {
-    const { name, files } = e.target;
-    if (files && files.length > 0) {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: files[0], // now this updates newAddressProofs
-      }));
-    }
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      newAddressProofs: file,   // <-- FIXED
+    }));
+
+    // OPTIONAL: clear validation error
+    setError((prev) => ({
+      ...prev,
+      newAddressProofs: "",
+    }));
   };
+
 
   const handleFileRemove = (fieldName) => {
     if (fieldName.startsWith("newAddressProofs.")) {
@@ -190,20 +230,6 @@ export default function HomeLoanSalaried() {
     }
   };
 
-  // const handleSameAddressChange = (e) => {
-  //   setSameAddress(e.target.checked);
-  //   if (e.target.checked) {
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       permanentAddress: prev.currentAddress,
-  //     }));
-  //   } else {
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       permanentAddress: "",
-  //     }));
-  //   }
-  // };
 
   const handleSameAddressChange = (e) => {
     const checked = e.target.checked;
@@ -255,7 +281,7 @@ export default function HomeLoanSalaried() {
     if (!formData.middleName) errors.middleName = "Middle name is required";
     if (!formData.lastName) errors.lastName = "Last name is required.";
     if (!formData.motherName) errors.motherName = "Mother's name is required.";
-    if (!formData.pan) errors.pan = "PAN number is required.";
+    // if (!formData.pan) errors.pan = "PAN number is required.";
     if (!formData.gender) errors.gender = "Gender is required.";
     if (!formData.maritalStatus) errors.maritalStatus = "Marital status is required.";
 
@@ -301,8 +327,15 @@ export default function HomeLoanSalaried() {
     if (!formData.currentHouseStatus)
       errors.currentHouseStatus = "Current house status is required.";
 
-    if (!formData.currentAddressPinCode)
+    // Current Address Pin Code Validation
+
+    const pin = formData.currentAddressPinCode?.trim();
+
+    if (!pin) {
       errors.currentAddressPinCode = "Current Address Pin is required.";
+    } else if (!/^[1-9][0-9]{5}$/.test(pin)) {
+      errors.currentAddressPinCode = "Enter a valid 6-digit PIN code.";
+    }
 
     // Permanent Address — YOU WANT THESE ALWAYS VALIDATED
     if (!sameAddress) {
@@ -318,15 +351,35 @@ export default function HomeLoanSalaried() {
       if (!formData.permanentHouseStatus)
         errors.permanentHouseStatus = "Permanent house status is required.";
 
-      if (!formData.permanentAddressPinCode)
+      // Permanent Address Pin Code Validation
+      const permanentPin = formData.permanentAddressPinCode?.trim();
+
+      if (!permanentPin) {
         errors.permanentAddressPinCode = "Permanent Address Pin is required.";
+      } else if (!/^[1-9][0-9]{5}$/.test(permanentPin)) {
+        errors.permanentAddressPinCode = "Enter a valid 6-digit PIN code.";
+      }
+
     }
     // Document
 
     if (!formData.aadharFront) errors.aadharFront = "Aadhar Front is required";
     if (!formData.aadharBack) errors.aadharBack = "Aadhar Back is required";
-    if (!formData.panCard) errors.panCard = "Pan Card is required";
+
+    // PAN Card validation
+    if (!formData.pan) {
+      errors.pan = "PAN Card is required";
+    } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panCard.toUpperCase())) {
+      errors.pan = "Enter a valid PAN Card number (e.g., ABCDE1234F)";
+    }
+
     if (!formData.passportPhoto) errors.passportPhoto = "Passport photo is required";
+
+    // New Address Proof Validation
+    if (!formData.newAddressProofs) {
+      errors.newAddressProofs = "At least one address proof document is required.";
+    }
+
 
     // Employment
     if (!formData.companyName) errors.companyName = "Company name is required.";
@@ -342,16 +395,20 @@ export default function HomeLoanSalaried() {
     if (!formData.salarySlip3) errors.salarySlip3 = "Salary slip 3 is required";
     // if (!formData.form16_26as) errors.form16_26as = "Form 16 is required";/
 
+    // Reference 1
+    if (!formData.reference1Name)
+      errors.reference1Name = "Reference 1 name is required.";
 
-    // References
-    if (!formData.reference1Name) errors.reference1Name = "Reference 1 name is required.";
     if (!formData.reference1Contact) {
       errors.reference1Contact = "Reference 1 contact is required.";
     } else if (!/^\d{10}$/.test(formData.reference1Contact)) {
       errors.reference1Contact = "Reference 1 contact must be exactly 10 digits.";
     }
 
-    if (!formData.reference2Name) errors.reference2Name = "Reference 2 name is required.";
+    // Reference 2
+    if (!formData.reference2Name)
+      errors.reference2Name = "Reference 2 name is required.";
+
     if (!formData.reference2Contact) {
       errors.reference2Contact = "Reference 2 contact is required.";
     } else if (!/^\d{10}$/.test(formData.reference2Contact)) {
@@ -359,17 +416,19 @@ export default function HomeLoanSalaried() {
     }
 
     if (
-      formData.loanAmount === "" ||
-      formData.loanAmount === null ||
-      formData.loanAmount === undefined
+      formData.reference1Contact &&
+      formData.reference2Contact &&
+      formData.reference1Contact === formData.reference2Contact
     ) {
-      errors.loanAmount = "Loan amount is required.";
+      errors.reference2Contact = "Reference 2 contact cannot be same as Reference 1 contact.";
     }
 
+    if (!formData.loanAmount || formData.loanAmount < 5000 || formData.loanAmount > 5000000) {
+      errors.loanAmount = "Loan amount must be between ₹5,000 and ₹50,00,000.";
+    }
+    
+
     if (!formData.bankStatement1) errors.bankStatement1 = "Bank Statement is required.";
-
-
-
 
     return errors;
   }
@@ -499,8 +558,24 @@ export default function HomeLoanSalaried() {
           "Content-Type": "multipart/form-data",
         };
 
+      // Create AbortController for request cancellation
+      abortControllerRef.current = new AbortController();
+
       const response = await axios.post(endpoint, formDataToSend, {
         headers,
+        timeout: 120000, // 120 seconds timeout for file uploads
+        maxContentLength: 100 * 1024 * 1024, // 100MB max content length
+        maxBodyLength: 100 * 1024 * 1024, // 100MB max body length
+        signal: abortControllerRef.current.signal,
+        onUploadProgress: (progressEvent) => {
+          // Optional: You can add progress tracking here if needed
+          if (progressEvent.total) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            // console.log(`Upload progress: ${percentCompleted}%`);
+          }
+        },
       });
 
       const data = response.data;
@@ -512,12 +587,28 @@ export default function HomeLoanSalaried() {
       setModalOpen(true);
     } catch (error) {
       console.error(error);
-      setError(
-        error.response?.data?.message || "Failed to save application. Try again."
-      );
-      setValidationErrors(error.response?.data?.errors || []);
+      
+      // Handle different error types
+      if (axios.isCancel(error)) {
+        setError("Request was cancelled. Please try again.");
+      } else if (error.code === 'ECONNABORTED') {
+        setError("Request timeout. Please check your connection and try again.");
+      } else if (error.response) {
+        // Server responded with error status
+        setError(
+          error.response?.data?.message || "Failed to save application. Try again."
+        );
+        setValidationErrors(error.response?.data?.errors || []);
+      } else if (error.request) {
+        // Request was made but no response received
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        // Something else happened
+        setError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -531,6 +622,9 @@ export default function HomeLoanSalaried() {
         setModalOpen(false);
         return;
       }
+      // Create AbortController for request cancellation
+      abortControllerRef.current = new AbortController();
+
       await axios.post(
         `${backendurl}/partner/applications/${applicationId}/submit`,
         {},
@@ -538,18 +632,32 @@ export default function HomeLoanSalaried() {
           headers: {
             Authorization: `Bearer ${partnerToken}`,
           },
+          timeout: 30000, // 30 seconds timeout
+          signal: abortControllerRef.current.signal,
         }
       );
       setModalOpen(false);
       setSuccessMessage("Application submitted successfully.");
       resetFields();
     } catch (err) {
-      setError(
-        err.response?.data?.message || err.message || "Something went wrong."
-      );
-      setValidationErrors(err.response?.data?.errors || []);
+      // Handle different error types
+      if (axios.isCancel(err)) {
+        setError("Request was cancelled. Please try again.");
+      } else if (err.code === 'ECONNABORTED') {
+        setError("Request timeout. Please check your connection and try again.");
+      } else if (err.response) {
+        setError(
+          err.response?.data?.message || err.message || "Something went wrong."
+        );
+        setValidationErrors(err.response?.data?.errors || []);
+      } else if (err.request) {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -894,7 +1002,7 @@ export default function HomeLoanSalaried() {
 
 
                     </div>
-                    {renderError("pan")}
+                    {formData.pan ? "" : renderError("pan")}
                   </div>
                   <div>
                     <label
@@ -1366,7 +1474,7 @@ export default function HomeLoanSalaried() {
                       required
                     />
 
-                    {formData.loanAmount?" ": renderError("loanAmount")}
+                    {renderError("loanAmount")}
                   </div>
                 </div>
               </section>
@@ -1489,7 +1597,7 @@ export default function HomeLoanSalaried() {
                         </p>
                       )}
 
-                      {formData[doc.name]?" ": renderError(doc.name)}
+                      {formData[doc.name] ? " " : renderError(doc.name)}
                     </div>
 
                   ))}
@@ -2300,16 +2408,18 @@ export default function HomeLoanSalaried() {
 
                 <label className="block text-sm font-medium mb-2 text-gray-900">
                   Select one document to submit as address proof (e.g.,
-                  Lightbill, Wifi, Water, Gas Bill, or Rent Agreement)
+                  Lightbill, Wifi, Water, Gas Bill, or Rent Agreement) *
                 </label>
 
                 <input
                   type="file"
-                  name="addressProof" // <--- store in newAddressProofs
+                  name="newAddressProofs" // <--- store in newAddressProofs
                   onChange={handleFileChangeAddressProofs}
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-teal-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-500 file:text-white hover:file:bg-teal-600"
                 />
+
+                {formData.newAddressProofs ? "" : renderError("newAddressProofs")}   {/* <-- KEEP ONLY THIS */}
 
                 {formData.newAddressProofs && (
                   <div className="mt-2 text-sm text-gray-700">
@@ -2324,6 +2434,7 @@ export default function HomeLoanSalaried() {
                     )}
                   </div>
                 )}
+
               </section>
 
               {/* References */}
@@ -2478,19 +2589,37 @@ export default function HomeLoanSalaried() {
                     >
                       Password *
                     </label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "#12B99C",
-                        backgroundColor: "white",
-                      }}
-                      placeholder="Enter password"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword.password ? "text" : "password"}
+                        name="password"
+                        value={formData.password || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "#12B99C",
+                          backgroundColor: "white",
+                        }}
+                        placeholder="Enter password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPassword((prev) => ({
+                            ...prev,
+                            password: !prev.password,
+                          }))
+                        }
+                        className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword.password ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
 
                     {renderError('password')}
                   </div>
@@ -2501,19 +2630,37 @@ export default function HomeLoanSalaried() {
                     >
                       Confirm Password *
                     </label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={formData.confirmPassword || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "#12B99C",
-                        backgroundColor: "white",
-                      }}
-                      placeholder="Re-enter password"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword.confirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        value={formData.confirmPassword || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "#12B99C",
+                          backgroundColor: "white",
+                        }}
+                        placeholder="Re-enter password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPassword((prev) => ({
+                            ...prev,
+                            confirmPassword: !prev.confirmPassword,
+                          }))
+                        }
+                        className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword.confirmPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                     {renderError('confirmPassword')}
                   </div>
                 </div>

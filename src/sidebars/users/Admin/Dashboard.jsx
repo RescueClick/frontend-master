@@ -2,6 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchAdminDashboard } from '../../../feature/thunks/adminThunks'
+import { useRealtimeData } from '../../../utils/useRealtimeData'
 
 import {
   BarChart3,
@@ -29,20 +30,13 @@ const Dashboard = () => {
   const dispatch = useDispatch()
   const { data } = useSelector((state) => state.admin.dashboard)
 
-
-
-
-
   const navigate = useNavigate();
 
-
-  useEffect(() => {
-
-
-
-    dispatch(fetchAdminDashboard())
-
-  }, [])
+  // Real-time dashboard updates with 30 second polling
+  useRealtimeData(fetchAdminDashboard, {
+    interval: 30000, // 30 seconds
+    enabled: true,
+  });
 
 
   const statsCards = [

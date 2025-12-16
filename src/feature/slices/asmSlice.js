@@ -7,6 +7,7 @@ import {
   fetchRmList,
   fetchAsmApplications,
   getAnalytics,
+  deleteRmAsm,
 } from "../thunks/asmThunks";
 
 
@@ -34,6 +35,12 @@ const initialState = {
     error: null,
     success: false,
     data: [],
+  },
+  deleteRm: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
   },
   // 🔹 Dashboard state
   dashboard: {
@@ -251,7 +258,6 @@ const asmSlice = createSlice({
         };
       });
 
-
       builder
       .addCase(getAnalytics.pending, (state) => {
         state.analyticsdashboard.loading = true;
@@ -273,16 +279,26 @@ const asmSlice = createSlice({
         state.analyticsdashboard.analyticsData = null;
       });
 
-
-
-
-
-
-
-      
-
-
-      
+      // Delete RM (ASM)
+      builder
+        .addCase(deleteRmAsm.pending, (state) => {
+          state.deleteRm.loading = true;
+          state.deleteRm.error = null;
+          state.deleteRm.success = false;
+          state.deleteRm.data = null;
+        })
+        .addCase(deleteRmAsm.fulfilled, (state, action) => {
+          state.deleteRm.loading = false;
+          state.deleteRm.error = null;
+          state.deleteRm.success = true;
+          state.deleteRm.data = action.payload;
+        })
+        .addCase(deleteRmAsm.rejected, (state, action) => {
+          state.deleteRm.loading = false;
+          state.deleteRm.error = action.payload;
+          state.deleteRm.success = false;
+          state.deleteRm.data = null;
+        });
   },
 
   

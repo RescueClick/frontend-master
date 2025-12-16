@@ -312,6 +312,26 @@ export const activateRM = createAsyncThunk(
   }
 );
 
+// Thunk to permanently delete an RM (ASM role) after deactivation
+export const deleteRmAsm = createAsyncThunk(
+  "asm/deleteRm",
+  async (rmId, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.delete(`${backendurl}/asm/delete/${rmId}`, {
+        headers: {
+          Authorization: `Bearer ${asmToken}`,
+        },
+      });
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to delete RM"
+      );
+    }
+  }
+);
+
 
 // Thunk to activate Partner (ASM role)
 export const activatePartner = createAsyncThunk(

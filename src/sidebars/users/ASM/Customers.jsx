@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Search, Filter, Eye, Users, Phone } from "lucide-react";
 import { fetchAsmCustomers } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
+import { useRealtimeData } from "../../../utils/useRealtimeData";
 import axios from "axios"
 import { useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
@@ -23,44 +24,46 @@ const Customer = () => {
     (state) => state.asm.customers
   );
 
-  console.log("Model : ", model);
-  
+  // Real-time customer updates with 30 second polling
+  useRealtimeData(fetchAsmCustomers, {
+    interval: 30000, // 30 seconds
+    enabled: true,
+  });
 
+  // Memoized customer data
+  const customers = useMemo(() => {
+    return Array.isArray(data)
+      ? data.map((c) => ({
+          name: c.userName,
+          id: c.employeeId,
+          phone: c.phone || "-",
+          applicationDate: new Date(c.applicationDate).toLocaleDateString(), // formatted
+          loanType: c.loanType,
+          loanAmount: c.loanAmount || 0,
+          disburseAmount: c.disburseAmount || 0,
+          status: c.status, // comes as "DISBURSED"
+          customerId: c.customerId
+        }))
+      : [];
+  }, [data]);
 
-  useEffect(() => {
-    dispatch(fetchAsmCustomers());
-  }, [dispatch]);
+  // Memoized filtered customers
+  const filteredCustomers = useMemo(() => {
+    return customers.filter((customer) => {
+      const term = searchTerm.toLowerCase();
 
-  // Sample customer data
-  const customers = Array.isArray(data)
-    ? data.map((c) => ({
-        name: c.userName,
-        id: c.employeeId,
-        phone: c.phone || "-",
-        applicationDate: new Date(c.applicationDate).toLocaleDateString(), // formatted
-        loanType: c.loanType,
-        loanAmount: c.loanAmount || 0,
-        disburseAmount: c.disburseAmount || 0,
-        status: c.status, // comes as "DISBURSED"
-        customerId: c.customerId
-      }))
-    : [];
+      const matchesSearch =
+        customer.name?.toLowerCase().includes(term) ||
+        customer.id?.toLowerCase().includes(term) ||
+        customer.phone?.toLowerCase().includes(term);
 
-  // Filter customers based on search and status
-const filteredCustomers = customers.filter((customer) => {
-  const term = searchTerm.toLowerCase();
+      const matchesFilter =
+        filterStatus === "All" ||
+        customer.status?.toLowerCase() === filterStatus.toLowerCase();
 
-  const matchesSearch =
-    customer.name?.toLowerCase().includes(term) ||
-    customer.id?.toLowerCase().includes(term) ||
-    customer.phone?.toLowerCase().includes(term);
-
-  const matchesFilter =
-    filterStatus === "All" ||
-    customer.status?.toLowerCase() === filterStatus.toLowerCase();
-
-  return matchesSearch && matchesFilter;
-});
+      return matchesSearch && matchesFilter;
+    });
+  }, [customers, searchTerm, filterStatus]);
 
 
   // Helpers for status color

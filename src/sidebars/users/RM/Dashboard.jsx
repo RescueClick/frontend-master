@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   User,
   Users,
@@ -29,6 +29,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { fetchDashboard } from "../../../feature/thunks/rmThunks";
 import { useDispatch, useSelector } from "react-redux";
+import { useRealtimeData } from "../../../utils/useRealtimeData";
 import {backendurl} from "../../../feature/urldata"
 
 
@@ -40,12 +41,11 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const { data, loading, error } = useSelector((state) => state.rm.dashboard);
 
-
-
-  useEffect(() => {
-  
-    dispatch(fetchDashboard());
-  }, [dispatch]);
+  // Real-time dashboard updates with 30 second polling
+  useRealtimeData(fetchDashboard, {
+    interval: 30000, // 30 seconds
+    enabled: true,
+  });
 
   // Sample data
   const metrics = {
@@ -55,17 +55,19 @@ const Dashboard = () => {
     revenue: data?.totalRevenu ? data?.totalRevenu : "NA"
   };
 
-  const targetVsAchievement = (data?.targets || [])?.map((item) => {
-    const percentage =
-      item.target > 0 ? Math.round((item.achieved / item.target) * 100) : 0;
+  const targetVsAchievement = useMemo(() => {
+    return (data?.targets || [])?.map((item) => {
+      const percentage =
+        item.target > 0 ? Math.round((item.achieved / item.target) * 100) : 0;
 
-    return {
-      month: item.month,
-      target: item.target,
-      achievement: item.achieved,
-      percentage,
-    };
-  });
+      return {
+        month: item.month,
+        target: item.target,
+        achievement: item.achieved,
+        percentage,
+      };
+    });
+  }, [data?.targets]);
 
   const topCustomers = [
     {

@@ -185,7 +185,22 @@ const LoginPage = () => {
   
     } catch (err) {
       console.error("Login failed:", err);
-      setModalError(err?.message || "Login failed. Please try again.");
+
+      let message = "Login failed. Please try again.";
+
+      // Show clearer text when a partner account is pending activation
+      if (
+        err === "Account is not active (status: PENDING)." ||
+        err?.message === "Account is not active (status: PENDING)."
+      ) {
+        message = "Account is not active (status: PENDING).";
+      } else if (typeof err === "string") {
+        message = err;
+      } else if (err?.message) {
+        message = err.message;
+      }
+
+      setModalError(message);
       setShowErrorModal(true);
     } finally {
       setLoading(false);
@@ -222,7 +237,7 @@ const LoginPage = () => {
             <div className="space-y-6">
               {/* Username Field */}
               <div>
-                <label htmlFor="username" className="block text-sm font-medium mb-2" style={{ color: '#111827' }}>Username</label>
+                <label htmlFor="username" className="block text-sm font-medium mb-2" style={{ color: '#111827' }}>Email Address</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User className="h-5 w-5" style={{ color: '#6B7280' }} />
@@ -235,7 +250,7 @@ const LoginPage = () => {
                     onChange={handleInputChange}
                     className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${errors.username ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-[#12B99C]'
                       }`}
-                    placeholder="Enter your username"
+                    placeholder="Enter your email address"
                   />
                 </div>
                 {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username}</p>}

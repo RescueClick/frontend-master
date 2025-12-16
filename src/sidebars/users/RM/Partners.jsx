@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Users,
   Search,
@@ -35,6 +35,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
 import { activatePartner, assignCustomerToPartner, fetchPartners } from "../../../feature/thunks/rmThunks";
+import { useRealtimeData, useRefetch } from "../../../utils/useRealtimeData";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -72,13 +73,19 @@ const Partners = () => {
 
   const { loading, error, data } = useSelector((state) => state.rm.partner);
 
-  const otherPartners = data?.filter((p) => p.id !== selectedPartner?.id);
+  // Real-time data fetching with 30 second polling
+  const { refetch } = useRealtimeData(fetchPartners, {
+    interval: 30000, // 30 seconds
+    enabled: true,
+  });
 
-  console.log(data)
+  // Manual refetch function
+  const refetchPartners = useRefetch(fetchPartners);
 
-  useEffect(() => {
-    dispatch(fetchPartners());
-  }, [dispatch]);
+  const otherPartners = useMemo(
+    () => data?.filter((p) => p.id !== selectedPartner?.id) || [],
+    [data, selectedPartner?.id]
+  );
 
   const partnerStats = {
     totalPartners: 48,
@@ -120,17 +127,21 @@ const Partners = () => {
     }
   };
   
-  const filteredPartners = data?.filter((partner) => {
-    const matchesSearch =
-      partner.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      partner.type?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredPartners = useMemo(() => {
+    if (!data) return [];
+    
+    return data.filter((partner) => {
+      const matchesSearch =
+        partner.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        partner.type?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesFilter =
-      selectedFilter === "all" ||
-      partner.status?.toLowerCase() === selectedFilter.toLowerCase();
+      const matchesFilter =
+        selectedFilter === "all" ||
+        partner.status?.toLowerCase() === selectedFilter.toLowerCase();
 
-    return matchesSearch && matchesFilter;
-  });
+      return matchesSearch && matchesFilter;
+    });
+  }, [data, searchTerm, selectedFilter]);
 
 
   const toggleActivation = (partner) => {
@@ -148,26 +159,37 @@ const Partners = () => {
   };
 
 
-  const handleConfirmDeactivation = () => {
-
-    dispatch(
-      assignCustomerToPartner({
-        oldPartnerId: selectedPartner.id,
+  const handleConfirmDeactivation = useCallback(async () => {
+    try {
+      await dispatch(
+        assignCustomerToPartner({
+          oldPartnerId: selectedPartner.id,
+        })
+      ).unwrap();
       
-      })
-    );
+      // Refetch partners after deactivation
+      refetchPartners();
+      
+      setModalOpen(false);
+      setSelectedPartner(null);
+    } catch (error) {
+      console.error("Deactivation error:", error);
+    }
+  }, [dispatch, selectedPartner, refetchPartners]);
 
-    setModalOpen(false);
-    setSelectedPartner(null);
-  };
-
-  const handlePartnerActive = () => {
-
-    dispatch(activatePartner({ partnerId: selectedPartner.id }))
-
-    setActivateModel(null)
-
-  }
+  const handlePartnerActive = useCallback(async () => {
+    try {
+      await dispatch(activatePartner({ partnerId: selectedPartner.id })).unwrap();
+      
+      // Refetch partners after activation
+      refetchPartners();
+      
+      setActivateModel(null);
+      setSelectedPartner(null);
+    } catch (error) {
+      console.error("Activation error:", error);
+    }
+  }, [dispatch, selectedPartner, refetchPartners]);
 
 
   const handleExport = () => {

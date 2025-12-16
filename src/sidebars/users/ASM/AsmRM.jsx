@@ -6,6 +6,7 @@ import {
   assignRMBulkTarget,
   fetchRmList,
   reassignPartnersAndDeactivateRM,
+  deleteRmAsm,
 } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -183,6 +184,23 @@ export default function AsmRM() {
 const handleLoginAs = (userId) => {
 loginAsUser(userId, navigate);
 };
+
+  const handleDeleteRm = async (rmId) => {
+    const confirmed = window.confirm(
+      "Delete this RM account permanently? This cannot be undone."
+    );
+    if (!confirmed) return;
+
+    try {
+      await dispatch(deleteRmAsm(rmId)).unwrap();
+      dispatch(fetchRmList());
+      alert("RM deleted successfully");
+    } catch (err) {
+      alert(
+        typeof err === "string" ? err : err?.message || "Failed to delete RM"
+      );
+    }
+  };
 
   return (
     <>
@@ -476,6 +494,14 @@ loginAsUser(userId, navigate);
                         >
                           <Eye size={16} className="text-gray-600" />
                         </button>
+                        {rm.status !== "ACTIVE" && (
+                          <button
+                            className="ml-2 px-2 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
+                            onClick={() => handleDeleteRm(rm._id)}
+                          >
+                            Delete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))

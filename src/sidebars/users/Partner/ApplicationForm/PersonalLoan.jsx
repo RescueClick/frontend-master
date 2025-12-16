@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   User,
   Phone,
@@ -11,6 +11,8 @@ import {
   Users,
   Home,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import axios from "axios";
@@ -109,7 +111,20 @@ export default function PersonalLoan() {
   const [validationErrors, setValidationErrors] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [savedApplication, setSavedApplication] = useState(null);
+  const [showPassword, setShowPassword] = useState({
+    password: false,
+    confirmPassword: false,
+  });
+  const abortControllerRef = useRef(null);
 
+  // Cleanup function to cancel pending requests
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -426,8 +441,24 @@ export default function PersonalLoan() {
           "Content-Type": "multipart/form-data",
         };
 
+      // Create AbortController for request cancellation
+      abortControllerRef.current = new AbortController();
+
       const response = await axios.post(endpoint, formDataToSend, {
         headers,
+        timeout: 120000, // 120 seconds timeout for file uploads
+        maxContentLength: 100 * 1024 * 1024, // 100MB max content length
+        maxBodyLength: 100 * 1024 * 1024, // 100MB max body length
+        signal: abortControllerRef.current.signal,
+        onUploadProgress: (progressEvent) => {
+          // Optional: You can add progress tracking here if needed
+          if (progressEvent.total) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            // console.log(`Upload progress: ${percentCompleted}%`);
+          }
+        },
       });
 
       const data = response.data;
@@ -439,12 +470,28 @@ export default function PersonalLoan() {
       setModalOpen(true);
     } catch (error) {
       console.error(error);
-      setError(
-        error.response?.data?.message || "Failed to save application. Try again."
-      );
-      setValidationErrors(error.response?.data?.errors || []);
+      
+      // Handle different error types
+      if (axios.isCancel(error)) {
+        setError("Request was cancelled. Please try again.");
+      } else if (error.code === 'ECONNABORTED') {
+        setError("Request timeout. Please check your connection and try again.");
+      } else if (error.response) {
+        // Server responded with error status
+        setError(
+          error.response?.data?.message || "Failed to save application. Try again."
+        );
+        setValidationErrors(error.response?.data?.errors || []);
+      } else if (error.request) {
+        // Request was made but no response received
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        // Something else happened
+        setError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -459,6 +506,9 @@ export default function PersonalLoan() {
         setModalOpen(false);
         return;
       }
+      // Create AbortController for request cancellation
+      abortControllerRef.current = new AbortController();
+
       await axios.post(
         `${backendurl}/partner/applications/${applicationId}/submit`,
         {},
@@ -466,18 +516,32 @@ export default function PersonalLoan() {
           headers: {
             Authorization: `Bearer ${partnerToken}`,
           },
+          timeout: 30000, // 30 seconds timeout
+          signal: abortControllerRef.current.signal,
         }
       );
       setModalOpen(false);
       setSuccessMessage("Application submitted successfully.");
       resetFields();
     } catch (err) {
-      setError(
-        err.response?.data?.message || err.message || "Something went wrong."
-      );
-      setValidationErrors(err.response?.data?.errors || []);
+      // Handle different error types
+      if (axios.isCancel(err)) {
+        setError("Request was cancelled. Please try again.");
+      } else if (err.code === 'ECONNABORTED') {
+        setError("Request timeout. Please check your connection and try again.");
+      } else if (err.response) {
+        setError(
+          err.response?.data?.message || err.message || "Something went wrong."
+        );
+        setValidationErrors(err.response?.data?.errors || []);
+      } else if (err.request) {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -2384,19 +2448,37 @@ export default function PersonalLoan() {
                     >
                       Password *
                     </label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "#12B99C",
-                        backgroundColor: "white",
-                      }}
-                      placeholder="Enter password"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword.password ? "text" : "password"}
+                        name="password"
+                        value={formData.password || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "#12B99C",
+                          backgroundColor: "white",
+                        }}
+                        placeholder="Enter password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPassword((prev) => ({
+                            ...prev,
+                            password: !prev.password,
+                          }))
+                        }
+                        className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword.password ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                     {renderError("password")}
                   </div>
                   <div>
@@ -2406,19 +2488,37 @@ export default function PersonalLoan() {
                     >
                       Confirm Password *
                     </label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={formData.confirmPassword || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "#12B99C",
-                        backgroundColor: "white",
-                      }}
-                      placeholder="Re-enter password"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword.confirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        value={formData.confirmPassword || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "#12B99C",
+                          backgroundColor: "white",
+                        }}
+                        placeholder="Re-enter password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPassword((prev) => ({
+                            ...prev,
+                            confirmPassword: !prev.confirmPassword,
+                          }))
+                        }
+                        className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword.confirmPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                     {renderError("confirmPassword")}
                   </div>
                 </div>
