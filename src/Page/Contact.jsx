@@ -58,45 +58,45 @@ const Contact = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  const newErrors = validateForm();
+    e.preventDefault();
+    const newErrors = validateForm();
 
-  if (Object.keys(newErrors).length === 0) {
-    try {
-      const response = await fetch(`${backendurl}/contact`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          message: formData.queries,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert("Success! We'll get back to you shortly."); // ✅ simple success alert
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          queries: "",
+    if (Object.keys(newErrors).length === 0) {
+      try {
+        const response = await fetch(`${backendurl}/contact`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            message: formData.queries,
+          }),
         });
-      } else {
-        alert("Failed to send email. Please try again.");
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert("Success! We'll get back to you shortly."); // ✅ simple success alert
+          setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            queries: "",
+          });
+        } else {
+          alert("Failed to send email. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error submitting form:", error);
+        alert("Something went wrong. Please try again.");
       }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      alert("Something went wrong. Please try again.");
+    } else {
+      setErrors(newErrors);
     }
-  } else {
-    setErrors(newErrors);
-  }
-};
+  };
 
 
 
@@ -125,16 +125,16 @@ const Contact = () => {
   }
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100 py-12 px-4">
-    <section className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold text-gray-900 mb-4">
-          Contact <span className="text-[#12B99C]">Trustline Fintech</span>
-        </h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Ready to transform your financial future? Get in touch with our expert team for personalized consultation.
-        </p>
-      </div>
+      <section className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-gray-900 mb-4">
+            Contact <span className="text-[#12B99C]">Trustline Fintech</span>
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Ready to transform your financial future? Get in touch with our expert team for personalized consultation.
+          </p>
+        </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           {/* Contact Form */}
@@ -245,42 +245,42 @@ const Contact = () => {
             </form>
           </div>
 
-        {/* Contact Information */}
-        <div className="space-y-8">
-          {/* Why Choose Us */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Why Choose Trustline Fintech?</h3>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-6 w-6 text-[#12B99C] flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-gray-900">100% Digital Process</h4>
-                  <p className="text-gray-600 text-sm">No physical visits required - everything from your smartphone</p>
+          {/* Contact Information */}
+          <div className="space-y-8">
+            {/* Why Choose Us */}
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Why Choose Trustline Fintech?</h3>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-[#12B99C] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-gray-900">100% Digital Process</h4>
+                    <p className="text-gray-600 text-sm">No physical visits required - everything from your smartphone</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-6 w-6 text-[#12B99C] flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-gray-900">Expert Consultation</h4>
-                  <p className="text-gray-600 text-sm">Personalized financial advice from certified professionals</p>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-[#12B99C] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Expert Consultation</h4>
+                    <p className="text-gray-600 text-sm">Personalized financial advice from certified professionals</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-6 w-6 text-[#12B99C] flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-gray-900">Trusted by 80k+ Customers</h4>
-                  <p className="text-gray-600 text-sm">Join thousands of satisfied customers across India</p>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-[#12B99C] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Trusted by 80k+ Customers</h4>
+                    <p className="text-gray-600 text-sm">Join thousands of satisfied customers across India</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-6 w-6 text-[#12B99C] flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-gray-900">45+ Bank Partnerships</h4>
-                  <p className="text-gray-600 text-sm">Wide network of leading banks and financial institutions</p>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-[#12B99C] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-gray-900">45+ Bank Partnerships</h4>
+                    <p className="text-gray-600 text-sm">Wide network of leading banks and financial institutions</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
             {/* Contact Stats */}
             <div className="bg-gradient-to-r from-[#12B99C] to-[#0f9d86] rounded-2xl p-8 text-white">
@@ -289,22 +289,23 @@ const Contact = () => {
                 <div className="flex items-center space-x-3">
                   <Phone className="h-6 w-6 text-emerald-100" />
                   <div>
-                    <p className="font-semibold">+91 8766681450 </p>
-                    <p className="text-emerald-100 text-sm">Mon - Fri, 9:00 AM - 6:00 PM</p>
+                    <p className="font-semibold ">+91 8766681450 </p>
+                    <p className="text-emerald-100 text-sm px-1">Mon - Fri, 9:00 AM - 6:00 PM</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  {/* <Mail className="h-6 w-6 text-emerald-100" /> */}
-                  {/* <div>
-                    <p className="font-semibold">Quick Response</p>
-                    <p className="text-emerald-100 text-sm">We respond within 24 hours guaranteed</p>
-                  </div> */}
+
                   <div className="flex items-center gap-2">
-                <Mail className="w-6 h-6 text-emerald-100" />
-                <a href="mailto:support@trustlinefintech.com" className="font-semibold hover:text-[#12B99C]">
-                  Email Us : <span className="text-emerald-100 text-sm">contact@trustlinefintech.com</span>
-                </a>
-              </div>
+                    <Mail className="w-6 h-6 text-emerald-100" />
+                    <a
+                      href="https://mail.google.com/mail/?view=cm&fs=1&to=contact@trustlinefintech.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-semibold px-2 transition-colors break-all"
+                    >
+                       contact@trustlinefintech.com
+                    </a>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <MessageSquare className="h-6 w-6 text-emerald-100" />

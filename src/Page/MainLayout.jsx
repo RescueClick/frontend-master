@@ -61,7 +61,12 @@ const MainLayout = () => {
               {/* Email Us */}
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#12B99C]" />
-                <a href="mailto:support@trustlinefintech.com" className="font-semibold hover:text-[#12B99C]">
+                <a
+                  href="https://mail.google.com/mail/?view=cm&fs=1&to=contact@trustlinefintech.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold hover:text-[#12B99C]"
+                >
                   Email Us : <span className="text-gray-400">contact@trustlinefintech.com</span>
                 </a>
               </div>
@@ -236,7 +241,7 @@ const MainLayout = () => {
               <li><a href="/Home" className="hover:text-[#12B99C] transition">Home</a></li>
               {/* <li><a href="/AboutUs" className="hover:text-[#12B99C] transition">About Us</a></li> */}
               <li><a href="/Contact" className="hover:text-[#12B99C] transition">Contact Us</a></li>
-              <li><a href="/PartnerRegistrationForm" className="hover:text-[#12B99C] transition">Apply For Channel Partner</a></li>
+              <li><a href="/PartnerRegistrationForm" className="hover:text-[#12B99C] transition">Apply for Channel Partner</a></li>
             </ul>
           </div>
 

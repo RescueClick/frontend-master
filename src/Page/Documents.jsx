@@ -16,7 +16,7 @@ const Documents = () => {
         'Bank Account Statement (Last 6 months)',
         'Form 16 AS',
         'Office I-card',
-        'CIBIL -680+',
+        'CIBIL 680+',
         'Current Residential Proof'
       ]
     },
@@ -29,7 +29,7 @@ const Documents = () => {
         'PAN Card',
         'Mobile Number',
         'Email ID',
-        'CIBIL-680+'
+        'CIBIL 680+'
       ]
     },
     {
@@ -41,7 +41,7 @@ const Documents = () => {
         'Aadhaar Card',
         'Registration Proof',
         'Bank Account Statement (Last 6 months)',
-        'CIBIL-680+'
+        'CIBIL 680+'
       ]
     },
     {
@@ -54,7 +54,7 @@ const Documents = () => {
         'Property Documents',
         'Income Proof (Salary Slips)',
         'Bank Statement (Last 6 months)',
-        'CIBIL -680+'
+        'CIBIL 680+'
       ]
     },
   ];
