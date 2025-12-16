@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
-import { FaHandshake, FaLaptop, FaBolt, FaHeadset } from "react-icons/fa";
+import { FaHandshake, FaLaptop, FaBolt, FaHeadset, FaEnvelope } from "react-icons/fa";
 import { Users, Building, MapPin, Shield, Star, Target, Phone, Mail, Wallet, BriefcaseBusiness, Home as HomeIcon, Store } from "lucide-react";
 
 import backgroundImage from "../assets/background_image.jpg";
@@ -341,7 +341,7 @@ const Home = () => {
             <p className="text-2xl text-gray-900 font-bold leading-snug">
               Earn up to <span style={{ color: '#12B99C' }} className="font-extrabold">₹1,00,000</span> per month by becoming a trusted financial partner.
             </p>
-            
+
             <button
               onClick={() => { navigate('/PartnerRegistrationForm'); }}
               className="mt-6 px-10 py-4 text-white text-lg font-bold rounded-full shadow-lg transition-all transform hover:-translate-y-1 hover:shadow-xl duration-300" style={{ backgroundColor: '#12B99C', hover: { backgroundColor: '#0e9c7d' } }}>
@@ -370,7 +370,7 @@ const Home = () => {
 
       <section className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 text-white">
         {/* Hero Section */}
-        <section className="px-6 py-16">
+        <section className="px-6 py-6">
           <div className="max-w-7xl mx-auto text-center">
             <h2 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               Why Choose
@@ -385,7 +385,7 @@ const Home = () => {
         </section>
 
         {/* Stats Section */}
-        <section className="px-6 py-16">
+        <section className="px-6 py-8">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {[
@@ -512,8 +512,14 @@ const Home = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-white mb-1">Email Us</h3>
-                      <a href="mailto:support@trustlinefintech.com" className="text-lg font-bold text-teal-400 hover:text-teal-300 transition-colors break-all">
-                        support@trustlinefintech.com
+
+                      <a
+                        href="https://mail.google.com/mail/?view=cm&fs=1&to=contact@trustlinefintech.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-lg font-bold text-teal-400 hover:text-teal-300 transition-colors break-all"
+                      >
+                        contact@trustlinefintech.com
                       </a>
                     </div>
                   </div>

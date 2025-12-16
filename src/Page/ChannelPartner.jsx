@@ -139,17 +139,17 @@ const Channelpartner = () => {
 
   return (
     <div>
-      <section className="mx-auto mt-10">
+      {/* <section className="mx-auto mt-10">
         <div className="text-center">
           <h1 className="text-5xl font-bold text-gray-800">
             Channel Partner
           </h1>
         </div>
-      </section>
+      </section> */}
 
       {/* <ChannelPartnerHero /> */}
 
-      <section className="py-15 px-4">
+      <section className="py-12 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-5">
             <h1 className="text-5xl font-bold text-black mb-4 leading-tight">

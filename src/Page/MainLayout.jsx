@@ -19,12 +19,12 @@ const MainLayout = () => {
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   const navItems = [
-    { name: "Home", href: "/" },
+    { name: "Home", href: "/home" },
     { name: "Services", href: "/services" },
     { name: "Channel Partner", href: "/channel-partner" },
     { name: "Documents", href: "/documents" },
     { name: "About Us", href: "/about-us" },
-    { name: "Contact", href: "/contact" },
+    { name: "Contact Us", href: "/contact" },
 
   ];
 
@@ -81,11 +81,11 @@ const MainLayout = () => {
                   <img
                     src={logo}
                     alt="Logo"
-                    style={{ width: "48px", height: "48px"}}
+                    style={{ width: "48px", height: "48px" }}
                     className="object-contain"
                   />
                 </div>
-               
+
                 <div className="block leading-tight">
                   <div className="text-base sm:text-xl font-bold text-gray-800">Trustline Fintech</div>
                   <div className="text-[10px] sm:text-xs text-[#12B99C] font-medium">
@@ -225,7 +225,7 @@ const MainLayout = () => {
           <div>
             <h2 className="text-xl font-bold mb-4 text-[#12B99C]">About Us</h2>
             <p className="text-sm leading-relaxed text-gray-300">
-              Trustline Fintech brings to you the easiest & most optimized online portal for effective financial consultation and services. With our 24×7 service, we ensure top-notch support & astounding advantages.
+              Trustline Fintech brings to you the easiest & most optimized online portal for effective financial consultation and services.
             </p>
           </div>
 
@@ -236,7 +236,7 @@ const MainLayout = () => {
               <li><a href="/Home" className="hover:text-[#12B99C] transition">Home</a></li>
               {/* <li><a href="/AboutUs" className="hover:text-[#12B99C] transition">About Us</a></li> */}
               <li><a href="/Contact" className="hover:text-[#12B99C] transition">Contact Us</a></li>
-              <li><a href="/PartnerRegistrationForm" className="hover:text-[#12B99C] transition">Apply Channel Partner</a></li>
+              <li><a href="/PartnerRegistrationForm" className="hover:text-[#12B99C] transition">Apply For Channel Partner</a></li>
             </ul>
           </div>
 
@@ -244,7 +244,7 @@ const MainLayout = () => {
             <h2 className="text-xl font-bold mb-4 text-[#12B99C]">Social Links</h2>
             <div className="mt-6">
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4  transform -translate-x-5 ">
 
                 <a
                   href="https://www.facebook.com/profile.php?id=61578373723382"
@@ -283,32 +283,58 @@ const MainLayout = () => {
             </ul>
           </div>
 
+
+
+
           {/* Contact */}
           <div>
             <h2 className="text-xl font-bold mb-4 text-[#12B99C]">Contact & Address</h2>
+
             <ul className="space-y-4 text-sm text-gray-300">
               <li className="flex items-start gap-3">
-                <FaEnvelope className="mt-1 text-[#12B99C]" />
-                <a href="mailto:contact@trustlinefintech.com" className="hover:text-[#12B99C] transition">contact@trustlinefintech.com</a>
+                <span className="w-5 h-5 flex items-center justify-center text-[#12B99C] mt-1">
+                  <FaEnvelope size={16} />
+                </span>
+                <a
+                  href="https://mail.google.com/mail/?view=cm&fs=1&to=contact@trustlinefintech.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#12B99C] transition"
+                >
+                  contact@trustlinefintech.com
+                </a>
+
               </li>
+
               <li className="flex items-start gap-3">
-                <FaPhoneAlt className="mt-1 text-[#12B99C]" />
-                <a href="tel:+918766681450" className="hover:text-[#12B99C] transition">+91 8766681450</a>
+                <span className="w-5 h-5 flex items-center justify-center text-[#12B99C] mt-1">
+                  <FaPhoneAlt size={16} />
+                </span>
+                <a
+                  href="tel:+918766681450"
+                  className="hover:text-[#12B99C] transition"
+                >
+                  +91 8766681450
+                </a>
               </li>
+
               <li className="flex items-start gap-3">
-                <FaMapMarkerAlt className="mt-1 text-[#12B99C]" />
+                <span className="w-5 h-5 flex items-center justify-center text-[#12B99C] mt-1">
+                  <FaMapMarkerAlt size={16} />
+                </span>
                 <span>
                   SR.No.53/2A/1, Office No. 014,<br />
                   A Wing, 3rd Floor,<br />
-                  City Vista Fountain Road,<br />
+                  City Vista, Fountain Road,<br />
                   Ashoka Nagar,<br />
                   Kharadi, Pune - 411014
-
-                  © 2025 Trustline Fintech. All Rights Reserved.
                 </span>
               </li>
             </ul>
           </div>
+
+
+
         </div>
 
         {/* Divider */}
