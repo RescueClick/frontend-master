@@ -325,7 +325,7 @@ const Home = () => {
             <img
               src="https://thumbs.dreamstime.com/b/businessman-using-tablet-laptop-analyzing-sales-data-economic-growth-graph-chart-business-strategy-digital-marketing-154742021.jpg"
               alt="Businessman analyzing financial data"
-              className="w-full max-w-sm h-auto rounded-2xl shadow-xl object-cover transform transition-transform duration-500 hover:scale-105"
+              className="w-full max-w-lg h-auto rounded-2xl shadow-xl object-cover transform transition-transform duration-500 hover:scale-105"
               loading="lazy"
             />
           </div>

@@ -128,7 +128,7 @@ const AboutUs = () => {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Team</h2>
             <p className="text-xl text-[#12B99C] font-semibold">
-              For Every Solution - We have #Dedicated team!
+              For Every Solution - We have a Dedicated team!
             </p>
           </div>
 

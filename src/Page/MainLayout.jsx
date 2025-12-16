@@ -62,7 +62,7 @@ const MainLayout = () => {
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#12B99C]" />
                 <a href="mailto:support@trustlinefintech.com" className="font-semibold hover:text-[#12B99C]">
-                  Email Us : <span className="text-gray-400">support@trustlinefintech.com</span>
+                  Email Us : <span className="text-gray-400">contact@trustlinefintech.com</span>
                 </a>
               </div>
             </div>
@@ -71,23 +71,21 @@ const MainLayout = () => {
 
         {/* Navbar */}
         <header className="bg-white w-full font-inter border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto sm:px-6">
             <div className="flex justify-between items-center py-3">
               {/* Logo */}
               <div className="flex items-center gap-2 sm:gap-3">
-                {/* <div className="w-10 h-10 bg-gradient-to-br from-[#12B99C] to-[#0ea688] rounded-xl flex items-center justify-center text-white font-bold text-base shadow-lg">
-                  T
-                </div> */}
+
 
                 <div>
                   <img
                     src={logo}
                     alt="Logo"
-                    style={{ width: "48px", height: "48px" }}
+                    style={{ width: "48px", height: "48px"}}
                     className="object-contain"
                   />
                 </div>
-
+               
                 <div className="block leading-tight">
                   <div className="text-base sm:text-xl font-bold text-gray-800">Trustline Fintech</div>
                   <div className="text-[10px] sm:text-xs text-[#12B99C] font-medium">
@@ -242,10 +240,10 @@ const MainLayout = () => {
             </ul>
           </div>
 
-   <div>
- <h2 className="text-xl font-bold mb-4 text-[#12B99C]">Social Links</h2>
- <div className="mt-6">
-             
+          <div>
+            <h2 className="text-xl font-bold mb-4 text-[#12B99C]">Social Links</h2>
+            <div className="mt-6">
+
               <div className="flex items-center gap-4">
 
                 <a
@@ -274,16 +272,16 @@ const MainLayout = () => {
 
               </div>
             </div>
- </div>
+          </div>
           {/* Legal */}
-            <div>
-              <h2 className="text-xl font-bold mb-4 text-[#12B99C]">Documents & Legal</h2>
-              <ul className="space-y-3 text-sm text-gray-300">
-                <li><a href="/Documents" className="hover:text-[#12B99C]">Documents List</a></li>
-                <li><a href="/TermsConditions" className="hover:text-[#12B99C]">Terms & Conditions</a></li>
-                <li><a href="/PrivacyPolicy" className="hover:text-[#12B99C]">Privacy Policy</a></li>
-                </ul>
-            </div>
+          <div>
+            <h2 className="text-xl font-bold mb-4 text-[#12B99C]">Documents & Legal</h2>
+            <ul className="space-y-3 text-sm text-gray-300">
+              <li><a href="/Documents" className="hover:text-[#12B99C]">Documents List</a></li>
+              <li><a href="/TermsConditions" className="hover:text-[#12B99C]">Terms & Conditions</a></li>
+              <li><a href="/PrivacyPolicy" className="hover:text-[#12B99C]">Privacy Policy</a></li>
+            </ul>
+          </div>
 
           {/* Contact */}
           <div>
@@ -291,7 +289,7 @@ const MainLayout = () => {
             <ul className="space-y-4 text-sm text-gray-300">
               <li className="flex items-start gap-3">
                 <FaEnvelope className="mt-1 text-[#12B99C]" />
-                <a href="mailto:support@trustlinefintech.com" className="hover:text-[#12B99C] transition">support@trustlinefintech.com</a>
+                <a href="mailto:contact@trustlinefintech.com" className="hover:text-[#12B99C] transition">contact@trustlinefintech.com</a>
               </li>
               <li className="flex items-start gap-3">
                 <FaPhoneAlt className="mt-1 text-[#12B99C]" />
@@ -305,6 +303,8 @@ const MainLayout = () => {
                   City Vista Fountain Road,<br />
                   Ashoka Nagar,<br />
                   Kharadi, Pune - 411014
+
+                  © 2025 Trustline Fintech. All Rights Reserved.
                 </span>
               </li>
             </ul>

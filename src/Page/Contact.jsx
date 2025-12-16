@@ -294,11 +294,17 @@ const Contact = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Mail className="h-6 w-6 text-emerald-100" />
-                  <div>
+                  {/* <Mail className="h-6 w-6 text-emerald-100" /> */}
+                  {/* <div>
                     <p className="font-semibold">Quick Response</p>
                     <p className="text-emerald-100 text-sm">We respond within 24 hours guaranteed</p>
-                  </div>
+                  </div> */}
+                  <div className="flex items-center gap-2">
+                <Mail className="w-6 h-6 text-emerald-100" />
+                <a href="mailto:support@trustlinefintech.com" className="font-semibold hover:text-[#12B99C]">
+                  Email Us : <span className="text-emerald-100 text-sm">contact@trustlinefintech.com</span>
+                </a>
+              </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <MessageSquare className="h-6 w-6 text-emerald-100" />
