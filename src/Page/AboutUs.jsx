@@ -128,7 +128,7 @@ const AboutUs = () => {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Team</h2>
             <p className="text-xl text-[#12B99C] font-semibold">
-              For Every Solution - We have #Dedicated team!
+              For Every Solution - We have a Dedicated team!
             </p>
           </div>
 
@@ -166,24 +166,7 @@ const AboutUs = () => {
         </div>
       </section> */}
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <Building className="h-8 w-8 text-[#12B99C]" />
-              <span className="text-2xl font-bold">Trustline Fintech</span>
-            </div>
-            <p className="text-gray-400">
-              Trustline Fintech - Your trusted financial partner since 2018
-            </p>
-          </div>
-
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 Trustline Fintech. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+   
     </div>
   )
 }
