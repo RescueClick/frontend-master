@@ -16,6 +16,7 @@ import {loginUser,
   getAllCustomers,
   fetchBanners,
   deleteRm,
+  rejectPartner,
   loginAsUserThunk
 
  } from "../thunks/adminThunks"; 
@@ -147,6 +148,12 @@ const initialState = {
 
   // Delete RM action state
   deleteRm: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  rejectPartner: {
     loading: false,
     error: null,
     success: false,
@@ -538,6 +545,30 @@ const adminSlice = createSlice({
           state.deleteRm.loading = false;
           state.deleteRm.error = action.payload;
           state.deleteRm.success = false;
+        });
+
+      // 🔹 Reject Partner
+      builder
+        .addCase(rejectPartner.pending, (state) => {
+          state.rejectPartner.loading = true;
+          state.rejectPartner.error = null;
+          state.rejectPartner.success = false;
+        })
+        .addCase(rejectPartner.fulfilled, (state, action) => {
+          state.rejectPartner.loading = false;
+          state.rejectPartner.data = action.payload;
+          state.rejectPartner.success = true;
+          // Remove rejected partner from partners list
+          if (state.partners.data) {
+            state.partners.data = state.partners.data.filter(
+              (p) => p._id !== action.meta.arg
+            );
+          }
+        })
+        .addCase(rejectPartner.rejected, (state, action) => {
+          state.rejectPartner.loading = false;
+          state.rejectPartner.error = action.payload;
+          state.rejectPartner.success = false;
         });
 
       // 🔹 Login As (impersonation) Thunk

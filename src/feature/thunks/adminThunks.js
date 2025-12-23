@@ -657,6 +657,32 @@ export const activatePartner = createAsyncThunk(
   }
 );
 
+// Thunk to reject/delete Partner request with all documents
+export const rejectPartner = createAsyncThunk(
+  "admin/rejectPartner",
+  async (partnerId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+
+      const response = await axios.delete(
+        `${backendurl}/admin/partner/${partnerId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data.message;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to reject Partner"
+      );
+    }
+  }
+);
+
 // Async thunk for Login As (Impersonation)
 export const loginAsUserThunk = createAsyncThunk(
   "auth/loginAsUser",

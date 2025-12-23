@@ -107,6 +107,7 @@ export default function HomeLoanSelfEmployee() {
     otherDocs: null,
     annualTurnover: "",
     partnerReferralCode: "",
+    loanAmount: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);
@@ -343,7 +344,7 @@ export default function HomeLoanSelfEmployee() {
     
     if (!formData.aadharFront) errors.aadharFront = "Aadhar Front is required";
     if (!formData.aadharBack) errors.aadharBack = "Aadhar Back is required";
-    if (!formData.panCard) errors.panCard = "Pan card number is required.";
+    if (!formData.panCard) errors.panCard = "Pan card document is required.";
     if (!formData.selfie) errors.selfie = "Upload selfie is required."
 
 
@@ -355,7 +356,7 @@ export default function HomeLoanSelfEmployee() {
     if (!formData.businessVintage)
       errors.businessVintage = "Business vintage is required.";
     if (!formData.annualTurnover)
-      errors.annualTurnover = "Annual Turnover is required. "
+      errors.annualTurnover = "Annual Turnover is required.";
 
 
     // Female applicant requires co-applicant docs
@@ -433,23 +434,23 @@ export default function HomeLoanSelfEmployee() {
 
 
   const handleSubmit = async () => {
+    console.log("=== Form Submit Started ===");
     setLoading(true);
     setError("");
     setValidationErrors([]);
     setSuccessMessage("");
     setSavedApplication(null);
     try {
+      console.log("Validating form data...", formData);
       const errors = validateForm(formData, sameAddress);
+      console.log("Validation errors:", errors);
       if (Object.keys(errors).length > 0) {
+        console.log("Form validation failed, stopping submission");
         setFieldErrors(errors);
         setLoading(false);
         return;
       }
-      if (error) {
-        setValidationErrors([error]);
-        setLoading(false);
-        return;
-      }
+      console.log("Validation passed, building application data...");
 
       // Build nested JSON structure
       const applicationData = {
@@ -468,17 +469,17 @@ export default function HomeLoanSelfEmployee() {
           maritalStatus: formData.maritalStatus,
           SpouseName: formData.SpouseName,
           panNumber: formData.panNumber,
-          loanAmount: formData.loanAmount || 0,
+          loanAmount: formData.loanAmount ? Number(formData.loanAmount) : 0,
           currentAddress: formData.currentAddress,
           currentAddressPincode: formData.currentAddressPincode,
           currentAddressOwnRented: formData.currentAddressOwnRented,
           currentAddressStability: formData.currentAddressStability,
           currentAddressLandmark: formData.currentAddressLandmark,
-          permanentAddress: formData.permanentAddress,
-          permanentAddressPincode: formData.permanentAddressPincode,
-          permanentAddressOwnRented: formData.permanentAddressOwnRented,
-          permanentAddressStability: formData.permanentAddressStability,
-          permanentAddressLandmark: formData.permanentAddressLandmark,
+          permanentAddress: sameAddress ? formData.currentAddress : formData.permanentAddress,
+          permanentAddressPincode: sameAddress ? formData.currentAddressPincode : formData.permanentAddressPincode,
+          permanentAddressOwnRented: sameAddress ? formData.currentAddressOwnRented : formData.permanentAddressOwnRented,
+          permanentAddressStability: sameAddress ? formData.currentAddressStability : formData.permanentAddressStability,
+          permanentAddressLandmark: sameAddress ? formData.currentAddressLandmark : formData.permanentAddressLandmark,
         },
         product: {
           businessName: formData.businessName,
@@ -591,12 +592,21 @@ export default function HomeLoanSelfEmployee() {
 
 
       if (!checkFileSize(docsQueue)) {
+        console.log("File size check failed");
         setLoading(false);
         return;
       }
+      
+      console.log("Preparing API request...");
+      console.log("Docs queue length:", docsQueue.length);
+      console.log("Application data:", JSON.stringify(applicationData, null, 2));
+      
       const endpoint = isPartnerLoggedIn
         ? `${backendurl}/partner/create-applications`
         : `${backendurl}/partner/public/create-application`;
+      
+      console.log("API Endpoint:", endpoint);
+      console.log("Is Partner Logged In:", isPartnerLoggedIn);
 
       const headers = isPartnerLoggedIn
         ? {
@@ -610,6 +620,7 @@ export default function HomeLoanSelfEmployee() {
       // Create AbortController for request cancellation
       abortControllerRef.current = new AbortController();
 
+      console.log("Making API POST request...");
       const response = await axios.post(endpoint, formDataToSend, {
         headers,
         timeout: 120000, // 120 seconds timeout for file uploads
@@ -626,7 +637,9 @@ export default function HomeLoanSelfEmployee() {
           }
         },
       });
+      console.log("API Response received:", response);
       const data = response.data;
+      console.log("Response data:", data);
 
       setApplicationId(data.id);
       setSavedApplication(data);
@@ -634,23 +647,37 @@ export default function HomeLoanSelfEmployee() {
         data.message || "Application saved successfully. You can submit now."
       );
       setModalOpen(true);
+      console.log("=== Form Submit Success ===");
     } catch (err) {
+      console.error("=== Form Submit Error ===", err);
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+        request: err.request,
+      });
+      
       // Handle different error types
       if (axios.isCancel(err)) {
+        console.log("Request was cancelled");
         setError("Request was cancelled. Please try again.");
       } else if (err.code === 'ECONNABORTED') {
+        console.log("Request timeout");
         setError("Request timeout. Please check your connection and try again.");
       } else if (err.response) {
         // Server responded with error status
+        console.log("Server error response:", err.response.status, err.response.data);
         setError(
           err.response?.data?.message || err.message || "Something went wrong."
         );
         setValidationErrors(err.response?.data?.errors || []);
       } else if (err.request) {
         // Request was made but no response received
+        console.log("No response received from server");
         setError("Network error. Please check your connection and try again.");
       } else {
         // Something else happened
+        console.log("Unexpected error:", err);
         setError("An unexpected error occurred. Please try again.");
       }
     } finally {
@@ -785,6 +812,7 @@ export default function HomeLoanSelfEmployee() {
       reference2Contact: "",
       otherDocs: null,
       annualTurnover: "",
+      loanAmount: "",
     })
   }
 

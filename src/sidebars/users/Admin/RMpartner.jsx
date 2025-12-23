@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Eye, Search } from "lucide-react";
+import { Eye, Search, Trash2 } from "lucide-react";
 
 import { fetchRMs } from "../../../feature/thunks/adminThunks";
 import { useDispatch, useSelector } from "react-redux";
 import {
   assignPartnerToRm,
   getUnassignedPartners,
+  rejectPartner,
 } from "../../../feature/thunks/adminThunks";
 import { getAuthData } from "../../../utils/localStorage";
 
@@ -71,6 +72,9 @@ export default function RMpartner() {
     partnerData: null,
   });
 
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [partnerToReject, setPartnerToReject] = useState(null);
+
   const dispatch = useDispatch();
   const { loading, error, data } = useSelector(
     (state) => state.admin.unassignedPartners
@@ -88,6 +92,26 @@ export default function RMpartner() {
   }, [dispatch]);
 
   const [customers] = useState(customersData);
+
+  const handleRejectPartner = async () => {
+    if (!partnerToReject) return;
+    
+    try {
+      await dispatch(rejectPartner(partnerToReject._id)).unwrap();
+      // Refetch unassigned partners after rejection
+      dispatch(getUnassignedPartners());
+      setRejectModalOpen(false);
+      setPartnerToReject(null);
+      alert("Partner request rejected and deleted successfully");
+    } catch (error) {
+      alert(error || "Failed to reject partner");
+    }
+  };
+
+  const handleCancelReject = () => {
+    setRejectModalOpen(false);
+    setPartnerToReject(null);
+  };
 
   return (
     <div
@@ -237,6 +261,50 @@ export default function RMpartner() {
                   Confirm & Assign RM
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Partner Modal */}
+      {rejectModalOpen && partnerToReject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              Reject Partner Request
+            </h3>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to <span className="font-semibold text-red-600">reject and delete</span> the partner request for{" "}
+              <span className="font-semibold">
+                {partnerToReject.firstName} {partnerToReject.lastName}
+              </span>?
+              <br />
+              <br />
+              <span className="text-sm text-red-600">
+                ⚠️ This action will permanently delete:
+              </span>
+              <ul className="text-sm text-gray-600 mt-2 ml-4 list-disc">
+                <li>Partner account and all documents</li>
+                <li>All associated applications</li>
+                <li>All associated payouts</li>
+                <li>All assigned targets</li>
+              </ul>
+              <br />
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition"
+                onClick={handleCancelReject}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+                onClick={handleRejectPartner}
+              >
+                Yes, Reject & Delete
+              </button>
             </div>
           </div>
         </div>
@@ -410,6 +478,7 @@ export default function RMpartner() {
               <th className="px-3 py-3 text-left">Created on</th>
               <th className="px-3 py-3 text-left">assign</th>
               <th className="px-3 py-3 text-left">view more</th>
+              <th className="px-3 py-3 text-left">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -450,6 +519,19 @@ export default function RMpartner() {
                   >
                     <Eye className="w-4 h-4" />
                     View More
+                  </button>
+                </td>
+
+                <td className="px-3 py-2">
+                  <button
+                    className="p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition"
+                    onClick={() => {
+                      setPartnerToReject(partner);
+                      setRejectModalOpen(true);
+                    }}
+                    title="Reject & Delete"
+                  >
+                    <Trash2 size={16} />
                   </button>
                 </td>
               </tr>

@@ -4,6 +4,7 @@ import { Phone, DollarSign, User, Calendar, Info, CheckCircle, XCircle, Clock } 
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 import { useNavigate } from "react-router-dom";
+import NotificationBell from "../../../components/NotificationBell";
 
 
 const Customer = () => {
@@ -154,9 +155,12 @@ const Customer = () => {
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-gray-100 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-sm py-2 px-4 sticky top-0 z-10">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 text-center">
-          My Loans
-        </h1>
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            My Loans
+          </h1>
+          <NotificationBell />
+        </div>
       </header>
 
       {/* Content */}

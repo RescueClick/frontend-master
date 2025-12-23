@@ -93,6 +93,8 @@ import PartnerCustomers from "./sidebars/users/Partner/Customers";
 import PartnerApplications from "./sidebars/users/Partner/Applications";
 import PartnerEmiCalculator from "./sidebars/users/Partner/EmiCalculator";
 import KYCDetails from "./sidebars/users/Partner/KYCDetails";
+import CompleteApplication from "./sidebars/users/Partner/CompleteApplication";
+import DocumentUpload from "./sidebars/users/Partner/DocumentUpload";
 
 
 
@@ -282,6 +284,8 @@ const AppRoutes = () => {
         <Route path="applications" element={<PartnerApplications />} />
         <Route path="EmiCalculator" element={<PartnerEmiCalculator />} />
         <Route path="KYCDetails" element={<KYCDetails />} />
+        <Route path="complete-application" element={<CompleteApplication />} />
+        <Route path="document-upload" element={<DocumentUpload />} />
 
         <Route path="get-loan" element={<GetLoan />}/>
         <Route path="personal-loan" element={<PersonalLoan />}  />

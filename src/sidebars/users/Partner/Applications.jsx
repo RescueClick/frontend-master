@@ -38,6 +38,8 @@ const Application = () => {
 
         const mappedData = res.data.map((app) => ({
           id: app.appNo || app._id, // Prefer appNo (e.g., TLF0001)
+          applicationId: app._id, // Store MongoDB _id for API calls
+          customerId: app.customerId?._id || app.customerId || app.customer?._id || "", // Store customer ID
           customerName: `${app.customer?.firstName || ""} ${
             app.customer?.lastName || ""
           }`.trim(),
@@ -50,6 +52,10 @@ const Application = () => {
           approvalAmount: app.approvedLoanAmount
             ? `₹${app.approvedLoanAmount.toLocaleString("en-IN")}`
             : "—",
+          disbursedAmount: app.status === "DISBURSED" && app.approvedLoanAmount
+            ? app.approvedLoanAmount
+            : 0, // Disbursed amount (only when status is DISBURSED)
+          payoutAmount: app.payoutAmount || 0, // Payout amount
           status: mapStatus(app.status), // normalize backend → UI
           stageHistory: app.stageHistory || [],
         }));
@@ -113,6 +119,24 @@ const Application = () => {
       month: "short",
       day: "numeric",
     });
+  };
+
+  // Convert loan type to shortcut
+  const getLoanTypeShortcut = (loanType) => {
+    if (!loanType) return "—";
+    const type = loanType.toUpperCase();
+    switch (type) {
+      case "HOME_LOAN_SALARIED":
+        return "HLS";
+      case "HOME_LOAN_SELF_EMPLOYED":
+        return "HLB";
+      case "PERSONAL_LOAN":
+        return "PL";
+      case "BUSINESS_LOAN":
+        return "BL";
+      default:
+        return loanType; // Return original if no match
+    }
   };
 
   const filteredApplications = applications.filter((application) => {
@@ -306,58 +330,76 @@ const Application = () => {
                 <thead style={{ backgroundColor: "#12B99C" }}>
                   <tr>
                     <th
-                      className="px-4 py-4 text-left text-sm font-semibold"
+                      className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap"
                       style={{ color: "white" }}
                     >
-                      User Name
+                      Name
                     </th>
                     <th
-                      className="px-4 py-4 text-left text-sm font-semibold"
+                      className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap"
                       style={{ color: "white" }}
                     >
-                      Application Id
+                      App ID
                     </th>
                     <th
-                      className="px-4 py-4 text-left text-sm font-semibold"
+                      className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap"
                       style={{ color: "white" }}
                     >
                       Contact
                     </th>
                     <th
-                      className="px-4 py-4 text-left text-sm font-semibold"
+                      className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap"
                       style={{ color: "white" }}
                     >
                       Date
                     </th>
                     <th
-                      className="px-4 py-4 text-left text-sm font-semibold"
+                      className="px-3 py-3 text-center text-xs font-semibold whitespace-nowrap"
                       style={{ color: "white" }}
                     >
-                      Loan Type
+                      Type
                     </th>
                     <th
-                      className="px-4 py-4 text-left text-sm font-semibold"
+                      className="px-3 py-3 text-right text-xs font-semibold whitespace-nowrap"
                       style={{ color: "white" }}
                     >
-                      Loan Amount
+                      Loan Amt
                     </th>
                     <th
-                      className="px-4 py-4 text-left text-sm font-semibold"
+                      className="px-3 py-3 text-right text-xs font-semibold whitespace-nowrap"
                       style={{ color: "white" }}
                     >
-                      Approval Amount
+                      Approved
                     </th>
                     <th
-                      className="px-4 py-4 text-left text-sm font-semibold"
+                      className="px-3 py-3 text-right text-xs font-semibold whitespace-nowrap"
+                      style={{ color: "white" }}
+                    >
+                      Disbursed
+                    </th>
+                    <th
+                      className="px-3 py-3 text-right text-xs font-semibold whitespace-nowrap"
+                      style={{ color: "white" }}
+                    >
+                      Payout
+                    </th>
+                    <th
+                      className="px-3 py-3 text-center text-xs font-semibold whitespace-nowrap"
                       style={{ color: "white" }}
                     >
                       Status
                     </th>
                     <th
-                      className="px-4 py-4 text-left text-sm font-semibold"
+                      className="px-3 py-3 text-center text-xs font-semibold whitespace-nowrap"
                       style={{ color: "white" }}
                     >
                       Remarks
+                    </th>
+                    <th
+                      className="px-3 py-3 text-center text-xs font-semibold whitespace-nowrap"
+                      style={{ color: "white" }}
+                    >
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -367,76 +409,99 @@ const Application = () => {
                       key={application.id}
                       className="hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-4 py-4">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm mr-3">
+                      <td className="px-3 py-3">
+                        <div className="flex items-center min-w-0">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs mr-2 flex-shrink-0">
                             {application.customerName
                               .split(" ")
                               .map((n) => n[0])
                               .join("")}
                           </div>
                           <div
-                            className="text-sm font-medium"
+                            className="text-xs font-medium truncate"
                             style={{ color: "#111827" }}
+                            title={application.customerName}
                           >
                             {application.customerName}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-3">
                         <div
-                          className="font-mono text-sm font-medium"
+                          className="font-mono text-xs font-medium"
                           style={{ color: "#111827" }}
                         >
                           {application.id}
                         </div>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm text-gray-600">
+                      <td className="px-3 py-3">
+                        <div className="text-xs text-gray-600 whitespace-nowrap">
                           {application.contact}
                         </div>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm text-gray-600">
+                      <td className="px-3 py-3">
+                        <div className="text-xs text-gray-600 whitespace-nowrap">
                           {formatDate(application.dateSubmitted)}
                         </div>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm" style={{ color: "#111827" }}>
-                          {application.loanType}
+                      <td className="px-3 py-3">
+                        <div className="flex justify-center">
+                          <span className="inline-flex px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-semibold">
+                            {getLoanTypeShortcut(application.loanType)}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-3">
                         <div
-                          className="text-sm font-medium"
+                          className="text-xs font-medium text-right whitespace-nowrap"
                           style={{ color: "#111827" }}
                         >
                           {application.loanAmount}
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-3">
                         <div
-                          className="text-sm font-medium"
+                          className="text-xs font-medium text-right whitespace-nowrap"
                           style={{ color: "#111827" }}
                         >
                           {application.approvalAmount}
                         </div>
                       </td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
-                            application.status
-                          )}`}
+                      <td className="px-3 py-3">
+                        <div
+                          className="text-xs font-medium text-right whitespace-nowrap"
+                          style={{ color: application.disbursedAmount > 0 ? "#10B981" : "#9CA3AF" }}
                         >
-                          {application.status}
-                        </span>
+                          {application.disbursedAmount > 0
+                            ? `₹${application.disbursedAmount.toLocaleString("en-IN")}`
+                            : "—"}
+                        </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-3">
+                        <div
+                          className="text-xs font-semibold text-right whitespace-nowrap"
+                          style={{ color: "#7C3AED" }}
+                        >
+                          ₹ {application.payoutAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex justify-center">
+                          <span
+                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusBadgeColor(
+                              application.status
+                            )}`}
+                          >
+                            {application.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
                         <div className="flex items-center justify-center">
                           <button
-                            className="px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity text-sm"
+                            className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs"
                             style={{ backgroundColor: "orange" }}
-                            title="View"
+                            title="View Remarks"
                             onClick={() => {
                               const lastRemark = application.stageHistory
                                 ?.length
@@ -451,6 +516,25 @@ const Application = () => {
                           >
                             View
                           </button>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-center gap-1">
+                          {application.applicationId && application.customerId && (
+                            <button
+                              className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs flex items-center gap-1"
+                              style={{ backgroundColor: "#12B99C" }}
+                              title="Upload Documents"
+                              onClick={() => {
+                                navigate(
+                                  `/partner/complete-application?applicationId=${application.applicationId}&customerId=${application.customerId}`
+                                );
+                              }}
+                            >
+                              <Eye size={12} />
+                              Docs
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -505,7 +589,11 @@ const Application = () => {
                   </div>
                   <div>
                     <div className="text-gray-500 text-xs mb-1">Loan Type</div>
-                    <div className="font-medium text-gray-900">{application.loanType}</div>
+                    <div className="font-medium">
+                      <span className="inline-flex px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
+                        {getLoanTypeShortcut(application.loanType)}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <div className="text-gray-500 text-xs mb-1">Loan Amount</div>
@@ -515,10 +603,22 @@ const Application = () => {
                     <div className="text-gray-500 text-xs mb-1">Approval Amount</div>
                     <div className="font-medium text-gray-900">{application.approvalAmount}</div>
                   </div>
+                  <div>
+                    <div className="text-gray-500 text-xs mb-1">Disbursed</div>
+                    <div className={`font-medium ${application.disbursedAmount > 0 ? "text-green-700" : "text-gray-400"}`}>
+                      {application.disbursedAmount > 0
+                        ? `₹${application.disbursedAmount.toLocaleString("en-IN")}`
+                        : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500 text-xs mb-1">Payout</div>
+                    <div className="font-medium text-purple-700">₹ {application.payoutAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
+                  </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
                   <button
                     className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity text-sm"
                     style={{ backgroundColor: "orange" }}
@@ -536,6 +636,20 @@ const Application = () => {
                   >
                     View Remarks
                   </button>
+                  {application.applicationId && application.customerId && (
+                    <button
+                      className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity text-sm flex items-center gap-1"
+                      style={{ backgroundColor: "#12B99C" }}
+                      onClick={() => {
+                        navigate(
+                          `/partner/complete-application?applicationId=${application.applicationId}&customerId=${application.customerId}`
+                        );
+                      }}
+                    >
+                      <Eye size={14} />
+                      Documents
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

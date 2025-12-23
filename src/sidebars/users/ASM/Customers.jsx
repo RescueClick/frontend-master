@@ -314,9 +314,16 @@ const Customer = () => {
               className="pl-10 pr-8 py-3 border border-gray-200 rounded-xl bg-white min-w-[160px]"
             >
               <option value="All">All Status</option>
-              <option value="In Process">In Process</option>
-              <option value="Disbursed">Disbursed</option>
-              <option value="Rejected">Rejected</option>
+              <option value="DRAFT">Draft</option>
+              <option value="SUBMITTED">Submitted</option>
+              <option value="DOC_INCOMPLETE">Document Incomplete</option>
+              <option value="DOC_COMPLETE">Document Complete</option>
+              <option value="DOC_SUBMITTED">Document Submitted</option>
+              <option value="UNDER_REVIEW">Under Review</option>
+              <option value="APPROVED">Approved</option>
+              <option value="AGREEMENT">Agreement</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="DISBURSED">Disbursed</option>
             </select>
           </div>
         </div>

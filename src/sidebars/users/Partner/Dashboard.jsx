@@ -546,9 +546,8 @@ const Dashboard = () => {
 
           <div className="space-y-4">
             {targetVsAchievement?.map((item, index) => (
-              <>
-                {item.target != 0 && (
-                  <div key={index} className="space-y-2">
+              item.target != 0 ? (
+                  <div key={`target-${index}-${item.month}`} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <span className="text-sm font-medium text-gray-700 w-8">
@@ -598,8 +597,7 @@ const Dashboard = () => {
                       ></div>
                     </div>
                   </div>
-                )}
-              </>
+                ) : null
             ))}
           </div>
         </div>
