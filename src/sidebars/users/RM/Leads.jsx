@@ -37,8 +37,9 @@ const Leads = () => {
   const [error, setError] = useState(null);
 
   // Map actual app statuses to UI tabs
+  // Note: DRAFT is normalized to SUBMITTED, but we include both for backward compatibility
   const STATUS_MAPPING = {
-    New: ["DRAFT", "SUBMITTED"],
+    New: ["DRAFT", "SUBMITTED"], // DRAFT will be normalized to SUBMITTED in display
     InProcess: [
       "DOC_INCOMPLETE",
       "DOC_COMPLETE",

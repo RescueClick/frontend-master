@@ -74,9 +74,11 @@ const Customer = () => {
       customer.customerEmployeeId.toLowerCase().includes(search) ||
       customer.contact.includes(search);
 
+    // Normalize DRAFT to SUBMITTED for filtering
+    const normalizedStatus = customer.status === "DRAFT" ? "SUBMITTED" : customer.status;
     const matchesStatus =
       statusFilter === "All" ||
-      customer.status.toLowerCase() === statusFilter.toLowerCase();
+      normalizedStatus?.toLowerCase() === statusFilter.toLowerCase();
 
     return matchesSearch && matchesStatus;
   });
@@ -132,9 +134,9 @@ const Customer = () => {
             <div className="text-sm font-mono text-teal-600">{customer.customerEmployeeId}</div>
           </div>
         </div>
-        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(customer.status)} whitespace-nowrap ml-2`}>
-          {customer.status}
-        </span>
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(customer.status === "DRAFT" ? "SUBMITTED" : customer.status)} whitespace-nowrap ml-2`}>
+                            {customer.status === "DRAFT" ? "SUBMITTED" : customer.status}
+                          </span>
       </div>
 
       <div className="space-y-2 text-sm">
@@ -179,7 +181,7 @@ const Customer = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[ 
             { count: customersData.length, label: "Total Customers", bg: "bg-blue-600", icon: <Users size={16} className="text-blue-200 sm:w-5 sm:h-5" /> },
-            { count: getStatusCount(customersData, "DRAFT"), label: "Pending", bg: "bg-yellow-500", icon: <Clock size={16} className="text-yellow-100 sm:w-5 sm:h-5" /> },
+            { count: getStatusCount(customersData, "SUBMITTED") + getStatusCount(customersData, "DRAFT"), label: "Pending", bg: "bg-yellow-500", icon: <Clock size={16} className="text-yellow-100 sm:w-5 sm:h-5" /> },
             { count: getStatusCount(customersData, "REJECTED"), label: "Rejected", bg: "bg-red-600", icon: <XCircle size={16} className="text-red-100 sm:w-5 sm:h-5" /> },
             { count: getStatusCount(customersData, "DISBURSED"), label: "Disbursed", bg: "bg-green-600", icon: <CheckCircle size={16} className="text-green-100 sm:w-5 sm:h-5" /> },
           ].map((item, index) => (
@@ -240,7 +242,6 @@ const Customer = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
                 <option value="All">All Status</option>
-                <option value="DRAFT">Draft</option>
                 <option value="SUBMITTED">Submitted</option>
                 <option value="DOC_INCOMPLETE">Document Incomplete</option>
                 <option value="DOC_COMPLETE">Document Complete</option>
@@ -323,8 +324,8 @@ const Customer = () => {
                           ₹ {(customer.payoutAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </td>
                     <td className="px-3 lg:px-5 py-3">
-                          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(customer.status)} whitespace-nowrap`}>
-                            {customer.status}
+                          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(customer.status === "DRAFT" ? "SUBMITTED" : customer.status)} whitespace-nowrap`}>
+                            {customer.status === "DRAFT" ? "SUBMITTED" : customer.status}
                           </span>
                         </td>
                       </tr>

@@ -194,10 +194,12 @@ const Customers = () => {
 
 
 
-    // ✅ Status match (if your API gives status)
+    // ✅ Status match (normalize DRAFT to SUBMITTED, case-insensitive)
+    const customerStatus = customer.status?.toUpperCase();
+    const normalizedStatus = customerStatus === "DRAFT" ? "SUBMITTED" : customerStatus;
     const matchesStatus =
       selectedFilterLower === "all" ||
-      customer.status?.toLowerCase() === selectedFilterLower;
+      normalizedStatus?.toLowerCase() === selectedFilterLower;
 
     // ✅ Loan type match (if your API gives loanType)
     const matchesLoanType =
@@ -264,20 +266,29 @@ const Customers = () => {
 
   function InProcessCount(applications) {
     if (!Array.isArray(applications)) return 0;
-    // Count applications where status is DRAFT
-    return applications.filter((app) => app.status === "DRAFT").length;
+    // Count applications that are in process (not DISBURSED, REJECTED, or APPROVED)
+    return applications.filter((app) => {
+      const status = app.status?.toUpperCase();
+      return status && !["DISBURSED", "REJECTED", "APPROVED"].includes(status);
+    }).length;
   }
 
   function RejectedCount(applications) {
     if (!Array.isArray(applications)) return 0;
-    // Count applications where status is DRAFT
-    return applications.filter((app) => app.status === "Rejected").length;
+    // Count applications where status is REJECTED
+    return applications.filter((app) => {
+      const status = app.status?.toUpperCase();
+      return status === "REJECTED";
+    }).length;
   }
 
   function DisbursedCount(applications) {
     if (!Array.isArray(applications)) return 0;
-    // Count applications where status is DRAFT
-    return applications.filter((app) => app.status === "Disbursed").length;
+    // Count applications where status is DISBURSED
+    return applications.filter((app) => {
+      const status = app.status?.toUpperCase();
+      return status === "DISBURSED";
+    }).length;
   }
 
   const stats = [
@@ -656,10 +667,10 @@ loginAsUser(userId, navigate);
                       <td className="px-6 py-4">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                            customer.status
+                            customer.status === "DRAFT" ? "SUBMITTED" : customer.status
                           )}`}
                         >
-                          {customer.status || "N/A"}
+                          {customer.status === "DRAFT" ? "SUBMITTED" : (customer.status || "N/A")}
                         </span>
                       </td>
 

@@ -42,9 +42,11 @@ const filteredCustomers = applications.filter((customer) => {
     customer.id?.toLowerCase().includes(term) ||
     customer.phone?.toLowerCase().includes(term);
 
-  const matchesFilter =
-    filterStatus === "All" ||
-    customer.status?.toLowerCase() === filterStatus.toLowerCase();
+      // Normalize DRAFT to SUBMITTED for filtering
+      const normalizedStatus = customer.status === "DRAFT" ? "SUBMITTED" : customer.status;
+      const matchesFilter =
+        filterStatus === "All" ||
+        normalizedStatus?.toLowerCase() === filterStatus.toLowerCase();
 
   return matchesSearch && matchesFilter;
 });
@@ -105,7 +107,6 @@ const filteredCustomers = applications.filter((customer) => {
               className="pl-10 pr-8 py-3 border border-gray-200 rounded-xl bg-white min-w-[160px]"
             >
               <option value="All">All Status</option>
-              <option value="DRAFT">Draft</option>
               <option value="SUBMITTED">Submitted</option>
               <option value="DOC_INCOMPLETE">Document Incomplete</option>
               <option value="DOC_COMPLETE">Document Complete</option>
@@ -168,10 +169,10 @@ const filteredCustomers = applications.filter((customer) => {
                   <td className="px-3 py-4">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        customer.status
+                        customer.status === "DRAFT" ? "SUBMITTED" : customer.status
                       )}`}
                     >
-                      {customer.status}
+                      {customer.status === "DRAFT" ? "SUBMITTED" : customer.status}
                     </span>
                   </td>
                   {/* <td className="px-3 py-4">

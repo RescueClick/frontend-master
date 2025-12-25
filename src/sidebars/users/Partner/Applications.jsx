@@ -72,10 +72,11 @@ const Application = () => {
   }, []);
 
   // ✅ Status normalizer: backend enums → UI friendly labels
+  // Note: DRAFT status is mapped to SUBMITTED as applications go directly to SUBMITTED
   const mapStatus = (status) => {
     switch (status) {
       case "DRAFT":
-        return "DRAFT";
+        return "SUBMITTED"; // Map DRAFT to SUBMITTED (no draft concept)
       case "SUBMITTED":
         return "SUBMITTED";
       case "DOC_INCOMPLETE":
@@ -153,9 +154,11 @@ const Application = () => {
 
   const summaryStats = {
     total: applications.length,
-    inProcess: applications.filter((a) => a.status === "In Process").length,
-    disbursed: applications.filter((a) => a.status === "Disbursed").length,
-    rejected: applications.filter((a) => a.status === "Rejected").length,
+    inProcess: applications.filter((a) => 
+      !["DISBURSED", "REJECTED", "APPROVED"].includes(a.status)
+    ).length,
+    disbursed: applications.filter((a) => a.status === "DISBURSED").length,
+    rejected: applications.filter((a) => a.status === "REJECTED").length,
   };
 
   function getStatusCount(customers, status) {
@@ -240,7 +243,9 @@ const Application = () => {
                     className="text-xl sm:text-2xl font-bold mb-1"
                     style={{ color: "#F59E0B" }}
                   >
-                    {getStatusCount(applications, "DRAFT")}
+                    {applications.filter((a) => 
+                      !["DISBURSED", "REJECTED", "APPROVED"].includes(a.status)
+                    ).length}
                   </div>
                   <div className="text-xs sm:text-sm text-gray-600">In Process</div>
                 </div>
@@ -308,7 +313,6 @@ const Application = () => {
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
                   <option value="All">All Status</option>
-                  <option value="DRAFT">Draft</option>
                   <option value="SUBMITTED">Submitted</option>
                   <option value="DOC_INCOMPLETE">Document Incomplete</option>
                   <option value="DOC_COMPLETE">Document Complete</option>
