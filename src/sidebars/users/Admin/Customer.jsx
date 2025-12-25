@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Eye , Download} from "lucide-react";
+import { Eye , Download, Trash2 } from "lucide-react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { getAllCustomers } from "../../../feature/thunks/adminThunks";
@@ -23,6 +23,8 @@ export default function CustomerTable() {
 
 
   const [model, setModel] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // Customer to delete
+  const [deleting, setDeleting] = useState(false)
   const  navigate = useNavigate()
 
 
@@ -80,6 +82,44 @@ export default function CustomerTable() {
       console.log("userId", userId)
     loginAsUser(userId, navigate);
     };
+
+    // ✅ Delete customer and all their loan applications
+    const handleDeleteCustomer = async (customerId, customerName) => {
+      try {
+        setDeleting(true);
+        const { adminToken } = getAuthData();
+        if (!adminToken) {
+          throw new Error("Admin not authenticated");
+        }
+
+        const response = await axios.delete(
+          `${backendurl}/admin/customer/${customerId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${adminToken}`,
+            },
+          }
+        );
+
+        // Show success message
+        alert(`Customer "${customerName}" and all associated loan applications deleted successfully.`);
+        
+        // Close delete confirmation modal
+        setDeleteConfirm(null);
+        
+        // Refresh the customer list
+        dispatch(getAllCustomers());
+      } catch (error) {
+        console.error("Error deleting customer:", error);
+        alert(
+          error.response?.data?.message || 
+          error.message || 
+          "Failed to delete customer"
+        );
+      } finally {
+        setDeleting(false);
+      }
+    };
     
  
   return (
@@ -89,6 +129,74 @@ export default function CustomerTable() {
 
 
     
+{/* ✅ Delete Confirmation Modal */}
+{deleteConfirm && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-[60] overflow-y-auto">
+    <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 relative mx-4">
+      {/* Warning Icon */}
+      <div className="flex justify-center mb-4">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+          <Trash2 className="w-8 h-8 text-red-600" />
+        </div>
+      </div>
+
+      {/* Title */}
+      <h2 className="text-xl font-bold text-center text-gray-800 mb-2">
+        Delete Customer?
+      </h2>
+
+      {/* Warning Message */}
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+        <p className="text-sm text-red-800 font-medium mb-2">
+          ⚠️ This action cannot be undone!
+        </p>
+        <p className="text-sm text-gray-700">
+          You are about to permanently delete:
+        </p>
+        <ul className="text-sm text-gray-700 mt-2 ml-4 list-disc">
+          <li>Customer: <strong>{deleteConfirm.firstName} {deleteConfirm.lastName}</strong></li>
+          <li>Customer ID: <strong>{deleteConfirm.employeeId}</strong></li>
+          <li>All associated loan applications</li>
+          <li>All uploaded documents</li>
+        </ul>
+      </div>
+
+      {/* Confirmation Text */}
+      <p className="text-center text-gray-600 mb-6">
+        Are you sure you want to proceed?
+      </p>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={() => setDeleteConfirm(null)}
+          disabled={deleting}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => handleDeleteCustomer(deleteConfirm._id, `${deleteConfirm.firstName} ${deleteConfirm.lastName}`)}
+          disabled={deleting}
+          className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {deleting ? (
+            <>
+              <span className="animate-spin">⏳</span>
+              Deleting...
+            </>
+          ) : (
+            <>
+              <Trash2 size={16} />
+              Delete Permanently
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 {model && 
   <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 overflow-y-auto">
     <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl p-6 relative mx-4 my-8">
@@ -316,11 +424,22 @@ export default function CustomerTable() {
         </span>
       </td>
       <td className="px-3 py-2">
-        <button className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-        onClick={()=>{setModel(c)}}
-        >
-          <Eye size={14} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            className="p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+            onClick={()=>{setModel(c)}}
+            title="View Details"
+          >
+            <Eye size={14} />
+          </button>
+          <button 
+            className="p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
+            onClick={() => setDeleteConfirm(c)}
+            title="Delete Customer"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </td>
     </tr>
   ))}
