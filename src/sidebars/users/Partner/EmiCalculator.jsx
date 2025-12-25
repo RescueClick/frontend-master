@@ -359,21 +359,54 @@
 // export default EmiCalculator;
 
 import React, { useState, useEffect } from 'react';
-import { Calculator, DollarSign, Calendar, Percent, TrendingUp, PieChart, Info } from 'lucide-react';
+import {
+  Calculator,
+  DollarSign,
+  Calendar,
+  Percent,
+  TrendingUp,
+  PieChart,
+  Info,
+} from 'lucide-react';
+
+const MIN_AMOUNT = 5000;
+const MAX_AMOUNT = 10000000; // 1 crore
+const MIN_RATE = 0;
+const MAX_RATE = 100;
+const MIN_TENURE = 0;
+const MAX_TENURE = 50;
+
+const clamp = (value, min, max) => {
+  if (Number.isNaN(value)) return min;
+  return Math.min(Math.max(value, min), max);
+};
+
+const sanitizeNumber = (raw, allowDecimal = false) => {
+  if (typeof raw === "number") return raw;
+  if (typeof raw !== "string") return NaN;
+  const cleaned = allowDecimal
+    ? raw.replace(/[^0-9.]/g, "")
+    : raw.replace(/\D/g, "");
+  if (cleaned === "") return NaN;
+  return allowDecimal ? parseFloat(cleaned) : parseInt(cleaned, 10);
+};
  
 const EmiCalculator = () => {
   const [loanAmount, setLoanAmount] = useState(500000);
   const [interestRate, setInterestRate] = useState(8.5);
   const [loanTenure, setLoanTenure] = useState(20);
+  const [loanAmountInput, setLoanAmountInput] = useState("500000");
+  const [interestRateInput, setInterestRateInput] = useState("8.5");
+  const [loanTenureInput, setLoanTenureInput] = useState("20");
   const [emi, setEmi] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const [totalInterest, setTotalInterest] = useState(0);
  
   // Calculate EMI
   const calculateEmi = () => {
-    const principal = parseFloat(loanAmount);
-    const rate = parseFloat(interestRate) / 100 / 12; // Monthly interest rate
-    const tenure = parseFloat(loanTenure) * 12; // Total months
+    const principal = Number(loanAmount);
+    const rate = Number(interestRate) / 100 / 12; // Monthly interest rate
+    const tenure = Number(loanTenure) * 12; // Total months
  
     if (principal > 0 && rate > 0 && tenure > 0) {
       const emiAmount = (principal * rate * Math.pow(1 + rate, tenure)) / (Math.pow(1 + rate, tenure) - 1);
@@ -391,20 +424,75 @@ const EmiCalculator = () => {
   }, [loanAmount, interestRate, loanTenure]);
  
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
+    if (!Number.isFinite(amount)) return "₹0";
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
     }).format(amount);
   };
- 
+
   const formatNumber = (num) => {
-    return new Intl.NumberFormat('en-IN').format(num);
+    if (!Number.isFinite(num)) return "0";
+    return new Intl.NumberFormat("en-IN").format(num);
+  };
+
+  const handleAmountTextChange = (value) => {
+    setLoanAmountInput(value);
+    const parsed = sanitizeNumber(value, false);
+    if (Number.isNaN(parsed)) {
+      setLoanAmount(0);
+      return;
+    }
+    const clamped = clamp(parsed, MIN_AMOUNT, MAX_AMOUNT);
+    setLoanAmount(clamped);
+  };
+
+  const handleRateTextChange = (value) => {
+    setInterestRateInput(value);
+    const parsed = sanitizeNumber(value, true);
+    if (Number.isNaN(parsed)) {
+      setInterestRate(0);
+      return;
+    }
+    const clamped = clamp(parsed, MIN_RATE, MAX_RATE);
+    setInterestRate(clamped);
+  };
+
+  const handleTenureTextChange = (value) => {
+    setLoanTenureInput(value);
+    const parsed = sanitizeNumber(value, false);
+    if (Number.isNaN(parsed)) {
+      setLoanTenure(0);
+      return;
+    }
+    const clamped = clamp(parsed, MIN_TENURE, MAX_TENURE);
+    setLoanTenure(clamped);
+  };
+
+  const handleAmountSlider = (val) => {
+    const clamped = clamp(val, MIN_AMOUNT, MAX_AMOUNT);
+    setLoanAmount(clamped);
+    setLoanAmountInput(String(Math.round(clamped)));
+  };
+
+  const handleRateSlider = (val) => {
+    const clamped = clamp(val, MIN_RATE, MAX_RATE);
+    setInterestRate(clamped);
+    setInterestRateInput(String(clamped));
+  };
+
+  const handleTenureSlider = (val) => {
+    const clamped = clamp(val, MIN_TENURE, MAX_TENURE);
+    setLoanTenure(clamped);
+    setLoanTenureInput(String(Math.round(clamped)));
   };
  
   // Calculate percentages for breakdown
-  const principalPercentage = ((loanAmount / totalAmount) * 100).toFixed(1);
-  const interestPercentage = ((totalInterest / totalAmount) * 100).toFixed(1);
+  const principalPercentage =
+    totalAmount > 0 ? ((loanAmount / totalAmount) * 100).toFixed(1) : "0.0";
+  const interestPercentage =
+    totalAmount > 0 ? ((totalInterest / totalAmount) * 100).toFixed(1) : "0.0";
  
   return (
     <div className="min-h-screen bg-slate-50 p-4">
@@ -444,7 +532,7 @@ const EmiCalculator = () => {
                     max="10000000"
                     step="50000"
                     value={loanAmount}
-                    onChange={(e) => setLoanAmount(e.target.value)}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500"
                     style={{
                       background: `linear-gradient(to right, #12B99C 0%, #12B99C ${((loanAmount - 100000) / (10000000 - 100000)) * 100}%, #e5e7eb ${((loanAmount - 100000) / (10000000 - 100000)) * 100}%, #e5e7eb 100%)`
@@ -459,7 +547,7 @@ const EmiCalculator = () => {
                   <input
                     type="number"
                     value={loanAmount}
-                    onChange={(e) => setLoanAmount(e.target.value)}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none text-lg font-semibold bg-slate-50 transition-colors"
                     placeholder="Enter loan amount"
                   />
@@ -480,7 +568,7 @@ const EmiCalculator = () => {
                     max="30"
                     step="0.1"
                     value={interestRate}
-                    onChange={(e) => setInterestRate(e.target.value)}
+                    onChange={(e) => handleRateChange(e.target.value)}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
                     style={{
                       background: `linear-gradient(to right, #F59E0B 0%, #F59E0B ${((interestRate - 1) / (30 - 1)) * 100}%, #e5e7eb ${((interestRate - 1) / (30 - 1)) * 100}%, #e5e7eb 100%)`
@@ -495,7 +583,7 @@ const EmiCalculator = () => {
                   <input
                     type="number"
                     value={interestRate}
-                    onChange={(e) => setInterestRate(e.target.value)}
+                    onChange={(e) => handleRateChange(e.target.value)}
                     step="0.1"
                     className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-lg font-semibold bg-slate-50 transition-colors"
                     placeholder="Enter interest rate"
@@ -517,7 +605,7 @@ const EmiCalculator = () => {
                     max="30"
                     step="1"
                     value={loanTenure}
-                    onChange={(e) => setLoanTenure(e.target.value)}
+                    onChange={(e) => handleTenureChange(e.target.value)}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-800"
                     style={{
                       background: `linear-gradient(to right, #1E3A8A 0%, #1E3A8A ${((loanTenure - 1) / (30 - 1)) * 100}%, #e5e7eb ${((loanTenure - 1) / (30 - 1)) * 100}%, #e5e7eb 100%)`
@@ -532,7 +620,7 @@ const EmiCalculator = () => {
                   <input
                     type="number"
                     value={loanTenure}
-                    onChange={(e) => setLoanTenure(e.target.value)}
+                    onChange={(e) => handleTenureChange(e.target.value)}
                     className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-800 focus:outline-none text-lg font-semibold bg-slate-50 transition-colors"
                     placeholder="Enter loan tenure"
                   />

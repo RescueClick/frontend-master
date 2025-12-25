@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { CheckCircle, AlertCircle, Building2, User, Phone, CreditCard, Hash } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, AlertCircle, Building2, User, Phone, CreditCard, Hash, Edit } from 'lucide-react';
+import axios from 'axios';
+import { backendurl } from '../../../feature/urldata';
+import { getAuthData } from '../../../utils/localStorage';
 
 const KYCDetails = () => {
   const [formData, setFormData] = useState({
@@ -13,6 +16,88 @@ const KYCDetails = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [existingDetails, setExistingDetails] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Fetch existing KYC details on component mount
+  useEffect(() => {
+    fetchKYCDetails();
+  }, []);
+
+  const fetchKYCDetails = async () => {
+    try {
+      setFetching(true);
+      const { partnerToken } = getAuthData();
+
+      if (!partnerToken) {
+        setFetching(false);
+        return;
+      }
+
+      // Fetch partner profile which contains bank details
+      const response = await axios.get(
+        `${backendurl}/partner/profile`,
+        {
+          headers: {
+            Authorization: `Bearer ${partnerToken}`,
+          },
+        }
+      );
+
+      const profile = response.data;
+      
+      // Check if bank details exist (any field with value)
+      if (profile.bankName || profile.accountNumber || profile.accountHolderName || 
+          profile.ifscCode || (profile.registeredMobile && profile.registeredMobile.trim())) {
+        const details = {
+          bankName: profile.bankName || '',
+          accountHolderName: profile.accountHolderName || '',
+          mobileNumber: (profile.registeredMobile && profile.registeredMobile.trim()) ? profile.registeredMobile.trim() : '',
+          accountNumber: profile.accountNumber || '',
+          ifscCode: profile.ifscCode || '',
+        };
+        
+        setExistingDetails(details);
+
+        // Pre-fill form with existing data
+        setFormData({
+          bankName: details.bankName,
+          accountHolderName: details.accountHolderName,
+          mobileNumber: details.mobileNumber,
+          accountNumber: details.accountNumber,
+          confirmAccountNumber: details.accountNumber,
+          ifscCode: details.ifscCode,
+        });
+      } else {
+        // No existing details, reset form
+        setExistingDetails(null);
+        setFormData({
+          bankName: '',
+          accountHolderName: '',
+          mobileNumber: '',
+          accountNumber: '',
+          confirmAccountNumber: '',
+          ifscCode: '',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching KYC details:', error);
+      // Reset to empty state on error
+      setExistingDetails(null);
+      setFormData({
+        bankName: '',
+        accountHolderName: '',
+        mobileNumber: '',
+        accountNumber: '',
+        confirmAccountNumber: '',
+        ifscCode: '',
+      });
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -53,9 +138,56 @@ const KYCDetails = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (validateForm()) {
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { partnerToken } = getAuthData();
+
+      if (!partnerToken) {
+        alert('Authentication required. Please login again.');
+        return;
+      }
+
+      // Prepare data for API (map mobileNumber to registeredMobile)
+      const apiData = {
+        bankName: formData.bankName.trim(),
+        accountHolderName: formData.accountHolderName.trim(),
+        accountNumber: formData.accountNumber.trim(),
+        ifscCode: formData.ifscCode.trim().toUpperCase(),
+        registeredMobile: formData.mobileNumber.trim(),
+      };
+
+      await axios.patch(
+        `${backendurl}/partner/bank-details`,
+        apiData,
+        {
+          headers: {
+            Authorization: `Bearer ${partnerToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      // Clear form errors on success
+      setErrors({});
+      
+      // Refresh existing details
+      await fetchKYCDetails();
+      setIsEditing(false);
       setIsSubmitted(true);
+    } catch (error) {
+      console.error('Error submitting KYC details:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to submit KYC details. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,7 +217,27 @@ const KYCDetails = () => {
     });
     setErrors({});
     setIsSubmitted(false);
+    setIsEditing(false);
   };
+
+  const hasExistingDetails = existingDetails && (
+    (existingDetails.bankName && existingDetails.bankName.trim()) || 
+    (existingDetails.accountNumber && existingDetails.accountNumber.trim()) || 
+    (existingDetails.accountHolderName && existingDetails.accountHolderName.trim()) ||
+    (existingDetails.ifscCode && existingDetails.ifscCode.trim()) ||
+    (existingDetails.mobileNumber && existingDetails.mobileNumber.trim())
+  );
+
+  if (fetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F8FAFC' }}>
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#12B99C' }}></div>
+          <p className="mt-4 text-gray-600">Loading KYC details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (
@@ -135,12 +287,122 @@ const KYCDetails = () => {
               KYC Details
             </h1>
             <p className="text-sm sm:text-base text-gray-600 px-4">
-              Please provide your banking details for verification
+              {hasExistingDetails 
+                ? 'View and update your banking details' 
+                : 'Please provide your banking details for verification'}
             </p>
           </div>
 
-          {/* Form */}
+          {/* Existing Details Display (Read-only) */}
+          {hasExistingDetails && !isEditing && (
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 border-l-4" style={{ borderLeftColor: '#10B981' }}>
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5" style={{ color: '#10B981' }} />
+                  <h2 className="text-lg sm:text-xl font-semibold" style={{ color: '#111827' }}>
+                    Current KYC Details
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors"
+                  style={{ backgroundColor: '#E0F7F6', color: '#12B99C' }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = '#12B99C';
+                    e.target.style.color = '#fff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = '#E0F7F6';
+                    e.target.style.color = '#12B99C';
+                  }}
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>Edit</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="pb-3 border-b border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Building2 className="h-4 w-4 text-gray-500" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-600">Bank Name</span>
+                  </div>
+                  <p className="text-sm sm:text-base font-semibold ml-6" style={{ color: '#111827' }}>
+                    {existingDetails.bankName || 'Not provided'}
+                  </p>
+                </div>
+
+                <div className="pb-3 border-b border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-600">Account Holder</span>
+                  </div>
+                  <p className="text-sm sm:text-base font-semibold ml-6" style={{ color: '#111827' }}>
+                    {existingDetails.accountHolderName || 'Not provided'}
+                  </p>
+                </div>
+
+                <div className="pb-3 border-b border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Phone className="h-4 w-4 text-gray-500" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-600">Registered Mobile Number</span>
+                  </div>
+                  <p className="text-sm sm:text-base font-semibold ml-6" style={{ color: '#111827' }}>
+                    {existingDetails.mobileNumber && existingDetails.mobileNumber.trim() 
+                      ? existingDetails.mobileNumber 
+                      : 'Not provided'}
+                  </p>
+                </div>
+
+                <div className="pb-3 border-b border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="h-4 w-4 text-gray-500" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-600">Account Number</span>
+                  </div>
+                  <p className="text-sm sm:text-base font-semibold ml-6" style={{ color: '#111827' }}>
+                    {existingDetails.accountNumber && existingDetails.accountNumber.length >= 4
+                      ? `****${existingDetails.accountNumber.slice(-4)}` 
+                      : existingDetails.accountNumber || 'Not provided'}
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Hash className="h-4 w-4 text-gray-500" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-600">IFSC Code</span>
+                  </div>
+                  <p className="text-sm sm:text-base font-semibold ml-6" style={{ color: '#111827' }}>
+                    {existingDetails.ifscCode || 'Not provided'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Form - Show when editing or no existing details */}
+          {(!hasExistingDetails || isEditing) && (
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
+            {hasExistingDetails && (
+              <div className="mb-4 flex justify-end">
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    // Reset form to existing values
+                    setFormData({
+                      bankName: existingDetails.bankName || '',
+                      accountHolderName: existingDetails.accountHolderName || '',
+                      mobileNumber: existingDetails.mobileNumber || '',
+                      accountNumber: existingDetails.accountNumber || '',
+                      confirmAccountNumber: existingDetails.accountNumber || '',
+                      ifscCode: existingDetails.ifscCode || '',
+                    });
+                  }}
+                  className="text-sm sm:text-base text-gray-600 hover:text-gray-800 font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
             <div className="space-y-4 sm:space-y-6">
               {/* Bank Name */}
               <div>
@@ -295,16 +557,31 @@ const KYCDetails = () => {
               <div className="pt-4 sm:pt-6">
                 <button
                   onClick={handleSubmit}
-                  className="w-full py-3 px-4 sm:px-6 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02] text-sm sm:text-base"
+                  disabled={loading}
+                  className={`w-full py-3 px-4 sm:px-6 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02] text-sm sm:text-base ${
+                    loading ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                   style={{ backgroundColor: '#12B99C' }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#0EA589'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#12B99C'}
+                  onMouseEnter={(e) => {
+                    if (!loading) e.target.style.backgroundColor = '#0EA589';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!loading) e.target.style.backgroundColor = '#12B99C';
+                  }}
                 >
-                  Submit KYC Details
+                  {loading ? (
+                    <span className="flex items-center justify-center">
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      {hasExistingDetails ? 'Updating...' : 'Submitting...'}
+                    </span>
+                  ) : (
+                    hasExistingDetails ? 'Update KYC Details' : 'Submit KYC Details'
+                  )}
                 </button>
               </div>
             </div>
           </div>
+          )}
 
           {/* Security Notice */}
           <div className="mt-4 sm:mt-6 bg-white rounded-lg p-3 sm:p-4 border-l-4" style={{ borderLeftColor: '#F59E0B' }}>
