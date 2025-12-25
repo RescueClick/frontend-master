@@ -74,6 +74,11 @@ const DonePayout = () => {
     (state) => state.rm.customerPartnersPayout
   );
 
+  // ✅ Get setPayouts loading state
+  const { loading: savingPayout, success: payoutSuccess, error: payoutError } = useSelector(
+    (state) => state.rm.setPayouts
+  );
+
 
   useEffect(() => {
     dispatch(fetchRmCustomersPayOutDone());
@@ -157,22 +162,106 @@ const DonePayout = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleSavePayout = (applicationId, partnerId, payoutPercent, note) => {
+  const handleSavePayout = async (applicationId, partnerId, payoutPercent, note) => {
+    try {
+      await dispatch(
+        setPayouts({
+          applicationId,
+          partnerId,
+          payoutPercentage: Number(payoutPercent), // ✅ Ensures it's a number
+          note,
+          payOutStatus: "DONE",
+        })
+      ).unwrap(); // unwrap() throws error if rejected
 
-
-    dispatch(
-      setPayouts({
-        applicationId,
-        partnerId,
-        payoutPercentage: Number(payoutPercent), // ✅ Ensures it's a number
-        note,
-        payOutStatus: "DONE",
-      })
-    );
+      // ✅ Success - refresh data and close modal
+      dispatch(fetchRmCustomersPayOutDone());
+      setCustomerID(null); // Close modal
+      setPayoutData({ approvalAmount: "", payoutPercentage: "", totalPayout: "" }); // Reset form
+    } catch (err) {
+      // Error is handled by Redux state, will show in popup
+      console.error("Failed to save payout:", err);
+    }
   };
 
   return (
     <>
+      {/* ✅ Loading Popup Modal */}
+      {savingPayout && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-[70] overflow-y-auto">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 relative mx-4">
+            {/* Loading Spinner */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="w-16 h-16 border-4 border-[#12B99C] border-t-transparent rounded-full animate-spin mb-4"></div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
+                Processing Payout...
+              </h2>
+              <p className="text-sm text-gray-600 text-center">
+                Please wait while we save the payout details. This may take a few moments.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Success Popup Modal */}
+      {payoutSuccess && !savingPayout && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-[70] overflow-y-auto">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 relative mx-4">
+            <div className="flex flex-col items-center justify-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
+                Payout Saved Successfully!
+              </h2>
+              <p className="text-sm text-gray-600 text-center mb-4">
+                The payout details have been saved and the customer list has been updated.
+              </p>
+              <button
+                onClick={() => {
+                  // Reset success state by dispatching a reset action or just closing
+                  window.location.reload(); // Simple refresh
+                }}
+                className="px-6 py-2 bg-[#12B99C] text-white rounded-lg hover:bg-[#0EA688] transition-colors font-medium"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Error Popup Modal */}
+      {payoutError && !savingPayout && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-[70] overflow-y-auto">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 relative mx-4">
+            <div className="flex flex-col items-center justify-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <XCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
+                Failed to Save Payout
+              </h2>
+              <p className="text-sm text-gray-600 text-center mb-4">
+                {payoutError || "An error occurred while saving the payout. Please try again."}
+              </p>
+              <button
+                onClick={() => {
+                  // Reset error by refreshing or dispatching reset
+                  window.location.reload();
+                }}
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Popup (Modal) */}
       {customerID && customerPartnersPayout && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/25 bg-opacity-40 z-50 p-4">
@@ -329,18 +418,7 @@ const DonePayout = () => {
                           </div>
 
                           {/* Total Payout Display */}
-                          <button
-                            type="button"
-                            className="bg-gradient-to-r from-[#F59E0B] to-[#EAB308] p-4 rounded-xl text-white w-full focus:outline-none"
-                            onClick={() =>
-                              handleSavePayout(
-                                partner.applicationId,
-                                partner._id,
-                                Number(payoutData.payoutPercentage), // ✅ Convert string → number
-                                "Initial payout"
-                              )
-                            }
-                          >
+                          <div className="bg-gradient-to-r from-[#F59E0B] to-[#EAB308] p-4 rounded-xl text-white w-full">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <IndianRupee className="w-5 h-5" />
@@ -364,15 +442,35 @@ const DonePayout = () => {
                                 </p>
                               </div>
                             </div>
-                          </button>
+                          </div>
                         </div>
                       </div>
 
                       {/* Action Buttons */}
                       <div className="flex gap-3 pt-4">
-                        <button className="flex-1 px-6 py-3 bg-gradient-to-r from-[#12B99C] to-[#0EA688] hover:from-[#0EA688] hover:to-[#12B99C] text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2">
-                          <Save className="w-4 h-4" />
-                          Save Details
+                        <button 
+                          className="flex-1 px-6 py-3 bg-gradient-to-r from-[#12B99C] to-[#0EA688] hover:from-[#0EA688] hover:to-[#12B99C] text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                          onClick={() =>
+                            handleSavePayout(
+                              partner.applicationId,
+                              partner._id,
+                              Number(payoutData.payoutPercentage), // ✅ Convert string → number
+                              "Initial payout"
+                            )
+                          }
+                          disabled={savingPayout || !payoutData.approvalAmount || !payoutData.payoutPercentage}
+                        >
+                          {savingPayout ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4" />
+                              Save Details
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>

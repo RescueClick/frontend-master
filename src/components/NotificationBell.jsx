@@ -650,9 +650,7 @@ const NotificationBell = () => {
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-3 h-3 border-2 border-white"></span>
           )}
-          {!isConnected && (
-            <span className="absolute -bottom-1 -right-1 bg-yellow-500 rounded-full w-2 h-2"></span>
-          )}
+          {/* ✅ Removed yellow dot - keeping only red dot for notifications */}
         </button>
       </div>
 

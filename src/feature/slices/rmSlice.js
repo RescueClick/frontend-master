@@ -10,6 +10,7 @@ import {
   fetchPartnersWithFollowUp, // 🔹 new thunk
   fetchRmCustomersPayOutPending,
   fetchRmCustomersPayOutDone,
+  setPayouts, // ✅ Add setPayouts thunk
   getAnalytics
 
 } from "../thunks/rmThunks";
@@ -320,6 +321,26 @@ const rmSlice = createSlice({
         state.donePayout.error = action.payload;
         state.donePayout.success = false;
         state.donePayout.data = [];
+      });
+
+    // ✅ Set Payouts
+    builder
+      .addCase(setPayouts.pending, (state) => {
+        state.setPayouts.loading = true;
+        state.setPayouts.error = null;
+        state.setPayouts.success = false;
+      })
+      .addCase(setPayouts.fulfilled, (state, action) => {
+        state.setPayouts.loading = false;
+        state.setPayouts.error = null;
+        state.setPayouts.success = true;
+        state.setPayouts.data = action.payload;
+      })
+      .addCase(setPayouts.rejected, (state, action) => {
+        state.setPayouts.loading = false;
+        state.setPayouts.error = action.payload;
+        state.setPayouts.success = false;
+        state.setPayouts.data = null;
       });
 
 
