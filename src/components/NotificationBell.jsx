@@ -648,9 +648,7 @@ const NotificationBell = () => {
         >
           <Bell size={20} className="text-gray-600" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
+            <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-3 h-3 border-2 border-white"></span>
           )}
           {!isConnected && (
             <span className="absolute -bottom-1 -right-1 bg-yellow-500 rounded-full w-2 h-2"></span>
