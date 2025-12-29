@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import { FaHandshake, FaLaptop, FaBolt, FaHeadset, FaEnvelope } from "react-icons/fa";
 import { Users, Building, MapPin, Shield, Star, Target, Phone, Mail, Wallet, BriefcaseBusiness, Home as HomeIcon, Store } from "lucide-react";
 
+import { ArrowDown } from "lucide-react";
 import backgroundImage from "../assets/background_image.jpg";
 import { useNavigate } from 'react-router-dom';
 import sbiLogo from "../assets/SBI_bank.png";
@@ -154,6 +155,7 @@ const Home = () => {
                 Get Loan in minutes, Low Cibil Score no issue, Tie-up with 100+ lenders.
               </p>
 
+              {/* <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6"> */}
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
                 <button
                   ref={button}
@@ -165,6 +167,20 @@ const Home = () => {
                 </button>
 
 
+                {/* Download App Button */}
+                <a
+                  href="/Trustline_v2.apk"
+                  download
+                  className="group relative w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 
+    bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white 
+    font-bold text-base sm:text-lg rounded-full shadow-2xl 
+    hover:shadow-[0_20px_40px_rgba(18,185,156,0.4)] 
+    transform hover:-translate-y-2 transition-all duration-500 overflow-hidden text-center"
+                >
+                  <span className="relative z-10">Download Trustline App ↓</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  
+                </a>
               </div>
             </div>
 
