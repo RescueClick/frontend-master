@@ -71,8 +71,8 @@ const AsmSiderbar = () => {
   const fallbackUser = getFallbackUser();
 
   // Check if impersonating
-  const { impersonationStack } = getAuthData();
-  const isImpersonating = impersonationStack && impersonationStack.length > 0;
+  const { parentUser } = getAuthData();
+  const isImpersonating = !!parentUser;
   const originalRole = getOriginalRole();
 
   // Sidebar navigation items with icons and routes

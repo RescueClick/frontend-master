@@ -166,19 +166,33 @@ export default function RM() {
   
   const loginAsUser = async (userId, navigate) => {
     try {
-      const { adminToken } = getAuthData();
-      if (!adminToken) throw new Error("Admin not authenticated");
+      const { adminToken, asmToken, rmToken, partnerToken } = getAuthData();
+      
+      // Determine which token to use (prioritize current role token)
+      let currentToken = adminToken || asmToken || rmToken || partnerToken;
+      if (!currentToken) {
+        alert("Not authenticated");
+        return;
+      }
   
       const res = await axios.post(
         `${backendurl}/auth/login-as/${userId}`,
         {},
-        { headers: { Authorization: `Bearer ${adminToken}` } }
+        { headers: { Authorization: `Bearer ${currentToken}` } }
       );
   
-      const { token, user } = res.data;
+      const { token, user, parent } = res.data;
   
-      // Save impersonated token without removing admin token
-      saveAuthData(token, user, true);
+      // Get current user info to store as parent
+      const currentAuth = getAuthData();
+      let currentUser = currentAuth.adminUser || currentAuth.asmUser || currentAuth.rmUser || currentAuth.partnerUser;
+      let currentUserToken = currentAuth.adminToken || currentAuth.asmToken || currentAuth.rmToken || currentAuth.partnerToken;
+      
+      // If parent info is provided from backend, use it; otherwise use current user
+      const parentInfo = parent || (currentUser ? { ...currentUser, token: currentUserToken } : null);
+  
+      // Save impersonated token - this will automatically clear parent token
+      saveAuthData(token, user, true, parentInfo);
   
       // Navigate to role
       switch (user.role) {

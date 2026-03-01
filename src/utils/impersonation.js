@@ -37,18 +37,32 @@
   
 
 // src/utils/impersonation.js
+import { restoreParentAuth, getAuthData, clearChildAuthData } from "./localStorage";
 
-// Get the original role that started the impersonation (the one with a token but not in stack)
+// Get the original role that started the impersonation (check parent_user first)
 export const getOriginalRole = () => {
-  const authData = {
-    adminToken: localStorage.getItem("super_admin_token"),
-    asmToken: localStorage.getItem("asm_token"),
-    rmToken: localStorage.getItem("rm_token"),
-  };
+  const authData = getAuthData();
   
-  // Check in priority order: Admin > ASM > RM
+  // First check if there's a parent user (we're impersonating)
+  if (authData.parentUser) {
+    const parent = authData.parentUser;
+    const routeMap = {
+      SUPER_ADMIN: "/admin",
+      ASM: "/asm",
+      RM: "/rm",
+      PARTNER: "/partner",
+      CUSTOMER: "/customer",
+    };
+    return { 
+      role: parent.role, 
+      route: routeMap[parent.role] || "/admin",
+      user: parent
+    };
+  }
+  
+  // Fallback: Check in priority order: Admin > ASM > RM
   if (authData.adminToken) {
-    return { role: "Admin", route: "/admin" };
+    return { role: "SUPER_ADMIN", route: "/admin" };
   }
   if (authData.asmToken) {
     return { role: "ASM", route: "/asm" };
@@ -64,22 +78,20 @@ export const backToOriginalRole = (navigate) => {
   const originalRole = getOriginalRole();
   
   if (originalRole) {
-    // Clear all impersonation stack
-    localStorage.removeItem("impersonation_stack");
+    // Restore parent auth (this clears child tokens and restores parent)
+    const restored = restoreParentAuth();
     
-    // Clear current impersonated role tokens
-    const currentRole = localStorage.getItem("partner_token") ? "partner" : 
-                       localStorage.getItem("customer_token") ? "customer" : null;
-    if (currentRole) {
-      localStorage.removeItem(`${currentRole}_token`);
-      localStorage.removeItem(`${currentRole}_user`);
+    if (restored) {
+      // Navigate to parent role
+      navigate(originalRole.route);
+    } else {
+      // Fallback: clear everything and go to login
+      clearChildAuthData();
+      navigate("/LoginPage");
     }
-    
-    // Navigate to original role
-    navigate(originalRole.route);
   } else {
     // Fallback: clear everything and go to login
-    localStorage.removeItem("impersonation_stack");
+    clearChildAuthData();
     navigate("/LoginPage");
   }
 };

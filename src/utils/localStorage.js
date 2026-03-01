@@ -21,9 +21,49 @@ export const clearAuthData = () => {
   localStorage.removeItem("customer_token");
   localStorage.removeItem("customer_user");
   localStorage.removeItem("impersonation_stack");
+  localStorage.removeItem("parent_user");
+  localStorage.removeItem("parent_token");
 };
 
-export const saveAuthData = (token, user, impersonation = false) => {
+/**
+ * Clear child tokens when logging back to parent
+ */
+export const clearChildAuthData = () => {
+  // Get current parent info
+  const parent = parseJson("parent_user");
+  if (!parent) return; // No parent, nothing to clear
+
+  // Clear all child role tokens (roles lower in hierarchy than parent)
+  const roleHierarchy = {
+    SUPER_ADMIN: ["asm", "rm", "partner", "customer"],
+    ASM: ["rm", "partner", "customer"],
+    RM: ["partner", "customer"],
+  };
+
+  const childRoles = roleHierarchy[parent.role] || [];
+  childRoles.forEach((role) => {
+    localStorage.removeItem(`${role}_token`);
+    localStorage.removeItem(`${role}_user`);
+  });
+
+  // Clear parent tracking
+  localStorage.removeItem("parent_user");
+  localStorage.removeItem("parent_token");
+};
+
+/**
+ * Clear parent tokens when logging as child
+ */
+export const clearParentAuthData = () => {
+  const parent = parseJson("parent_user");
+  if (!parent) return; // No parent, nothing to clear
+
+  const parentRoleKey = parent.role.toLowerCase();
+  localStorage.removeItem(`${parentRoleKey}_token`);
+  localStorage.removeItem(`${parentRoleKey}_user`);
+};
+
+export const saveAuthData = (token, user, impersonation = false, parent = null) => {
   if (!token || !user?.role) {
     console.error("Missing token or user role while saving auth data");
     return;
@@ -31,17 +71,48 @@ export const saveAuthData = (token, user, impersonation = false) => {
 
   const roleKey = user.role.toLowerCase();
   try {
+    // If impersonating, clear parent's token first
+    if (impersonation && parent) {
+      clearParentAuthData();
+      // Store parent info for "back to parent" functionality
+      localStorage.setItem("parent_user", JSON.stringify(parent));
+      localStorage.setItem("parent_token", parent.token || "");
+    }
+
     localStorage.setItem(`${roleKey}_token`, token);
     localStorage.setItem(`${roleKey}_user`, JSON.stringify(user));
 
     if (impersonation) {
       const stack = parseJson("impersonation_stack") || [];
-      stack.push({ role: user.role, token, user });
+      stack.push({ role: user.role, token, user, parent });
       localStorage.setItem("impersonation_stack", JSON.stringify(stack));
     }
   } catch (err) {
     console.error("Failed to save auth data:", err);
   }
+};
+
+/**
+ * Restore parent user session
+ */
+export const restoreParentAuth = () => {
+  const parent = parseJson("parent_user");
+  const parentToken = localStorage.getItem("parent_token");
+  
+  if (!parent || !parentToken) {
+    return null;
+  }
+
+  // Clear current child session
+  const currentUser = parseJson(`${parent.role.toLowerCase()}_user`);
+  if (currentUser) {
+    clearChildAuthData();
+  }
+
+  // Restore parent session
+  saveAuthData(parentToken, parent, false);
+  
+  return { token: parentToken, user: parent };
 };
 
 export const getAuthData = () => {
@@ -57,6 +128,8 @@ export const getAuthData = () => {
     customerToken: localStorage.getItem("customer_token"),
     customerUser: parseJson("customer_user"),
     impersonationStack: parseJson("impersonation_stack") || [],
+    parentUser: parseJson("parent_user"),
+    parentToken: localStorage.getItem("parent_token"),
   };
 };
 

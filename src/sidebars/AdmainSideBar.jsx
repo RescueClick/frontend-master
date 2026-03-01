@@ -51,9 +51,9 @@ const AdminSideBar = () => {
 
   const fallbackUser = getFallbackUser();
 
-  // Check if impersonating
-  const { impersonationStack } = getAuthData();
-  const isImpersonating = impersonationStack && impersonationStack.length > 0;
+  // Check if impersonating (check for parent_user)
+  const { parentUser } = getAuthData();
+  const isImpersonating = !!parentUser;
   const originalRole = getOriginalRole();
 
   // Sidebar navigation items with icons and routes
