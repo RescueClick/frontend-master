@@ -30,6 +30,29 @@ export const fetchAdminDashboard = createAsyncThunk(
   }
 );
 
+// Fetch recent activities for admin dashboard
+export const fetchRecentActivities = createAsyncThunk(
+  "admin/fetchRecentActivities",
+  async (limit = 10, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+
+      const response = await axios.get(`${backendurl}/admin/recent-activities`, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+        params: { limit },
+      });
+
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch recent activities"
+      );
+    }
+  }
+);
+
 
 // Async thunk for creating ASM
 export const createAsm = createAsyncThunk(

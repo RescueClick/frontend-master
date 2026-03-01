@@ -79,8 +79,39 @@ export default function RMpartner() {
   const { loading, error, data } = useSelector(
     (state) => state.admin.unassignedPartners
   );
+  const rejectPartnerState = useSelector(
+    (state) => state.admin.rejectPartner || { loading: false, success: false }
+  );
 
   const { data: rms } = useSelector((state) => state.admin.rm);
+  
+  const isRejecting = rejectPartnerState.loading;
+  
+  // Optimistic update: Filter out rejected partner immediately when deletion is successful
+  const displayData = data?.filter(
+    (partner) => {
+      // If rejection was successful and this is the rejected partner, hide it
+      if (rejectPartnerState.success && partnerToReject && partner._id === partnerToReject._id) {
+        return false;
+      }
+      return true;
+    }
+  ) || data;
+  
+  // Close modal when rejection is successful
+  useEffect(() => {
+    if (rejectPartnerState.success && rejectModalOpen) {
+      // Small delay to show success state
+      const timer = setTimeout(() => {
+        setRejectModalOpen(false);
+        setPartnerToReject(null);
+        // Refetch to ensure data is in sync
+        dispatch(getUnassignedPartners());
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [rejectPartnerState.success, rejectModalOpen, dispatch]);
 
   useEffect(() => {
     const { adminToken } = getAuthData() || {};
@@ -94,21 +125,24 @@ export default function RMpartner() {
   const [customers] = useState(customersData);
 
   const handleRejectPartner = async () => {
-    if (!partnerToReject) return;
+    if (!partnerToReject || isRejecting) return;
     
     try {
-      await dispatch(rejectPartner(partnerToReject._id)).unwrap();
-      // Refetch unassigned partners after rejection
-      dispatch(getUnassignedPartners());
-      setRejectModalOpen(false);
-      setPartnerToReject(null);
+      const result = await dispatch(rejectPartner(partnerToReject._id)).unwrap();
+      
+      // Show success message
       alert("Partner request rejected and deleted successfully");
+      
+      // Modal will close automatically via useEffect when success state changes
+      // Refetch will happen in useEffect as well
     } catch (error) {
-      alert(error || "Failed to reject partner");
+      console.error("Reject partner error:", error);
+      alert(error || "Failed to reject partner. Please try again.");
     }
   };
 
   const handleCancelReject = () => {
+    if (isRejecting) return; // Prevent closing during deletion
     setRejectModalOpen(false);
     setPartnerToReject(null);
   };
@@ -292,18 +326,36 @@ export default function RMpartner() {
               <br />
               This action cannot be undone.
             </p>
+            
+            {/* Loading indicator */}
+            {isRejecting && (
+              <div className="mb-4 flex items-center justify-center gap-2 text-blue-600">
+                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm">Deleting partner...</span>
+              </div>
+            )}
+            
             <div className="flex justify-end gap-3">
               <button
-                className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition"
+                className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleCancelReject}
+                disabled={isRejecting}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+                className="px-4 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 onClick={handleRejectPartner}
+                disabled={isRejecting}
               >
-                Yes, Reject & Delete
+                {isRejecting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  "Yes, Reject & Delete"
+                )}
               </button>
             </div>
           </div>
@@ -465,7 +517,7 @@ export default function RMpartner() {
       {/* Title */}
       <h2 className="text-lg font-semibold mb-2">New Partner</h2>
       <p className="text-xs text-gray-600 mb-3">
-        Total {data?.length} records found
+        Total {displayData?.length || 0} records found
       </p>
 
       {/* Table */}
@@ -482,7 +534,7 @@ export default function RMpartner() {
             </tr>
           </thead>
           <tbody>
-            {data?.map((partner, idx) => (
+            {displayData?.map((partner, idx) => (
               <tr key={idx} className="border-b hover:bg-gray-50">
                 <td className="px-3 py-2">
                   {partner.firstName + " " + partner.lastName}

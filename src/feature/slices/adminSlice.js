@@ -10,7 +10,8 @@ import {loginUser,
   deleteAsm,
   fetchAnalyticsdashboard,   
   fetchAdminProfile,  
-  fetchAdminDashboard, 
+  fetchAdminDashboard,
+  fetchRecentActivities,
   fetchPartners,
   getUnassignedPartners,
   getAllCustomers,
@@ -182,6 +183,13 @@ const initialState = {
       error: null,
       success: false,
       data: null,
+    },
+
+    recentActivities: {
+      loading: false,
+      error: null,
+      success: false,
+      activities: [],
     },
 
 };
@@ -458,6 +466,33 @@ const adminSlice = createSlice({
         };
       });
 
+    // 🔹 Fetch Recent Activities Thunk
+    builder
+      .addCase(fetchRecentActivities.pending, (state) => {
+        state.recentActivities = {
+          loading: true,
+          error: null,
+          success: false,
+          activities: state.recentActivities?.activities || [],
+        };
+      })
+      .addCase(fetchRecentActivities.fulfilled, (state, action) => {
+        state.recentActivities = {
+          loading: false,
+          error: null,
+          success: true,
+          activities: action.payload?.activities || [],
+        };
+      })
+      .addCase(fetchRecentActivities.rejected, (state, action) => {
+        state.recentActivities = {
+          loading: false,
+          error: action.payload,
+          success: false,
+          activities: state.recentActivities?.activities || [],
+        };
+      });
+
     // 🔹 Fetch Partners Thunk
     builder
       .addCase(fetchPartners.pending, (state) => {
@@ -558,9 +593,17 @@ const adminSlice = createSlice({
           state.rejectPartner.loading = false;
           state.rejectPartner.data = action.payload;
           state.rejectPartner.success = true;
+          
           // Remove rejected partner from partners list
           if (state.partners.data) {
             state.partners.data = state.partners.data.filter(
+              (p) => p._id !== action.meta.arg
+            );
+          }
+          
+          // Remove rejected partner from unassignedPartners list (optimistic update)
+          if (state.unassignedPartners.data) {
+            state.unassignedPartners.data = state.unassignedPartners.data.filter(
               (p) => p._id !== action.meta.arg
             );
           }

@@ -130,23 +130,25 @@ const Dashboard = () => {
   const targetVsAchievement = useMemo(() => {
     return Object.entries(data?.monthlyTargets || {}).map(
       ([month, stats]) => {
-        const achievement = stats?.achieved || 0; // fallback to 0
-        const target = stats?.target || 0; // fallback to 0
-        let percentage =
-          target > 0 ? Math.round((achievement / target) * 100) : 0;
+        const rawAchievement = Number(stats?.achieved) || 0;
+        const rawTarget = Number(stats?.target) || 0;
 
-        // Cap percentage at 100% and add "+" if exceeded
-        if (percentage > 100) {
-          percentage = "100" + "+";
-        } else {
-          percentage = percentage + "%";
-        }
+        const achievement =
+          Number.isFinite(rawAchievement) && rawAchievement >= 0
+            ? rawAchievement
+            : 0;
+        const target =
+          Number.isFinite(rawTarget) && rawTarget >= 0 ? rawTarget : 0;
+
+        // Safe percentage calculation to avoid NaN / Infinity
+        const percentageValue =
+          target > 0 ? (achievement / target) * 100 : 0;
 
         return {
           month,
           target,
           achievement,
-          percentage,
+          percentageValue,
         };
       }
     );
@@ -418,15 +420,13 @@ const Dashboard = () => {
                       )}
                       <span
                         className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          item.target > 0 &&
                           item.achievement / item.target >= 1
                             ? "bg-green-100 text-green-700"
                             : "bg-orange-100 text-orange-700"
                         }`}
                       >
-                        {Math.min(
-                          ((item.achievement / item.target) * 100).toFixed(1),
-                          100
-                        )}%
+                        {Math.min(item.percentageValue, 100).toFixed(1)}%
                       </span>
                     </div>
                   </div>
@@ -438,12 +438,13 @@ const Dashboard = () => {
                   <div
                     className="h-4 rounded-full transition-all duration-500"
                     style={{
-                      width: `${Math.min(
-                        (item.achievement / item.target) * 100,
-                        100
+                      width: `${Math.min(item.percentageValue, 100).toFixed(
+                        1
                       )}%`,
                       backgroundColor:
-                        item.achievement >= item.target ? "#10B981" : "#F59E0B",
+                        item.target > 0 && item.achievement >= item.target
+                          ? "#10B981"
+                          : "#F59E0B",
                     }}
                   ></div>
                 </div>
@@ -554,7 +555,7 @@ const Dashboard = () => {
                           {item.month}
                         </span>
                         <div className="flex items-center space-x-2 ml-9">
-                          {item.percentage >= 100 ? (
+                          {item.percentageValue >= 100 ? (
                             <CheckCircle size={16} className="text-green-500" />
                           ) : (
                             <Target size={16} className="text-orange-500" />
@@ -562,18 +563,13 @@ const Dashboard = () => {
 
                           <span
                             className={`text-xs px-2 py-1 rounded-full font-medium ${
+                              item.target > 0 &&
                               item.achievement / item.target >= 1
                                 ? "bg-green-100 text-green-700"
                                 : "bg-orange-100 text-orange-700"
                             }`}
                           >
-                            {Math.min(
-                              ((item.achievement / item.target) * 100).toFixed(
-                                1
-                              ),
-                              100
-                            )}
-                            %
+                            {Math.min(item.percentageValue, 100).toFixed(1)}%
                           </span>
                         </div>
                       </div>
@@ -586,11 +582,11 @@ const Dashboard = () => {
                         className="h-2 rounded-full transition-all duration-500"
                         style={{
                           width: `${Math.min(
-                            (item.achievement / item.target) * 100,
+                            item.percentageValue,
                             100
-                          )}%`,
+                          ).toFixed(1)}%`,
                           backgroundColor:
-                            item.achievement >= item.target
+                            item.target > 0 && item.achievement >= item.target
                               ? "#10B981"
                               : "#F59E0B",
                         }}

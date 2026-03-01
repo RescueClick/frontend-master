@@ -1,7 +1,7 @@
-import React from 'react'
+
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchAdminDashboard } from '../../../feature/thunks/adminThunks'
+import { fetchAdminDashboard, fetchRecentActivities } from '../../../feature/thunks/adminThunks'
 import { useRealtimeData } from '../../../utils/useRealtimeData'
 
 import {
@@ -29,6 +29,8 @@ const Dashboard = () => {
 
   const dispatch = useDispatch()
   const { data } = useSelector((state) => state.admin.dashboard)
+  const recentActivitiesState = useSelector((state) => state.admin.recentActivities || { activities: [] })
+  const activities = recentActivitiesState.activities || []
 
   const navigate = useNavigate();
 
@@ -37,6 +39,16 @@ const Dashboard = () => {
     interval: 30000, // 30 seconds
     enabled: true,
   });
+
+  // Fetch recent activities on mount and every 30 seconds
+  useEffect(() => {
+    dispatch(fetchRecentActivities(10));
+    const interval = setInterval(() => {
+      dispatch(fetchRecentActivities(10));
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [dispatch]);
 
 
   const statsCards = [
@@ -175,33 +187,56 @@ const Dashboard = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
           <div className="space-y-4">
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <Users size={16} className="text-white" />
+            {activities && activities.length > 0 ? (
+              activities.map((activity, index) => {
+                const getIcon = () => {
+                  switch (activity.icon) {
+                    case "users":
+                      return <Users size={16} className="text-white" />;
+                    case "banknote":
+                      return <Banknote size={16} className="text-white" />;
+                    case "userCheck":
+                      return <UserCheck size={16} className="text-white" />;
+                    case "fileText":
+                      return <FileText size={16} className="text-white" />;
+                    default:
+                      return <Bell size={16} className="text-white" />;
+                  }
+                };
+
+                const getIconColor = () => {
+                  switch (activity.iconColor) {
+                    case "blue":
+                      return "bg-blue-500";
+                    case "green":
+                      return "bg-green-500";
+                    case "purple":
+                      return "bg-purple-500";
+                    case "red":
+                      return "bg-red-500";
+                    default:
+                      return "bg-gray-500";
+                  }
+                };
+
+                return (
+                  <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div className={`w-8 h-8 ${getIconColor()} rounded-full flex items-center justify-center`}>
+                      {getIcon()}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                      <p className="text-xs text-gray-500">{activity.description}</p>
+                      <p className="text-xs text-gray-400 mt-1">{activity.timeAgo}</p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p className="text-sm">No recent activities</p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">New customer registered</p>
-                <p className="text-xs text-gray-500">2 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                <Banknote size={16} className="text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Payout completed</p>
-                <p className="text-xs text-gray-500">5 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                <UserCheck size={16} className="text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">New partner onboarded</p>
-                <p className="text-xs text-gray-500">15 minutes ago</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 

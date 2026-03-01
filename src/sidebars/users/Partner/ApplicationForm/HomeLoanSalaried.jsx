@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   User,
   Phone,
@@ -126,12 +126,25 @@ export default function HomeLoanSalaried() {
     confirmPassword: false,
   });
   const abortControllerRef = useRef(null);
+  const objectUrlsRef = useRef([]); // Store all created object URLs
 
-  // Cleanup function to cancel pending requests
+  // Cleanup function to cancel pending requests and revoke object URLs
   useEffect(() => {
     return () => {
+      // Cancel pending requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+      // Revoke all object URLs to prevent memory leaks
+      objectUrlsRef.current.forEach(url => {
+        if (url) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      objectUrlsRef.current = [];
+      // Close document modal if open
+      if (documentModel) {
+        setdocumentModel(null);
       }
     };
   }, []);
@@ -777,7 +790,14 @@ export default function HomeLoanSalaried() {
           <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full relative p-4">
             {/* Close Button */}
             <button
-              onClick={() => setdocumentModel(null)}
+              onClick={() => {
+                // Revoke the URL when closing the modal
+                if (documentModel && documentModel.startsWith('blob:')) {
+                  URL.revokeObjectURL(documentModel);
+                  objectUrlsRef.current = objectUrlsRef.current.filter(url => url !== documentModel);
+                }
+                setdocumentModel(null);
+              }}
               className="absolute top-2 right-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
             >
               Close
@@ -1540,15 +1560,16 @@ export default function HomeLoanSalaried() {
                         {formData[doc.name] && (
                           <button
                             type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData[doc.name].preview
-                                  ? formData[doc.name].preview
-                                  : formData[doc.name] instanceof File
-                                    ? URL.createObjectURL(formData[doc.name])
-                                    : ""
-                              )
-                            }
+                            onClick={() => {
+                              let url = "";
+                              if (formData[doc.name].preview) {
+                                url = formData[doc.name].preview;
+                              } else if (formData[doc.name] instanceof File) {
+                                url = URL.createObjectURL(formData[doc.name]);
+                                objectUrlsRef.current.push(url);
+                              }
+                              setdocumentModel(url);
+                            }}
                             className="p-1 rounded-full hover:bg-blue-100 transition-colors"
                             style={{ color: "#2563EB" }}
                             title="View file"
@@ -1810,15 +1831,16 @@ export default function HomeLoanSalaried() {
                           {/* View Button */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.companyIdCard.preview
-                                  ? formData.companyIdCard.preview
-                                  : formData.companyIdCard instanceof File
-                                    ? URL.createObjectURL(formData.companyIdCard)
-                                    : ""
-                              )
-                            }
+                            onClick={() => {
+                              let url = "";
+                              if (formData.companyIdCard.preview) {
+                                url = formData.companyIdCard.preview;
+                              } else if (formData.companyIdCard instanceof File) {
+                                url = URL.createObjectURL(formData.companyIdCard);
+                                objectUrlsRef.current.push(url);
+                              }
+                              setdocumentModel(url);
+                            }}
                             className="p-1 rounded-full hover:bg-blue-100 transition-colors"
                             style={{ color: "#2563EB" }}
                             title="View file"
@@ -1897,15 +1919,16 @@ export default function HomeLoanSalaried() {
                           {/* View Button */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.salarySlip1.preview
-                                  ? formData.salarySlip1.preview
-                                  : formData.salarySlip1 instanceof File
-                                    ? URL.createObjectURL(formData.salarySlip1)
-                                    : ""
-                              )
-                            }
+                            onClick={() => {
+                              let url = "";
+                              if (formData.salarySlip1.preview) {
+                                url = formData.salarySlip1.preview;
+                              } else if (formData.salarySlip1 instanceof File) {
+                                url = URL.createObjectURL(formData.salarySlip1);
+                                objectUrlsRef.current.push(url);
+                              }
+                              setdocumentModel(url);
+                            }}
                             className="p-1 rounded-full hover:bg-blue-100 transition-colors"
                             style={{ color: "#2563EB" }}
                             title="View file"
@@ -1984,15 +2007,16 @@ export default function HomeLoanSalaried() {
                           {/* View Button */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.salarySlip2.preview
-                                  ? formData.salarySlip2.preview
-                                  : formData.salarySlip2 instanceof File
-                                    ? URL.createObjectURL(formData.salarySlip2)
-                                    : ""
-                              )
-                            }
+                            onClick={() => {
+                              let url = "";
+                              if (formData.salarySlip2.preview) {
+                                url = formData.salarySlip2.preview;
+                              } else if (formData.salarySlip2 instanceof File) {
+                                url = URL.createObjectURL(formData.salarySlip2);
+                                objectUrlsRef.current.push(url);
+                              }
+                              setdocumentModel(url);
+                            }}
                             className="p-1 rounded-full hover:bg-blue-100 transition-colors"
                             style={{ color: "#2563EB" }}
                             title="View file"
@@ -2071,15 +2095,16 @@ export default function HomeLoanSalaried() {
                           {/* View Button */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.salarySlip3.preview
-                                  ? formData.salarySlip3.preview
-                                  : formData.salarySlip3 instanceof File
-                                    ? URL.createObjectURL(formData.salarySlip3)
-                                    : ""
-                              )
-                            }
+                            onClick={() => {
+                              let url = "";
+                              if (formData.salarySlip3.preview) {
+                                url = formData.salarySlip3.preview;
+                              } else if (formData.salarySlip3 instanceof File) {
+                                url = URL.createObjectURL(formData.salarySlip3);
+                                objectUrlsRef.current.push(url);
+                              }
+                              setdocumentModel(url);
+                            }}
                             className="p-1 rounded-full hover:bg-blue-100 transition-colors"
                             style={{ color: "#2563EB" }}
                             title="View file"
@@ -2157,15 +2182,16 @@ export default function HomeLoanSalaried() {
                           {/* View Button */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.form16_26as.preview
-                                  ? formData.form16_26as.preview
-                                  : formData.form16_26as instanceof File
-                                    ? URL.createObjectURL(formData.form16_26as)
-                                    : ""
-                              )
-                            }
+                            onClick={() => {
+                              let url = "";
+                              if (formData.form16_26as?.preview) {
+                                url = formData.form16_26as.preview;
+                              } else if (formData.form16_26as instanceof File) {
+                                url = URL.createObjectURL(formData.form16_26as);
+                                objectUrlsRef.current.push(url);
+                              }
+                              setdocumentModel(url);
+                            }}
                             className="p-1 rounded-full hover:bg-blue-100 transition-colors"
                             style={{ color: "#2563EB" }}
                             title="View file"
@@ -2255,15 +2281,16 @@ export default function HomeLoanSalaried() {
                           {/* View Button */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.bankStatement1.preview
-                                  ? formData.bankStatement1.preview
-                                  : formData.bankStatement1 instanceof File
-                                    ? URL.createObjectURL(formData.bankStatement1)
-                                    : ""
-                              )
-                            }
+                            onClick={() => {
+                              let url = "";
+                              if (formData.bankStatement1?.preview) {
+                                url = formData.bankStatement1.preview;
+                              } else if (formData.bankStatement1 instanceof File) {
+                                url = URL.createObjectURL(formData.bankStatement1);
+                                objectUrlsRef.current.push(url);
+                              }
+                              setdocumentModel(url);
+                            }}
                             className="p-1 rounded-full hover:bg-blue-100 transition-colors"
                             style={{ color: "#2563EB" }}
                             title="View file"
@@ -2341,15 +2368,16 @@ export default function HomeLoanSalaried() {
                           {/* View Button */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.bankStatement2.preview
-                                  ? formData.bankStatement2.preview
-                                  : formData.bankStatement2 instanceof File
-                                    ? URL.createObjectURL(formData.bankStatement2)
-                                    : ""
-                              )
-                            }
+                            onClick={() => {
+                              let url = "";
+                              if (formData.bankStatement2?.preview) {
+                                url = formData.bankStatement2.preview;
+                              } else if (formData.bankStatement2 instanceof File) {
+                                url = URL.createObjectURL(formData.bankStatement2);
+                                objectUrlsRef.current.push(url);
+                              }
+                              setdocumentModel(url);
+                            }}
                             className="p-1 rounded-full hover:bg-blue-100 transition-colors"
                             style={{ color: "#2563EB" }}
                             title="View file"
@@ -2423,15 +2451,27 @@ export default function HomeLoanSalaried() {
 
                 {formData.newAddressProofs && (
                   <div className="mt-2 text-sm text-gray-700">
-                    {formData.newAddressProofs.type.includes("image") ? (
-                      <img
-                        src={URL.createObjectURL(formData.newAddressProofs)}
-                        alt="New Address Proof"
-                        className="w-40 h-40 object-cover rounded-lg border mt-2"
-                      />
-                    ) : (
-                      <p>📄 {formData.newAddressProofs.name}</p>
-                    )}
+                    {(() => {
+                      const isImage = formData.newAddressProofs.type?.includes("image");
+                      const previewUrl = useMemo(() => {
+                        if (isImage && formData.newAddressProofs instanceof File) {
+                          const url = URL.createObjectURL(formData.newAddressProofs);
+                          objectUrlsRef.current.push(url);
+                          return url;
+                        }
+                        return null;
+                      }, [formData.newAddressProofs, isImage]);
+                      
+                      return isImage && previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt="New Address Proof"
+                          className="w-40 h-40 object-cover rounded-lg border mt-2"
+                        />
+                      ) : (
+                        <p>📄 {formData.newAddressProofs.name}</p>
+                      );
+                    })()}
                   </div>
                 )}
 

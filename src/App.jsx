@@ -1,8 +1,9 @@
-import './App.css';
-import AppRoutes from './AppRoutes';
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getAuthData } from './utils/localStorage';
+import "./App.css";
+import AppRoutes from "./AppRoutes";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getAuthData } from "./utils/localStorage";
+import { SocketProvider } from "./components/SocketProvider";
 
 function App() {
   const navigate = useNavigate();
@@ -18,7 +19,10 @@ function App() {
         localStorage.setItem("impersonation_stack", JSON.stringify(stack));
 
         if (stack.length > 0) {
-          navigate(`/${stack[stack.length - 1].user.role.toLowerCase()}`, { replace: true });
+          navigate(
+            `/${stack[stack.length - 1].user.role.toLowerCase()}`,
+            { replace: true }
+          );
         } else if (adminToken) {
           navigate("/admin/dashboard", { replace: true });
         } else {
@@ -38,7 +42,12 @@ function App() {
     };
   }, [navigate]);
 
-  return <AppRoutes />;
+  // Wrap the whole app with SocketProvider so all routes share one socket connection
+  return (
+    <SocketProvider>
+      <AppRoutes />
+    </SocketProvider>
+  );
 }
 
 export default App;

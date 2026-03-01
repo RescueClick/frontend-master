@@ -97,6 +97,8 @@ const Analytics = () => {
         employeeId: "N/A",
         asmCode: "N/A",
         performance: "0.00%",
+        performancePercentage: 0,
+        targetValue: 0,
       };
     }
 
@@ -104,17 +106,20 @@ const Analytics = () => {
     const totals = analytics.totals || {};
 
     const disbursed = Number(analytics.totalDisbursed) || 0;
-    const revenue = Number(analytics.assignedTarget) || 0;
+    // Backend returns assignedTarget as a number; normalise and guard against NaN
+    const targetValue = Number(analytics.assignedTarget);
+    const safeTargetValue = Number.isFinite(targetValue) && targetValue > 0 ? targetValue : 0;
 
-    // Calculate performance percentage safely
-    const performancePercentage = revenue > 0 ? (disbursed / revenue) * 100 : 0;
+    // Calculate performance percentage safely to avoid NaN/Infinity
+    const performancePercentage =
+      safeTargetValue > 0 ? (disbursed / safeTargetValue) * 100 : 0;
     const performance = `${performancePercentage.toFixed(2)}%`;
 
     return {
       totalRM: totals.rms ?? 0,
       partner: totals.partners ?? 0,
       customerCount: totals.customers ?? 0,
-      totalRevenue: revenue,
+      totalRevenue: safeTargetValue,
       totalDisburse: disbursed,
       asmName: profile.name || "ASM",
       status: profile.status || "UNKNOWN",
@@ -122,9 +127,9 @@ const Analytics = () => {
       email: profile.email || "N/A",
       employeeId: profile.employeeId || "N/A",
       asmCode: profile.asmCode || "N/A",
-      performance: analytics.performance,
+      performance: analytics.performance || performance,
       performancePercentage,
-      targetValue: analytics.assignedTarget.targetValue,
+      targetValue: safeTargetValue,
     };
   }, [Analyticsdashboard]);
 
@@ -326,13 +331,14 @@ const Analytics = () => {
             </span>
             <span
               className={`text-xs px-2 py-1 rounded-full font-medium ${
-                analyticsData?.totalDisburse  / analyticsData?.targetValue  >= 1
+                analyticsData.targetValue > 0 &&
+                analyticsData.totalDisburse / analyticsData.targetValue >= 1
                   ? "bg-green-100 text-green-700"
                   : "bg-orange-100 text-orange-700"
               }`}
             >
               {Math.min(
-                ((analyticsData?.totalDisburse / analyticsData?.targetValue ) * 100).toFixed(1),
+                analyticsData.performancePercentage.toFixed(1),
                 100
               )}
               %
@@ -343,7 +349,7 @@ const Analytics = () => {
             <span>
               Disbursed: {formatCurrency(analyticsData.totalDisburse)}
             </span>
-            <span>Target: {formatCurrency(analyticsData?.targetValue)}</span>
+            <span>Target: {formatCurrency(analyticsData.targetValue)}</span>
           </div>
 
           {/* Progress Bar */}
@@ -352,25 +358,19 @@ const Analytics = () => {
               className="bg-gradient-to-r from-orange-500 to-orange-600 h-full rounded-full transition-all duration-500 ease-out"
               style={{
                 width: `${Math.min(
-                  ((analyticsData?.totalDisburse || 0) /
-                    (analyticsData?.targetValue || 1)) *
-                    100,
+                  analyticsData.performancePercentage,
                   100
                 ).toFixed(2)}%`,
               }}
               role="progressbar"
               aria-valuenow={Math.min(
-                ((analyticsData?.totalDisburse || 0) /
-                  (analyticsData?.targetValue || 1)) *
-                  100,
+                analyticsData.performancePercentage,
                 100
               ).toFixed(2)}
               aria-valuemin="0"
               aria-valuemax="100"
               aria-label={`Performance: ${Math.min(
-                ((analyticsData?.totalDisburse || 0) /
-                  (analyticsData?.targetValue || 1)) *
-                  100,
+                analyticsData.performancePercentage,
                 100
               ).toFixed(2)}%`}
             />
