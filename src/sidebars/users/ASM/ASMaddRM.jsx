@@ -20,7 +20,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
-import { createRM } from "../../../feature/thunks/asmThunks";
+// NOTE: ASM can NO LONGER create RM directly.
+// ASM should create RSM, and RSM will create RM.
+// This component has been disabled to enforce the hierarchy: ADMIN → ASM → RSM → RM
 
 const ASMaddRM = () => {
   const navigate = useNavigate();
@@ -118,58 +120,11 @@ const ASMaddRM = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-// ✅ Handle form submit
+// ✅ Handle form submit - DISABLED: ASM cannot create RM directly
 const handleSubmit = async (e) => {
   e.preventDefault();
-  if (!validateForm()) return;
-
-    // Make sure we're passing the MongoDB _id correctly
-    const requestData = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      dob: formData.dob,
-      region: formData.region,
-      phone: formData.phone,
-      email: formData.email,
-      password: formData.password,
-    };
-
-  try {
-    setLoading(true); // start loader
-
-    // Dispatch the async thunk and wait for completion
-    const resultAction = await dispatch(createRM(requestData));
-
-    if (createRM.fulfilled.match(resultAction)) {
-      // Success: Show message from backend or custom message
-      setMessage(
-        resultAction.payload?.message ||
-          "Relationship Manager has been added successfully to your team."
-      );
-      handleAddASM(); // additional logic after success
-    } else {
-      // Failure: Show error from backend
-      setMessage(resultAction.payload || "Failed to create RM");
-    }
-  } catch (error) {
-    setMessage(error.message || "An unexpected error occurred!");
-  } finally {
-    setLoading(false); // stop loader
-
-
-    setFormData(
-      {
-        firstName: "",
-        lastName: "",
-        phone: "",
-        dob: "",
-        region: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-      }
-    )
-  }
+  alert("ASM cannot create RM directly. Please create an RSM first, and the RSM will create RMs.");
+  navigate("/asm/rsms"); // Redirect to RSMs page
 };
 
 
@@ -247,9 +202,24 @@ const handleSubmit = async (e) => {
             <h1 className="text-3xl font-bold" style={{ color: colors.text }}>
               Add New Relationship Manager
             </h1>
-            <p className="text-gray-600 mt-2">
-              Fill in the details to add a new RM to your team
-            </p>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    <strong>Note:</strong> ASM cannot create RM directly. Please create an RSM first, and the RSM will create RMs.
+                    <button
+                      onClick={() => navigate("/asm/rsms")}
+                      className="ml-2 underline font-medium"
+                    >
+                      Go to RSMs page →
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Form */}

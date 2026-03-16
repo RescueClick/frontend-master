@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Loader2,
   Plus,
+  IndianRupee,
 } from "lucide-react";
 import { getAuthData } from "../../../utils/localStorage";
 
@@ -130,8 +131,8 @@ const Dashboard = () => {
   const targetVsAchievement = useMemo(() => {
     return Object.entries(data?.monthlyTargets || {}).map(
       ([month, stats]) => {
-        const rawAchievement = Number(stats?.achieved) || 0;
-        const rawTarget = Number(stats?.target) || 0;
+        const rawAchievement = Number(stats?.achievedDisbursement || stats?.achieved) || 0;
+        const rawTarget = Number(stats?.disbursementTarget || stats?.target) || 0;
 
         const achievement =
           Number.isFinite(rawAchievement) && rawAchievement >= 0
@@ -149,10 +150,25 @@ const Dashboard = () => {
           target,
           achievement,
           percentageValue,
+          fileCountTarget: stats?.fileCountTarget || 0,
+          achievedFileCount: stats?.achievedFileCount || 0,
         };
       }
     );
   }, [data?.monthlyTargets]);
+
+  // Current month target data from backend
+  const currentMonthTarget = useMemo(() => {
+    return data?.currentMonthTarget || {
+      fileCountTarget: 0,
+      disbursementTarget: 0,
+      achievedFileCount: 0,
+      achievedDisbursement: 0,
+      fileTargetMet: false,
+      disbursementTargetMet: false,
+      targetAchieved: false,
+    };
+  }, [data?.currentMonthTarget]);
 
   const currentDate = new Date();
 
@@ -401,56 +417,99 @@ const Dashboard = () => {
 
 
 
-      {/* Current Month Progress */}
+      {/* Current Month Target */}
       <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-md border border-gray-200 mb-4 sm:mb-6">
-        <div className="space-y-4">
-          {targetVsAchievement?.map((item, index) => (
-            item.month === monthNames[currentDate.getMonth()] && (
-              <div key={index} className="space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-sm font-medium text-gray-700">
-                      {item.month}
-                    </span>
-                    <div className="flex items-center space-x-2">
-                      {item.percentage >= 100 ? (
-                        <CheckCircle size={16} className="text-green-500" />
-                      ) : (
-                        <Target size={16} className="text-orange-500" />
-                      )}
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          item.target > 0 &&
-                          item.achievement / item.target >= 1
-                            ? "bg-green-100 text-green-700"
-                            : "bg-orange-100 text-orange-700"
-                        }`}
-                      >
-                        {Math.min(item.percentageValue, 100).toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">
-                    {item.achievement}K / {item.target}K
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Month Target</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* File Count Target */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <span className="text-sm font-medium text-gray-700">File Count</span>
+                <div className="flex items-center space-x-2">
+                  {currentMonthTarget.fileTargetMet ? (
+                    <CheckCircle size={16} className="text-green-500" />
+                  ) : (
+                    <Target size={16} className="text-orange-500" />
+                  )}
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      currentMonthTarget.fileTargetMet
+                        ? "bg-green-100 text-green-700"
+                        : "bg-orange-100 text-orange-700"
+                    }`}
+                  >
+                    {currentMonthTarget.fileCountTarget > 0
+                      ? Math.round((currentMonthTarget.achievedFileCount / currentMonthTarget.fileCountTarget) * 100)
+                      : 0}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    className="h-4 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min(item.percentageValue, 100).toFixed(
-                        1
-                      )}%`,
-                      backgroundColor:
-                        item.target > 0 && item.achievement >= item.target
-                          ? "#10B981"
-                          : "#F59E0B",
-                    }}
-                  ></div>
+              </div>
+              <span className="text-sm font-medium text-gray-900">
+                {currentMonthTarget.achievedFileCount} / {currentMonthTarget.fileCountTarget}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="h-2 rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(
+                    currentMonthTarget.fileCountTarget > 0
+                      ? (currentMonthTarget.achievedFileCount / currentMonthTarget.fileCountTarget) * 100
+                      : 0,
+                    100
+                  )}%`,
+                  backgroundColor: currentMonthTarget.fileTargetMet ? "#10B981" : "#F59E0B",
+                }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Disbursement Target */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <IndianRupee className="w-5 h-5 text-green-600" />
+                <span className="text-sm font-medium text-gray-700">Disbursement</span>
+                <div className="flex items-center space-x-2">
+                  {currentMonthTarget.disbursementTargetMet ? (
+                    <CheckCircle size={16} className="text-green-500" />
+                  ) : (
+                    <Target size={16} className="text-orange-500" />
+                  )}
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      currentMonthTarget.disbursementTargetMet
+                        ? "bg-green-100 text-green-700"
+                        : "bg-orange-100 text-orange-700"
+                    }`}
+                  >
+                    {currentMonthTarget.disbursementTarget > 0
+                      ? Math.round((currentMonthTarget.achievedDisbursement / currentMonthTarget.disbursementTarget) * 100)
+                      : 0}%
+                  </span>
                 </div>
               </div>
-            )
-          ))}
+              <span className="text-sm font-medium text-gray-900">
+                ₹{(currentMonthTarget.achievedDisbursement / 1000).toFixed(0)}K / ₹{(currentMonthTarget.disbursementTarget / 1000).toFixed(0)}K
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="h-2 rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(
+                    currentMonthTarget.disbursementTarget > 0
+                      ? (currentMonthTarget.achievedDisbursement / currentMonthTarget.disbursementTarget) * 100
+                      : 0,
+                    100
+                  )}%`,
+                  backgroundColor: currentMonthTarget.disbursementTargetMet ? "#10B981" : "#F59E0B",
+                }}
+              ></div>
+            </div>
+          </div>
         </div>
       </div>
 

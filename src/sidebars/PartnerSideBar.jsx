@@ -12,11 +12,12 @@ import {
   Calculator,
   IdCard,
   X,
+  Target,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import PartnerProfile from "../components/PartnerProfile"; // ✅ Correct import
 import { getAuthData } from "../utils/localStorage";
-import { backToOriginalRole, getOriginalRole } from "../utils/impersonation";
+import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPartnerProfile } from "../feature/thunks/partnerThunks";
 import logo from "../assets/logo.png";
@@ -71,6 +72,7 @@ const PartnerSideBar = () => {
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: "/partner/dashboard" },
     { name: "Applications", icon: FileText, path: "/partner/applications" },
+    { name: "My Target", icon: Target, path: "/partner/my-target" },
   { name: "Emi Calculator", icon: Calculator, path: "/partner/EmiCalculator" },
   { name: "KYC Details", icon: IdCard, path: "/partner/KYCDetails" }
   ];
@@ -142,16 +144,28 @@ const PartnerSideBar = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              {/* Go Back Button - Show when impersonating */}
+              {/* Go Back Buttons - Show when impersonating */}
               {isImpersonating && originalRole && (
-                <button
-                  onClick={() => backToOriginalRole(navigate)}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
-                  title={`Go back to ${originalRole.role} Panel`}
-                >
-                  <ArrowLeft size={16} />
-                  <span>Back to {originalRole.role}</span>
-                </button>
+                <>
+                  {/* Back to parent (e.g., RM / RSM / ASM) */}
+                  <button
+                    onClick={() => backToOriginalRole(navigate)}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                    title={`Go back to ${originalRole.displayName || formatRoleName(originalRole.role)} Panel`}
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Back to {originalRole.displayName || formatRoleName(originalRole.role)}</span>
+                  </button>
+                  {/* Back directly to Admin if available */}
+                  <button
+                    onClick={() => backToAdmin(navigate)}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
+                    title="Back to Admin Dashboard (exit all impersonations)"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Back to Admin</span>
+                  </button>
+                </>
               )}
               {/* Notifications */}
               <NotificationBell />

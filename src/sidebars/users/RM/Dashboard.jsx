@@ -57,17 +57,39 @@ const Dashboard = () => {
 
   const targetVsAchievement = useMemo(() => {
     return (data?.targets || [])?.map((item) => {
+      const target = item.disbursementTarget || item.target || 0;
+      const achievement = item.achieved || 0;
+      const fileCountTarget = item.fileCountTarget || 0;
+      const achievedFileCount = item.achievedFileCount || 0;
       const percentage =
-        item.target > 0 ? Math.round((item.achieved / item.target) * 100) : 0;
+        target > 0 ? Math.round((achievement / target) * 100) : 0;
+      const filePercentage =
+        fileCountTarget > 0 ? Math.round((achievedFileCount / fileCountTarget) * 100) : 0;
 
       return {
         month: item.month,
-        target: item.target,
-        achievement: item.achieved,
+        target,
+        achievement,
         percentage,
+        fileCountTarget,
+        achievedFileCount,
+        filePercentage,
       };
     });
   }, [data?.targets]);
+
+  // Current month target data
+  const currentMonthTarget = useMemo(() => {
+    return data?.currentMonthTarget || {
+      fileCountTarget: 0,
+      disbursementTarget: 0,
+      achievedFileCount: 0,
+      achievedDisbursement: 0,
+      fileTargetMet: false,
+      disbursementTargetMet: false,
+      targetAchieved: false,
+    };
+  }, [data?.currentMonthTarget]);
 
   const topCustomers = [
     {
@@ -426,7 +448,7 @@ const Dashboard = () => {
                 {formatCurrency(data?.totals?.totalRevenue)}
               </p>
               <p className="text-sm font-medium text-gray-600">
-                Revenue Generated
+                Total Disbursed
               </p>
               {/* <p className="text-xs text-gray-500 mt-1">
                 95% of quarterly target
@@ -435,75 +457,65 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 mb-5 ">
-
-        <div className="space-y-4">
-              {targetVsAchievement.map((item, index) => (
-
-                <>
-
-              { item.month == monthNames[currentDate.getMonth()] &&
-
-                <div key={index} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-sm font-medium text-gray-700 w-8">
-                        {item.month}
-                      </span>
-                      <div className="flex items-center space-x-2 ml-7">
-                        {item.percentage >= 100 ? (
-                          <CheckCircle size={16} className="text-green-500" />
-                        ) : (
-                          <Target size={16} className="text-orange-500" />
-                        )}
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${item.percentage >= 100
-                              ? "bg-green-100 text-green-700"
-                              : "bg-orange-100 text-orange-700"
-                            }`}
-                        >
-                          {item.percentage}%
-                        </span>
-                      </div>
-                    </div>
+        {/* Current Month Target - RM focuses on Disbursement (Business Metric) */}
+        <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 mb-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Current Month Target</h3>
+            <span className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">Revenue Target</span>
+          </div>
+          <div className="space-y-3">
+            {/* Disbursement Target - Primary Metric for RM */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <IndianRupee className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 block">Disbursement Target</span>
+                    <span className="text-xs text-gray-600">Sum of all Partner targets under you</span>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-auto">
+                    {currentMonthTarget.disbursementTargetMet ? (
+                      <CheckCircle size={18} className="text-green-600" />
+                    ) : (
+                      <Target size={18} className="text-orange-500" />
+                    )}
                     <span
-                      className="text-sm font-medium"
-                      style={{ color: "#111827" }}
+                      className={`text-sm px-3 py-1 rounded-full font-semibold ${
+                        currentMonthTarget.disbursementTargetMet
+                          ? "bg-green-100 text-green-700"
+                          : "bg-orange-100 text-orange-700"
+                      }`}
                     >
-                      {item.achievement}K / {item.target}K
+                      {currentMonthTarget.disbursementTarget > 0
+                        ? Math.round((currentMonthTarget.achievedDisbursement / currentMonthTarget.disbursementTarget) * 100)
+                        : 0}%
                     </span>
                   </div>
-
-
-
-
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.min((item.achievement / item.target) * 100, 100)}%`,
-                        backgroundColor: (() => {
-                          const percent = (item.achievement / item.target) * 100;
-                          if (percent < 50) return "#EF4444"; // red
-                          else if (percent < 90) return "#F59E0B"; // yellow
-                          else return "#12B99C"; // green
-                        })(),
-                      }}
-                    ></div>
-                  </div>
-
-
-
-
                 </div>
-              }
-
-
-                </>
-
-          
-              ))}
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-2xl font-bold text-gray-900">
+                  ₹{(currentMonthTarget.achievedDisbursement / 100000).toFixed(1)}L / ₹{(currentMonthTarget.disbursementTarget / 100000).toFixed(1)}L
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  className="h-3 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min(
+                      currentMonthTarget.disbursementTarget > 0
+                        ? (currentMonthTarget.achievedDisbursement / currentMonthTarget.disbursementTarget) * 100
+                        : 0,
+                      100
+                    )}%`,
+                    backgroundColor: currentMonthTarget.disbursementTargetMet ? "#10B981" : "#F59E0B",
+                  }}
+                ></div>
+              </div>
             </div>
+          </div>
         </div>
 
 

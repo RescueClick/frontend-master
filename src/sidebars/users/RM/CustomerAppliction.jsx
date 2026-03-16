@@ -2066,6 +2066,7 @@ const CustomerApplication = () => {
                         className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent transition-all duration-300"
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
+                        disabled={applicationData?.rsmId && !["DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status)}
                       >
                         <option value="">Select Status</option>
                         <option value="SUBMITTED">SUBMITTED</option>
@@ -2076,11 +2077,12 @@ const CustomerApplication = () => {
                         >
                           DOC_COMPLETE {!areAllDocumentsVerified() ? "(All docs must be verified)" : ""}
                         </option>
-                        <option value="UNDER_REVIEW">UNDER_REVIEW</option>
-                        <option value="APPROVED">APPROVED</option>
-                        <option value="AGREEMENT">AGREEMENT</option>
-                        <option value="DISBURSED">DISBURSED</option>
-                        <option value="REJECTED">REJECTED</option>
+                        {/* ✅ RM can only set statuses up to DOC_COMPLETE. Beyond that, RSM handles it */}
+                        {applicationData?.rsmId && !["DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status) && (
+                          <option value="" disabled>
+                            ⚠️ Application transferred to RSM - Status changes handled by RSM
+                          </option>
+                        )}
                       </select>
                       
                       {/* Show warning if trying to select DOC_COMPLETE without all docs verified */}
@@ -2128,14 +2130,48 @@ const CustomerApplication = () => {
                         </div>
                       )}
                       
-                      {/* Show info when current status is DOC_COMPLETE - can always revert to DOC_INCOMPLETE */}
-                      {applicationData?.status === "DOC_COMPLETE" && status !== "DOC_INCOMPLETE" && status !== "DOC_COMPLETE" && (
+                      {/* Show info when application has been transferred to RSM */}
+                      {applicationData?.rsmId && !["DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status) && (
                         <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <div className="flex items-start">
                             <AlertCircle className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
                             <div className="flex-1">
                               <p className="text-sm font-medium text-blue-800">
+                                Application Transferred to RSM
+                              </p>
+                              <p className="text-xs text-blue-600 mt-1">
+                                Current Status: {applicationData?.status}. This application has been transferred to RSM. Further status changes (UNDER_REVIEW, APPROVED, DISBURSED, etc.) are handled by RSM only.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Show info when current status is DOC_COMPLETE - can revert to DOC_INCOMPLETE but not go forward */}
+                      {applicationData?.status === "DOC_COMPLETE" && !applicationData?.rsmId && status !== "DOC_INCOMPLETE" && status !== "DOC_COMPLETE" && (
+                        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-start">
+                            <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-yellow-800">
                                 Current Status: DOC_COMPLETE
+                              </p>
+                              <p className="text-xs text-yellow-600 mt-1">
+                                Once you submit DOC_COMPLETE, this application will be automatically transferred to RSM. You can only revert to DOC_INCOMPLETE if needed.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Show info when current status is DOC_COMPLETE - can always revert to DOC_INCOMPLETE */}
+                      {applicationData?.status === "DOC_COMPLETE" && !applicationData?.rsmId && status === "DOC_INCOMPLETE" && (
+                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-start">
+                            <AlertCircle className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-blue-800">
+                                Reverting to DOC_INCOMPLETE
                               </p>
                               <p className="text-xs text-blue-700 mt-1">
                                 You can change status to <strong>DOC_INCOMPLETE</strong> at any time if documents need to be re-uploaded or re-verified.

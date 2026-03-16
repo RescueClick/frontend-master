@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { fetchPartnerProfile, updatePartnerProfile ,fetchPartnerDashboard } from "../thunks/partnerThunks";
+import { fetchPartnerProfile, updatePartnerProfile ,fetchPartnerDashboard, fetchMyTarget } from "../thunks/partnerThunks";
 
 
 const initialState = {
@@ -18,6 +18,13 @@ const initialState = {
     data: null,
   },
   dashboard: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  // My Target state
+  myTarget: {
     loading: false,
     error: null,
     success: false,
@@ -91,6 +98,23 @@ const partnerSlice = createSlice({
           success: false,
           data: null,
         };
+      })
+
+      // Fetch My Target
+      .addCase(fetchMyTarget.pending, (state) => {
+        state.myTarget.loading = true;
+        state.myTarget.error = null;
+        state.myTarget.success = false;
+      })
+      .addCase(fetchMyTarget.fulfilled, (state, action) => {
+        state.myTarget.loading = false;
+        state.myTarget.data = action.payload;
+        state.myTarget.success = true;
+      })
+      .addCase(fetchMyTarget.rejected, (state, action) => {
+        state.myTarget.loading = false;
+        state.myTarget.error = action.payload;
+        state.myTarget.success = false;
       });
   },
 });

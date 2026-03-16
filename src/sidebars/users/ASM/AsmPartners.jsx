@@ -224,139 +224,97 @@ loginAsUser(userId, navigate);
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr style={{ background: colors.primary }}>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                      User Name
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                      User ID
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                      Contact
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                      Create on
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                      Login as
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                      Activation
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black-100">
-                  {filteredCustomers.length > 0 ? (
-                    filteredCustomers.map((c) => (
-                      <tr
-                        key={c.id}
-                        className="hover:bg-gray-50 transition-colors  border-b"
-                      >
-                        <td className="px-4 py-2  border-b">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold"
-                            
-                            >
-
-                              <img src={c?.profilePic} alt="profile"  className="border border-gray-900"/> 
-                              {/* {c.name?.charAt(0).toUpperCase()} */}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900 text-sm">
-                                {c.name}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="font-mono text-sm text-gray-700 bg-gray-100 px-3 py-1 rounded-md">
-                            { c.employeeId}
+          <div className="overflow-x-auto rounded-lg shadow-sm">
+            <table className="w-full border-collapse bg-white text-sm">
+              <thead style={{ background: colors.primary, color: "white" }}>
+                <tr>
+                  <th className="px-2 py-4 text-left">User Name</th>
+                  <th className="px-2 py-4 text-left">User ID</th>
+                  <th className="px-2 py-4 text-left">Contact</th>
+                  <th className="px-2 py-4 text-left">Create on</th>
+                  <th className="px-2 py-4 text-left">Login as</th>
+                  <th className="px-2 py-4 text-left">Activation</th>
+                  <th className="px-2 py-4 text-left">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCustomers.length > 0 ? (
+                  filteredCustomers.map((c) => (
+                    <tr key={c.id} className="border-b hover:bg-gray-50">
+                      <td className="px-2 py-3 align-top">
+                        <div className="flex items-center gap-3">
+                          <img src={c?.profilePic} alt="profile" className="w-8 h-8 rounded-full border border-gray-300" />
+                          <span className="font-semibold text-sm">
+                            {c.name}
                           </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-gray-900">
-                            {c.phone}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-gray-600">
-                            {formatDate(c.createdOn)}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3">
-                          <button className="px-2 py-1 border border-[#1E3A8A] text-[#1E3A8A] text-sm transition-colors font-medium cursor-pointer"
-                          onClick={()=> handleLoginAs(c.id)}
-                          >
-                            Login
-                          </button>
-                        </td>
-
-                        <td className="px-2 py-3 align-middle">
+                        </div>
+                      </td>
+                      <td className="px-2 py-3 align-middle">{c.employeeId}</td>
+                      <td className="px-2 py-3 align-middle">
+                        <span className="text-sm font-medium">
+                          {c.phone}
+                        </span>
+                      </td>
+                      <td className="px-2 py-3 align-middle">
+                        {formatDate(c.createdOn)}
+                      </td>
+                      <td className="px-2 py-3 align-middle">
+                        <button
+                          className="px-2 py-1 border rounded text-xs"
+                          style={{
+                            borderColor: colors.secondary,
+                            color: colors.secondary,
+                          }}
+                          onClick={() => handleLoginAs(c.id)}
+                        >
+                          Login
+                        </button>
+                      </td>
+                      <td className="px-2 py-3 align-middle">
+                        <div
+                          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
+                            c.activation === "ACTIVE"
+                              ? "bg-blue-500"
+                              : "bg-gray-300"
+                          }`}
+                          onClick={() => {
+                            if (c.activation === "ACTIVE") {
+                              toggleActivation(c);
+                            } else {
+                              dispatch(activatePartner(c.id));
+                            }
+                          }}
+                        >
                           <div
-                            className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
+                            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
                               c.activation === "ACTIVE"
-                                ? "bg-blue-500"
-                                : "bg-gray-300"
+                                ? "translate-x-6"
+                                : "translate-x-0"
                             }`}
-                            onClick={() => {
-
-                              if(c.activation === "ACTIVE"){
-                                toggleActivation(c)
-                              }
-                              else{
-                                dispatch(activatePartner(c.id));
-
-                              }
-
-                        
-                              }}
-                          >
-                            <div
-                              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                                c.activation === "ACTIVE"
-                                  ? "translate-x-6"
-                                  : "translate-x-0"
-                              }`}
-                            ></div>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3">
+                          ></div>
+                        </div>
+                      </td>
+                      <td className="px-2 py-3 align-middle">
+                        <div className="flex items-center gap-1 h-full">
                           <button
-                            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                            className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                             onClick={() => handleViewCustomer(c)}
-                            title="View Details"
                           >
-                            <Eye size={16} className="text-gray-600" />
+                            <Eye size={14} />
                           </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="7" className="text-center py-12">
-                        <div className="text-gray-500">
-                          <p className="text-lg font-medium">
-                            No partners found
-                          </p>
-                          <p className="text-sm mt-1">
-                            Try adjusting your search criteria
-                          </p>
                         </div>
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center py-4">
+                      No partners found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

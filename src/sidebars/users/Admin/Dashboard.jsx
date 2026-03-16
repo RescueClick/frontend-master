@@ -19,9 +19,11 @@ import {
   LayoutGrid,
   Download,
   Banknote,
-  User
+  User,
+  IndianRupee
 } from 'lucide-react';
 import { useEffect } from 'react';
+import { formatCurrency, formatNumber, typography } from '../../../utils/designSystem';
 
 
 
@@ -76,8 +78,8 @@ const Dashboard = () => {
     <div className="p-6 bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
       {/* Header Section */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
-        <p className="text-gray-600 text-sm">Monitor your business metrics and activities</p>
+        <h1 className={typography.h1()}>Dashboard Overview</h1>
+        <p className={`${typography.bodySmall()} mt-2`}>Monitor your business metrics and activities</p>
       </div>
 
       {/* Stats Cards Grid */}
@@ -90,12 +92,12 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-red-100 to-red-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">All Time Payout</p>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{data?.totalPayout || 0}</p>
-              <p className="text-xs text-gray-400">Total disbursements</p>
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>All Time Payout</p>
+              <p className={`${typography.h2()} mb-1`}>{formatCurrency(data?.totalPayout || 0)}</p>
+              <p className={typography.tiny()}>Total payouts made</p>
             </div>
             <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <TrendingUp className="w-5 h-5 text-white" />
+              <Banknote className="w-5 h-5 text-white" />
             </div>
           </div>
         </div>
@@ -108,12 +110,12 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Disbursed</p>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{data?.totalRevenue || 0}</p>
-              <p className="text-xs text-gray-400">Revenue generated</p>
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Total Disbursed</p>
+              <p className={`${typography.h2()} mb-1`}>{formatCurrency(data?.totalRevenue || 0)}</p>
+              <p className={typography.tiny()}>Company-wide disbursement</p>
             </div>
             <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <TrendingUp className="w-5 h-5 text-white" />
+              <IndianRupee className="w-5 h-5 text-white" />
             </div>
           </div>
         </div>
@@ -126,9 +128,9 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Area Sales Managers</p>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{data?.totalASM || 0}</p>
-              <p className="text-xs text-gray-400">Active ASMs</p>
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Area Sales Managers</p>
+              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalASM || 0)}</p>
+              <p className={typography.tiny()}>Active ASMs</p>
             </div>
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
               <Users className="w-5 h-5 text-white" />
@@ -144,9 +146,9 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-100 to-amber-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Relationship Managers</p>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{data?.totalRM || 0}</p>
-              <p className="text-xs text-gray-400">Active RMs</p>
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Relationship Managers</p>
+              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalRM || 0)}</p>
+              <p className={typography.tiny()}>Active RMs</p>
             </div>
             <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
               <User className="w-5 h-5 text-white" />
@@ -162,9 +164,9 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Partners</p>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{data?.totalPartners || 0}</p>
-              <p className="text-xs text-gray-400">Total partners</p>
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Partners</p>
+              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalPartners || 0)}</p>
+              <p className={typography.tiny()}>Total partners</p>
             </div>
             <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
               <Building2 className="w-5 h-5 text-white" />
@@ -180,9 +182,9 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Customers</p>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{data?.totalCustomers || 0}</p>
-              <p className="text-xs text-gray-400">Total customers</p>
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Customers</p>
+              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalCustomers || 0)}</p>
+              <p className={typography.tiny()}>Total customers</p>
             </div>
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
               <UserCheck className="w-5 h-5 text-white" />
@@ -199,8 +201,8 @@ const Dashboard = () => {
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 flex flex-col" style={{ maxHeight: 'calc(100vh - 20rem)', height: 'calc(100vh - 20rem)' }}>
           <div className="flex items-center justify-between mb-5 flex-shrink-0">
             <div>
-              <h3 className="text-xl font-bold text-gray-900">Recent Activity</h3>
-              <p className="text-xs text-gray-500 mt-1">Latest system activities and updates</p>
+              <h3 className={typography.h3()}>Recent Activity</h3>
+              <p className={`${typography.caption()} mt-1`}>Latest system activities and updates</p>
             </div>
             <div className="bg-gray-100 rounded-lg p-2">
               <Bell className="w-5 h-5 text-gray-600" />
@@ -245,9 +247,9 @@ const Dashboard = () => {
                       {getIcon()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 mb-1">{activity.title}</p>
-                      <p className="text-xs text-gray-600 line-clamp-2 mb-1">{activity.description}</p>
-                      <p className="text-xs text-gray-400 font-medium">{activity.timeAgo}</p>
+                      <p className={`${typography.label()} mb-1`}>{activity.title}</p>
+                      <p className={`${typography.caption()} line-clamp-2 mb-1`}>{activity.description}</p>
+                      <p className={`${typography.tiny()} font-medium`}>{activity.timeAgo}</p>
                     </div>
                   </div>
                 );
@@ -257,8 +259,8 @@ const Dashboard = () => {
                 <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
                   <Bell className="w-8 h-8 text-gray-400" />
                 </div>
-                <p className="text-sm font-medium">No recent activities</p>
-                <p className="text-xs mt-1">Activities will appear here</p>
+                <p className={typography.label()}>No recent activities</p>
+                <p className={`${typography.caption()} mt-1`}>Activities will appear here</p>
               </div>
             )}
           </div>
@@ -268,34 +270,48 @@ const Dashboard = () => {
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 flex flex-col" style={{ maxHeight: 'calc(100vh - 20rem)', height: 'calc(100vh - 20rem)' }}>
           <div className="flex items-center justify-between mb-5 flex-shrink-0">
             <div>
-              <h3 className="text-xl font-bold text-gray-900">Quick Actions</h3>
-              <p className="text-xs text-gray-500 mt-1">Frequently used actions</p>
+              <h3 className={typography.h3()}>Quick Actions</h3>
+              <p className={`${typography.caption()} mt-1`}>Frequently used actions</p>
             </div>
             <div className="bg-gray-100 rounded-lg p-2">
               <LayoutGrid className="w-5 h-5 text-gray-600" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 flex-1 content-start">
+          <div className="grid grid-cols-3 gap-4 flex-1 content-start">
+            {/* Add ASM */}
             <button 
-              onClick={() => { navigate('/admin/Add-ASM-Page'); }} 
+              onClick={() => { navigate('/admin/add-asm-page'); }} 
               className="group cursor-pointer flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300 transform hover:-translate-y-1"
             >
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 mb-3 shadow-md group-hover:scale-110 transition-transform duration-300">
                 <Users size={24} className="text-white" />
               </div>
-              <span className="text-sm font-semibold text-blue-900">Add ASM</span>
-              <span className="text-xs text-blue-600 mt-1">Create new ASM</span>
+              <span className={`${typography.label("text-blue-900")}`}>Add ASM</span>
+              <span className={`${typography.caption("text-blue-600")} mt-1`}>Create new ASM</span>
             </button>
 
+            {/* Add RM */}
             <button 
-              onClick={() => { navigate('/admin/Add-RM-Page'); }} 
+              onClick={() => { navigate('/admin/add-rm-page'); }} 
               className="group cursor-pointer flex flex-col items-center justify-center p-6 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl border border-indigo-200 hover:shadow-lg hover:border-indigo-300 transition-all duration-300 transform hover:-translate-y-1"
             >
               <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-3 mb-3 shadow-md group-hover:scale-110 transition-transform duration-300">
                 <Users size={24} className="text-white" />
               </div>
-              <span className="text-sm font-semibold text-indigo-900">Add RM</span>
-              <span className="text-xs text-indigo-600 mt-1">Create new RM</span>
+              <span className={`${typography.label("text-indigo-900")}`}>Add RM</span>
+              <span className={`${typography.caption("text-indigo-600")} mt-1`}>Create new RM</span>
+            </button>
+
+            {/* Add RSM */}
+            <button 
+              onClick={() => { navigate('/admin/add-rsm-page'); }} 
+              className="group cursor-pointer flex flex-col items-center justify-center p-6 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200 hover:shadow-lg hover:border-emerald-300 transition-all duration-300 transform hover:-translate-y-1"
+            >
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-3 mb-3 shadow-md group-hover:scale-110 transition-transform duration-300">
+                <Users size={24} className="text-white" />
+              </div>
+              <span className={`${typography.label("text-emerald-900")}`}>Add RSM</span>
+              <span className={`${typography.caption("text-emerald-600")} mt-1`}>Create new RSM</span>
             </button>
           </div>
         </div>

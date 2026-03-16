@@ -23,6 +23,9 @@ import {
   Edit,
   Lock,
   X,
+  IndianRupee,
+  Award,
+  TrendingUp,
 } from "lucide-react";
 import axios from "axios"
 
@@ -30,7 +33,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getAuthData, clearAuthData } from "../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAsmProfile } from "../feature/thunks/asmThunks";
-import { backToOriginalRole, getOriginalRole } from "../utils/impersonation";
+import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
 
 import { backendurl } from "../feature/urldata";
 import Profile from "./users/userProfile/Profile";
@@ -78,11 +81,12 @@ const AsmSiderbar = () => {
   // Sidebar navigation items with icons and routes
 
   const sidebarItems = [
-    { name: "Dashboard", icon: LayoutGrid, path: "/Asm/dashboard" },
-    { name: "RM", icon: Users, path: "/Asm/RM" },
-    { name: "Partners", icon: UserCheck, path: "/Asm/partners" },
-    { name: "Customers", icon: Users, path: "/Asm/customers" },
-    { name: "Applications", icon: FileText, path: "/Asm/applications" },
+    { name: "Dashboard", icon: LayoutGrid, path: "/asm/dashboard" },
+    { name: "RSMs", icon: Users, path: "/asm/rsms" },
+    { name: "Applications", icon: FileText, path: "/asm/applications" },
+    { name: "Payouts", icon: IndianRupee, path: "/asm/payouts" },
+    { name: "Incentives", icon: Award, path: "/asm/incentives" },
+    { name: "Follow-ups", icon: Phone, path: "/asm/follow-ups" },
   ];
 
 
@@ -225,16 +229,28 @@ const AsmSiderbar = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              {/* Go Back Button - Show when impersonating */}
+              {/* Go Back Buttons - Show when impersonating */}
               {isImpersonating && originalRole && (
-                <button
-                  onClick={() => backToOriginalRole(navigate)}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
-                  title={`Go back to ${originalRole.role} Panel`}
-                >
-                  <ArrowLeft size={16} />
-                  <span>Back to {originalRole.role}</span>
-                </button>
+                <>
+                  {/* Back to parent (e.g., Admin → ASM) */}
+                  <button
+                    onClick={() => backToOriginalRole(navigate)}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                    title={`Go back to ${originalRole.displayName || formatRoleName(originalRole.role)} Panel`}
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Back to {originalRole.displayName || formatRoleName(originalRole.role)}</span>
+                  </button>
+                  {/* Back directly to Admin if available */}
+                  <button
+                    onClick={() => backToAdmin(navigate)}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
+                    title="Back to Admin Dashboard (exit all impersonations)"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Back to Admin</span>
+                  </button>
+                </>
               )}
               {/* Notifications */}
               <NotificationBell />

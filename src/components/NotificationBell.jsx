@@ -11,32 +11,7 @@ const getAuthToken = () => {
   const authData = getAuthData();
   const token = authData?.adminToken || authData?.asmToken || authData?.rmToken || authData?.partnerToken || authData?.customerToken;
   
-  // Debug logging to help identify token issues
-  if (!token) {
-    console.warn("⚠️ Web: No auth token found. Available tokens:", {
-      hasAdminToken: !!authData?.adminToken,
-      hasAsmToken: !!authData?.asmToken,
-      hasRmToken: !!authData?.rmToken,
-      hasPartnerToken: !!authData?.partnerToken,
-      hasCustomerToken: !!authData?.customerToken,
-      authDataKeys: Object.keys(authData || {}),
-    });
-  } else {
-    // Determine which token type was used
-    let tokenType = "unknown";
-    if (authData?.adminToken === token) tokenType = "adminToken";
-    else if (authData?.asmToken === token) tokenType = "asmToken";
-    else if (authData?.rmToken === token) tokenType = "rmToken";
-    else if (authData?.partnerToken === token) tokenType = "partnerToken";
-    else if (authData?.customerToken === token) tokenType = "customerToken";
-    
-    console.log("✅ Web: Auth token found:", {
-      hasToken: true,
-      tokenType: tokenType,
-      tokenLength: token.length,
-      tokenPreview: token.substring(0, 20) + "...",
-    });
-  }
+  // Debug logging removed for production
   
   return token;
 };
@@ -45,13 +20,11 @@ const loadNotificationsFromAPI = async () => {
   try {
     const token = getAuthToken();
     if (!token) {
-      console.warn("⚠️ No auth token found, cannot load notifications");
       throw new Error("No auth token available");
     }
 
     // Ensure backendurl is available
     if (!backendurl) {
-      console.error("❌ Backend URL is not configured");
       throw new Error("Backend URL not configured");
     }
 
@@ -59,19 +32,6 @@ const loadNotificationsFromAPI = async () => {
     // So we just append /notifications
     const apiUrl = `${backendurl}/notifications`;
 
-    console.log("📥 Web: Loading notifications from API...", { 
-      backendurl, 
-      apiUrl,
-      hasToken: !!token,
-      tokenType: token ? "found" : "missing"
-    });
-    
-    console.log("📡 Web: Making API request to:", apiUrl);
-    console.log("📡 Web: Request headers:", {
-      Authorization: `Bearer ${token.substring(0, 20)}...`,
-      'Content-Type': 'application/json',
-    });
-    
     const response = await axios.get(apiUrl, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -84,57 +44,17 @@ const loadNotificationsFromAPI = async () => {
       timeout: 10000, // 10 second timeout
     });
 
-    console.log("📥 Web: API Response received:", {
-      status: response.status,
-      statusText: response.statusText,
-      hasData: !!response.data,
-      dataKeys: response.data ? Object.keys(response.data) : [],
-      notificationsCount: response.data?.notifications?.length || 0,
-      total: response.data?.total || 0,
-      unreadCount: response.data?.unreadCount || 0,
-    });
-
     if (!response.data) {
-      console.warn("⚠️ No data in response:", response);
       return [];
     }
 
     const notifications = response.data.notifications || [];
-    console.log(`✅ Loaded ${notifications.length} notifications from MongoDB`, {
-      total: response.data.total,
-      unreadCount: response.data.unreadCount,
-      returned: response.data.returned,
-      responseData: response.data, // Log full response for debugging
-    });
-    
-    // If notifications array is empty but total > 0, there might be an issue
-    if (notifications.length === 0 && response.data.total > 0) {
-      console.warn("⚠️ Response shows total > 0 but notifications array is empty!", response.data);
-    }
-    
     return notifications;
   } catch (error) {
-    console.error("❌ Failed to load notifications from API:", {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      url: error.config?.url,
-    });
-    
     if (error.response?.status === 401) {
-      console.warn("⚠️ Unauthorized - token may be expired");
       throw error; // Re-throw to allow retry logic
     }
-    
-    if (error.code === 'ECONNABORTED') {
-      console.warn("⚠️ Request timeout - API might be slow");
-    }
-    
-    if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-      console.warn("⚠️ Network error - backend might be unreachable");
-    }
-    
+
     throw error; // Re-throw to allow retry logic in component
   }
 };
@@ -143,7 +63,6 @@ const saveNotificationToAPI = async (notification) => {
   try {
     const token = getAuthToken();
     if (!token) {
-      console.warn("⚠️ No auth token found, cannot save notification");
       return null;
     }
 
@@ -168,12 +87,9 @@ const saveNotificationToAPI = async (notification) => {
 
     return response.data.notification;
   } catch (error) {
-    // If duplicate, that's okay - just log it
     if (error.response?.status === 200 || error.response?.data?.message?.includes("already exists")) {
-      console.log("⚠️ Duplicate notification, skipping save");
       return null;
     }
-    console.error("Failed to save notification to API:", error);
     return null;
   }
 };
@@ -192,9 +108,7 @@ const markNotificationAsRead = async (notificationId) => {
         },
       }
     );
-  } catch (error) {
-    console.error("Failed to mark notification as read:", error);
-  }
+  } catch (error) {}
 };
 
 const deleteNotificationFromAPI = async (notificationId) => {
@@ -207,9 +121,7 @@ const deleteNotificationFromAPI = async (notificationId) => {
         Authorization: `Bearer ${token}`,
       },
     });
-  } catch (error) {
-    console.error("Failed to delete notification:", error);
-  }
+  } catch (error) {}
 };
 
 const markAllAsReadAPI = async () => {
@@ -226,9 +138,7 @@ const markAllAsReadAPI = async () => {
         },
       }
     );
-  } catch (error) {
-    console.error("Failed to mark all as read:", error);
-  }
+  } catch (error) {}
 };
 
 const deleteAllNotificationsAPI = async () => {
@@ -241,9 +151,7 @@ const deleteAllNotificationsAPI = async () => {
         Authorization: `Bearer ${token}`,
       },
     });
-  } catch (error) {
-    console.error("Failed to delete all notifications:", error);
-  }
+  } catch (error) {}
 };
 
 // Generate unique notification ID based on content to prevent duplicates
@@ -282,48 +190,23 @@ const NotificationBell = () => {
       try {
         const token = getAuthToken();
         if (!token) {
-          console.warn("⚠️ No auth token found, will retry...", { retryCount, maxRetries });
-          
           // Retry if token is not available yet (component might mount before auth is ready)
           if (retryCount < maxRetries) {
             retryCount++;
-            console.log(`🔄 Retrying to load notifications (attempt ${retryCount}/${maxRetries})...`);
             setTimeout(() => {
               loadNotifications(true);
             }, retryDelay);
             return;
           } else {
-            console.error("❌ Failed to get auth token after", maxRetries, "retries");
-            console.error("❌ This might mean the user is not logged in or token was cleared");
             setLoading(false);
             setNotifications([]); // Set empty array instead of leaving it undefined
             return;
           }
         }
 
-        console.log("📥 Web: Attempting to load notifications from API...");
         const loadedNotifications = await loadNotificationsFromAPI();
         
         if (Array.isArray(loadedNotifications)) {
-          console.log("✅ Web: Received notifications array with", loadedNotifications.length, "items");
-          
-          // Calculate unread count
-          const unread = loadedNotifications.filter(n => !n.read).length;
-          console.log("✅ Web: Unread count:", unread);
-          
-          if (loadedNotifications.length > 0) {
-            console.log("📋 Web: First notification sample:", {
-              _id: loadedNotifications[0]._id,
-              userId: loadedNotifications[0].userId,
-              type: loadedNotifications[0].type,
-              title: loadedNotifications[0].title,
-              read: loadedNotifications[0].read,
-            });
-          } else {
-            console.warn("⚠️ Web: API returned empty notifications array");
-            console.warn("⚠️ Web: This might mean no notifications exist for this user, or userId mismatch");
-          }
-          
           setNotifications(loadedNotifications);
           
           // Initialize processed IDs from loaded notifications
@@ -332,66 +215,42 @@ const NotificationBell = () => {
               processedIdsRef.current.add(n.notificationId || n._id);
             }
           });
-          
-          console.log("✅ Web: NotificationBell: Loaded", loadedNotifications.length, "notifications from MongoDB");
         } else {
-          console.warn("⚠️ Web: Invalid notifications format received:", loadedNotifications);
-          console.warn("⚠️ Web: Type:", typeof loadedNotifications, "Is Array:", Array.isArray(loadedNotifications));
           setNotifications([]);
         }
       } catch (error) {
-        console.error("❌ Failed to load notifications:", {
-          message: error.message,
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          stack: error.stack,
-        });
-        
         // Retry on error if we haven't exceeded max retries
         if (retryCount < maxRetries && error.response?.status !== 401) {
           retryCount++;
-          console.log(`🔄 Retrying after error (attempt ${retryCount}/${maxRetries})...`);
           setTimeout(() => {
             loadNotifications(true);
           }, retryDelay * retryCount); // Exponential backoff
         } else {
-          console.error("❌ Max retries reached or 401 error. Stopping retries.");
           setNotifications([]);
         }
       } finally {
         setLoading(false);
-        // Note: notifications.length here refers to the state at the time of the finally block
-        // The actual state update happens asynchronously
-        console.log("🏁 Loading complete. setLoading(false) called");
       }
     };
 
     // Load immediately on mount
-    console.log("🔔 Web: NotificationBell: Mounting, loading notifications from MongoDB...");
     loadNotifications();
 
     // Refresh notifications every 30 seconds to catch any missed updates
     const refreshInterval = setInterval(() => {
-      console.log("🔄 Web: NotificationBell: Periodic refresh from MongoDB");
       loadNotifications(true); // Pass true to indicate it's a refresh, not initial load
     }, 30000); // 30 seconds
 
     return () => {
-      console.log("🔔 Web: NotificationBell: Unmounting, clearing intervals");
       clearInterval(refreshInterval);
     };
   }, []); // Only run once on mount
 
   useEffect(() => {
-    console.log("🔔 NotificationBell: Setting up socket listeners", { isConnected });
-    
     // Ensure socket is connected
     if (!socketManager.getIsConnected()) {
-      console.log("🔔 NotificationBell: Socket not connected, attempting to connect...");
       const socket = socketManager.connect();
       if (socket) {
-        console.log("✅ NotificationBell: Socket connection initiated");
       }
     }
     
@@ -404,8 +263,6 @@ const NotificationBell = () => {
 
     // Listen for application updates - Reload from MongoDB instead of creating from socket
     const handleApplicationUpdate = async (data) => {
-      console.log("📨 NotificationBell: Received applicationUpdated event, reloading from MongoDB", data);
-      
       // Small delay to ensure backend has saved to MongoDB
       setTimeout(async () => {
         try {
@@ -418,17 +275,13 @@ const NotificationBell = () => {
               processedIdsRef.current.add(n.notificationId || n._id);
             }
           });
-          console.log("✅ NotificationBell: Reloaded", loadedNotifications.length, "notifications from MongoDB");
         } catch (error) {
-          console.error("Failed to reload notifications:", error);
         }
       }, 500); // 500ms delay to ensure backend saved
     };
 
     // Listen for document updates - Reload from MongoDB instead of creating from socket
     const handleDocumentUpdate = async (data) => {
-      console.log("📨 NotificationBell: Received documentStatusChanged event, reloading from MongoDB", data);
-      
       // Small delay to ensure backend has saved to MongoDB
       setTimeout(async () => {
         try {
@@ -441,17 +294,13 @@ const NotificationBell = () => {
               processedIdsRef.current.add(n.notificationId || n._id);
             }
           });
-          console.log("✅ NotificationBell: Reloaded", loadedNotifications.length, "notifications from MongoDB");
         } catch (error) {
-          console.error("Failed to reload notifications:", error);
         }
       }, 500); // 500ms delay to ensure backend saved
     };
 
     // Listen for partner status changes - Reload from MongoDB
     const handlePartnerStatusChange = async (data) => {
-      console.log("📨 NotificationBell: Received partnerStatusChanged event, reloading from MongoDB", data);
-      
       setTimeout(async () => {
         try {
           const loadedNotifications = await loadNotificationsFromAPI();
@@ -462,17 +311,13 @@ const NotificationBell = () => {
               processedIdsRef.current.add(n.notificationId || n._id);
             }
           });
-          console.log("✅ NotificationBell: Reloaded", loadedNotifications.length, "notifications from MongoDB");
         } catch (error) {
-          console.error("Failed to reload notifications:", error);
         }
       }, 500);
     };
 
     // Listen for payout updates - Reload from MongoDB
     const handlePayoutUpdate = async (data) => {
-      console.log("📨 NotificationBell: Received payoutStatusChanged event, reloading from MongoDB", data);
-      
       setTimeout(async () => {
         try {
           const loadedNotifications = await loadNotificationsFromAPI();
@@ -483,17 +328,13 @@ const NotificationBell = () => {
               processedIdsRef.current.add(n.notificationId || n._id);
             }
           });
-          console.log("✅ NotificationBell: Reloaded", loadedNotifications.length, "notifications from MongoDB");
         } catch (error) {
-          console.error("Failed to reload notifications:", error);
         }
       }, 500);
     };
 
     // Listen for new partner/customer registrations - Reload from MongoDB
     const handleNewRegistration = async (data) => {
-      console.log("📨 NotificationBell: Received new registration event, reloading from MongoDB", data);
-      
       setTimeout(async () => {
         try {
           const loadedNotifications = await loadNotificationsFromAPI();
@@ -504,16 +345,12 @@ const NotificationBell = () => {
               processedIdsRef.current.add(n.notificationId || n._id);
             }
           });
-          console.log("✅ NotificationBell: Reloaded", loadedNotifications.length, "notifications from MongoDB");
         } catch (error) {
-          console.error("Failed to reload notifications:", error);
         }
       }, 500);
     };
 
-    // Subscribe to socket events - Only listen to applicationUpdated and documentStatusChanged
-    // Notifications are now saved in MongoDB on backend, so we just reload from API
-    console.log("🔔 NotificationBell: Subscribing to socket events via internal event bus");
+    // Subscribe to socket events
     subscribe("applicationUpdated", handleApplicationUpdate);
     subscribe("documentStatusChanged", handleDocumentUpdate);
     subscribe("partnerStatusChanged", handlePartnerStatusChange);
@@ -522,20 +359,14 @@ const NotificationBell = () => {
     subscribe("newCustomerRegistered", handleNewRegistration);
     
     // Listen for socket authentication confirmation
-    const handleAuthenticated = (data) => {
-      console.log("✅ NotificationBell: Socket authenticated", data);
-      console.log("✅ NotificationBell: User rooms:", data?.rooms);
-    };
+    const handleAuthenticated = (data) => {};
     
     const socketForAuth = socketManager.getSocket();
     if (socketForAuth) {
       socketForAuth.on("authenticated", handleAuthenticated);
-    } else {
-      console.warn("⚠️ NotificationBell: Socket not available yet");
     }
 
     return () => {
-      console.log("🔔 NotificationBell: Cleaning up socket listeners");
       unsubscribe("applicationUpdated", handleApplicationUpdate);
       unsubscribe("documentStatusChanged", handleDocumentUpdate);
       unsubscribe("partnerStatusChanged", handlePartnerStatusChange);
@@ -552,16 +383,6 @@ const NotificationBell = () => {
   }, [subscribe, unsubscribe, isConnected]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
-  
-  // Debug: Log notification state changes
-  useEffect(() => {
-    console.log("🔔 NotificationBell: State updated", {
-      notificationCount: notifications.length,
-      unreadCount,
-      loading,
-      notificationOpen,
-    });
-  }, [notifications.length, unreadCount, loading, notificationOpen]);
 
   // Format notification for display (handle both MongoDB format and local format)
   const formatNotification = (notification) => {
@@ -685,9 +506,7 @@ const NotificationBell = () => {
                           processedIdsRef.current.add(n.notificationId || n._id);
                         }
                       });
-                      console.log("✅ Manually refreshed notifications");
                     } catch (error) {
-                      console.error("Failed to refresh:", error);
                     } finally {
                       setLoading(false);
                     }

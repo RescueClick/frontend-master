@@ -4,7 +4,7 @@ const parseJson = (key) => {
   try {
     return JSON.parse(raw);
   } catch (err) {
-    console.error(`Failed to parse ${key} from localStorage`, err);
+    // ignore parse errors in production
     return null;
   }
 };
@@ -14,6 +14,8 @@ export const clearAuthData = () => {
   localStorage.removeItem("super_admin_user");
   localStorage.removeItem("asm_token");
   localStorage.removeItem("asm_user");
+  localStorage.removeItem("rsm_token");
+  localStorage.removeItem("rsm_user");
   localStorage.removeItem("rm_token");
   localStorage.removeItem("rm_user");
   localStorage.removeItem("partner_token");
@@ -23,6 +25,8 @@ export const clearAuthData = () => {
   localStorage.removeItem("impersonation_stack");
   localStorage.removeItem("parent_user");
   localStorage.removeItem("parent_token");
+  localStorage.removeItem("main_parent_user");
+  localStorage.removeItem("main_parent_token");
 };
 
 /**
@@ -35,8 +39,9 @@ export const clearChildAuthData = () => {
 
   // Clear all child role tokens (roles lower in hierarchy than parent)
   const roleHierarchy = {
-    SUPER_ADMIN: ["asm", "rm", "partner", "customer"],
-    ASM: ["rm", "partner", "customer"],
+    SUPER_ADMIN: ["asm", "rsm", "rm", "partner", "customer"],
+    ASM: ["rsm", "rm", "partner", "customer"],
+    RSM: ["rm", "partner", "customer"],
     RM: ["partner", "customer"],
   };
 
@@ -46,9 +51,10 @@ export const clearChildAuthData = () => {
     localStorage.removeItem(`${role}_user`);
   });
 
-  // Clear parent tracking
+  // Clear parent tracking (but keep main_parent for admin access)
   localStorage.removeItem("parent_user");
   localStorage.removeItem("parent_token");
+  // Note: main_parent_user and main_parent_token are kept for "Back to Admin" functionality
 };
 
 /**
@@ -65,18 +71,35 @@ export const clearParentAuthData = () => {
 
 export const saveAuthData = (token, user, impersonation = false, parent = null) => {
   if (!token || !user?.role) {
-    console.error("Missing token or user role while saving auth data");
     return;
   }
 
   const roleKey = user.role.toLowerCase();
   try {
-    // If impersonating, clear parent's token first
+    // If impersonating, we need to handle parent tracking carefully
     if (impersonation && parent) {
-      clearParentAuthData();
-      // Store parent info for "back to parent" functionality
+      // Don't clear parent's token - we need it for nested impersonations
+      // Instead, just store the parent info for "back to parent" functionality
       localStorage.setItem("parent_user", JSON.stringify(parent));
       localStorage.setItem("parent_token", parent.token || "");
+      
+      // Track main parent (admin) - check if parent is admin, or if main_parent already exists
+      const mainParent = parseJson("main_parent_user");
+      if (!mainParent) {
+        // If no main parent exists, check if current parent is admin
+        if (parent.role === "SUPER_ADMIN") {
+          localStorage.setItem("main_parent_user", JSON.stringify(parent));
+          localStorage.setItem("main_parent_token", parent.token || "");
+        } else {
+          // If parent is not admin, check if there's an admin token (admin is the root)
+          const adminToken = localStorage.getItem("super_admin_token");
+          const adminUser = parseJson("super_admin_user");
+          if (adminToken && adminUser) {
+            localStorage.setItem("main_parent_user", JSON.stringify(adminUser));
+            localStorage.setItem("main_parent_token", adminToken);
+          }
+        }
+      }
     }
 
     localStorage.setItem(`${roleKey}_token`, token);
@@ -84,11 +107,12 @@ export const saveAuthData = (token, user, impersonation = false, parent = null) 
 
     if (impersonation) {
       const stack = parseJson("impersonation_stack") || [];
-      stack.push({ role: user.role, token, user, parent });
+      // Store parent info in stack entry for nested impersonation support
+      stack.push({ role: user.role, token, user, parent, parentToken: parent?.token });
       localStorage.setItem("impersonation_stack", JSON.stringify(stack));
     }
   } catch (err) {
-    console.error("Failed to save auth data:", err);
+    // ignore localStorage save errors
   }
 };
 
@@ -121,6 +145,8 @@ export const getAuthData = () => {
     adminUser: parseJson("super_admin_user"),
     asmToken: localStorage.getItem("asm_token"),
     asmUser: parseJson("asm_user"),
+    rsmToken: localStorage.getItem("rsm_token"),
+    rsmUser: parseJson("rsm_user"),
     rmToken: localStorage.getItem("rm_token"),
     rmUser: parseJson("rm_user"),
     partnerToken: localStorage.getItem("partner_token"),
@@ -130,6 +156,8 @@ export const getAuthData = () => {
     impersonationStack: parseJson("impersonation_stack") || [],
     parentUser: parseJson("parent_user"),
     parentToken: localStorage.getItem("parent_token"),
+    mainParentUser: parseJson("main_parent_user"),
+    mainParentToken: localStorage.getItem("main_parent_token"),
   };
 };
 

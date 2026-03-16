@@ -23,12 +23,13 @@ import {
   Edit,
   Lock,
   X,
+  TrendingUp,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
 import { fetchRmProfile } from "../feature/thunks/rmThunks";
 import { clearAuthData, getAuthData } from "../utils/localStorage";
-import { backToOriginalRole, getOriginalRole } from "../utils/impersonation";
+import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios"
 import { backendurl } from "../feature/urldata";
@@ -79,7 +80,6 @@ const RmSidebar = () => {
     { name: "Dashboard", icon: LayoutGrid, path: "/rm/dashboard" },
     { name: "My Partners", icon: UserCheck, path: "/rm/partners" },
     { name: "Manage Loans", icon: Users, path: "/rm/customers" },
-    { name: "Set Payout", icon: ClipboardList, path: "/rm/Rm-Application" },
     { name: "Follow Up", icon: CalendarCheck, path: "/rm/Follow-up" },
     { name: "Leads & Pipeline", icon: LineChart, path: "/rm/leads" },
     { name: "Targets & Reports", icon: BarChart2, path: "/rm/reports" },
@@ -235,16 +235,28 @@ const RmSidebar = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              {/* Go Back Button - Show when impersonating */}
+              {/* Go Back Buttons - Show when impersonating */}
               {isImpersonating && originalRole && (
-                <button
-                  onClick={() => backToOriginalRole(navigate)}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
-                  title={`Go back to ${originalRole.role} Panel`}
-                >
-                  <ArrowLeft size={16} />
-                  <span>Back to {originalRole.role}</span>
-                </button>
+                <>
+                  {/* Back to parent (e.g., ASM / RSM) */}
+                  <button
+                    onClick={() => backToOriginalRole(navigate)}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                    title={`Go back to ${originalRole.displayName || formatRoleName(originalRole.role)} Panel`}
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Back to {originalRole.displayName || formatRoleName(originalRole.role)}</span>
+                  </button>
+                  {/* Back directly to Admin if available */}
+                  <button
+                    onClick={() => backToAdmin(navigate)}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
+                    title="Back to Admin Dashboard (exit all impersonations)"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Back to Admin</span>
+                  </button>
+                </>
               )}
               {/* Notifications */}
               <NotificationBell />
@@ -478,6 +490,52 @@ const RmSidebar = () => {
                           </p>
                         </div>
                       </div>
+
+                      {/* Personal Loan RSM */}
+                      {data?.personalRsmName && (
+                        <div className="flex items-start gap-4 border-t pt-4">
+                          <Users className="w-5 h-5 text-[#12B99C]" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-500">Personal Loan RSM</p>
+                            <p className="text-[#111827] font-medium">
+                              {data?.personalRsmName || "N/A"}
+                            </p>
+                            {data?.personalRsmEmployeeId && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                ID: {data.personalRsmEmployeeId}
+                              </p>
+                            )}
+                            {data?.personalRsmPhone && (
+                              <p className="text-xs text-gray-500">
+                                Phone: {data.personalRsmPhone}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Business & Home Loan RSM */}
+                      {data?.businessHomeRsmName && (
+                        <div className="flex items-start gap-4 border-t pt-4">
+                          <Users className="w-5 h-5 text-[#12B99C]" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-500">Business & Home Loan RSM</p>
+                            <p className="text-[#111827] font-medium">
+                              {data?.businessHomeRsmName || "N/A"}
+                            </p>
+                            {data?.businessHomeRsmEmployeeId && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                ID: {data.businessHomeRsmEmployeeId}
+                              </p>
+                            )}
+                            {data?.businessHomeRsmPhone && (
+                              <p className="text-xs text-gray-500">
+                                Phone: {data.businessHomeRsmPhone}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* ASM Details */}
                       {/* <div className="flex items-start gap-4">

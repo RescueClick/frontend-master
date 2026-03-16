@@ -1,17 +1,48 @@
-// src/redux/slices/asm/asmRmSlice.js
-import {createAsyncThunk } from "@reduxjs/toolkit";
+import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { backendurl } from "../urldata";
-import { getAuthData } from "../../utils/localStorage";
+import { getAuthData, saveAuthData } from "../../utils/localStorage";
 
+// Login User (for all roles)
+export const loginUser = createAsyncThunk(
+  "admin/loginUser",
+  async ({ email, password }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${backendurl}/auth/login`, {
+        email,
+        password,
+      });
 
+      const { token, user } = response.data;
 
+      // Save auth data based on role
+      if (user.role === "SUPER_ADMIN") {
+        saveAuthData(token, user, false, "admin");
+      } else if (user.role === "ASM") {
+        saveAuthData(token, user, false, "asm");
+      } else if (user.role === "RSM") {
+        saveAuthData(token, user, false, "rsm");
+      } else if (user.role === "RM") {
+        saveAuthData(token, user, false, "rm");
+      } else if (user.role === "PARTNER") {
+        saveAuthData(token, user, false, "partner");
+      } else if (user.role === "CUSTOMER") {
+        saveAuthData(token, user, false, "customer");
+      }
 
+      return { token, user };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Login failed"
+      );
+    }
+  }
+);
 
+// Fetch Admin Dashboard
 export const fetchAdminDashboard = createAsyncThunk(
   "admin/fetchAdminDashboard",
-  async (_, { rejectWithValue }) => {   // ✅ FIX: _ means no payload
-    
+  async (_, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
 
@@ -53,26 +84,73 @@ export const fetchRecentActivities = createAsyncThunk(
   }
 );
 
-
-// Async thunk for creating ASM
-export const createAsm = createAsyncThunk(
-  "asm/createAsm",
-  async ({ firstName, lastName, phone, email ,dob, region , password, token }, { rejectWithValue }) => {
+// Fetch ASMs
+export const fetchAsms = createAsyncThunk(
+  "admin/fetchAsms",
+  async (_, { rejectWithValue }) => {
     try {
+      const { adminToken } = getAuthData();
+      const response = await axios.get(`${backendurl}/admin/get-asm`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch ASMs"
+      );
+    }
+  }
+);
+
+// Fetch RMs
+export const fetchRMs = createAsyncThunk(
+  "admin/fetchRMs",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.get(`${backendurl}/admin/get-rm`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch RMs"
+      );
+    }
+  }
+);
+
+// Fetch RSMs
+export const fetchRSMs = createAsyncThunk(
+  "admin/fetchRSMs",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.get(`${backendurl}/admin/get-rsm`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch RSMs"
+      );
+    }
+  }
+);
+
+// Create ASM
+export const createAsm = createAsyncThunk(
+  "admin/createAsm",
+  async (asmData, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
       const response = await axios.post(
         `${backendurl}/admin/create-asm`,
-        {
-          firstName,
-          lastName,
-          phone,
-          email,
-          dob,
-          region,
-          password,
-        },
+        asmData,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -85,94 +163,44 @@ export const createAsm = createAsyncThunk(
   }
 );
 
- 
- 
-// Async thunk for login
-export const loginUser = createAsyncThunk(
-  "auth/login",
-  async ({ email, password }, { rejectWithValue }) => {
+// Create RSM
+export const createRSM = createAsyncThunk(
+  "admin/createRSM",
+  async (rsmData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${backendurl}/auth/login`, {
-        email,
-        password,
-      });
-      // Open the response object to inspect its properties
-  
-
-      return response.data; // must be serializable (JSON)
-    } catch (err) {
-      if (err.response && err.response.data) {
-      
-        return rejectWithValue(err.response.data.message);
-      } else {
-        return rejectWithValue(err.message);
-      }
-    }
-  }
-);
-
-// 🔹 Async thunk for fetching ASMs
-export const fetchAsms = createAsyncThunk(
-  "asm/fetchAsms",
-  async (token, { rejectWithValue }) => {
-    try {
-      const response = await axios.get(`${backendurl}/admin/get-asm`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-     
- 
-      return response.data; // list of ASMs
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch ASMs"
-      );
-    }
-  }
-);
-
-
-// 🔹 Async thunk for fetching RMs
-export const fetchRMs = createAsyncThunk(
-  "rm/fetchRMs",
-  async (token, { rejectWithValue }) => {
-    try {
-      const response = await axios.get(`${backendurl}/admin/get-rm`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-     
-      return response.data; // list of RMs
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch RMs"
-      );
-    }
-  }
-);
-
-// Async thunk for creating RM
-export const createRm = createAsyncThunk(
-  "rm/createRm",
-  async ({ firstName, lastName, phone, email, dob, region, password, assignedAsmId, token }, { rejectWithValue }) => {
-    try {
+      const { adminToken } = getAuthData();
       const response = await axios.post(
-        `${backendurl}/admin/create-rm`,
-        {
-          firstName,
-          lastName,
-          phone,
-          dob,
-          region,
-          email,
-          password,
-          asmId: assignedAsmId, // Add ASM ID to the request
-        },
+        `${backendurl}/admin/create-rsm`,
+        rsmData,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to create RSM"
+      );
+    }
+  }
+);
+
+// Create RM
+export const createRm = createAsyncThunk(
+  "admin/createRm",
+  async (rmData, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/create-rm`,
+        rmData,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -185,17 +213,19 @@ export const createRm = createAsyncThunk(
   }
 );
 
-// 🔹 Async thunk to assign an RM to an ASM
+// Assign RM to ASM
 export const assignRmToAsm = createAsyncThunk(
-  "rm/assignRmToAsm",
-  async ({ rmId, asmId, token }, { rejectWithValue }) => {
+  "admin/assignRmToAsm",
+  async ({ rmId, asmId }, { rejectWithValue }) => {
     try {
+      const { adminToken } = getAuthData();
       const response = await axios.post(
-        `${backendurl}/admin/assign-rm-to-asm`,
+        `${backendurl}/admin/assign-rm-asm`,
         { rmId, asmId },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -208,41 +238,44 @@ export const assignRmToAsm = createAsyncThunk(
   }
 );
 
-// 🔹 Async thunk to bulk assign all RMs from one ASM to another (for deactivation flow)
+// Reassign all RMs from ASM
 export const reassignAllRmsFromAsm = createAsyncThunk(
-  "rm/reassignAllRmsFromAsm",
-  async ({ oldAsmId, newAsmId, token }, { rejectWithValue }) => {
+  "admin/reassignAllRmsFromAsm",
+  async ({ oldAsmId, newAsmId }, { rejectWithValue }) => {
     try {
+      const { adminToken } = getAuthData();
       const response = await axios.post(
-        `${backendurl}/admin/assign-rms-to-asm`,
+        `${backendurl}/admin/reassign-rms-asm`,
         { oldAsmId, newAsmId },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
           },
         }
       );
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to reassign RMs to new ASM"
+        error.response?.data?.message || "Failed to reassign RMs"
       );
     }
   }
 );
 
-
-// 🔹 Async thunk to activate an ASM
+// Activate ASM
 export const activateAsm = createAsyncThunk(
-  "asm/activateAsm",
-  async ({ asmId, token }, { rejectWithValue }) => {
+  "admin/activateAsm",
+  async (asmId, { rejectWithValue }) => {
     try {
+      const { adminToken } = getAuthData();
       const response = await axios.post(
-        `${backendurl}/admin/activate-asm`,
+        `${backendurl}/admin/asm/activate`,
         { asmId },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -255,17 +288,20 @@ export const activateAsm = createAsyncThunk(
   }
 );
 
-// 🔹 Permanently delete an ASM (must be deactivated first)
+// Delete ASM
 export const deleteAsm = createAsyncThunk(
-  "asm/deleteAsm",
-  async ({ asmId }, { rejectWithValue }) => {
+  "admin/deleteAsm",
+  async (asmId, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.delete(`${backendurl}/admin/asm/${asmId}`, {
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-        },
-      });
+      const response = await axios.delete(
+        `${backendurl}/admin/asm/${asmId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(
@@ -275,44 +311,48 @@ export const deleteAsm = createAsyncThunk(
   }
 );
 
-// 🔹 Async thunk to fetch ASM dashboard metrics
-export const fetchAnalyticsdashboard  = createAsyncThunk(
-  "asm/fetchAnalyticsdashboard ",
+// Fetch Analytics Dashboard
+// Fetch Analytics for any role (Admin can view all roles)
+// Now uses universal analytics endpoint
+export const fetchAnalyticsdashboard = createAsyncThunk(
+  "admin/fetchAnalyticsdashboard",
   async ({ ID, token }, { rejectWithValue }) => {
-
-
-
     try {
+      const adminToken = token || getAuthData().adminToken;
+      if (!adminToken) {
+        return rejectWithValue("Admin token not found");
+      }
+      
+      // Use universal analytics endpoint
       const response = await axios.get(
-        `${backendurl}/admin/${ID}/analytics`,
+        `${backendurl}/analytics/${ID}`,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${adminToken}`,
           },
         }
       );
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch ASM dashboard"
+        error.response?.data?.message || "Failed to fetch analytics"
       );
     }
   }
 );
 
+// Fetch Admin Profile
 export const fetchAdminProfile = createAsyncThunk(
-  "admin/fetchProfile",
-  async (adminToken, { rejectWithValue }) => {
-   
+  "admin/fetchAdminProfile",
+  async (_, { rejectWithValue }) => {
     try {
+      const { adminToken } = getAuthData();
       const response = await axios.get(`${backendurl}/admin/profile`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
       });
- 
-      
-      return response.data; // return only profile object
+      return response.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch admin profile"
@@ -321,17 +361,18 @@ export const fetchAdminProfile = createAsyncThunk(
   }
 );
 
-// 🔹 Async thunk for fetching Partners
+// Fetch Partners
 export const fetchPartners = createAsyncThunk(
   "admin/fetchPartners",
-  async (token, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
+      const { adminToken } = getAuthData();
       const response = await axios.get(`${backendurl}/admin/get-partners`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${adminToken}`,
         },
       });
-      return response.data; // list of partners
+      return response.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch partners"
@@ -340,137 +381,41 @@ export const fetchPartners = createAsyncThunk(
   }
 );
 
-
- // Get Unassigned Partners Thunk
- export const getUnassignedPartners = createAsyncThunk(
+// Get Unassigned Partners
+export const getUnassignedPartners = createAsyncThunk(
   "admin/getUnassignedPartners",
   async (_, { rejectWithValue }) => {
-
-
-    const {adminToken} = getAuthData();
-
-
-    
-
     try {
-      const res = await axios.get(`${backendurl}/admin/get-unassigned-partners`, {
-        headers: {
-          Authorization: `Bearer ${adminToken}`, // Adjust based on how you store token
-        },
-      });
-
-      return res.data;
-    } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
-    }
-  }
-);
-
-
-
-// Assign Partner to RM Thunk
-export const assignPartnerToRm = createAsyncThunk(
-  "admin/assignPartnerToRm",
-  async ({ partnerId, rmId }, { rejectWithValue }) => {
-
-
-    
-    
-    
-
-    const { adminToken } = getAuthData();
-
-    try {
-      const res = await axios.post(
-        `${backendurl}/admin/assign-admin-partner-to-rm`,
-        { partnerId, rmId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      return res.data;
-    } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
-    }
-  }
-);
-
-
-export const assignAsmBulkTarget = createAsyncThunk(
-  "target/assignAsmBulkTarget",
-  async ({ month, year, totalTarget }, { rejectWithValue }) => {
-
-    const { adminToken } = getAuthData(); // Admin token
-
-    try {
-      const response = await axios.post(
-        `${backendurl}/admin/target/assign-asm-bulk`,
-        { month, year, totalTarget },
+      const { adminToken } = getAuthData();
+      const response = await axios.get(
+        `${backendurl}/admin/unassigned-partners`,
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,
           },
         }
       );
-
-      
-      return response.data; // returns bulk assignments
+      return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to assign bulk ASM targets"
+        error.response?.data?.message || "Failed to fetch unassigned partners"
       );
     }
   }
 );
 
-
-export const assignBulkTargetAll = createAsyncThunk(
-  "target/assignBulkTargetAll",
-  async ({ month, year, totalTarget }, { rejectWithValue }) => {
-
-    const { adminToken } = getAuthData(); // Admin token
-
-    try {
-      const response = await axios.post(
-        `${backendurl}/admin/target/assign-bulk`,
-        { month, year, totalTarget },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
-
-      
-      return response.data; // returns bulk assignments
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to assign bulk targets to all"
-      );
-    }
-  }
-);
-
-
-
+// Get All Customers
 export const getAllCustomers = createAsyncThunk(
-  "customers/getAllCustomers",
+  "admin/getAllCustomers",
   async (_, { rejectWithValue }) => {
-    const { adminToken } = getAuthData(); // Super Admin token
-
     try {
+      const { adminToken } = getAuthData();
       const response = await axios.get(`${backendurl}/admin/get-customers`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
       });
-
-      
-      return response.data; // Send data to reducer
+      return response.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch customers"
@@ -479,35 +424,7 @@ export const getAllCustomers = createAsyncThunk(
   }
 );
 
-
-
-export const uploadBanners = createAsyncThunk(
-  "banners/uploadBanners",
-  async (formData , { rejectWithValue }) => {
-    const { adminToken } = getAuthData(); // Super Admin Token
-  
-
-    try {
-      const response = await axios.post(`${backendurl}/admin/banners`, formData, {
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-    
-      return response.data; // Send data to reducer
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to upload banners"
-      );
-    }
-  }
-);
-
-
-
-// Thunk to fetch all banners
+// Fetch Banners
 export const fetchBanners = createAsyncThunk(
   "admin/fetchBanners",
   async (_, { rejectWithValue }) => {
@@ -515,124 +432,19 @@ export const fetchBanners = createAsyncThunk(
       const { adminToken } = getAuthData();
       const response = await axios.get(`${backendurl}/admin/banners`, {
         headers: {
-          Authorization: `Bearer ${adminToken }`,
+          Authorization: `Bearer ${adminToken}`,
         },
       });
-      return response.data.banners; // return banners to slice
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to fetch banners");
-    }
-  }
-);
-
-
-export const deleteBanner = createAsyncThunk(
-  "admin/deleteBanner",
-  async (bannerId, { rejectWithValue }) => {
-
-
-   
-    
-    try {
-      const { adminToken } = getAuthData();
-
-      const response = await axios.delete(`${backendurl}/admin/banners/${bannerId}`, {
-        headers: {
-          Authorization: `Bearer ${adminToken }`,
-        },
-      });
-      return { id: bannerId, message: response.data.message };
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to delete banner");
-    }
-  }
-);
-
-
-export const assignPartnersToRM = createAsyncThunk(
-  "admin/assignPartnersToRM",
-  async ({ oldRmId, newRmId }, { rejectWithValue }) => {
-   
-
-    try {
-      const { adminToken } = getAuthData();
-
-      const response = await axios.post(
-        `${backendurl}/admin/assign-partners-rm`,
-        { oldRmId, newRmId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      return response.data.message;
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to assign partners");
-    }
-  }
-);
-
-
-export const reassignCustomersAndDeactivatePartner = createAsyncThunk(
-  "admin/reassignCustomersAndDeactivatePartner",
-  async ({ oldPartnerId }, { rejectWithValue }) => {
-   
-
-    try {
-      const { adminToken } = getAuthData();
-
-      const response = await axios.post(
-        `${backendurl}/admin/deactivate-partner`,
-        { oldPartnerId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      return response.data.message; // success message
-    } catch (err) {
+      return response.data;
+    } catch (error) {
       return rejectWithValue(
-        err.response?.data?.message || "Failed to reassign customers"
+        error.response?.data?.message || "Failed to fetch banners"
       );
     }
   }
 );
 
-
-// Thunk to activate RM
-export const activateRM = createAsyncThunk(
-  "admin/activateRM",
-  async (rmId , { rejectWithValue }) => {
-   
-
-    try {
-      const { adminToken } = getAuthData(); // ✅ Use your stored token
-
-      const response = await axios.post(
-        `${backendurl}/admin/rm/activate`,
-        { rmId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      return response.data.message; // ✅ Success message from backend
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to activate RM");
-    }
-  }
-);
-
-// 🔹 Permanently delete an RM (must be deactivated first)
+// Delete RM
 export const deleteRm = createAsyncThunk(
   "admin/deleteRm",
   async (rmId, { rejectWithValue }) => {
@@ -644,22 +456,206 @@ export const deleteRm = createAsyncThunk(
         },
       });
       return response.data;
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to delete RM");
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete RM"
+      );
     }
   }
 );
 
+// Reject Partner
+export const rejectPartner = createAsyncThunk(
+  "admin/rejectPartner",
+  async (partnerId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/reject-partner`,
+        { partnerId },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to reject partner"
+      );
+    }
+  }
+);
 
-// Thunk to activate Partner
-export const activatePartner = createAsyncThunk(
-  "admin/activatePartner",
-  async ( partnerId , { rejectWithValue }) => {
-   
+// Login As User (Impersonation)
+export const loginAsUserThunk = createAsyncThunk(
+  "admin/loginAsUser",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/auth/login-as/${userId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+      return response.data; // { token, user }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to login as user"
+      );
+    }
+  }
+);
+
+// Fetch Delete Account Requests
+export const fetchDeleteAccountRequests = createAsyncThunk(
+  "admin/fetchDeleteAccountRequests",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.get(
+        `${backendurl}/admin/delete-account-requests`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch delete account requests"
+      );
+    }
+  }
+);
+
+// Update Delete Account Request Status
+export const updateDeleteAccountRequestStatus = createAsyncThunk(
+  "admin/updateDeleteAccountRequestStatus",
+  async ({ requestId, status }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.patch(
+        `${backendurl}/admin/delete-account-requests/${requestId}`,
+        { status },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update delete account request"
+      );
+    }
+  }
+);
+
+// Payout Management - Pending/Done (similar to RM)
+export const fetchAdminCustomersPayOutPending = createAsyncThunk(
+  "adminCustomers/fetchPendingPayouts",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+
+      const response = await axios.get(`${backendurl}/admin/customers/pending-payouts`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+
+      return response.data; // returns array of customer objects
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch Admin pending payout customers"
+      );
+    }
+  }
+);
+
+export const fetchAdminCustomersPayOutDone = createAsyncThunk(
+  "adminCustomers/fetchDonePayout",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+
+      const response = await axios.get(`${backendurl}/admin/customers/done-payouts`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+
+      return response.data; // returns array of customer objects
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch Admin done payout customers"
+      );
+    }
+  }
+);
+
+export const fetchAdminCustomerPartnersPayout = createAsyncThunk(
+  "admin/fetchCustomerPartnersPayout",
+  async (customerId, { rejectWithValue }) => {
+    const { adminToken } = getAuthData();
 
     try {
-      const { adminToken } = getAuthData(); // ✅ get token
+      const response = await axios.get(
+        `${backendurl}/admin/customer/${customerId}/partners-payout`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
+      return response.data; // { partners }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch partners payout details"
+      );
+    }
+  }
+);
+
+export const setAdminPayouts = createAsyncThunk(
+  "admin/setPayouts",
+  async (payoutData, { rejectWithValue }) => {
+    const { adminToken } = getAuthData();
+
+    try {
+      const response = await axios.post(
+        `${backendurl}/admin/set-payouts`,
+        payoutData, // { applicationId, partnerId, payoutPercentage, note, payOutStatus }
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data; // { message, payout }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to set payout"
+      );
+    }
+  }
+);
+
+// Activate Partner
+export const activatePartner = createAsyncThunk(
+  "admin/activatePartner",
+  async (partnerId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
       const response = await axios.post(
         `${backendurl}/admin/partner/activate`,
         { partnerId },
@@ -670,25 +666,24 @@ export const activatePartner = createAsyncThunk(
           },
         }
       );
-
-      return response.data.message; // ✅ return success message
-    } catch (err) {
+      return response.data;
+    } catch (error) {
       return rejectWithValue(
-        err.response?.data?.message || "Failed to activate partner"
+        error.response?.data?.message || "Failed to activate partner"
       );
     }
   }
 );
 
-// Thunk to reject/delete Partner request with all documents
-export const rejectPartner = createAsyncThunk(
-  "admin/rejectPartner",
-  async (partnerId, { rejectWithValue }) => {
+// Reassign Customers and Deactivate Partner
+export const reassignCustomersAndDeactivatePartner = createAsyncThunk(
+  "admin/reassignCustomersAndDeactivatePartner",
+  async ({ oldPartnerId }, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
-
-      const response = await axios.delete(
-        `${backendurl}/admin/partner/${partnerId}`,
+      const response = await axios.post(
+        `${backendurl}/admin/deactivate-partner`,
+        { oldPartnerId },
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,
@@ -696,37 +691,314 @@ export const rejectPartner = createAsyncThunk(
           },
         }
       );
-
-      return response.data.message;
-    } catch (err) {
+      return response.data;
+    } catch (error) {
       return rejectWithValue(
-        err.response?.data?.message || "Failed to reject Partner"
+        error.response?.data?.message || "Failed to reassign customers and deactivate partner"
       );
     }
   }
 );
 
-// Async thunk for Login As (Impersonation)
-export const loginAsUserThunk = createAsyncThunk(
-  "auth/loginAsUser",
-  async ({ userId }, { rejectWithValue }) => {
+// Activate RM (Admin role)
+export const activateRM = createAsyncThunk(
+  "admin/activateRM",
+  async (rmId, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
-      if (!adminToken) throw new Error("Admin not authenticated");
-
-      const res = await axios.post(
-        `${backendurl}/auth/login-as/${userId}`,
-        {},
-        { headers: { Authorization: `Bearer ${adminToken}` } }
+      const response = await axios.post(
+        `${backendurl}/admin/rm/activate`,
+        { rmId },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to activate RM"
+      );
+    }
+  }
+);
 
-      return res.data; // { token, user }
-    } catch (err) {
-      if (err.response && err.response.data) {
-        return rejectWithValue(err.response.data.message);
-      } else {
-        return rejectWithValue(err.message);
-      }
+// Assign Partners to RM (Admin role) - Reassigns partners from old RM to new RM
+export const assignPartnersToRM = createAsyncThunk(
+  "admin/assignPartnersToRM",
+  async ({ oldRmId, newRmId }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/assign-partners-rm`,
+        { oldRmId, newRmId },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to assign partners to RM"
+      );
+    }
+  }
+);
+
+// Activate RSM (Admin role)
+export const activateRSM = createAsyncThunk(
+  "admin/activateRSM",
+  async (rsmId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/rsm/activate`,
+        { rsmId },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to activate RSM"
+      );
+    }
+  }
+);
+
+// Deactivate RSM (Admin role)
+export const deactivateRSM = createAsyncThunk(
+  "admin/deactivateRSM",
+  async (rsmId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/rsm/deactivate`,
+        { rsmId },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to deactivate RSM"
+      );
+    }
+  }
+);
+
+// Assign ASM Bulk Target (Admin role)
+export const assignAsmBulkTarget = createAsyncThunk(
+  "admin/assignAsmBulkTarget",
+  async ({ month, year, totalTarget }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/target/assign-asm-bulk`,
+        { month, year, totalTarget },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to assign ASM bulk target"
+      );
+    }
+  }
+);
+
+// Assign Bulk Target All (Admin role) - Assigns targets to all ASMs, RMs, and Partners
+export const assignBulkTargetAll = createAsyncThunk(
+  "admin/assignBulkTargetAll",
+  async ({ month, year, totalTarget }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/target/assign-bulk`,
+        { month, year, totalTarget },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to assign bulk target to all"
+      );
+    }
+  }
+);
+
+// Upload Banners (Admin role)
+export const uploadBanners = createAsyncThunk(
+  "admin/uploadBanners",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/banners`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to upload banners"
+      );
+    }
+  }
+);
+
+// Delete Banner (Admin role)
+export const deleteBanner = createAsyncThunk(
+  "admin/deleteBanner",
+  async (bannerId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.delete(
+        `${backendurl}/admin/banners/${bannerId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete banner"
+      );
+    }
+  }
+);
+
+// Assign Partner to RM (Admin role)
+export const assignPartnerToRm = createAsyncThunk(
+  "admin/assignPartnerToRm",
+  async ({ partnerId, rmId }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/assign-admin-partner-to-rm`,
+        { partnerId, rmId },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to assign partner to RM"
+      );
+    }
+  }
+);
+
+// ==================== PARTNER TARGET MANAGEMENT (Admin) ====================
+
+// Fetch Partner Targets (Admin role)
+export const fetchAdminPartnerTargets = createAsyncThunk(
+  "admin/fetchPartnerTargets",
+  async ({ year, month }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const params = new URLSearchParams();
+      if (year) params.append("year", year);
+      if (month) params.append("month", month);
+      
+      const response = await axios.get(
+        `${backendurl}/admin/partners/targets?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch partner targets"
+      );
+    }
+  }
+);
+
+// Assign Target to Single Partner (Admin role)
+export const assignAdminPartnerTarget = createAsyncThunk(
+  "admin/assignPartnerTarget",
+  async ({ partnerId, month, year, fileCountTarget, disbursementTarget }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/target/assign-partner`,
+        { partnerId, month, year, fileCountTarget, disbursementTarget },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to assign target to partner"
+      );
+    }
+  }
+);
+
+// Distribute Hierarchical Targets (Admin) - Top-Down Model
+export const distributeHierarchicalTargets = createAsyncThunk(
+  "admin/distributeHierarchicalTargets",
+  async ({ month, year, totalCompanyTarget, partnerFileCountTarget }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/target/distribute-hierarchical`,
+        { month, year, totalCompanyTarget, partnerFileCountTarget },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to distribute hierarchical targets"
+      );
     }
   }
 );

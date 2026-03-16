@@ -312,26 +312,30 @@ export const updateFollowUp = createAsyncThunk(
 );
 
 
+// Fetch Partner Analytics (RM role - hierarchical access: RM → Partner)
+// Now uses universal analytics endpoint
 export const getAnalytics = createAsyncThunk(
   "analytics/getAnalytics",
-  async (id, { rejectWithValue }) => {
+  async (partnerId, { rejectWithValue }) => {
     const { rmToken } = getAuthData();
 
+    if (!rmToken) {
+      return rejectWithValue("RM token not found");
+    }
+
     try {
-      const response = await axios.get(`${backendurl}/rm/${id}/analytics`, {
+      // Use universal analytics endpoint
+      const response = await axios.get(`${backendurl}/analytics/${partnerId}`, {
         headers: {
           Authorization: `Bearer ${rmToken}`,
           "Content-Type": "application/json",
         },
       });
 
-   
-      
-
-      return response.data; // { profile, analytics }
+      return response.data; // { data: { profile, analytics } }
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch analytics"
+        error.response?.data?.message || "Failed to fetch partner analytics"
       );
     }
   }
@@ -391,6 +395,33 @@ export const activatePartner = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.message || "Failed to activate partner"
+      );
+    }
+  }
+);
+
+// Fetch Partner Targets (RM role) - View only
+export const fetchRmPartnerTargets = createAsyncThunk(
+  "rm/fetchPartnerTargets",
+  async ({ year, month }, { rejectWithValue }) => {
+    try {
+      const { rmToken } = getAuthData();
+      const params = new URLSearchParams();
+      if (year) params.append("year", year);
+      if (month) params.append("month", month);
+      
+      const response = await axios.get(
+        `${backendurl}/rm/partners/targets?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${rmToken}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch partner targets"
       );
     }
   }

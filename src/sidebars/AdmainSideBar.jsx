@@ -11,14 +11,14 @@ import {
   LogOut,
   TrendingUp,
   ArrowLeft,
-
+  Trash2,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
 import { getAuthData, clearAuthData } from "../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAdminProfile } from "../feature/thunks/adminThunks";
-import { backToOriginalRole, getOriginalRole } from "../utils/impersonation";
+import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
 
 import logo from "../assets/logo.png";
 import NotificationBell from "../components/NotificationBell";
@@ -60,13 +60,19 @@ const AdminSideBar = () => {
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: "/admin/dashboard" },
     { name: "ASM", icon: Users, path: "/admin/ASM" },
+    { name: "RSM", icon: Users, path: "/admin/RSM" },
     { name: "RM", icon: Users, path: "/admin/RM" },
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
     { name: "Customer", icon: Users, path: "/admin/customer" },
     { name: "Set Target", icon: TrendingUp, path: "/admin/target" },
     { name: "Banner", icon: Download, path: "/admin/banner" },
-    { name: "Admin → Partner", icon: UserCheck, path: "/admin/RM-partner" }, 
+    { name: "Admin → Partner", icon: UserCheck, path: "/admin/RM-partner" },
     { name: "Banks", icon: Building2, path: "/admin/banks" },
+    {
+      name: "Delete Requests",
+      icon: Trash2,
+      path: "/admin/delete-requests",
+    },
   ];
 
 
@@ -142,16 +148,28 @@ const AdminSideBar = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              {/* Go Back Button - Show when impersonating */}
+              {/* Go Back Buttons - Show when impersonating */}
               {isImpersonating && originalRole && (
-                <button
-                  onClick={() => backToOriginalRole(navigate)}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
-                  title={`Go back to ${originalRole.role} Panel`}
-                >
-                  <ArrowLeft size={16} />
-                  <span>Back to {originalRole.role}</span>
-                </button>
+                <>
+                  {/* Back to immediate parent */}
+                  <button
+                    onClick={() => backToOriginalRole(navigate)}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                    title={`Go back to ${originalRole.displayName || formatRoleName(originalRole.role)} Panel`}
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Back to {originalRole.displayName || formatRoleName(originalRole.role)}</span>
+                  </button>
+                  {/* Back directly to Admin if available */}
+                  <button
+                    onClick={() => backToAdmin(navigate)}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
+                    title="Back to Admin Dashboard (exit all impersonations)"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Back to Admin</span>
+                  </button>
+                </>
               )}
               {/* Notifications */}
               <NotificationBell />

@@ -61,11 +61,33 @@ export const updateAsmProfile = createAsyncThunk(
   }
 );
 
+// Fetch RSMs under current ASM
+export const fetchRsmList = createAsyncThunk(
+  "asm/fetchRsmList",
+  async (_, { rejectWithValue }) => {
+    const { asmToken } = getAuthData();
+
+    try {
+      const response = await axios.get(`${backendurl}/asm/get-rsms`, {
+        headers: {
+          Authorization: `Bearer ${asmToken}`,
+        },
+      });
+
+      return response.data; // list of RSMs
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch RSM list"
+      );
+    }
+  }
+);
+
+// Fetch RMs under ASM (existing behavior)
 export const fetchRmList = createAsyncThunk(
   "asm/fetchRmList",
   async (_, { rejectWithValue }) => {
     const { asmToken } = getAuthData();
-
 
     try {
       const response = await axios.get(`${backendurl}/asm/get-rm`, {
@@ -288,11 +310,9 @@ export const reassignCustomersAndDeactivatePartner = createAsyncThunk(
 // Thunk to activate RM (ASM role)
 export const activateRM = createAsyncThunk(
   "asm/activateRM",
-  async (rmId , { rejectWithValue }) => {
-  
-
+  async (rmId, { rejectWithValue }) => {
     try {
-      const { asmToken } = getAuthData(); // ✅ Get ASM token
+      const { asmToken } = getAuthData();
 
       const response = await axios.post(
         `${backendurl}/asm/rm/activate`,
@@ -305,9 +325,84 @@ export const activateRM = createAsyncThunk(
         }
       );
 
-      return response.data.message; // ✅ Success message from backend
+      return response.data.message;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Failed to activate RM");
+    }
+  }
+);
+
+// Thunk to deactivate RM (ASM role)
+export const deactivateRM = createAsyncThunk(
+  "asm/deactivateRM",
+  async (rmId, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+
+      const response = await axios.post(
+        `${backendurl}/asm/rm/deactivate`,
+        { rmId },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data.message;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to deactivate RM");
+    }
+  }
+);
+
+// Thunk to activate RSM (ASM role)
+export const activateRSM = createAsyncThunk(
+  "asm/activateRSM",
+  async (rsmId, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+
+      const response = await axios.post(
+        `${backendurl}/rsm/activate`,
+        { rsmId },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data.message;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to activate RSM");
+    }
+  }
+);
+
+// Thunk to deactivate RSM (ASM role)
+export const deactivateRSM = createAsyncThunk(
+  "asm/deactivateRSM",
+  async (rsmId, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+
+      const response = await axios.post(
+        `${backendurl}/rsm/deactivate`,
+        { rsmId },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data.message;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to deactivate RSM");
     }
   }
 );
@@ -327,6 +422,370 @@ export const deleteRmAsm = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.message || "Failed to delete RM"
+      );
+    }
+  }
+);
+
+// Fetch RSM Analytics (ASM role)
+// Now uses universal analytics endpoint
+export const fetchRsmAnalytics = createAsyncThunk(
+  "asm/fetchRsmAnalytics",
+  async (rsmId, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      
+      if (!asmToken) {
+        return rejectWithValue("ASM token not found");
+      }
+      
+      // Use universal analytics endpoint
+      const response = await axios.get(`${backendurl}/analytics/${rsmId}`, {
+        headers: {
+          Authorization: `Bearer ${asmToken}`,
+        },
+      });
+      
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch RSM analytics"
+      );
+    }
+  }
+);
+
+// Record RSM Follow-up (ASM role)
+export const recordRsmFollowUp = createAsyncThunk(
+  "asm/recordRsmFollowUp",
+  async ({ rsmId, status, remarks }, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/asm/rsm/${rsmId}/follow-up`,
+        { status, remarks },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to record follow-up"
+      );
+    }
+  }
+);
+
+// Fetch RSM Follow-ups (ASM role)
+export const fetchRsmFollowUps = createAsyncThunk(
+  "asm/fetchRsmFollowUps",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.get(`${backendurl}/asm/rsms/follow-ups`, {
+        headers: {
+          Authorization: `Bearer ${asmToken}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch RSM follow-ups"
+      );
+    }
+  }
+);
+
+// ==================== PAYOUT MANAGEMENT ====================
+
+// Fetch Disbursed Applications (ASM role)
+export const fetchDisbursedApplications = createAsyncThunk(
+  "asm/fetchDisbursedApplications",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.get(`${backendurl}/asm/disbursed-applications`, {
+        headers: {
+          Authorization: `Bearer ${asmToken}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch disbursed applications"
+      );
+    }
+  }
+);
+
+// Fetch Payouts (ASM role)
+// Payout Management - Pending/Done (similar to RM)
+export const fetchAsmCustomersPayOutPending = createAsyncThunk(
+  "asmCustomers/fetchPendingPayouts",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+
+      const response = await axios.get(`${backendurl}/asm/customers/pending-payouts`, {
+        headers: { Authorization: `Bearer ${asmToken}` },
+      });
+
+      return response.data; // returns array of customer objects
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch ASM pending payout customers"
+      );
+    }
+  }
+);
+
+export const fetchAsmCustomersPayOutDone = createAsyncThunk(
+  "asmCustomers/fetchDonePayout",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+
+      const response = await axios.get(`${backendurl}/asm/customers/done-payouts`, {
+        headers: { Authorization: `Bearer ${asmToken}` },
+      });
+
+      return response.data; // returns array of customer objects
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch ASM done payout customers"
+      );
+    }
+  }
+);
+
+export const fetchAsmCustomerPartnersPayout = createAsyncThunk(
+  "asm/fetchCustomerPartnersPayout",
+  async (customerId, { rejectWithValue }) => {
+    const { asmToken } = getAuthData();
+
+    try {
+      const response = await axios.get(
+        `${backendurl}/asm/customer/${customerId}/partners-payout`,
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+          },
+        }
+      );
+
+      return response.data; // { partners }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch partners payout details"
+      );
+    }
+  }
+);
+
+export const setAsmPayouts = createAsyncThunk(
+  "asm/setPayouts",
+  async (payoutData, { rejectWithValue }) => {
+    const { asmToken } = getAuthData();
+
+    try {
+      const response = await axios.post(
+        `${backendurl}/asm/set-payouts`,
+        payoutData, // { applicationId, partnerId, payoutPercentage, note, payOutStatus }
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data; // { message, payout }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to set payout"
+      );
+    }
+  }
+);
+
+export const fetchPayouts = createAsyncThunk(
+  "asm/fetchPayouts",
+  async (status, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const url = status 
+        ? `${backendurl}/asm/payouts?status=${status}`
+        : `${backendurl}/asm/payouts`;
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${asmToken}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch payouts"
+      );
+    }
+  }
+);
+
+// Create/Update Payout (ASM role)
+export const createPayout = createAsyncThunk(
+  "asm/createPayout",
+  async ({ applicationId, partnerId, payoutPercentage, note }, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/asm/payouts/create`,
+        { applicationId, partnerId, payoutPercentage, note },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to create payout"
+      );
+    }
+  }
+);
+
+// Approve Payout (ASM role)
+export const approvePayout = createAsyncThunk(
+  "asm/approvePayout",
+  async (payoutId, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/asm/payouts/approve`,
+        { payoutId },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to approve payout"
+      );
+    }
+  }
+);
+
+// ==================== INCENTIVE MANAGEMENT ====================
+
+// Fetch Incentives (ASM role)
+export const fetchIncentives = createAsyncThunk(
+  "asm/fetchIncentives",
+  async ({ year, month }, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const params = new URLSearchParams();
+      if (year) params.append("year", year);
+      if (month) params.append("month", month);
+      const url = params.toString() 
+        ? `${backendurl}/asm/incentives?${params.toString()}`
+        : `${backendurl}/asm/incentives`;
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${asmToken}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch incentives"
+      );
+    }
+  }
+);
+
+// ==================== PARTNER TARGET ASSIGNMENT (ASM Only) ====================
+
+// Assign Target to Single Partner (ASM role)
+export const assignPartnerTarget = createAsyncThunk(
+  "asm/assignPartnerTarget",
+  async ({ partnerId, month, year, fileCountTarget, disbursementTarget }, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/asm/target/assign-partner`,
+        { partnerId, month, year, fileCountTarget, disbursementTarget },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to assign target to partner"
+      );
+    }
+  }
+);
+
+// Assign Target to All Partners in Bulk (ASM role)
+export const assignPartnerTargetBulk = createAsyncThunk(
+  "asm/assignPartnerTargetBulk",
+  async ({ month, year, fileCountTarget, disbursementTarget }, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/asm/target/assign-partner-bulk`,
+        { month, year, fileCountTarget, disbursementTarget },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to assign targets to partners"
+      );
+    }
+  }
+);
+
+// Fetch Partner Targets (ASM role)
+export const fetchPartnerTargets = createAsyncThunk(
+  "asm/fetchPartnerTargets",
+  async ({ year, month }, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const params = new URLSearchParams();
+      if (year) params.append("year", year);
+      if (month) params.append("month", month);
+      
+      const response = await axios.get(
+        `${backendurl}/asm/partners/targets?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch partner targets"
       );
     }
   }
@@ -365,29 +824,7 @@ export const activatePartner = createAsyncThunk(
 
 
 // Thunk to create a new RM (ASM role)
-export const createRM = createAsyncThunk(
-  "asm/createRM",
-  async (rmData, { rejectWithValue }) => {
-   
-    try {
-      const { asmToken } = getAuthData(); // ✅ Get ASM token
-
-      const response = await axios.post(
-        `${backendurl}/asm/create-rm`,
-        rmData,
-        {
-          headers: {
-            Authorization: `Bearer ${asmToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      return response.data; // ✅ Full response including message, rmCode, employeeId, tempPassword
-    } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.message || "Failed to create RM"
-      );
-    }
-  }
-);
+// NOTE: ASM can NO LONGER create RM directly.
+// ASM should create RSM, and RSM will create RM.
+// This thunk has been removed to enforce the hierarchy: ADMIN → ASM → RSM → RM
+// Use createRsmByAdminOrAsm instead to create RSM, then RSM can create RM.

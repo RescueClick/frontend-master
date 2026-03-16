@@ -498,65 +498,39 @@ const DonePayout = () => {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-100">
+        <div className="overflow-x-auto rounded-lg shadow-sm">
+          <table className="w-full border-collapse bg-white text-sm">
+            <thead style={{ background: "#12B99C", color: "white" }}>
               <tr>
-                <th className="px-6 py-3 text-left font-medium text-gray-600">
-                  User Name
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600">
-                  User Id
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600">
-                  Contact
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600">
-                  Application Date
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600">
-                  Loan Type
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600">
-                  Loan Amount
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600">
-                  Approval Amount
-                </th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600">
-                  Payout
-                </th>
+                <th className="px-2 py-4 text-left">User Name</th>
+                <th className="px-2 py-4 text-left">User Id</th>
+                <th className="px-2 py-4 text-left">Contact</th>
+                <th className="px-2 py-4 text-left">Application Date</th>
+                <th className="px-2 py-4 text-left">Loan Type</th>
+                <th className="px-2 py-4 text-left">Loan Amount</th>
+                <th className="px-2 py-4 text-left">Approval Amount</th>
+                <th className="px-2 py-4 text-left">Payout</th>
               </tr>
             </thead>
-
             <tbody>
               {data.map((customer) => (
                 <tr
                   key={customer.customerID}
-                  className="border-b border-gray-100 hover:bg-gray-50"
+                  className="border-b hover:bg-gray-50"
                 >
-                  {/* User Name */}
-                  <td className="px-6 py-4">
-                    <p className="font-medium">{customer.customerName}</p>
+                  <td className="px-2 py-3 align-top">
+                    <span className="font-medium">{customer.customerName}</span>
                   </td>
-
-                  {/* User Id */}
-                  <td className="px-6 py-4">
-                    <p className="text-xs text-gray-500">
+                  <td className="px-2 py-3 align-middle">
+                    <span className="text-xs text-gray-500">
                       #{customer.customerEmployeeId}
-                    </p>
+                    </span>
                   </td>
-
-                  {/* Contact */}
-                  <td className="px-6 py-4">{customer.contact}</td>
-
-                  {/* Application Date */}
-                  <td className="px-6 py-4 text-gray-600">
+                  <td className="px-2 py-3 align-middle">{customer.contact}</td>
+                  <td className="px-2 py-3 align-middle">
                     {new Date(customer.createdAt).toLocaleDateString("en-IN")}
                   </td>
-
-                  {/* Loan Type */}
-                  <td className="px-6 py-4">
+                  <td className="px-2 py-3 align-middle">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(
                         customer.loanType
@@ -565,23 +539,17 @@ const DonePayout = () => {
                       {customer.loanType}
                     </span>
                   </td>
-
-                  {/* Loan Amount */}
-                  <td className="px-6 py-4 font-semibold">
+                  <td className="px-2 py-3 align-middle font-semibold">
                     {customer.requestedAmount
                       ? `₹${customer?.requestedAmount.toLocaleString("en-IN")}`
                       : "—"}
                   </td>
-
-                  {/* Approval Amount */}
-                  <td className="px-6 py-4 font-semibold">
+                  <td className="px-2 py-3 align-middle font-semibold">
                     {customer.approvedAmount
                       ? `₹${customer.approvedAmount.toLocaleString("en-IN")}`
                       : "—"}
                   </td>
-
-                  {/* Status */}
-                  <td className="px-6 py-4">
+                  <td className="px-2 py-3 align-middle">
                     <button
                       type="button"
                       className={`px-3 py-1 text-xs font-medium cursor-pointer ${getStatusColor(
@@ -594,9 +562,6 @@ const DonePayout = () => {
                       {customer.payOutStatus}
                     </button>
                   </td>
-
-                  {/* Action */}
-                  {/* Add your action buttons here if needed */}
                 </tr>
               ))}
             </tbody>

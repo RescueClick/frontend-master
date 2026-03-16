@@ -9,11 +9,11 @@ import {
   Download,
   Settings,
   Lock,
-  Edit,
   LogOut,
   Save,
   X,
   Link2 as LinkIcon,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchPartnerProfile } from "../feature/thunks/partnerThunks";
@@ -244,7 +244,7 @@ const PartnerProfile = () => {
 
             {/* Address & Referral Link */}
 
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
               {/* Address */}
 
               <div className="flex items-start space-x-3">
@@ -407,6 +407,26 @@ const PartnerProfile = () => {
                 <span>Agreement</span>
               </button>
             </div>
+          </div>
+
+          {/* Delete Account Section */}
+          <div className="p-5 border-t border-gray-200 bg-red-50/60">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <Trash2 className="w-4 h-4 text-red-500" />
+              Delete Account
+            </h3>
+            <p className="text-xs text-gray-600 mb-3">
+              This will start a request to permanently delete your partner
+              account. You will lose access to the Partner Dashboard and
+              mobile app after deletion.
+            </p>
+            <button
+              onClick={() => navigate("/delete-account")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Request Account Deletion</span>
+            </button>
           </div>
         </div>
 

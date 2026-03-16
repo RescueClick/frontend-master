@@ -4,10 +4,26 @@ import {
   fetchAsmDashboard,
   fetchAsmPartners,
   fetchAsmProfile,
+  fetchRsmList,
   fetchRmList,
   fetchAsmApplications,
   getAnalytics,
   deleteRmAsm,
+  fetchPayouts,
+  approvePayout,
+  createPayout,
+  fetchDisbursedApplications,
+  fetchIncentives,
+  fetchRsmFollowUps,
+  recordRsmFollowUp,
+  fetchAsmCustomersPayOutPending,
+  fetchAsmCustomersPayOutDone,
+  fetchAsmCustomerPartnersPayout,
+  setAsmPayouts,
+  assignPartnerTarget,
+  assignPartnerTargetBulk,
+  fetchPartnerTargets,
+  fetchRsmAnalytics,
 } from "../thunks/asmThunks";
 
 
@@ -29,7 +45,14 @@ const initialState = {
     success: false,
     data: null,
   },
-  // 🔹 RM List state
+  // 🔹 RSM List state (ASM manages RSMs)
+  rsmList: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  // 🔹 RM List state (for backward compatibility, ASM can still see RMs via RSMs)
   rmList: {
     loading: false,
     error: null,
@@ -70,13 +93,84 @@ const initialState = {
     success: false,
     data: [],
   },
-
-
+  payouts: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  disbursedApplications: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  incentives: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  followUps: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  // Payout Management (Pending/Done)
+  pendingPayout: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  donePayout: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  customerPartnersPayout: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  setPayouts: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  assignPartnerTarget: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  assignPartnerTargetBulk: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  partnerTargets: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
   analyticsdashboard: {
     loading: false,
     error: null,
     success: false,
     analyticsData: null,
+  },
+  // RSM Analytics state (ASM viewing RSM analytics)
+  rsmAnalytics: {
+    loading: false,
+    error: null,
+    data: null,
   },
 
     // Assign RM -> ASM action state
@@ -128,7 +222,33 @@ const asmSlice = createSlice({
         };
       })
 
-      // Rm fetch list
+      // RSM fetch list (ASM manages RSMs)
+      .addCase(fetchRsmList.pending, (state) => {
+        state.rsmList = {
+          loading: true,
+          error: null,
+          success: false,
+          data: [],
+        };
+      })
+      .addCase(fetchRsmList.fulfilled, (state, action) => {
+        state.rsmList = {
+          loading: false,
+          error: null,
+          success: true,
+          data: action.payload, // list of RSMs
+        };
+      })
+      .addCase(fetchRsmList.rejected, (state, action) => {
+        state.rsmList = {
+          loading: false,
+          error: action.payload,
+          success: false,
+          data: [],
+        };
+      })
+
+      // Rm fetch list (for backward compatibility)
       .addCase(fetchRmList.pending, (state) => {
         state.rmList = {
           loading: true,
@@ -298,10 +418,218 @@ const asmSlice = createSlice({
           state.deleteRm.error = action.payload;
           state.deleteRm.success = false;
           state.deleteRm.data = null;
-        });
-  },
+        })
 
-  
+      // Payouts
+      .addCase(fetchPayouts.pending, (state) => {
+        state.payouts.loading = true;
+        state.payouts.error = null;
+      })
+      .addCase(fetchPayouts.fulfilled, (state, action) => {
+        state.payouts.loading = false;
+        state.payouts.data = action.payload;
+        state.payouts.success = true;
+      })
+      .addCase(fetchPayouts.rejected, (state, action) => {
+        state.payouts.loading = false;
+        state.payouts.error = action.payload;
+      })
+      .addCase(approvePayout.fulfilled, (state) => {
+        // Refresh payouts after approval
+      })
+      .addCase(createPayout.fulfilled, (state) => {
+        // Refresh payouts after creation
+      })
+
+      // Disbursed Applications
+      .addCase(fetchDisbursedApplications.pending, (state) => {
+        state.disbursedApplications.loading = true;
+        state.disbursedApplications.error = null;
+      })
+      .addCase(fetchDisbursedApplications.fulfilled, (state, action) => {
+        state.disbursedApplications.loading = false;
+        state.disbursedApplications.data = action.payload;
+        state.disbursedApplications.success = true;
+      })
+      .addCase(fetchDisbursedApplications.rejected, (state, action) => {
+        state.disbursedApplications.loading = false;
+        state.disbursedApplications.error = action.payload;
+      })
+
+      // Incentives
+      .addCase(fetchIncentives.pending, (state) => {
+        state.incentives.loading = true;
+        state.incentives.error = null;
+      })
+      .addCase(fetchIncentives.fulfilled, (state, action) => {
+        state.incentives.loading = false;
+        state.incentives.data = action.payload;
+        state.incentives.success = true;
+      })
+      .addCase(fetchIncentives.rejected, (state, action) => {
+        state.incentives.loading = false;
+        state.incentives.error = action.payload;
+      })
+
+      // Follow-ups
+      .addCase(fetchRsmFollowUps.pending, (state) => {
+        state.followUps.loading = true;
+        state.followUps.error = null;
+      })
+      .addCase(fetchRsmFollowUps.fulfilled, (state, action) => {
+        state.followUps.loading = false;
+        state.followUps.data = action.payload;
+        state.followUps.success = true;
+      })
+      .addCase(fetchRsmFollowUps.rejected, (state, action) => {
+        state.followUps.loading = false;
+        state.followUps.error = action.payload;
+      })
+      .addCase(recordRsmFollowUp.fulfilled, (state) => {
+        // Refresh follow-ups after recording
+      })
+
+      // Pending Payout
+      .addCase(fetchAsmCustomersPayOutPending.pending, (state) => {
+        state.pendingPayout.loading = true;
+        state.pendingPayout.error = null;
+      })
+      .addCase(fetchAsmCustomersPayOutPending.fulfilled, (state, action) => {
+        state.pendingPayout.loading = false;
+        state.pendingPayout.data = action.payload;
+        state.pendingPayout.success = true;
+      })
+      .addCase(fetchAsmCustomersPayOutPending.rejected, (state, action) => {
+        state.pendingPayout.loading = false;
+        state.pendingPayout.error = action.payload;
+      })
+
+      // Done Payout
+      .addCase(fetchAsmCustomersPayOutDone.pending, (state) => {
+        state.donePayout.loading = true;
+        state.donePayout.error = null;
+      })
+      .addCase(fetchAsmCustomersPayOutDone.fulfilled, (state, action) => {
+        state.donePayout.loading = false;
+        state.donePayout.data = action.payload;
+        state.donePayout.success = true;
+      })
+      .addCase(fetchAsmCustomersPayOutDone.rejected, (state, action) => {
+        state.donePayout.loading = false;
+        state.donePayout.error = action.payload;
+      })
+
+      // Customer Partners Payout
+      .addCase(fetchAsmCustomerPartnersPayout.pending, (state) => {
+        state.customerPartnersPayout.loading = true;
+        state.customerPartnersPayout.error = null;
+      })
+      .addCase(fetchAsmCustomerPartnersPayout.fulfilled, (state, action) => {
+        state.customerPartnersPayout.loading = false;
+        state.customerPartnersPayout.data = action.payload;
+        state.customerPartnersPayout.success = true;
+      })
+      .addCase(fetchAsmCustomerPartnersPayout.rejected, (state, action) => {
+        state.customerPartnersPayout.loading = false;
+        state.customerPartnersPayout.error = action.payload;
+      })
+
+      // Set Payouts
+      .addCase(setAsmPayouts.pending, (state) => {
+        state.setPayouts.loading = true;
+        state.setPayouts.error = null;
+        state.setPayouts.success = false;
+      })
+      .addCase(setAsmPayouts.fulfilled, (state, action) => {
+        state.setPayouts.loading = false;
+        state.setPayouts.data = action.payload;
+        state.setPayouts.success = true;
+      })
+      .addCase(setAsmPayouts.rejected, (state, action) => {
+        state.setPayouts.loading = false;
+        state.setPayouts.error = action.payload;
+        state.setPayouts.success = false;
+      })
+
+      // Assign Partner Target (Single)
+      .addCase(assignPartnerTarget.pending, (state) => {
+        state.assignPartnerTarget = {
+          loading: true,
+          error: null,
+          success: false,
+        };
+      })
+      .addCase(assignPartnerTarget.fulfilled, (state, action) => {
+        state.assignPartnerTarget = {
+          loading: false,
+          error: null,
+          success: true,
+          data: action.payload,
+        };
+      })
+      .addCase(assignPartnerTarget.rejected, (state, action) => {
+        state.assignPartnerTarget = {
+          loading: false,
+          error: action.payload,
+          success: false,
+        };
+      })
+
+      // Assign Partner Target (Bulk)
+      .addCase(assignPartnerTargetBulk.pending, (state) => {
+        state.assignPartnerTargetBulk = {
+          loading: true,
+          error: null,
+          success: false,
+        };
+      })
+      .addCase(assignPartnerTargetBulk.fulfilled, (state, action) => {
+        state.assignPartnerTargetBulk = {
+          loading: false,
+          error: null,
+          success: true,
+          data: action.payload,
+        };
+      })
+      .addCase(assignPartnerTargetBulk.rejected, (state, action) => {
+        state.assignPartnerTargetBulk = {
+          loading: false,
+          error: action.payload,
+          success: false,
+        };
+      })
+
+      // Fetch Partner Targets
+      .addCase(fetchPartnerTargets.pending, (state) => {
+        state.partnerTargets.loading = true;
+        state.partnerTargets.error = null;
+        state.partnerTargets.success = false;
+      })
+      .addCase(fetchPartnerTargets.fulfilled, (state, action) => {
+        state.partnerTargets.loading = false;
+        state.partnerTargets.data = action.payload;
+        state.partnerTargets.success = true;
+      })
+      .addCase(fetchPartnerTargets.rejected, (state, action) => {
+        state.partnerTargets.loading = false;
+        state.partnerTargets.error = action.payload;
+        state.partnerTargets.success = false;
+      })
+
+      // Fetch RSM Analytics (ASM viewing RSM analytics)
+      .addCase(fetchRsmAnalytics.pending, (state) => {
+        state.rsmAnalytics.loading = true;
+        state.rsmAnalytics.error = null;
+      })
+      .addCase(fetchRsmAnalytics.fulfilled, (state, action) => {
+        state.rsmAnalytics.loading = false;
+        state.rsmAnalytics.data = action.payload;
+      })
+      .addCase(fetchRsmAnalytics.rejected, (state, action) => {
+        state.rsmAnalytics.loading = false;
+        state.rsmAnalytics.error = action.payload;
+      });
+  },
 });
 
 export default asmSlice.reducer;

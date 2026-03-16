@@ -242,6 +242,14 @@ const MainLayout = () => {
               {/* <li><a href="/AboutUs" className="hover:text-[#12B99C] transition">About Us</a></li> */}
               <li><a href="/Contact" className="hover:text-[#12B99C] transition">Contact Us</a></li>
               <li><a href="/PartnerRegistrationForm" className="hover:text-[#12B99C] transition">Apply for Channel Partner</a></li>
+              <li>
+                <a
+                  href="/delete-account"
+                  className="hover:text-[#12B99C] transition"
+                >
+                  Delete Account Help
+                </a>
+              </li>
             </ul>
           </div>
 

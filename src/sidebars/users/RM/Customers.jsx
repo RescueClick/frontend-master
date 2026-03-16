@@ -566,10 +566,7 @@ loginAsUser(userId, navigate);
                       Approval Amount
                     </th>
                     
-                      <th className="px-6 py-3 text-left font-medium text-white">
-                      Login As
-                    </th>
-
+                 
                     <th className="px-6 py-3 text-left font-medium text-white">
                       Status
                     </th>
@@ -652,18 +649,6 @@ loginAsUser(userId, navigate);
 
                       {/* Status */}
 
-                      <td className="px-6 py-4 font-semibold">
-                      <button
-                        className="px-2 py-1 border rounded text-xs"
-                        style={{
-                          borderColor: colors.secondary,
-                          color: colors.secondary,
-                        }}
-                        onClick={()=> handleLoginAs(customer?.customerId)}
-                      >
-                        Login
-                      </button>
-                      </td>
                       <td className="px-6 py-4">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(

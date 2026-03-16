@@ -492,7 +492,7 @@ const handleSubmit = async (e) => {
                 <button
                   type="button"
                   className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
-                  onClick={() => navigate("/sidebar/dashboard")}
+                  onClick={() => navigate("/admin/dashboard")}
                 >
                   Cancel
                 </button>

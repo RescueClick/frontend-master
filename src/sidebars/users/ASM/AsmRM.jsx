@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Eye, Search, X, Calendar, IndianRupee } from "lucide-react";
+import { Eye, Search, X } from "lucide-react";
 
 import {
   activateRM,
-  assignRMBulkTarget,
   fetchRmList,
   reassignPartnersAndDeactivateRM,
   deleteRmAsm,
@@ -42,7 +41,6 @@ export default function AsmRM() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showViewModal, setShowViewModal] = useState(false);
   const [rmToView, setRmToView] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const dispatch = useDispatch();
   const { data, loading, error } = useSelector((state) => state.asm.rmList);
@@ -84,53 +82,6 @@ export default function AsmRM() {
     setShowViewModal(true);
   };
 
-  // model
-
-  const [formData, setFormData] = useState({
-    month: new Date().toLocaleString("default", { month: "long" }),
-    year: new Date().getFullYear(),
-    target: 0,
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const months = [
-    { name: "January", value: 1 },
-    { name: "February", value: 2 },
-    { name: "March", value: 3 },
-    { name: "April", value: 4 },
-    { name: "May", value: 5 },
-    { name: "June", value: 6 },
-    { name: "July", value: 7 },
-    { name: "August", value: 8 },
-    { name: "September", value: 9 },
-    { name: "October", value: 10 },
-    { name: "November", value: 11 },
-    { name: "December", value: 12 },
-  ];
-
-  const years = Array.from(
-    { length: 11 },
-    (_, i) => new Date().getFullYear() + i
-  );
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    dispatch(
-      assignRMBulkTarget({
-        month: Number(formData.month),
-        year: formData.year,
-        totalTarget: Number(formData.target),
-      })
-    );
-  };
 
 
   const deactivateRm =(rmToDeactivate,selectedReplacement )=>{
@@ -204,111 +155,6 @@ loginAsUser(userId, navigate);
 
   return (
     <>
-      {/* target Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/25 flex justify-center items-center z-50 transition-opacity duration-300 p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative transform transition-all duration-300 scale-100 animate-slide-up">
-            {/* Close Button */}
-            <button
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 transition"
-              onClick={() => setIsModalOpen(false)}
-              aria-label="Close modal"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            {/* Modal Title */}
-            <h3 className="text-2xl font-bold text-gray-800 mb-2 text-center">
-              Set Monthly Target
-            </h3>
-            <p className="text-gray-500 text-sm text-center mb-6">
-              Track your goals with precision.
-            </p>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Month Input - Now a dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Month
-                </label>
-                <div className="relative">
-                  <select
-                    name="month"
-                    value={formData.month}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:outline-none transition-colors appearance-none pr-10"
-                    required
-                  >
-                    <option value="" disabled>
-                      Select a month
-                    </option>
-                    {months.map((month) => (
-                      <option key={month.value} value={month.value}>
-                        {month.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none w-5 h-5" />
-                </div>
-              </div>
-
-              {/* Year Input - Now a dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Year
-                </label>
-                <div className="relative">
-                  <select
-                    name="year"
-                    value={formData.year}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:outline-none transition-colors appearance-none pr-10"
-                    required
-                  >
-                    {years.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none w-5 h-5" />
-                </div>
-              </div>
-
-              {/* Target Amount Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">
-                  Target Amount
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                    <IndianRupee className="w-5 h-5" />
-                  </span>
-                  <input
-                    type="number"
-                    name="target"
-                    placeholder="Enter target amount"
-                    value={formData.target}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:outline-none transition-colors"
-                    required
-                    min="0"
-                  />
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="w-full bg-[#12B99C] text-white py-3 rounded-xl hover:bg-[#0d8a73] transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                Save Target
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       <div
         className="p-6"
@@ -342,19 +188,6 @@ loginAsUser(userId, navigate);
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
 
-              <button
-                className="bg-[#12B99C] text-white px-4 ml-2 py-2 rounded-lg hover:bg-[#0d8a73] transition"
-                onClick={() => setIsModalOpen(true)}
-              >
-                Set Target
-              </button>
-
-              <button
-                className=" bg-white text text-black border-2 border-black px-4 ml-2 py-2 rounded-lg hover:bg-[#e6e6e6] transition"
-                onClick={()=>{ navigate('/asm/ASMaddRM'); }} 
-              >
-                Add New RM
-              </button>
 
 
             </div>
@@ -362,104 +195,65 @@ loginAsUser(userId, navigate);
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr style={{ background: colors.primary }}>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    User Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    User ID
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Contact
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Created On
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Login as
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Activation
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Action
-                  </th>
+        <div className="overflow-x-auto rounded-lg shadow-sm">
+          <table className="w-full border-collapse bg-white text-sm">
+            <thead style={{ background: colors.primary, color: "white" }}>
+              <tr>
+                <th className="px-2 py-4 text-left">User Name</th>
+                <th className="px-2 py-4 text-left">User ID</th>
+                <th className="px-2 py-4 text-left">Contact</th>
+                <th className="px-2 py-4 text-left">Created On</th>
+                <th className="px-2 py-4 text-left">Login as</th>
+                <th className="px-2 py-4 text-left">Activation</th>
+                <th className="px-2 py-4 text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="text-center py-4">
+                    Loading...
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-black-100">
-                {loading ? (
-                  <tr>
-                    <td colSpan="7" className="text-center py-12">
-                      <div className="flex items-center justify-center gap-2 text-gray-500">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#12B99C]"></div>
-                        Loading...
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredRms.length > 0 ? (
-                  filteredRms.map((rm) => (
-                    <tr
-                      key={rm._id}
-                      className="transition-colors border-b hover:bg-gray-50"
+              ) : filteredRms.length > 0 ? (
+                filteredRms.map((rm) => (
+                  <tr key={rm._id} className="border-b hover:bg-gray-50">
+                    <td
+                      className="px-2 py-3 align-top cursor-pointer"
+                      onClick={() => {
+                        navigate("/asm/ASManalytics", {
+                          state: { id: rm._id },
+                        });
+                      }}
                     >
-                      <td className="px-4">
-                        <div className="flex items-center gap-3">
-                          {/* <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold"
-                                                        style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
-                                                        {rm.firstName?.charAt(0)}{rm.lastName?.charAt(0)}
-                                                    </div> */}
-
-                          <div
-                            onClick={() => {
-                              navigate("/asm/ASManalytics", {
-                                state: { id: rm._id },
-                              });
-                            }}
-                          >
-                            <p className="font-semibold text-gray-900 text-sm">
-                              {rm.firstName} {rm.lastName}
-                            </p>
-                            {/* <p className="text-sm text-gray-500">{rm.rmCode}</p> */}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6">
-                        <span className="font-mono text-sm text-gray-700 bg-gray-100 px-3 py-1 rounded-md">
-                          {rm.employeeId}
-                        </span>
-                      </td>
-                      <td className="px-6">
-                        <p className="text-sm font-medium text-gray-900">
-                          {rm.phone}
-                        </p>
-                      </td>
-                      <td className="px-6">
-                        <span className="text-sm text-gray-600">
-                          {new Date(rm.createdAt).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </span>
-                      </td>
-                      <td className="px-2 whitespace-nowrap align-middle">
-                        <button
-                          className="px-4 py-1 border rounded text-xs"
-                          style={{
-                            borderColor: "rgb(30, 58, 138)",
-                            color: "rgb(30, 58, 138)",
-                          }}
-                          onClick={()=> handleLoginAs(rm._id)}
-                        >
-                          Login
-                        </button>
-                      </td>
-
-                      <td className="px-2 py-3 align-middle">
+                      {rm.firstName} {rm.lastName}
+                    </td>
+                    <td className="px-2 py-3 align-middle">{rm.employeeId}</td>
+                    <td className="px-2 py-3 align-middle">
+                      <span className="text-sm font-medium">
+                        {rm.phone}
+                      </span>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      {new Date(rm.createdAt).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <button
+                        className="px-2 py-1 border rounded text-xs"
+                        style={{
+                          borderColor: colors.secondary,
+                          color: colors.secondary,
+                        }}
+                        onClick={() => handleLoginAs(rm._id)}
+                      >
+                        Login
+                      </button>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
                       <div
                         className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
                           rm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
@@ -484,42 +278,35 @@ loginAsUser(userId, navigate);
                         />
                       </div>
                     </td>
-
-
-                      <td className="px-6 py-2">
+                    <td className="px-2 py-3 align-middle">
+                      <div className="flex items-center gap-1 h-full">
                         <button
-                          className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                          className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                           onClick={() => handleViewRM(rm)}
-                          title="View Details"
                         >
-                          <Eye size={16} className="text-gray-600" />
+                          <Eye size={14} />
                         </button>
                         {rm.status !== "ACTIVE" && (
                           <button
-                            className="ml-2 px-2 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
+                            className="cursor-pointer p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
                             onClick={() => handleDeleteRm(rm._id)}
                           >
                             Delete
                           </button>
                         )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="text-center py-12">
-                      <div className="text-gray-500">
-                        <p className="text-lg font-medium">No datafound</p>
-                        <p className="text-sm mt-1">
-                          Try adjusting your search criteria
-                        </p>
                       </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="text-center py-4">
+                    No data found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -617,18 +404,84 @@ loginAsUser(userId, navigate);
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <p>
                       <strong className="text-gray-700">ASM Name:</strong>{" "}
-                      <span className="text-gray-900">{rmToView.asmName}</span>
+                      <span className="text-gray-900">{rmToView.asmName || "N/A"}</span>
                     </p>
                     <p>
                       <strong className="text-gray-700">
                         ASM Employee ID:
                       </strong>{" "}
                       <span className="text-gray-900 font-mono">
-                        {rmToView.asmEmployeeId}
+                        {rmToView.asmEmployeeId || "N/A"}
                       </span>
                     </p>
                   </div>
                 </div>
+
+                {/* Personal Loan RSM Information */}
+                {rmToView.personalRsmName && (
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 md:col-span-2">
+                    <h4 className="font-semibold text-[#111827] mb-4 text-base">
+                      Personal Loan RSM Information
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <p>
+                        <strong className="text-gray-700">RSM Name:</strong>{" "}
+                        <span className="text-gray-900">{rmToView.personalRsmName}</span>
+                      </p>
+                      <p>
+                        <strong className="text-gray-700">RSM Employee ID:</strong>{" "}
+                        <span className="text-gray-900 font-mono">
+                          {rmToView.personalRsmEmployeeId || "N/A"}
+                        </span>
+                      </p>
+                      <p>
+                        <strong className="text-gray-700">RSM Phone:</strong>{" "}
+                        <span className="text-gray-900 font-mono">
+                          {rmToView.personalRsmPhone || "N/A"}
+                        </span>
+                      </p>
+                      <p>
+                        <strong className="text-gray-700">RSM Email:</strong>{" "}
+                        <span className="text-gray-900 font-mono">
+                          {rmToView.personalRsmEmail || "N/A"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Business & Home Loan RSM Information */}
+                {rmToView.businessHomeRsmName && (
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 md:col-span-2">
+                    <h4 className="font-semibold text-[#111827] mb-4 text-base">
+                      Business & Home Loan RSM Information
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <p>
+                        <strong className="text-gray-700">RSM Name:</strong>{" "}
+                        <span className="text-gray-900">{rmToView.businessHomeRsmName}</span>
+                      </p>
+                      <p>
+                        <strong className="text-gray-700">RSM Employee ID:</strong>{" "}
+                        <span className="text-gray-900 font-mono">
+                          {rmToView.businessHomeRsmEmployeeId || "N/A"}
+                        </span>
+                      </p>
+                      <p>
+                        <strong className="text-gray-700">RSM Phone:</strong>{" "}
+                        <span className="text-gray-900 font-mono">
+                          {rmToView.businessHomeRsmPhone || "N/A"}
+                        </span>
+                      </p>
+                      <p>
+                        <strong className="text-gray-700">RSM Email:</strong>{" "}
+                        <span className="text-gray-900 font-mono">
+                          {rmToView.businessHomeRsmEmail || "N/A"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end mt-6">

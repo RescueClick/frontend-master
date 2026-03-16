@@ -8,6 +8,8 @@ const ProtectedRoute = ({ allowedRoles = [] }) => {
     adminUser,
     asmToken,
     asmUser,
+    rsmToken,
+    rsmUser,
     rmToken,
     rmUser,
     partnerToken,
@@ -41,6 +43,12 @@ const ProtectedRoute = ({ allowedRoles = [] }) => {
         if (asmToken && asmUser) {
           currentRole = asmUser.role;
           currentToken = asmToken;
+        }
+        break;
+      case "RSM":
+        if (rsmToken && rsmUser) {
+          currentRole = rsmUser.role;
+          currentToken = rsmToken;
         }
         break;
       case "RM":

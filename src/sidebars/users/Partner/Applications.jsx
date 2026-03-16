@@ -328,224 +328,162 @@ const Application = () => {
           </div>
 
           {/* Applications Table - Desktop */}
-          <div className="hidden lg:block bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead style={{ backgroundColor: "#12B99C" }}>
-                  <tr>
-                    <th
-                      className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Name
-                    </th>
-                    <th
-                      className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      App ID
-                    </th>
-                    <th
-                      className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Contact
-                    </th>
-                    <th
-                      className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Date
-                    </th>
-                    <th
-                      className="px-3 py-3 text-center text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Type
-                    </th>
-                    <th
-                      className="px-3 py-3 text-right text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Loan Amt
-                    </th>
-                    <th
-                      className="px-3 py-3 text-right text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Approved
-                    </th>
-                    <th
-                      className="px-3 py-3 text-right text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Disbursed
-                    </th>
-                    <th
-                      className="px-3 py-3 text-right text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Payout
-                    </th>
-                    <th
-                      className="px-3 py-3 text-center text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Status
-                    </th>
-                    <th
-                      className="px-3 py-3 text-center text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Remarks
-                    </th>
-                    <th
-                      className="px-3 py-3 text-center text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "white" }}
-                    >
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredApplications.map((application) => (
-                    <tr
-                      key={application.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-3 py-3">
-                        <div className="flex items-center min-w-0">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs mr-2 flex-shrink-0">
-                            {application.customerName
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </div>
-                          <div
-                            className="text-xs font-medium truncate"
-                            style={{ color: "#111827" }}
-                            title={application.customerName}
-                          >
-                            {application.customerName}
-                          </div>
+          <div className="hidden lg:block overflow-x-auto rounded-lg shadow-sm">
+            <table className="w-full border-collapse bg-white text-sm">
+              <thead style={{ background: "#12B99C", color: "white" }}>
+                <tr>
+                  <th className="px-2 py-4 text-left">Name</th>
+                  <th className="px-2 py-4 text-left">App ID</th>
+                  <th className="px-2 py-4 text-left">Contact</th>
+                  <th className="px-2 py-4 text-left">Date</th>
+                  <th className="px-2 py-4 text-center">Type</th>
+                  <th className="px-2 py-4 text-right">Loan Amt</th>
+                  <th className="px-2 py-4 text-right">Approved</th>
+                  <th className="px-2 py-4 text-right">Disbursed</th>
+                  <th className="px-2 py-4 text-right">Payout</th>
+                  <th className="px-2 py-4 text-center">Status</th>
+                  <th className="px-2 py-4 text-center">Remarks</th>
+                  <th className="px-2 py-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredApplications.map((application) => (
+                  <tr
+                    key={application.id}
+                    className="border-b hover:bg-gray-50"
+                  >
+                    <td className="px-2 py-3 align-top">
+                      <div className="flex items-center min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs mr-2 flex-shrink-0">
+                          {application.customerName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
                         </div>
-                      </td>
-                      <td className="px-3 py-3">
                         <div
-                          className="font-mono text-xs font-medium"
+                          className="text-xs font-medium truncate"
                           style={{ color: "#111827" }}
+                          title={application.customerName}
                         >
-                          {application.id}
+                          {application.customerName}
                         </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="text-xs text-gray-600 whitespace-nowrap">
-                          {application.contact}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="text-xs text-gray-600 whitespace-nowrap">
-                          {formatDate(application.dateSubmitted)}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex justify-center">
-                          <span className="inline-flex px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-semibold">
-                            {getLoanTypeShortcut(application.loanType)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div
-                          className="text-xs font-medium text-right whitespace-nowrap"
-                          style={{ color: "#111827" }}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div
+                        className="font-mono text-xs font-medium"
+                        style={{ color: "#111827" }}
+                      >
+                        {application.id}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="text-xs text-gray-600 whitespace-nowrap">
+                        {application.contact}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="text-xs text-gray-600 whitespace-nowrap">
+                        {formatDate(application.dateSubmitted)}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="flex justify-center">
+                        <span className="inline-flex px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-semibold">
+                          {getLoanTypeShortcut(application.loanType)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div
+                        className="text-xs font-medium text-right whitespace-nowrap"
+                        style={{ color: "#111827" }}
+                      >
+                        {application.loanAmount}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div
+                        className="text-xs font-medium text-right whitespace-nowrap"
+                        style={{ color: "#111827" }}
+                      >
+                        {application.approvalAmount}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div
+                        className="text-xs font-medium text-right whitespace-nowrap"
+                        style={{ color: application.disbursedAmount > 0 ? "#10B981" : "#9CA3AF" }}
+                      >
+                        {application.disbursedAmount > 0
+                          ? `₹${application.disbursedAmount.toLocaleString("en-IN")}`
+                          : "—"}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div
+                        className="text-xs font-semibold text-right whitespace-nowrap"
+                        style={{ color: "#7C3AED" }}
+                      >
+                        ₹ {application.payoutAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="flex justify-center">
+                        <span
+                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusBadgeColor(
+                            application.status
+                          )}`}
                         >
-                          {application.loanAmount}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div
-                          className="text-xs font-medium text-right whitespace-nowrap"
-                          style={{ color: "#111827" }}
-                        >
-                          {application.approvalAmount}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div
-                          className="text-xs font-medium text-right whitespace-nowrap"
-                          style={{ color: application.disbursedAmount > 0 ? "#10B981" : "#9CA3AF" }}
-                        >
-                          {application.disbursedAmount > 0
-                            ? `₹${application.disbursedAmount.toLocaleString("en-IN")}`
-                            : "—"}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div
-                          className="text-xs font-semibold text-right whitespace-nowrap"
-                          style={{ color: "#7C3AED" }}
-                        >
-                          ₹ {application.payoutAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex justify-center">
-                          <span
-                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusBadgeColor(
-                              application.status
-                            )}`}
-                          >
-                            {application.status}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center justify-center">
-                          <button
-                            className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs"
-                            style={{ backgroundColor: "orange" }}
-                            title="View Remarks"
-                            onClick={() => {
-                              const lastRemark = application.stageHistory
-                                ?.length
-                                ? application.stageHistory[
-                                    application.stageHistory.length - 1
-                                  ].note
-                                : "No remarks available";
+                          {application.status}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="flex items-center justify-center">
+                        <button
+                          className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs"
+                          style={{ backgroundColor: "orange" }}
+                          title="View Remarks"
+                          onClick={() => {
+                            const lastRemark = application.stageHistory
+                              ?.length
+                              ? application.stageHistory[
+                                  application.stageHistory.length - 1
+                                ].note
+                              : "No remarks available";
 
-                              setSelectedRemark(lastRemark);
-                              setOpen(true);
+                            setSelectedRemark(lastRemark);
+                            setOpen(true);
+                          }}
+                        >
+                          View
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="flex items-center justify-center gap-1">
+                        {application.applicationId && application.customerId && (
+                          <button
+                            className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs flex items-center gap-1"
+                            style={{ backgroundColor: "#12B99C" }}
+                            title="Upload Documents"
+                            onClick={() => {
+                              navigate(
+                                `/partner/complete-application?applicationId=${application.applicationId}&customerId=${application.customerId}`
+                              );
                             }}
                           >
-                            View
+                            <Eye size={12} />
+                            Docs
                           </button>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          {application.applicationId && application.customerId && (
-                            <button
-                              className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs flex items-center gap-1"
-                              style={{ backgroundColor: "#12B99C" }}
-                              title="Upload Documents"
-                              onClick={() => {
-                                navigate(
-                                  `/partner/complete-application?applicationId=${application.applicationId}&customerId=${application.customerId}`
-                                );
-                              }}
-                            >
-                              <Eye size={12} />
-                              Docs
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Applications Cards - Mobile & Tablet */}

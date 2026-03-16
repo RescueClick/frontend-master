@@ -1,15 +1,18 @@
 import { createSlice } from "@reduxjs/toolkit";
-import {loginUser,
-   fetchAsms,
-   fetchRMs,
-   createAsm,
-   createRm,
-  assignRmToAsm, 
-  reassignAllRmsFromAsm, 
-  activateAsm, 
+import {
+  loginUser,
+  fetchAsms,
+  fetchRMs,
+  fetchRSMs,
+  createAsm,
+  createRSM,
+  createRm,
+  assignRmToAsm,
+  reassignAllRmsFromAsm,
+  activateAsm,
   deleteAsm,
-  fetchAnalyticsdashboard,   
-  fetchAdminProfile,  
+  fetchAnalyticsdashboard,
+  fetchAdminProfile,
   fetchAdminDashboard,
   fetchRecentActivities,
   fetchPartners,
@@ -18,9 +21,28 @@ import {loginUser,
   fetchBanners,
   deleteRm,
   rejectPartner,
-  loginAsUserThunk
-
- } from "../thunks/adminThunks"; 
+  loginAsUserThunk,
+  fetchDeleteAccountRequests,
+  updateDeleteAccountRequestStatus,
+  fetchAdminCustomersPayOutPending,
+  fetchAdminCustomersPayOutDone,
+  fetchAdminCustomerPartnersPayout,
+  setAdminPayouts,
+  activatePartner,
+  reassignCustomersAndDeactivatePartner,
+  activateRM,
+  assignPartnersToRM,
+  activateRSM,
+  deactivateRSM,
+  assignAsmBulkTarget,
+  assignBulkTargetAll,
+  uploadBanners,
+  deleteBanner,
+  assignPartnerToRm,
+  fetchAdminPartnerTargets,
+  assignAdminPartnerTarget,
+  distributeHierarchicalTargets,
+} from "../thunks/adminThunks";
 
 
 import { saveAuthData } from "../../utils/localStorage";
@@ -49,8 +71,22 @@ const initialState = {
     success: false,
     data: null,
   },
+  // Create RSM state
+  createRSMAdmin: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
   // RM related state
   rm: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  // RSM related state
+  rsm: {
     loading: false,
     error: null,
     success: false,
@@ -83,6 +119,20 @@ const initialState = {
     error: null,
     success: false,
     data: [],
+  },
+  // Partner Targets state
+  partnerTargets: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  // Hierarchical Target Distribution state
+  distributeHierarchicalTargets: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
   },
   // Customer related state
   customer: {
@@ -192,6 +242,38 @@ const initialState = {
       activities: [],
     },
 
+    deleteAccountRequests: {
+      loading: false,
+      error: null,
+      success: false,
+      data: [],
+    },
+    // Payout Management (Pending/Done)
+    pendingPayout: {
+      loading: false,
+      error: null,
+      success: false,
+      data: [],
+    },
+    donePayout: {
+      loading: false,
+      error: null,
+      success: false,
+      data: [],
+    },
+    customerPartnersPayout: {
+      loading: false,
+      error: null,
+      success: false,
+      data: null,
+    },
+    setPayouts: {
+      loading: false,
+      error: null,
+      success: false,
+      data: null,
+    },
+
 };
 
 const adminSlice = createSlice({
@@ -273,6 +355,24 @@ const adminSlice = createSlice({
         state.createAsmAdmin.success = false;
       });
 
+    // 🔹 Create RSM Thunk
+    builder
+      .addCase(createRSM.pending, (state) => {
+        state.createRSMAdmin.loading = true;
+        state.createRSMAdmin.error = null;
+        state.createRSMAdmin.success = false;
+      })
+      .addCase(createRSM.fulfilled, (state, action) => {
+        state.createRSMAdmin.loading = false;
+        state.createRSMAdmin.data = action.payload;
+        state.createRSMAdmin.success = true;
+      })
+      .addCase(createRSM.rejected, (state, action) => {
+        state.createRSMAdmin.loading = false;
+        state.createRSMAdmin.error = action.payload;
+        state.createRSMAdmin.success = false;
+      });
+
     // 🔹 ASM Thunk
     builder
       .addCase(fetchAsms.pending, (state) => {
@@ -303,6 +403,22 @@ const adminSlice = createSlice({
       .addCase(fetchRMs.rejected, (state, action) => {
         state.rm.loading = false;
         state.rm.error = action.payload;
+      });
+
+    // 🔹 RSM Thunk
+    builder
+      .addCase(fetchRSMs.pending, (state) => {
+        state.rsm.loading = true;
+        state.rsm.error = null;
+      })
+      .addCase(fetchRSMs.fulfilled, (state, action) => {
+        state.rsm.loading = false;
+        state.rsm.data = action.payload;
+        state.rsm.success = true;
+      })
+      .addCase(fetchRSMs.rejected, (state, action) => {
+        state.rsm.loading = false;
+        state.rsm.error = action.payload;
       });
 
     // 🔹 Create RM Thunk
@@ -557,11 +673,74 @@ const adminSlice = createSlice({
       .addCase(fetchBanners.fulfilled, (state, action) => {
         state.allBanners.loading = false;
         state.allBanners.success = true;
-        state.allBanners.data = action.payload;
+        // Handle both array and object with banners property
+        state.allBanners.data = Array.isArray(action.payload) 
+          ? action.payload 
+          : (action.payload?.banners || []);
       })
       .addCase(fetchBanners.rejected, (state, action) => {
         state.allBanners.loading = false;
         state.allBanners.error = action.payload;
+      })
+
+      // Upload Banners
+      .addCase(uploadBanners.pending, (state) => {
+        state.allBanners.loading = true;
+        state.allBanners.error = null;
+        state.allBanners.success = false;
+      })
+      .addCase(uploadBanners.fulfilled, (state, action) => {
+        state.allBanners.loading = false;
+        state.allBanners.success = true;
+        // Handle both array and object with banners property
+        state.allBanners.data = Array.isArray(action.payload) 
+          ? action.payload 
+          : (action.payload?.banners || []);
+      })
+      .addCase(uploadBanners.rejected, (state, action) => {
+        state.allBanners.loading = false;
+        state.allBanners.error = action.payload;
+      })
+
+      // Delete Banner
+      .addCase(deleteBanner.pending, (state) => {
+        state.allBanners.loading = true;
+        state.allBanners.error = null;
+        state.allBanners.success = false;
+      })
+      .addCase(deleteBanner.fulfilled, (state, action) => {
+        state.allBanners.loading = false;
+        state.allBanners.success = true;
+        // Handle both array and object with banners property
+        state.allBanners.data = Array.isArray(action.payload) 
+          ? action.payload 
+          : (action.payload?.banners || []);
+        // If delete was successful, refetch banners
+        if (action.payload && !Array.isArray(action.payload) && !action.payload.banners) {
+          // If response doesn't contain banners array, keep existing data
+          // The component will refetch after delete
+        }
+      })
+      .addCase(deleteBanner.rejected, (state, action) => {
+        state.allBanners.loading = false;
+        state.allBanners.error = action.payload;
+      })
+
+      // Assign Partner to RM
+      .addCase(assignPartnerToRm.pending, (state) => {
+        state.partner.loading = true;
+        state.partner.error = null;
+        state.partner.success = false;
+      })
+      .addCase(assignPartnerToRm.fulfilled, (state, action) => {
+        state.partner.loading = false;
+        state.partner.success = true;
+        state.partner.data = action.payload;
+      })
+      .addCase(assignPartnerToRm.rejected, (state, action) => {
+        state.partner.loading = false;
+        state.partner.error = action.payload;
+        state.partner.success = false;
       });
 
       // 🔹 Delete RM
@@ -614,6 +793,43 @@ const adminSlice = createSlice({
           state.rejectPartner.success = false;
         });
 
+      // 🔹 Fetch delete-account requests
+      builder
+        .addCase(fetchDeleteAccountRequests.pending, (state) => {
+          state.deleteAccountRequests.loading = true;
+          state.deleteAccountRequests.error = null;
+          state.deleteAccountRequests.success = false;
+        })
+        .addCase(fetchDeleteAccountRequests.fulfilled, (state, action) => {
+          state.deleteAccountRequests.loading = false;
+          state.deleteAccountRequests.data = action.payload || [];
+          state.deleteAccountRequests.success = true;
+        })
+        .addCase(fetchDeleteAccountRequests.rejected, (state, action) => {
+          state.deleteAccountRequests.loading = false;
+          state.deleteAccountRequests.error = action.payload;
+          state.deleteAccountRequests.success = false;
+        });
+
+      // 🔹 Update delete-account request status
+      builder
+        .addCase(updateDeleteAccountRequestStatus.pending, (state) => {
+          // no separate loading slice; keep it simple
+        })
+        .addCase(updateDeleteAccountRequestStatus.fulfilled, (state, action) => {
+          const updated = action.payload;
+          if (!updated) return;
+          const idx = state.deleteAccountRequests.data.findIndex(
+            (r) => r._id === updated._id
+          );
+          if (idx !== -1) {
+            state.deleteAccountRequests.data[idx] = updated;
+          }
+        })
+        .addCase(updateDeleteAccountRequestStatus.rejected, (_state, _action) => {
+          // ignore; UI will surface via thunk reject message
+        });
+
       // 🔹 Login As (impersonation) Thunk
 builder
 .addCase(loginAsUserThunk.pending, (state) => {
@@ -636,9 +852,267 @@ builder
   state.login.loading = false;
   state.login.error = action.payload || "Login as user failed";
   state.login.isAuthenticated = false;
-});
+})
 
+      // Pending Payout
+      .addCase(fetchAdminCustomersPayOutPending.pending, (state) => {
+        state.pendingPayout.loading = true;
+        state.pendingPayout.error = null;
+      })
+      .addCase(fetchAdminCustomersPayOutPending.fulfilled, (state, action) => {
+        state.pendingPayout.loading = false;
+        state.pendingPayout.data = action.payload;
+        state.pendingPayout.success = true;
+      })
+      .addCase(fetchAdminCustomersPayOutPending.rejected, (state, action) => {
+        state.pendingPayout.loading = false;
+        state.pendingPayout.error = action.payload;
+      })
 
+      // Done Payout
+      .addCase(fetchAdminCustomersPayOutDone.pending, (state) => {
+        state.donePayout.loading = true;
+        state.donePayout.error = null;
+      })
+      .addCase(fetchAdminCustomersPayOutDone.fulfilled, (state, action) => {
+        state.donePayout.loading = false;
+        state.donePayout.data = action.payload;
+        state.donePayout.success = true;
+      })
+      .addCase(fetchAdminCustomersPayOutDone.rejected, (state, action) => {
+        state.donePayout.loading = false;
+        state.donePayout.error = action.payload;
+      })
+
+      // Customer Partners Payout
+      .addCase(fetchAdminCustomerPartnersPayout.pending, (state) => {
+        state.customerPartnersPayout.loading = true;
+        state.customerPartnersPayout.error = null;
+      })
+      .addCase(fetchAdminCustomerPartnersPayout.fulfilled, (state, action) => {
+        state.customerPartnersPayout.loading = false;
+        state.customerPartnersPayout.data = action.payload;
+        state.customerPartnersPayout.success = true;
+      })
+      .addCase(fetchAdminCustomerPartnersPayout.rejected, (state, action) => {
+        state.customerPartnersPayout.loading = false;
+        state.customerPartnersPayout.error = action.payload;
+      })
+
+      // Set Payouts
+      .addCase(setAdminPayouts.pending, (state) => {
+        state.setPayouts.loading = true;
+        state.setPayouts.error = null;
+        state.setPayouts.success = false;
+      })
+      .addCase(setAdminPayouts.fulfilled, (state, action) => {
+        state.setPayouts.loading = false;
+        state.setPayouts.data = action.payload;
+        state.setPayouts.success = true;
+      })
+      .addCase(setAdminPayouts.rejected, (state, action) => {
+        state.setPayouts.loading = false;
+        state.setPayouts.error = action.payload;
+        state.setPayouts.success = false;
+      })
+
+      // Activate Partner
+      .addCase(activatePartner.pending, (state) => {
+        state.partner.loading = true;
+        state.partner.error = null;
+        state.partner.success = false;
+      })
+      .addCase(activatePartner.fulfilled, (state, action) => {
+        state.partner.loading = false;
+        state.partner.data = action.payload;
+        state.partner.success = true;
+        // Update partner in partners list if exists
+        if (state.partners.data && Array.isArray(state.partners.data)) {
+          const index = state.partners.data.findIndex(
+            (p) => p._id === action.payload?.partner?._id
+          );
+          if (index !== -1) {
+            state.partners.data[index] = {
+              ...state.partners.data[index],
+              status: "ACTIVE",
+            };
+          }
+        }
+      })
+      .addCase(activatePartner.rejected, (state, action) => {
+        state.partner.loading = false;
+        state.partner.error = action.payload;
+        state.partner.success = false;
+      })
+
+      // Reassign Customers and Deactivate Partner
+      .addCase(reassignCustomersAndDeactivatePartner.pending, (state) => {
+        state.partner.loading = true;
+        state.partner.error = null;
+        state.partner.success = false;
+      })
+      .addCase(reassignCustomersAndDeactivatePartner.fulfilled, (state, action) => {
+        state.partner.loading = false;
+        state.partner.data = action.payload;
+        state.partner.success = true;
+      })
+      .addCase(reassignCustomersAndDeactivatePartner.rejected, (state, action) => {
+        state.partner.loading = false;
+        state.partner.error = action.payload;
+        state.partner.success = false;
+      })
+
+      // Activate RM
+      .addCase(activateRM.pending, (state) => {
+        state.rm.loading = true;
+        state.rm.error = null;
+        state.rm.success = false;
+      })
+      .addCase(activateRM.fulfilled, (state, action) => {
+        state.rm.loading = false;
+        state.rm.data = action.payload;
+        state.rm.success = true;
+      })
+      .addCase(activateRM.rejected, (state, action) => {
+        state.rm.loading = false;
+        state.rm.error = action.payload;
+        state.rm.success = false;
+      })
+
+      // Assign Partners to RM
+      .addCase(assignPartnersToRM.pending, (state) => {
+        state.partner.loading = true;
+        state.partner.error = null;
+        state.partner.success = false;
+      })
+      .addCase(assignPartnersToRM.fulfilled, (state, action) => {
+        state.partner.loading = false;
+        state.partner.data = action.payload;
+        state.partner.success = true;
+      })
+      .addCase(assignPartnersToRM.rejected, (state, action) => {
+        state.partner.loading = false;
+        state.partner.error = action.payload;
+        state.partner.success = false;
+      })
+
+      // Activate RSM
+      .addCase(activateRSM.pending, (state) => {
+        state.rsm.loading = true;
+        state.rsm.error = null;
+        state.rsm.success = false;
+      })
+      .addCase(activateRSM.fulfilled, (state, action) => {
+        state.rsm.loading = false;
+        state.rsm.data = action.payload;
+        state.rsm.success = true;
+      })
+      .addCase(activateRSM.rejected, (state, action) => {
+        state.rsm.loading = false;
+        state.rsm.error = action.payload;
+        state.rsm.success = false;
+      })
+
+      // Deactivate RSM
+      .addCase(deactivateRSM.pending, (state) => {
+        state.rsm.loading = true;
+        state.rsm.error = null;
+        state.rsm.success = false;
+      })
+      .addCase(deactivateRSM.fulfilled, (state, action) => {
+        state.rsm.loading = false;
+        state.rsm.data = action.payload;
+        state.rsm.success = true;
+      })
+      .addCase(deactivateRSM.rejected, (state, action) => {
+        state.rsm.loading = false;
+        state.rsm.error = action.payload;
+        state.rsm.success = false;
+      })
+
+      // Assign ASM Bulk Target
+      .addCase(assignAsmBulkTarget.pending, (state) => {
+        state.asm.loading = true;
+        state.asm.error = null;
+        state.asm.success = false;
+      })
+      .addCase(assignAsmBulkTarget.fulfilled, (state, action) => {
+        state.asm.loading = false;
+        state.asm.data = action.payload;
+        state.asm.success = true;
+      })
+      .addCase(assignAsmBulkTarget.rejected, (state, action) => {
+        state.asm.loading = false;
+        state.asm.error = action.payload;
+        state.asm.success = false;
+      })
+
+      // Assign Bulk Target All
+      .addCase(assignBulkTargetAll.pending, (state) => {
+        state.asm.loading = true;
+        state.asm.error = null;
+        state.asm.success = false;
+      })
+      .addCase(assignBulkTargetAll.fulfilled, (state, action) => {
+        state.asm.loading = false;
+        state.asm.data = action.payload;
+        state.asm.success = true;
+      })
+      .addCase(assignBulkTargetAll.rejected, (state, action) => {
+        state.asm.loading = false;
+        state.asm.error = action.payload;
+        state.asm.success = false;
+      })
+
+      // Fetch Partner Targets
+      .addCase(fetchAdminPartnerTargets.pending, (state) => {
+        state.partnerTargets.loading = true;
+        state.partnerTargets.error = null;
+        state.partnerTargets.success = false;
+      })
+      .addCase(fetchAdminPartnerTargets.fulfilled, (state, action) => {
+        state.partnerTargets.loading = false;
+        state.partnerTargets.data = action.payload;
+        state.partnerTargets.success = true;
+      })
+      .addCase(fetchAdminPartnerTargets.rejected, (state, action) => {
+        state.partnerTargets.loading = false;
+        state.partnerTargets.error = action.payload;
+        state.partnerTargets.success = false;
+      })
+
+      // Assign Partner Target
+      .addCase(assignAdminPartnerTarget.pending, (state) => {
+        state.partnerTargets.loading = true;
+        state.partnerTargets.error = null;
+        state.partnerTargets.success = false;
+      })
+      .addCase(assignAdminPartnerTarget.fulfilled, (state, action) => {
+        state.partnerTargets.loading = false;
+        state.partnerTargets.success = true;
+      })
+      .addCase(assignAdminPartnerTarget.rejected, (state, action) => {
+        state.partnerTargets.loading = false;
+        state.partnerTargets.error = action.payload;
+        state.partnerTargets.success = false;
+      })
+
+      // Distribute Hierarchical Targets
+      .addCase(distributeHierarchicalTargets.pending, (state) => {
+        state.distributeHierarchicalTargets.loading = true;
+        state.distributeHierarchicalTargets.error = null;
+        state.distributeHierarchicalTargets.success = false;
+      })
+      .addCase(distributeHierarchicalTargets.fulfilled, (state, action) => {
+        state.distributeHierarchicalTargets.loading = false;
+        state.distributeHierarchicalTargets.data = action.payload;
+        state.distributeHierarchicalTargets.success = true;
+      })
+      .addCase(distributeHierarchicalTargets.rejected, (state, action) => {
+        state.distributeHierarchicalTargets.loading = false;
+        state.distributeHierarchicalTargets.error = action.payload;
+        state.distributeHierarchicalTargets.success = false;
+      });
 
   },
 });

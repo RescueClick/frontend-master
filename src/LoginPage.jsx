@@ -179,6 +179,7 @@ const LoginPage = () => {
       // Redirect based on current role
       if (lastRole === "SUPER_ADMIN") navigate("/admin");
       else if (lastRole === "ASM") navigate("/asm");
+      else if (lastRole === "RSM") navigate("/rsm");
       else if (lastRole === "RM") navigate("/rm");
       else if (lastRole === "PARTNER") navigate("/partner");
       else if (lastRole === "CUSTOMER") navigate("/customer");

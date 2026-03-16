@@ -657,54 +657,68 @@ loginAsUser(userId, navigate);
                   </div>
                 </div>
 
-                {/* Partner Cards */}
-
-                {/* Partner Cards */}
-                <div className="p-4 space-y-4">
-                  {filteredPartners?.map((partner) => (
-                    <div
-                      key={partner.id}
-                      className="p-4 shadow-md border border-gray-200 rounded-xl hover:shadow-lg transition-shadow bg-white"
-                    >
-                      {/* Top Section */}
-                      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                        {/* Left: Logo + Info */}
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden bg-gray-200">
-                            {partner?.profilePic ? (
-                              <img 
-                                src={partner.profilePic} 
-                                alt={partner.name || "Partner"} 
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  const fallback = e.target.parentElement.querySelector('.card-fallback');
-                                  if (fallback) fallback.style.display = 'flex';
-                                }}
-                              />
-                            ) : null}
-                            <div 
-                              className="card-fallback w-full h-full flex items-center justify-center bg-gray-200 text-gray-500"
-                              style={{ display: partner?.profilePic ? 'none' : 'flex' }}
-                            >
-                              <User className="w-6 h-6" />
-                            </div>
-                          </div>
-                          <div>
-                            <h4
-                              className="cursor-pointer text-base font-semibold text-gray-900"
+                {/* Partner Table */}
+                <div className="overflow-x-auto rounded-lg shadow-sm">
+                  <table className="w-full border-collapse bg-white text-sm">
+                    <thead style={{ background: colors.primary, color: "white" }}>
+                      <tr>
+                        <th className="px-2 py-4 text-left">Partner Name</th>
+                        <th className="px-2 py-4 text-left">Contact</th>
+                        <th className="px-2 py-4 text-left">Status</th>
+                        <th className="px-2 py-4 text-left">Deals</th>
+                        <th className="px-2 py-4 text-left">Revenue</th>
+                        <th className="px-2 py-4 text-left">Login As</th>
+                        <th className="px-2 py-4 text-left">Activation</th>
+                        <th className="px-2 py-4 text-left">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        <tr>
+                          <td colSpan="8" className="text-center py-4">
+                            Loading...
+                          </td>
+                        </tr>
+                      ) : filteredPartners && filteredPartners.length > 0 ? (
+                        filteredPartners.map((partner) => (
+                          <tr key={partner.id} className="border-b hover:bg-gray-50">
+                            <td
+                              className="px-2 py-3 align-top cursor-pointer"
                               onClick={() => {
                                 navigate("/rm/RManalytics", {
                                   state: { id: partner.id, role: "RM" },
                                 });
                               }}
                             >
-                              {partner.name}
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              {partner.type || "Partner"}
-                            </p>
-                            <div className="flex items-center space-x-2 mt-1">
+                              <div className="flex items-center gap-2">
+                                {partner?.profilePic ? (
+                                  <img
+                                    src={partner.profilePic}
+                                    alt={partner.name || "Partner"}
+                                    className="w-8 h-8 rounded-full object-cover"
+                                    onError={(e) => {
+                                      e.target.style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <User className="w-4 h-4 text-gray-500" />
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="font-semibold text-sm">
+                                    {partner.name}
+                                  </span>
+                                  <p className="text-xs text-gray-500">
+                                    {partner.type || "Partner"}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-2 py-3 align-middle">
+                              <span className="text-sm">{partner.phone || "—"}</span>
+                            </td>
+                            <td className="px-2 py-3 align-middle">
                               <span
                                 className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(
                                   partner.status
@@ -712,98 +726,75 @@ loginAsUser(userId, navigate);
                               >
                                 {partner.status}
                               </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right: Stats */}
-                        <div className="grid grid-cols-2 lg:flex lg:space-x-6 gap-3 lg:gap-12 w-full lg:w-auto">
-                          {/* Deals */}
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-blue-600">
-                              {partner.dealsClosedThisMonth ??
-                                partner.dealsThisMonth ??
-                                0}
-                            </p>
-                            <p className="text-xs text-gray-600">Deals</p>
-                          </div>
-
-                          {/* Revenue */}
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-green-600">
-                              {formatCurrency(partner.totalDisbursed || 0)}
-                            </p>
-                            <p className="text-xs text-gray-600">Revenue</p>
-                          </div>
-
-                          {/* Success */}
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-purple-600">
-                              {partner.performance ?? 0}
-                            </p>
-                            <p className="text-xs text-gray-600">Success</p>
-                          </div>
-
-                          <button
-                        className="px-2 py-1 border rounded text-xs flex items-center gap-1"
-                        style={{
-                          borderColor: colors.secondary,
-                          color: colors.secondary,
-                        }}
-                        onClick={() => setPartnerProfile(partner)}
-                        title="View Profile"
-                      >
-                        <Eye size={14} />
-                        Profile
-                      </button>
-
-                          <button
-                        className="px-2 py-1 border rounded text-xs"
-                        style={{
-                          borderColor: colors.secondary,
-                          color: colors.secondary,
-                        }}
-                        onClick={()=> handleLoginAs(partner?.id)}
-                      >
-                        Login
-                      </button>
-
-                          <div className="flex flex-col items-center mt-2">
-
-                            {
-
-                              partner.status == "ACTIVE" ?
+                            </td>
+                            <td className="px-2 py-3 align-middle">
+                              <span className="text-sm font-medium text-blue-600">
+                                {partner.dealsClosedThisMonth ??
+                                  partner.dealsThisMonth ??
+                                  0}
+                              </span>
+                            </td>
+                            <td className="px-2 py-3 align-middle">
+                              <span className="text-sm font-medium text-green-600">
+                                {formatCurrency(partner.totalDisbursed || 0)}
+                              </span>
+                            </td>
+                            <td className="px-2 py-3 align-middle">
+                              <button
+                                className="px-2 py-1 border rounded text-xs"
+                                style={{
+                                  borderColor: colors.secondary,
+                                  color: colors.secondary,
+                                }}
+                                onClick={() => handleLoginAs(partner?.id)}
+                              >
+                                Login
+                              </button>
+                            </td>
+                            <td className="px-2 py-3 align-middle">
+                              {partner.status === "ACTIVE" ? (
                                 <button
-                                  className={` cursor-pointer px-2 py-2 rounded-lg text-1xl font-semibold "bg-red-500 text-white bg-red-600`}
+                                  className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
                                   onClick={() => {
-                                    toggleActivation(partner)
+                                    toggleActivation(partner);
                                   }}
                                 >
                                   Deactivate
                                 </button>
-
-                                :
-
+                              ) : (
                                 <button
-                                  className={`cursor-pointer px-2 py-2 rounded-lg text-1xl font-semibold "bg-red-500 text-white bg-green-600`}
+                                  className="px-2 py-1 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700"
                                   onClick={() => {
-                                    setActivateModel(true)
-                                    setSelectedPartner(partner)
+                                    setActivateModel(true);
+                                    setSelectedPartner(partner);
                                   }}
                                 >
                                   Activate
                                 </button>
-
-
-                            }
-
-                          </div>
-
-
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                              )}
+                            </td>
+                            <td className="px-2 py-3 align-middle">
+                              <div className="flex items-center gap-1 h-full">
+                                <button
+                                  className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
+                                  onClick={() => setPartnerProfile(partner)}
+                                  title="View Profile"
+                                >
+                                  <Eye size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="8" className="text-center py-4">
+                            No partners found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

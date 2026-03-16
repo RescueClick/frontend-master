@@ -100,4 +100,31 @@ export const signupPartner = createAsyncThunk(
   }
 );
 
+// Fetch Partner's Own Target (Partner role)
+export const fetchMyTarget = createAsyncThunk(
+  "partner/fetchMyTarget",
+  async ({ year, month }, { rejectWithValue }) => {
+    try {
+      const { partnerToken } = getAuthData();
+      const params = new URLSearchParams();
+      if (year) params.append("year", year);
+      if (month) params.append("month", month);
+      
+      const response = await axios.get(
+        `${backendurl}/partner/my-target?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${partnerToken}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch my target"
+      );
+    }
+  }
+);
+
  

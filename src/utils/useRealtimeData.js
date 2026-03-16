@@ -85,7 +85,7 @@ export const useRefetch = (fetchAction) => {
     try {
       await dispatch(fetchAction());
     } catch (error) {
-      console.error('Refetch error:', error);
+      // silently ignore refetch errors in production
     }
   }, [dispatch, fetchAction]);
 

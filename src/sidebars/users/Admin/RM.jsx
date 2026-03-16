@@ -502,18 +502,88 @@ loginAsUser(userId, navigate);
                   <div className="space-y-3">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">ASM Name</p>
-                      <p className="text-sm">{rmToView.asmName}</p>
+                      <p className="text-sm">{rmToView.asmName || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">
                         ASM Employee ID
                       </p>
                       <p className="text-sm font-mono">
-                        {rmToView.asmEmployeeId}
+                        {rmToView.asmEmployeeId || "N/A"}
                       </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Personal Loan RSM Information */}
+                {rmToView.personalRsmName && (
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <h4 className="font-semibold text-[#111827] mb-3 text-sm">
+                      Personal Loan RSM Information
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">RSM Name</p>
+                        <p className="text-sm">{rmToView.personalRsmName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">
+                          RSM Employee ID
+                        </p>
+                        <p className="text-sm font-mono">
+                          {rmToView.personalRsmEmployeeId || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">RSM Phone</p>
+                        <p className="text-sm font-mono">
+                          {rmToView.personalRsmPhone || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">RSM Email</p>
+                        <p className="text-sm font-mono">
+                          {rmToView.personalRsmEmail || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Business & Home Loan RSM Information */}
+                {rmToView.businessHomeRsmName && (
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <h4 className="font-semibold text-[#111827] mb-3 text-sm">
+                      Business & Home Loan RSM Information
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">RSM Name</p>
+                        <p className="text-sm">{rmToView.businessHomeRsmName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">
+                          RSM Employee ID
+                        </p>
+                        <p className="text-sm font-mono">
+                          {rmToView.businessHomeRsmEmployeeId || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">RSM Phone</p>
+                        <p className="text-sm font-mono">
+                          {rmToView.businessHomeRsmPhone || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">RSM Email</p>
+                        <p className="text-sm font-mono">
+                          {rmToView.businessHomeRsmEmail || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Footer actions */}

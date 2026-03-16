@@ -14,13 +14,11 @@ class SocketManager {
   connect() {
     // If socket exists and is connected, return it
     if (this.socket?.connected) {
-      console.log("✅ Socket already connected, reusing existing connection:", this.socket.id);
       return this.socket;
     }
 
     // If socket exists but not connected, disconnect it first
     if (this.socket) {
-      console.log("🔄 Disconnecting existing socket before reconnecting...");
       this.socket.disconnect();
       this.socket = null;
     }
@@ -29,7 +27,6 @@ class SocketManager {
     const token = authData?.adminToken || authData?.asmToken || authData?.rmToken || authData?.partnerToken || authData?.customerToken;
 
     if (!token) {
-      console.warn("⚠️ No token found, cannot connect to socket");
       return null;
     }
 
@@ -55,9 +52,6 @@ class SocketManager {
       socketUrl = `http://${socketUrl}`;
     }
 
-    console.log("🔌 Web: Connecting socket to:", socketUrl);
-    console.log("🔌 Web: Original backendurl:", backendurl);
-
     this.socket = io(socketUrl, {
       auth: {
         token: token,
@@ -80,9 +74,6 @@ class SocketManager {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      console.log("✅ Socket connected:", this.socket.id);
-      console.log("📡 Socket connection status:", this.socket.connected);
-      console.log("🔐 Socket auth:", this.socket.auth);
       this.isConnected = true;
       this.reconnectAttempts = 0;
       this.emit("socketConnected", { connected: true });
@@ -92,45 +83,27 @@ class SocketManager {
     });
 
     this.socket.on("disconnect", (reason) => {
-      console.log("❌ Socket disconnected:", reason);
       this.isConnected = false;
       this.emit("socketDisconnected", { reason });
     });
 
     this.socket.on("connect_error", (error) => {
-      console.error("❌ Socket connection error:", error.message);
-      console.error("Error details:", error);
       this.isConnected = false;
       this.emit("socketDisconnected", { reason: error.message });
       this.reconnectAttempts++;
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error("❌ Max reconnection attempts reached");
         this.emit("socketConnectionFailed", { error: error.message });
       } else {
-        console.log(`🔄 Retrying connection (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
       }
     });
 
     // Listen for authentication success/failure
-    this.socket.on("authenticated", () => {
-      console.log("✅ Socket authenticated successfully");
-    });
+    this.socket.on("authenticated", () => {});
 
-    this.socket.on("unauthorized", (error) => {
-      console.error("❌ Socket authentication failed:", error);
-    });
+    this.socket.on("unauthorized", (error) => {});
 
     // Application Events
     this.socket.on("applicationUpdated", (data) => {
-      console.log("📨 SocketManager: Received applicationUpdated event from server", data);
-      console.log("📨 Application update details:", {
-        applicationId: data.applicationId,
-        status: data.status,
-        oldStatus: data.oldStatus,
-        actionBy: data.actionBy?.name || "N/A",
-        timestamp: data.timestamp
-      });
-      console.log("📨 SocketManager: Forwarding applicationUpdated to internal event bus");
       this.emit("applicationUpdated", data);
     });
 
@@ -144,14 +117,6 @@ class SocketManager {
     });
 
     this.socket.on("documentStatusChanged", (data) => {
-      console.log("📨 SocketManager: Received documentStatusChanged event from server", data);
-      console.log("📨 Document status change details:", {
-        applicationId: data.applicationId,
-        docType: data.docType,
-        status: data.status,
-        actionBy: data.actionBy?.name || "N/A",
-        timestamp: data.timestamp
-      });
       this.emit("documentStatusChanged", data);
     });
 
@@ -176,8 +141,6 @@ class SocketManager {
 
     // General Notification Event
     this.socket.on("notification", (data) => {
-      console.log("📨 SocketManager: Received notification event from server", data);
-      console.log("📨 SocketManager: Forwarding notification to internal event bus");
       this.emit("notification", data);
     });
 
@@ -206,7 +169,6 @@ class SocketManager {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
     } else {
-      console.warn(`Cannot emit ${event}: Socket not connected`);
     }
   }
 
@@ -236,7 +198,6 @@ class SocketManager {
         try {
           callback(data);
         } catch (error) {
-          console.error(`Error in socket listener for ${eventName}:`, error);
         }
       });
     }

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -7,24 +7,27 @@ import {
   fetchBanners,
   uploadBanners,
 } from "../../../feature/thunks/adminThunks";
-import { useEffect } from "react";
 
 export default function Banner() {
   const dispatch = useDispatch();
 
   const [banners, setBanners] = useState([]);
 
-  const [bannersGetData, setBannersGetData] = useState([]);
-
   const { loading, error, data } = useSelector(
     (state) => state.admin.allBanners
   );
 
-  
+  // Extract banners array from data (handle both array and object formats)
+  const bannersList = useMemo(() => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (data.banners && Array.isArray(data.banners)) return data.banners;
+    return [];
+  }, [data]);
 
   useEffect(() => {
     dispatch(fetchBanners());
-  }, [dispatch, null]);
+  }, [dispatch]);
 
   const fileInputRef = useRef(null);
 
@@ -53,11 +56,10 @@ export default function Banner() {
     });
   };
 
-  const handleUpdateBanner = (e) => {
-   
-
+  const handleUpdateBanner = async (e) => {
     if (!banners || banners.length === 0) {
       console.warn("No banners selected for upload");
+      alert("Please select at least one banner to upload");
       return;
     }
 
@@ -76,22 +78,38 @@ export default function Banner() {
       }
     }
 
-    // ✅ Only send if all files are valid
-    dispatch(uploadBanners(formData));
-
-    setTimeout(() => {
+    try {
+      // ✅ Only send if all files are valid
+      await dispatch(uploadBanners(formData)).unwrap();
+      
+      // Clear local banners after successful upload
+      setBanners([]);
+      
+      // Refetch banners from backend
       dispatch(fetchBanners());
-    }, 1000);
-
-    setBanners([]);
+    } catch (error) {
+      console.error("Failed to upload banners:", error);
+      alert(error || "Failed to upload banners. Please try again.");
+    }
   };
 
-  const removeBannerFromBackend = (bannerId) => {
-    dispatch(deleteBanner(bannerId));
+  const removeBannerFromBackend = async (bannerId) => {
+    if (!bannerId) {
+      console.error("No banner ID provided");
+      return;
+    }
 
-    setTimeout(() => {
+    const confirmed = window.confirm("Are you sure you want to delete this banner?");
+    if (!confirmed) return;
+
+    try {
+      await dispatch(deleteBanner(bannerId)).unwrap();
+      // Refetch banners after successful delete
       dispatch(fetchBanners());
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to delete banner:", error);
+      alert(error || "Failed to delete banner. Please try again.");
+    }
   };
 
   return (
@@ -191,28 +209,54 @@ export default function Banner() {
 
         {/* Banner Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {data?.map((banner, index) => (
-            <div key={index} className="relative group">
-              <div className="relative w-full aspect-[16/9]">
-                <img
-                  src={banner.imageUrl}
-                  alt="Banner"
-                  className="absolute inset-0 w-full h-full object-cover rounded-xl"
-                />
-              </div>
-
-              {/* Cross Button */}
+          {loading ? (
+            <div className="col-span-full text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+              <p className="mt-2 text-gray-600">Loading banners...</p>
+            </div>
+          ) : error ? (
+            <div className="col-span-full text-center py-8">
+              <p className="text-red-600">Error loading banners: {error}</p>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeBannerFromBackend(banner?._id);
-                }}
-                className="absolute top-3 right-3 z-20 bg-gray-800 bg-opacity-70 hover:bg-red-500 text-white rounded-full p-2 transition opacity-0 group-hover:opacity-100"
+                onClick={() => dispatch(fetchBanners())}
+                className="mt-4 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
               >
-                <X size={20} />
+                Retry
               </button>
             </div>
-          ))}
+          ) : bannersList.length > 0 ? (
+            bannersList.map((banner, index) => (
+              <div key={banner._id || index} className="relative group">
+                <div className="relative w-full aspect-[16/9]">
+                  <img
+                    src={banner.imageUrl}
+                    alt={banner.title || "Banner"}
+                    className="absolute inset-0 w-full h-full object-cover rounded-xl"
+                    onError={(e) => {
+                      console.error("Failed to load banner image:", banner.imageUrl);
+                      e.target.style.display = "none";
+                    }}
+                  />
+                </div>
+
+                {/* Cross Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeBannerFromBackend(banner?._id);
+                  }}
+                  className="absolute top-3 right-3 z-20 bg-gray-800 bg-opacity-70 hover:bg-red-500 text-white rounded-full p-2 transition opacity-0 group-hover:opacity-100"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-8">
+              <p className="text-gray-500 mb-2">No banners found</p>
+              <p className="text-sm text-gray-400">Upload banners using the form above</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

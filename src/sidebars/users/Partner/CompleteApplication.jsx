@@ -20,6 +20,15 @@ const CompleteApplication = () => {
   const [applicationData, setApplicationData] = useState(null);
   const [pendingDocuments, setPendingDocuments] = useState([]);
 
+  // Treat PHOTO and SELFIE (and co-applicant selfie) as the same logical document
+  const normalizeDocType = (docType) => {
+    const upper = (docType || "").toUpperCase();
+    if (upper === "SELFIE" || upper === "CO_APPLICANT_SELFIE") {
+      return "PHOTO";
+    }
+    return upper;
+  };
+
   useEffect(() => {
     if (applicationId && customerId) {
       fetchApplicationData();
@@ -50,8 +59,8 @@ const CompleteApplication = () => {
 
       // Get pending/rejected/updated documents (documents that need to be uploaded/re-uploaded)
       const allDocs = response.data.docs || [];
-      const pending = allDocs.filter(
-        (doc) => ["REJECTED", "PENDING", "UPDATED"].includes(doc.status)
+      const pending = allDocs.filter((doc) =>
+        ["REJECTED", "PENDING", "UPDATED"].includes(doc.status)
       );
 
       // Also check for required documents that might not exist yet
@@ -62,7 +71,8 @@ const CompleteApplication = () => {
         .filter(
           (docType) =>
             !allDocs.some(
-              (doc) => doc.docType?.toUpperCase() === docType.toUpperCase()
+              (doc) =>
+                normalizeDocType(doc.docType) === normalizeDocType(docType)
             )
         )
         .map((docType) => ({
@@ -74,19 +84,22 @@ const CompleteApplication = () => {
 
       // Combine pending/rejected docs with missing docs
       const allPendingDocs = [...pending, ...missingDocs];
-      
-      // Remove duplicates
-      const uniquePendingDocs = allPendingDocs.filter(
-        (doc, index, self) =>
-          index ===
-          self.findIndex(
-            (d) => d.docType?.toUpperCase() === doc.docType?.toUpperCase()
-          )
-      );
+
+      // Remove duplicates and treat SELFIE / CO_APPLICANT_SELFIE as PHOTO
+      const seenTypes = new Set();
+      const uniquePendingDocs = [];
+      allPendingDocs.forEach((doc) => {
+        const key = normalizeDocType(doc.docType);
+        if (seenTypes.has(key)) return;
+        seenTypes.add(key);
+        uniquePendingDocs.push({
+          ...doc,
+          docType: key,
+        });
+      });
 
       setPendingDocuments(uniquePendingDocs);
     } catch (err) {
-      console.error("Error fetching application data:", err);
       alert("Failed to fetch application data");
     } finally {
       setLoading(false);
@@ -95,14 +108,30 @@ const CompleteApplication = () => {
 
   const getRequiredDocTypes = (loanType) => {
     const baseDocs = ["PAN", "AADHAR_FRONT", "AADHAR_BACK"];
-    
+
+    // Treat PHOTO/SELFIE as a single requirement: PHOTO
     if (loanType === "PERSONAL_LOAN" || loanType === "HOME_LOAN_SALARIED") {
-      return [...baseDocs, "SALARY_SLIP_1", "BANK_STATEMENT", "PHOTO", "SELFIE", "ADDRESS_PROOF"];
-    } else if (loanType === "BUSINESS_LOAN" || loanType === "HOME_LOAN_SELF_EMPLOYED") {
-      return [...baseDocs, "BANK_STATEMENT", "GST_CERTIFICATE", "PHOTO", "SELFIE", "ADDRESS_PROOF"];
+      return [
+        ...baseDocs,
+        "SALARY_SLIP_1",
+        "BANK_STATEMENT",
+        "PHOTO",
+        "ADDRESS_PROOF",
+      ];
+    } else if (
+      loanType === "BUSINESS_LOAN" ||
+      loanType === "HOME_LOAN_SELF_EMPLOYED"
+    ) {
+      return [
+        ...baseDocs,
+        "BANK_STATEMENT",
+        "GST_CERTIFICATE",
+        "PHOTO",
+        "ADDRESS_PROOF",
+      ];
     }
-    
-    return [...baseDocs, "PHOTO", "SELFIE", "ADDRESS_PROOF"];
+
+    return [...baseDocs, "PHOTO", "ADDRESS_PROOF"];
   };
 
   const calculateProgress = () => {
@@ -113,8 +142,11 @@ const CompleteApplication = () => {
     const totalRequired = requiredDocTypes.length;
     
     // Count verified documents
-    const verifiedDocs = requiredDocTypes.filter(docType => {
-      const doc = allDocs.find(d => d.docType?.toUpperCase() === docType.toUpperCase());
+    const verifiedDocs = requiredDocTypes.filter((docType) => {
+      const target = normalizeDocType(docType);
+      const doc = allDocs.find(
+        (d) => normalizeDocType(d.docType) === target
+      );
       return doc && doc.status === "VERIFIED";
     }).length;
     
@@ -164,11 +196,14 @@ const CompleteApplication = () => {
       const allDocs = applicationData?.docs || [];
       const requiredDocTypes = getRequiredDocTypes(applicationData?.loanType);
       const hasAllUploaded = requiredDocTypes.every((docType) =>
-        allDocs.some(
-          (doc) =>
-            doc.docType?.toUpperCase() === docType.toUpperCase() &&
-            doc.url && doc.url.trim() !== ""
-        )
+        allDocs.some((doc) => {
+          const target = normalizeDocType(docType);
+          return (
+            normalizeDocType(doc.docType) === target &&
+            doc.url &&
+            doc.url.trim() !== ""
+          );
+        })
       );
 
       // Check if there are any rejected documents that need re-upload
@@ -195,7 +230,6 @@ const CompleteApplication = () => {
       alert("Application submitted successfully");
       navigate(-1);
     } catch (err) {
-      console.error("Error submitting application:", err);
       alert("Failed to submit application");
     }
   };
@@ -212,20 +246,25 @@ const CompleteApplication = () => {
   }
 
   const progress = calculateProgress();
-  const requiredDocTypes = applicationData ? getRequiredDocTypes(applicationData.loanType) : [];
+  const requiredDocTypes = applicationData
+    ? getRequiredDocTypes(applicationData.loanType)
+    : [];
   const allDocs = applicationData?.docs || [];
   
   // Calculate completed (verified) docs
-  const completedSteps = requiredDocTypes.filter(docType => {
-    const doc = allDocs.find(d => d.docType?.toUpperCase() === docType.toUpperCase());
+  const completedSteps = requiredDocTypes.filter((docType) => {
+    const target = normalizeDocType(docType);
+    const doc = allDocs.find(
+      (d) => normalizeDocType(d.docType) === target
+    );
     return doc && doc.status === "VERIFIED";
   }).length;
   
-  // Total required steps
-  const totalSteps = requiredDocTypes.length || pendingDocuments.length;
-  
   // Calculate pending docs count (including missing and rejected/updated)
   const pendingDocsCount = pendingDocuments.length;
+
+  // Total documents considered in progress = verified + pending
+  const totalSteps = completedSteps + pendingDocsCount;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -284,7 +323,7 @@ const CompleteApplication = () => {
               {progress}% Complete
             </span>
             <span className="text-sm text-gray-600 font-medium">
-              {completedSteps} of {totalSteps} documents verified
+              {completedSteps}/{totalSteps} documents verified
             </span>
           </div>
           {pendingDocsCount > 0 && (

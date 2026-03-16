@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   User,
   Mail,
@@ -20,7 +20,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData } from "../../../../utils/localStorage";
-import { createRm, fetchAsms } from "../../../../feature/thunks/adminThunks";
+import { createRm, fetchRSMs } from "../../../../feature/thunks/adminThunks";
 import { resetCreateRmState } from "../../../../feature/slices/adminSlice";
 
 const AddRMPage = () => {
@@ -30,9 +30,8 @@ const AddRMPage = () => {
   const { loading, error, success } = useSelector(
     (state) => state.admin.createRmAdmin
   );
-  const { data: asmList, loading: asmLoading } = useSelector(
-    (state) => state.admin.asm
-  );
+  const rsmList = useSelector((state) => state.admin.rsm?.data || []);
+  const rsmLoading = useSelector((state) => state.admin.rsm?.loading || false);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -43,14 +42,16 @@ const AddRMPage = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    assignedAsm: null, // New field for assigned ASM
+    personalRsm: null, // Personal Loan RSM
+    businessHomeRsm: null, // Business & Home Loan RSM
   });
 
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showAsmModal, setShowAsmModal] = useState(false); // New state for ASM modal
-  const [asmSearchTerm, setAsmSearchTerm] = useState(""); // New state for ASM search
+  const [showPersonalRsmModal, setShowPersonalRsmModal] = useState(false);
+  const [showBusinessHomeRsmModal, setShowBusinessHomeRsmModal] = useState(false);
+  const [rsmSearchTerm, setRsmSearchTerm] = useState("");
 
   const [message, setMessage] = useState("");
 
@@ -62,34 +63,64 @@ const AddRMPage = () => {
     text: "#111827",
   };
 
-  // ✅ Load ASM list when component mounts
+  // ✅ Load RSM list when component mounts
   useEffect(() => {
     const { adminToken } = getAuthData() || {};
     if (adminToken) {
-      dispatch(fetchAsms(adminToken));
+      console.log("Fetching RSMs...");
+      dispatch(fetchRSMs(adminToken));
     }
   }, [dispatch]);
 
-  // ✅ Filter ASM list based on search term
-  const filteredAsmList =
-    asmList?.filter((asm) => {
-      if (!asmSearchTerm.trim()) return true;
+  // ✅ Filter RSM list based on search term and type
+  const filterRsmList = useMemo(() => {
+    return (rsmType) => {
+      if (!rsmList || !Array.isArray(rsmList) || rsmList.length === 0) {
+        return [];
+      }
+      
+      return rsmList.filter((rsm) => {
+        // Check if rsmType matches (case-sensitive)
+        if (!rsm.rsmType || rsm.rsmType !== rsmType) {
+          return false;
+        }
+        
+        // If search term exists, filter by it
+        if (!rsmSearchTerm.trim()) {
+          return true;
+        }
 
-      const searchLower = asmSearchTerm.toLowerCase();
-      const fullName = `${asm.firstName} ${asm.lastName}`.toLowerCase();
-      const employeeId = (asm.employeeId || "").toLowerCase();
-      const email = (asm.email || "").toLowerCase();
+        const searchLower = rsmSearchTerm.toLowerCase();
+        const fullName = `${rsm.firstName || ""} ${rsm.lastName || ""}`.toLowerCase();
+        const employeeId = (rsm.employeeId || "").toLowerCase();
+        const email = (rsm.email || "").toLowerCase();
 
-      return (
-        fullName.includes(searchLower) ||
-        employeeId.includes(searchLower) ||
-        email.includes(searchLower)
-      );
-    }) || [];
+        return (
+          fullName.includes(searchLower) ||
+          employeeId.includes(searchLower) ||
+          email.includes(searchLower)
+        );
+      });
+    };
+  }, [rsmList, rsmSearchTerm]);
 
-  // ✅ Handle ASM search input change
-  const handleAsmSearchChange = (e) => {
-    setAsmSearchTerm(e.target.value);
+  const filteredPersonalRsms = useMemo(() => filterRsmList("PERSONAL"), [filterRsmList]);
+  const filteredBusinessHomeRsms = useMemo(() => filterRsmList("BUSINESS_HOME"), [filterRsmList]);
+
+  // Debug: Log when RSM list changes (after filtered lists are defined)
+  useEffect(() => {
+    console.log("RSM List updated:", rsmList);
+    console.log("RSM List length:", rsmList?.length || 0);
+    if (rsmList && rsmList.length > 0) {
+      console.log("RSM Types in list:", rsmList.map(r => ({ name: `${r.firstName} ${r.lastName}`, type: r.rsmType })));
+      console.log("Personal RSMs count:", filteredPersonalRsms.length);
+      console.log("Business Home RSMs count:", filteredBusinessHomeRsms.length);
+    }
+  }, [rsmList, filteredPersonalRsms, filteredBusinessHomeRsms]);
+
+  // ✅ Handle RSM search input change
+  const handleRsmSearchChange = (e) => {
+    setRsmSearchTerm(e.target.value);
   };
 
   // ✅ Validation
@@ -124,9 +155,12 @@ const AddRMPage = () => {
       newErrors.confirmPassword = "Passwords do not match";
     }
 
-    // New validation for ASM assignment
-    if (!formData.assignedAsm) {
-      newErrors.assignedAsm = "Please assign an ASM";
+    // New validation for RSM assignment
+    if (!formData.personalRsm) {
+      newErrors.personalRsm = "Please assign a Personal Loan RSM";
+    }
+    if (!formData.businessHomeRsm) {
+      newErrors.businessHomeRsm = "Please assign a Business & Home Loan RSM";
     }
 
     if (formData?.dob && getAgeFromDOB(formData?.dob) < 18) {
@@ -167,11 +201,19 @@ const AddRMPage = () => {
     if (error) dispatch(resetCreateRmState());
   };
 
-  // ✅ Handle ASM selection
-  const handleAsmSelection = (asm) => {
-    setFormData((prev) => ({ ...prev, assignedAsm: asm }));
-    setErrors((prev) => ({ ...prev, assignedAsm: "" }));
-    setShowAsmModal(false);
+  // ✅ Handle RSM selection
+  const handlePersonalRsmSelection = (rsm) => {
+    setFormData((prev) => ({ ...prev, personalRsm: rsm }));
+    setErrors((prev) => ({ ...prev, personalRsm: "" }));
+    setShowPersonalRsmModal(false);
+    setRsmSearchTerm("");
+  };
+
+  const handleBusinessHomeRsmSelection = (rsm) => {
+    setFormData((prev) => ({ ...prev, businessHomeRsm: rsm }));
+    setErrors((prev) => ({ ...prev, businessHomeRsm: "" }));
+    setShowBusinessHomeRsmModal(false);
+    setRsmSearchTerm("");
   };
 
 // ✅ Handle form submit
@@ -193,7 +235,8 @@ const handleSubmit = async (e) => {
     dob: formData.dob,
     email: formData.email,
     password: formData.password,
-    assignedAsmId: formData.assignedAsm?._id, // MongoDB ID (optional chaining)
+    personalRsmId: formData.personalRsm?._id,
+    businessHomeRsmId: formData.businessHomeRsm?._id,
     token: adminToken,
   };
 
@@ -242,8 +285,10 @@ const handleSubmit = async (e) => {
       email: "",
       password: "",
       confirmPassword: "",
-      assignedAsm: null,
+      personalRsm: null,
+      businessHomeRsm: null,
     });
+    setRsmSearchTerm("");
   };
 
   return (
@@ -455,33 +500,64 @@ const handleSubmit = async (e) => {
                   )}
                 </div>
 
-                {/* Assign ASM */}
+                {/* Assign Personal Loan RSM */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assign ASM *
+                    Personal Loan RSM *
                   </label>
                   <div className="relative">
                     <Users className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                     <button
                       type="button"
-                      onClick={() => setShowAsmModal(true)}
+                      onClick={() => setShowPersonalRsmModal(true)}
                       className={`${inputClassName(
-                        "assignedAsm"
+                        "personalRsm"
                       )} pl-10 text-left cursor-pointer hover:bg-gray-50 transition-colors ${
-                        formData.assignedAsm ? "text-gray-900" : "text-gray-500"
+                        formData.personalRsm ? "text-gray-900" : "text-gray-500"
                       }`}
                     >
-                      {formData.assignedAsm
-                        ? `${formData.assignedAsm.firstName} ${
-                            formData.assignedAsm.lastName
-                          } (${formData.assignedAsm.employeeId || "No Emp ID"})`
-                        : "Click to select ASM"}
+                      {formData.personalRsm
+                        ? `${formData.personalRsm.firstName} ${
+                            formData.personalRsm.lastName
+                          } (${formData.personalRsm.employeeId || "No Emp ID"})`
+                        : "Click to select Personal Loan RSM"}
                     </button>
                   </div>
-                  {errors.assignedAsm && (
+                  {errors.personalRsm && (
                     <p className="mt-1 text-sm text-red-600 flex items-center">
                       <AlertCircle className="w-4 h-4 mr-1" />{" "}
-                      {errors.assignedAsm}
+                      {errors.personalRsm}
+                    </p>
+                  )}
+                </div>
+
+                {/* Assign Business & Home Loan RSM */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business & Home Loan RSM *
+                  </label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowBusinessHomeRsmModal(true)}
+                      className={`${inputClassName(
+                        "businessHomeRsm"
+                      )} pl-10 text-left cursor-pointer hover:bg-gray-50 transition-colors ${
+                        formData.businessHomeRsm ? "text-gray-900" : "text-gray-500"
+                      }`}
+                    >
+                      {formData.businessHomeRsm
+                        ? `${formData.businessHomeRsm.firstName} ${
+                            formData.businessHomeRsm.lastName
+                          } (${formData.businessHomeRsm.employeeId || "No Emp ID"})`
+                        : "Click to select Business & Home Loan RSM"}
+                    </button>
+                  </div>
+                  {errors.businessHomeRsm && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />{" "}
+                      {errors.businessHomeRsm}
                     </p>
                   )}
                 </div>
@@ -599,23 +675,26 @@ const handleSubmit = async (e) => {
           </div>
         </div>
 
-        {/* ASM Selection Modal */}
-        {showAsmModal && (
+        {/* Personal Loan RSM Selection Modal */}
+        {showPersonalRsmModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
               {/* Modal Header */}
               <div className="bg-[#12B99C] p-3 text-white">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold">Select ASM</h3>
+                  <h3 className="text-xl font-bold">Select Personal Loan RSM</h3>
                   <button
-                    onClick={() => setShowAsmModal(false)}
+                    onClick={() => {
+                      setShowPersonalRsmModal(false);
+                      setRsmSearchTerm("");
+                    }}
                     className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
                   >
                     ✕
                   </button>
                 </div>
                 <p className="text-white/90 text-sm mt-1">
-                  Choose an Area Sales Manager to assign to this RM
+                  Choose a Personal Loan RSM to assign to this RM
                 </p>
               </div>
 
@@ -625,9 +704,9 @@ const handleSubmit = async (e) => {
                   <Search className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search ASM by name, employee ID, or email..."
-                    value={asmSearchTerm}
-                    onChange={handleAsmSearchChange}
+                    placeholder="Search Personal Loan RSM by name, employee ID, or email..."
+                    value={rsmSearchTerm}
+                    onChange={handleRsmSearchChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12B99C]/30 focus:border-[#12B99C]/50 transition-all duration-200"
                   />
                 </div>
@@ -635,21 +714,29 @@ const handleSubmit = async (e) => {
 
               {/* Modal Content (scrollable) */}
               <div className="flex-1 p-6 overflow-y-auto">
-                {asmLoading ? (
+                {rsmLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#12B99C]"></div>
                     <span className="ml-3 text-gray-600">
-                      Loading ASM list...
+                      Loading RSM list...
                     </span>
                   </div>
-                ) : filteredAsmList.length > 0 ? (
+                ) : !rsmList || rsmList.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600">No RSMs found</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Please create RSM accounts first
+                    </p>
+                  </div>
+                ) : filteredPersonalRsms.length > 0 ? (
                   <div className="space-y-3">
-                    {filteredAsmList.map((asm) => (
+                    {filteredPersonalRsms.map((rsm) => (
                       <div
-                        key={asm._id}
-                        onClick={() => handleAsmSelection(asm)}
+                        key={rsm._id}
+                        onClick={() => handlePersonalRsmSelection(rsm)}
                         className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
-                          formData.assignedAsm?._id === asm._id
+                          formData.personalRsm?._id === rsm._id
                             ? "border-[#12B99C] bg-[#12B99C]/5"
                             : "border-gray-200 hover:border-[#12B99C]/30"
                         }`}
@@ -659,25 +746,28 @@ const handleSubmit = async (e) => {
                             <div className="flex items-center space-x-3">
                               <div className="w-10 h-10 bg-[#12B99C]/10 rounded-full flex items-center justify-center">
                                 <span className="text-[#12B99C] font-semibold text-sm">
-                                  {asm.firstName?.charAt(0)}
-                                  {asm.lastName?.charAt(0)}
+                                  {rsm.firstName?.charAt(0)}
+                                  {rsm.lastName?.charAt(0)}
                                 </span>
                               </div>
                               <div>
                                 <h4 className="font-semibold text-gray-900">
-                                  {asm.firstName} {asm.lastName}
+                                  {rsm.firstName} {rsm.lastName}
                                 </h4>
                                 <p className="text-sm text-gray-600">
                                   Employee ID:{" "}
-                                  {asm.employeeId || "Not assigned"}
+                                  {rsm.employeeId || "Not assigned"}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  {asm.email} • {asm.phone}
+                                  {rsm.email} • {rsm.phone}
+                                </p>
+                                <p className="text-xs text-blue-600 mt-1">
+                                  ASM: {rsm.asmName || "N/A"}
                                 </p>
                               </div>
                             </div>
                           </div>
-                          {formData.assignedAsm?._id === asm._id && (
+                          {formData.personalRsm?._id === rsm._id && (
                             <div className="w-6 h-6 bg-[#12B99C] rounded-full flex items-center justify-center">
                               <Check className="w-4 h-4 text-white" />
                             </div>
@@ -686,11 +776,11 @@ const handleSubmit = async (e) => {
                       </div>
                     ))}
                   </div>
-                ) : asmSearchTerm.trim() ? (
+                ) : rsmSearchTerm.trim() ? (
                   <div className="text-center py-8">
                     <Search className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-600">
-                      No ASM found matching "{asmSearchTerm}"
+                      No Personal Loan RSM found matching "{rsmSearchTerm}"
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
                       Try searching with different keywords
@@ -699,9 +789,9 @@ const handleSubmit = async (e) => {
                 ) : (
                   <div className="text-center py-8">
                     <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600">No ASM records found</p>
+                    <p className="text-gray-600">No Personal Loan RSM records found</p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Please create ASM accounts first
+                      Please create Personal Loan RSM accounts first
                     </p>
                   </div>
                 )}
@@ -712,7 +802,151 @@ const handleSubmit = async (e) => {
                 <div className="flex justify-end space-x-3">
                   <button
                     type="button"
-                    onClick={() => setShowAsmModal(false)}
+                    onClick={() => {
+                      setShowPersonalRsmModal(false);
+                      setRsmSearchTerm("");
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Business & Home Loan RSM Selection Modal */}
+        {showBusinessHomeRsmModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+              {/* Modal Header */}
+              <div className="bg-[#12B99C] p-3 text-white">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold">Select Business & Home Loan RSM</h3>
+                  <button
+                    onClick={() => {
+                      setShowBusinessHomeRsmModal(false);
+                      setRsmSearchTerm("");
+                    }}
+                    className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-white/90 text-sm mt-1">
+                  Choose a Business & Home Loan RSM to assign to this RM
+                </p>
+              </div>
+
+              {/* Search Bar */}
+              <div className="p-4 border-b border-gray-200">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search Business & Home Loan RSM by name, employee ID, or email..."
+                    value={rsmSearchTerm}
+                    onChange={handleRsmSearchChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12B99C]/30 focus:border-[#12B99C]/50 transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Content (scrollable) */}
+              <div className="flex-1 p-6 overflow-y-auto">
+                {rsmLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#12B99C]"></div>
+                    <span className="ml-3 text-gray-600">
+                      Loading RSM list...
+                    </span>
+                  </div>
+                ) : !rsmList || rsmList.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600">No RSMs found</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Please create RSM accounts first
+                    </p>
+                  </div>
+                ) : filteredBusinessHomeRsms.length > 0 ? (
+                  <div className="space-y-3">
+                    {filteredBusinessHomeRsms.map((rsm) => (
+                      <div
+                        key={rsm._id}
+                        onClick={() => handleBusinessHomeRsmSelection(rsm)}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                          formData.businessHomeRsm?._id === rsm._id
+                            ? "border-[#12B99C] bg-[#12B99C]/5"
+                            : "border-gray-200 hover:border-[#12B99C]/30"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-[#12B99C]/10 rounded-full flex items-center justify-center">
+                                <span className="text-[#12B99C] font-semibold text-sm">
+                                  {rsm.firstName?.charAt(0)}
+                                  {rsm.lastName?.charAt(0)}
+                                </span>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">
+                                  {rsm.firstName} {rsm.lastName}
+                                </h4>
+                                <p className="text-sm text-gray-600">
+                                  Employee ID:{" "}
+                                  {rsm.employeeId || "Not assigned"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {rsm.email} • {rsm.phone}
+                                </p>
+                                <p className="text-xs text-blue-600 mt-1">
+                                  ASM: {rsm.asmName || "N/A"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          {formData.businessHomeRsm?._id === rsm._id && (
+                            <div className="w-6 h-6 bg-[#12B99C] rounded-full flex items-center justify-center">
+                              <Check className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : rsmSearchTerm.trim() ? (
+                  <div className="text-center py-8">
+                    <Search className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600">
+                      No Business & Home Loan RSM found matching "{rsmSearchTerm}"
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Try searching with different keywords
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600">No Business & Home Loan RSM records found</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Please create Business & Home Loan RSM accounts first
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-3 border-t border-gray-200 bg-gray-50">
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBusinessHomeRsmModal(false);
+                      setRsmSearchTerm("");
+                    }}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
                   >
                     Cancel

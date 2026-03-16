@@ -399,6 +399,7 @@ const handleLoginAs = (userId) => {
           </div>
         )}
 
+        {/* Table */}
         <div className="overflow-x-auto rounded-lg shadow-sm">
           <table className="w-full border-collapse bg-white text-sm">
             <thead style={{ background: colors.primary, color: "white" }}>
@@ -406,74 +407,53 @@ const handleLoginAs = (userId) => {
                 <th className="px-2 py-4 text-left">User Name</th>
                 <th className="px-2 py-4 text-left">User ID</th>
                 <th className="px-2 py-4 text-left">Contact</th>
-                <th className="px-2 py-4 text-left">Create on</th>
+                <th className="px-2 py-4 text-left">Created On</th>
                 <th className="px-2 py-4 text-left">Login as</th>
-                <th className="px-2 py-4 text-left">Activation</th>
+                <th className="px-2 py-4 text-left">Status</th>
                 <th className="px-2 py-4 text-left">Action</th>
               </tr>
             </thead>
-
             <tbody>
               {loadingState ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-4">
+                  <td colSpan="7" className="text-center py-4">
                     Loading...
                   </td>
                 </tr>
               ) : asm && asm.length > 0 ? (
                 asm.map((c) => (
                   <tr key={c._id} className="border-b hover:bg-gray-50">
-                    {/* User Info */}
-                    <td className="px-2 py-3 align-top">
-                      <div>
-                        <button
-                          type="button"
-                          className="font-semibold hover:underline"
-                          onClick={() =>
-                            navigate("/admin/Analytics", {
-                              state: { id: c._id, role: "ASM" },
-                            })
-                          }
-                        >
-                          {c.firstName} {c.lastName}
-                        </button>
-                      </div>
+                    <td
+                      className="px-2 py-3 align-top cursor-pointer"
+                      onClick={() =>
+                        navigate("/admin/Analytics", {
+                          state: { id: c._id, role: "ASM" },
+                        })
+                      }
+                    >
+                      {c.firstName} {c.lastName}
                     </td>
-
-                    {/* Employee ID */}
-                    <td className="px-2 py-3 align-middle">
-                      <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded">
-                        {c.employeeId}
-                      </span>
-                    </td>
-
-                    {/* Phone Number */}
+                    <td className="px-2 py-3 align-middle">{c.employeeId}</td>
                     <td className="px-2 py-3 align-middle">
                       <span className="text-sm font-medium">
                         {c.phone || "N/A"}
                       </span>
                     </td>
-
-                    {/* Created At */}
                     <td className="px-2 py-3 align-middle">
                       {new Date(c.createdAt).toLocaleDateString()}
                     </td>
-
-                    {/* Login As */}
-                    <td className="px-2 py-3 whitespace-nowrap align-middle">
+                    <td className="px-2 py-3 align-middle">
                       <button
                         className="px-2 py-1 border rounded text-xs"
                         style={{
                           borderColor: colors.secondary,
                           color: colors.secondary,
-                   }}
-                      onClick={()=> handleLoginAs(c._id)}
+                        }}
+                        onClick={() => handleLoginAs(c._id)}
                       >
                         Login
                       </button>
                     </td>
-
-                    {/* Activation Toggle Switch */}
                     <td className="px-2 py-3 align-middle">
                       <div
                         onClick={() => toggleActivation(c)}
@@ -490,19 +470,17 @@ const handleLoginAs = (userId) => {
                         ></div>
                       </div>
                     </td>
-
-                    {/* Action */}
                     <td className="px-2 py-3 align-middle">
                       <div className="flex items-center gap-1 h-full">
                         <button
-                          className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
+                          className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                           onClick={() => setSelectedUser(c)}
                         >
                           <Eye size={14} />
                         </button>
                         {c.status !== "ACTIVE" && (
                           <button
-                            className="p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
+                            className="cursor-pointer p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
                             onClick={() => handleDeleteAsm(c._id)}
                           >
                             Delete
@@ -514,7 +492,7 @@ const handleLoginAs = (userId) => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" className="text-center py-4">
+                  <td colSpan="7" className="text-center py-4">
                     No ASM records found
                   </td>
                 </tr>

@@ -11,8 +11,8 @@ import {
   fetchRmCustomersPayOutPending,
   fetchRmCustomersPayOutDone,
   setPayouts, // ✅ Add setPayouts thunk
-  getAnalytics
-
+  getAnalytics,
+  fetchRmPartnerTargets,
 } from "../thunks/rmThunks";
 
 
@@ -94,7 +94,14 @@ const initialState = {
     loading: false,
     error: null,
     success: false,
-    analyticsData: null,
+    data: null, // Changed from analyticsData to data for consistency
+  },
+  // Partner Targets state
+  partnerTargets: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
   },
 
   
@@ -349,20 +356,36 @@ const rmSlice = createSlice({
     state.analyticsdashboard.loading = true;
     state.analyticsdashboard.error = null;
     state.analyticsdashboard.success = false;
-    state.analyticsdashboard.analyticsData = null;
+    state.analyticsdashboard.data = null;
   })
   .addCase(getAnalytics.fulfilled, (state, action) => {
     state.analyticsdashboard.loading = false;
     state.analyticsdashboard.error = null;
     state.analyticsdashboard.success = true;
-    state.analyticsdashboard.analyticsData = action.payload;
-    
+    state.analyticsdashboard.data = action.payload; // Store full response
   })
   .addCase(getAnalytics.rejected, (state, action) => {
     state.analyticsdashboard.loading = false;
-    state.analyticsdashboard.error = action.payload || "Failed to fetch analyticsData";
+    state.analyticsdashboard.error = action.payload || "Failed to fetch analytics";
     state.analyticsdashboard.success = false;
-    state.analyticsdashboard.analyticsData = null;
+    state.analyticsdashboard.data = null;
+  })
+
+  // Fetch Partner Targets
+  .addCase(fetchRmPartnerTargets.pending, (state) => {
+    state.partnerTargets.loading = true;
+    state.partnerTargets.error = null;
+    state.partnerTargets.success = false;
+  })
+  .addCase(fetchRmPartnerTargets.fulfilled, (state, action) => {
+    state.partnerTargets.loading = false;
+    state.partnerTargets.data = action.payload;
+    state.partnerTargets.success = true;
+  })
+  .addCase(fetchRmPartnerTargets.rejected, (state, action) => {
+    state.partnerTargets.loading = false;
+    state.partnerTargets.error = action.payload;
+    state.partnerTargets.success = false;
   });
   },
 });
