@@ -12,6 +12,8 @@ import {
   TrendingUp,
   ArrowLeft,
   Trash2,
+  IndianRupee,
+  Award,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -64,6 +66,8 @@ const AdminSideBar = () => {
     { name: "RM", icon: Users, path: "/admin/RM" },
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
     { name: "Customer", icon: Users, path: "/admin/customer" },
+    { name: "Payout", icon: IndianRupee, path: "/admin/payout" },
+    { name: "Incentives", icon: Award, path: "/admin/incentives" },
     { name: "Set Target", icon: TrendingUp, path: "/admin/target" },
     { name: "Banner", icon: Download, path: "/admin/banner" },
     { name: "Admin → Partner", icon: UserCheck, path: "/admin/RM-partner" },

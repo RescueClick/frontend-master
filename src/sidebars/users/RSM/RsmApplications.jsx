@@ -26,30 +26,47 @@ export default function RsmApplications() {
 
   // Format applications data
   const applications = Array.isArray(data)
-    ? data.map((app) => ({
-        id: app._id,
-        appNo: app.appNo,
-        customerName: app.customerId
-          ? `${app.customerId.firstName || ""} ${app.customerId.lastName || ""}`.trim()
-          : "N/A",
-        customerId: app.customerId?.employeeId || app.customerId?._id || "N/A",
-        customerPhone: app.customerId?.phone || "-",
-        customerEmail: app.customerId?.email || "-",
-        rmName: app.rmId
-          ? `${app.rmId.firstName || ""} ${app.rmId.lastName || ""}`.trim()
-          : "N/A",
-        rmEmployeeId: app.rmId?.employeeId || "N/A",
-        partnerName: app.partnerId
-          ? `${app.partnerId.firstName || ""} ${app.partnerId.lastName || ""}`.trim()
-          : null,
-        applicationDate: app.createdAt
-          ? new Date(app.createdAt).toLocaleDateString()
-          : "-",
-        loanType: app.loanType || "-",
-        loanAmount: app.customer?.loanAmount || app.customerId?.loanAmount || app.requestedAmount || 0,
-        approvedLoanAmount: app.approvedLoanAmount || 0,
-        status: app.status || "DRAFT",
-      }))
+    ? data.map((app) => {
+        // Derive latest payout amount from payouts array if present
+        let latestPayoutAmount = 0;
+        if (Array.isArray(app.payouts) && app.payouts.length > 0) {
+          const latestPayout = app.payouts[app.payouts.length - 1];
+          latestPayoutAmount = Number(latestPayout.amount) || 0;
+        }
+
+        return {
+          id: app._id,
+          appNo: app.appNo,
+          customerName: app.customerId
+            ? `${app.customerId.firstName || ""} ${app.customerId.lastName || ""}`.trim()
+            : "N/A",
+          customerId: app.customerId?.employeeId || app.customerId?._id || "N/A",
+          customerPhone: app.customerId?.phone || "-",
+          customerEmail: app.customerId?.email || "-",
+          rmName: app.rmId
+            ? `${app.rmId.firstName || ""} ${app.rmId.lastName || ""}`.trim()
+            : "N/A",
+          rmEmployeeId: app.rmId?.employeeId || "N/A",
+          partnerName: app.partnerId
+            ? `${app.partnerId.firstName || ""} ${app.partnerId.lastName || ""}`.trim()
+            : null,
+          applicationDate: app.createdAt
+            ? new Date(app.createdAt).toLocaleDateString()
+            : "-",
+          loanType: app.loanType || "-",
+          loanAmount:
+            app.customer?.loanAmount ||
+            app.customerId?.loanAmount ||
+            app.requestedAmount ||
+            0,
+          approvedLoanAmount: app.approvedLoanAmount || 0,
+          payoutAmount:
+            typeof app.payoutAmount === "number" && app.payoutAmount > 0
+              ? app.payoutAmount
+              : latestPayoutAmount,
+          status: app.status || "DRAFT",
+        };
+      })
     : [];
 
   // Filter applications based on search and status
@@ -169,6 +186,7 @@ export default function RsmApplications() {
                 <th className="px-3 py-3 text-left">Loan Type</th>
                 <th className="px-3 py-3 text-left">Loan Amount</th>
                 <th className="px-3 py-3 text-left">Approved Amount</th>
+                <th className="px-3 py-3 text-left">Payout</th>
                 <th className="px-3 py-3 text-left">Status</th>
                 <th className="px-3 py-3 text-left">Action</th>
               </tr>
@@ -219,7 +237,14 @@ export default function RsmApplications() {
                       {formatCurrency(app.loanAmount)}
                     </td>
                     <td className="px-3 py-4 font-semibold text-green-600">
-                      {app.approvedLoanAmount > 0 ? formatCurrency(app.approvedLoanAmount) : "-"}
+                      {app.approvedLoanAmount > 0
+                        ? formatCurrency(app.approvedLoanAmount)
+                        : "-"}
+                    </td>
+                    <td className="px-3 py-4 font-semibold">
+                      {app.payoutAmount
+                        ? formatCurrency(app.payoutAmount)
+                        : "—"}
                     </td>
                     <td className="px-3 py-4">
                       <span

@@ -26,8 +26,18 @@ const MyTarget = () => {
   };
 
   const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   if (loading) {
@@ -55,21 +65,38 @@ const MyTarget = () => {
     );
   }
 
-  const fileProgress = targetData.fileCountTarget > 0 
-    ? (targetData.achievedFileCount / targetData.fileCountTarget) * 100 
-    : 0;
-  const disbursementProgress = targetData.disbursementTarget > 0 
-    ? (targetData.achievedDisbursement / targetData.disbursementTarget) * 100 
-    : 0;
+  const fileProgress =
+    targetData.fileCountTarget > 0
+      ? (targetData.achievedFileCount / targetData.fileCountTarget) * 100
+      : 0;
+  const disbursementProgress =
+    targetData.disbursementTarget > 0
+      ? (targetData.achievedDisbursement / targetData.disbursementTarget) * 100
+      : 0;
   const overallProgress = Math.min(fileProgress, disbursementProgress);
+
+  const isIncentiveEligible =
+    targetData.targetExceeded && targetData.targetAchieved;
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Target</h1>
-          <p className="text-gray-600">View your monthly targets and achievements</p>
+        <div className="mb-6 flex flex-col gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">My Target</h1>
+            <p className="text-gray-600">
+              View your monthly targets and achievements
+            </p>
+          </div>
+          {isIncentiveEligible && (
+            <div className="inline-flex items-center gap-2 self-start rounded-full bg-purple-50 border border-purple-200 px-3 py-1">
+              <Award className="w-4 h-4 text-purple-600" />
+              <span className="text-xs font-medium text-purple-800">
+                Congratulations! You&apos;re eligible for incentives this month.
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Month/Year Selector */}
@@ -199,6 +226,7 @@ const MyTarget = () => {
               )}
             </div>
           </div>
+
         </div>
 
         {/* Overall Status */}

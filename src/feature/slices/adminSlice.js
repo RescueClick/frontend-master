@@ -42,6 +42,8 @@ import {
   fetchAdminPartnerTargets,
   assignAdminPartnerTarget,
   distributeHierarchicalTargets,
+  fetchAdminIncentives,
+  payAdminIncentive,
 } from "../thunks/adminThunks";
 
 
@@ -268,6 +270,20 @@ const initialState = {
       data: null,
     },
     setPayouts: {
+      loading: false,
+      error: null,
+      success: false,
+      data: null,
+    },
+
+    // Incentive management (Admin)
+    incentives: {
+      loading: false,
+      error: null,
+      success: false,
+      data: [],
+    },
+    payIncentive: {
       loading: false,
       error: null,
       success: false,
@@ -1112,6 +1128,39 @@ builder
         state.distributeHierarchicalTargets.loading = false;
         state.distributeHierarchicalTargets.error = action.payload;
         state.distributeHierarchicalTargets.success = false;
+      })
+
+      // ==================== INCENTIVE MANAGEMENT (Admin) ====================
+      .addCase(fetchAdminIncentives.pending, (state) => {
+        state.incentives.loading = true;
+        state.incentives.error = null;
+        state.incentives.success = false;
+      })
+      .addCase(fetchAdminIncentives.fulfilled, (state, action) => {
+        state.incentives.loading = false;
+        state.incentives.data = action.payload || [];
+        state.incentives.success = true;
+      })
+      .addCase(fetchAdminIncentives.rejected, (state, action) => {
+        state.incentives.loading = false;
+        state.incentives.error = action.payload;
+        state.incentives.success = false;
+      })
+
+      .addCase(payAdminIncentive.pending, (state) => {
+        state.payIncentive.loading = true;
+        state.payIncentive.error = null;
+        state.payIncentive.success = false;
+      })
+      .addCase(payAdminIncentive.fulfilled, (state, action) => {
+        state.payIncentive.loading = false;
+        state.payIncentive.data = action.payload;
+        state.payIncentive.success = true;
+      })
+      .addCase(payAdminIncentive.rejected, (state, action) => {
+        state.payIncentive.loading = false;
+        state.payIncentive.error = action.payload;
+        state.payIncentive.success = false;
       });
 
   },

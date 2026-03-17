@@ -36,29 +36,46 @@ const Application = () => {
           headers: { Authorization: `Bearer ${partnerToken}` },
         });
 
-        const mappedData = res.data.map((app) => ({
-          id: app.appNo || app._id, // Prefer appNo (e.g., TLF0001)
-          applicationId: app._id, // Store MongoDB _id for API calls
-          customerId: app.customerId?._id || app.customerId || app.customer?._id || "", // Store customer ID
-          customerName: `${app.customer?.firstName || ""} ${
-            app.customer?.lastName || ""
-          }`.trim(),
-          contact: app.customer?.phone || app.customerId?.phone || "—",
-          dateSubmitted: app.createdAt, // ISO string → will format later in UI
-          loanType: app.loanType || "—",
-          loanAmount: app.customer?.loanAmount
-            ? `₹${app.customer.loanAmount.toLocaleString("en-IN")}`
-            : "—",
-          approvalAmount: app.approvedLoanAmount
-            ? `₹${app.approvedLoanAmount.toLocaleString("en-IN")}`
-            : "—",
-          disbursedAmount: app.status === "DISBURSED" && app.approvedLoanAmount
-            ? app.approvedLoanAmount
-            : 0, // Disbursed amount (only when status is DISBURSED)
-          payoutAmount: app.payoutAmount || 0, // Payout amount
-          status: mapStatus(app.status), // normalize backend → UI
-          stageHistory: app.stageHistory || [],
-        }));
+        const mappedData = res.data.map((app) => {
+          // Derive latest payout amount from payouts array (if present)
+          let latestPayoutAmount = 0;
+          if (Array.isArray(app.payouts) && app.payouts.length > 0) {
+            const latestPayout = app.payouts[app.payouts.length - 1];
+            latestPayoutAmount = Number(latestPayout.amount) || 0;
+          }
+
+          return {
+            id: app.appNo || app._id, // Prefer appNo (e.g., TLF0001)
+            applicationId: app._id, // Store MongoDB _id for API calls
+            customerId:
+              app.customerId?._id ||
+              app.customerId ||
+              app.customer?._id ||
+              "", // Store customer ID
+            customerName: `${app.customer?.firstName || ""} ${
+              app.customer?.lastName || ""
+            }`.trim(),
+            contact: app.customer?.phone || app.customerId?.phone || "—",
+            dateSubmitted: app.createdAt, // ISO string → will format later in UI
+            loanType: app.loanType || "—",
+            loanAmount: app.customer?.loanAmount
+              ? `₹${app.customer.loanAmount.toLocaleString("en-IN")}`
+              : "—",
+            approvalAmount: app.approvedLoanAmount
+              ? `₹${app.approvedLoanAmount.toLocaleString("en-IN")}`
+              : "—",
+            disbursedAmount:
+              app.status === "DISBURSED" && app.approvedLoanAmount
+                ? app.approvedLoanAmount
+                : 0, // Disbursed amount (only when status is DISBURSED)
+            payoutAmount:
+              typeof app.payoutAmount === "number" && app.payoutAmount > 0
+                ? app.payoutAmount
+                : latestPayoutAmount, // Use backend field if present, else latest payout
+            status: mapStatus(app.status), // normalize backend → UI
+            stageHistory: app.stageHistory || [],
+          };
+        });
 
         setApplications(mappedData);
       } catch (err) {

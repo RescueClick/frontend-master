@@ -313,8 +313,9 @@ const RsmApplicationView = () => {
         return;
       }
 
-      if (status === "DISBURSED" && (!approvalAmount || approvalAmount <= 0)) {
-        toast.error("Please enter a valid approval amount for DISBURSED status");
+      // For APPROVED status, approved amount is mandatory
+      if (status === "APPROVED" && (!approvalAmount || Number(approvalAmount) <= 0)) {
+        toast.error("Please enter a valid approved loan amount for APPROVED status");
         setSubmitLoading(false);
         return;
       }
@@ -333,8 +334,9 @@ const RsmApplicationView = () => {
         note: remark,
       };
 
-      if (status === "DISBURSED" && approvalAmount) {
-        requestBody.approvedLoanAmount = parseInt(approvalAmount);
+      // Only send approvedLoanAmount when moving to APPROVED
+      if (status === "APPROVED" && approvalAmount) {
+        requestBody.approvedLoanAmount = parseInt(approvalAmount, 10);
       }
 
       const result = await dispatch(transitionRsmApplication({
@@ -1031,8 +1033,8 @@ const RsmApplicationView = () => {
                       </div>
                     </div>
 
-                    {/* Approval Amount Field - Only show when DISBURSED is selected */}
-                    {status === "DISBURSED" && (
+                    {/* Approval Amount Field - Only show when APPROVED is selected */}
+                    {status === "APPROVED" && (
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-3">
                           Approved Loan Amount (₹) *
@@ -1051,7 +1053,7 @@ const RsmApplicationView = () => {
 
                     <button
                       onClick={handleSubmit}
-                      disabled={submitLoading || !status || !remark.trim() || (status === "DISBURSED" && !approvalAmount)}
+                      disabled={submitLoading || !status || !remark.trim() || (status === "APPROVED" && !approvalAmount)}
                       className="w-full flex items-center justify-center bg-gradient-to-r from-[#12B99C] to-[#0FA485] text-white py-3 px-6 rounded-xl shadow-lg hover:from-[#0ea889] hover:to-[#0d8a73] transition-all duration-300 hover:shadow-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {submitLoading ? (

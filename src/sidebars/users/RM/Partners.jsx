@@ -667,6 +667,7 @@ loginAsUser(userId, navigate);
                         <th className="px-2 py-4 text-left">Status</th>
                         <th className="px-2 py-4 text-left">Deals</th>
                         <th className="px-2 py-4 text-left">Revenue</th>
+                        <th className="px-2 py-4 text-left">Payout</th>
                         <th className="px-2 py-4 text-left">Login As</th>
                         <th className="px-2 py-4 text-left">Activation</th>
                         <th className="px-2 py-4 text-left">Action</th>
@@ -737,6 +738,11 @@ loginAsUser(userId, navigate);
                             <td className="px-2 py-3 align-middle">
                               <span className="text-sm font-medium text-green-600">
                                 {formatCurrency(partner.totalDisbursed || 0)}
+                              </span>
+                            </td>
+                            <td className="px-2 py-3 align-middle">
+                              <span className="text-sm font-medium text-purple-700">
+                                {formatCurrency(partner.totalPayout || 0)}
                               </span>
                             </td>
                             <td className="px-2 py-3 align-middle">

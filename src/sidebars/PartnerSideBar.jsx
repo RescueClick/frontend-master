@@ -13,6 +13,8 @@ import {
   IdCard,
   X,
   Target,
+  Award,
+  IndianRupee,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import PartnerProfile from "../components/PartnerProfile"; // ✅ Correct import
@@ -73,8 +75,10 @@ const PartnerSideBar = () => {
     { name: "Dashboard", icon: LayoutGrid, path: "/partner/dashboard" },
     { name: "Applications", icon: FileText, path: "/partner/applications" },
     { name: "My Target", icon: Target, path: "/partner/my-target" },
-  { name: "Emi Calculator", icon: Calculator, path: "/partner/EmiCalculator" },
-  { name: "KYC Details", icon: IdCard, path: "/partner/KYCDetails" }
+    { name: "Incentive History", icon: Award, path: "/partner/incentives" },
+    { name: "Payout History", icon: IndianRupee, path: "/partner/payouts" },
+    { name: "Emi Calculator", icon: Calculator, path: "/partner/EmiCalculator" },
+    { name: "KYC Details", icon: IdCard, path: "/partner/KYCDetails" },
   ];
 
 

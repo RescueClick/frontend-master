@@ -45,11 +45,10 @@ const AsmDoneIncentive = () => {
 
   const incentives = Array.isArray(data) ? data : [];
   
-  // Filter for done incentives (eligible - must EXCEED targets, not just meet them)
-  const doneIncentives = incentives.filter((i) => {
-    // Show only partners who EXCEEDED targets (eligible for incentives)
-    return i.eligibleForIncentive && i.targetExceeded && i.targetAchieved;
-  });
+  // Filter for done incentives: eligible AND incentive has been paid
+  const doneIncentives = incentives.filter(
+    (i) => i.eligibleForIncentive && i.incentivePaid
+  );
 
   const filteredIncentives = doneIncentives.filter((incentive) => {
     const term = searchTerm.toLowerCase();
@@ -58,6 +57,8 @@ const AsmDoneIncentive = () => {
       incentive.partnerEmployeeId?.toLowerCase().includes(term)
     );
   });
+
+  // ASM cannot change status here; this screen is view-only for done incentives
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -146,18 +147,19 @@ const AsmDoneIncentive = () => {
               <th className="px-2 py-4 text-left">Disbursement Achieved</th>
               <th className="px-2 py-4 text-left">Incentive</th>
               <th className="px-2 py-4 text-left">Status</th>
+              <th className="px-2 py-4 text-left">Action</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="7" className="text-center py-4">
+                <td colSpan="8" className="text-center py-4">
                   Loading incentives...
                 </td>
               </tr>
             ) : filteredIncentives.length === 0 ? (
               <tr>
-                <td colSpan="7" className="text-center py-4">
+                <td colSpan="8" className="text-center py-4">
                   No done incentives found
                 </td>
               </tr>
@@ -206,6 +208,9 @@ const AsmDoneIncentive = () => {
                         Done
                       </span>
                     </td>
+                    <td className="px-2 py-3 align-middle text-xs text-gray-500">
+                      View Only
+                    </td>
                   </tr>
                 );
               })
@@ -213,6 +218,7 @@ const AsmDoneIncentive = () => {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 };

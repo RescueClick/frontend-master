@@ -83,7 +83,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-5 mb-6">
         {/* ALL TIME PAYOUT */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
@@ -156,6 +156,24 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* RSMs */}
+        <div
+          className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
+          onClick={() => navigate("/admin/rsm")}
+        >
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-teal-100 to-teal-50 rounded-bl-full opacity-50"></div>
+          <div className="relative flex items-center justify-between">
+            <div className="flex-1">
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Regional Sales Managers</p>
+              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalRSM || 0)}</p>
+              <p className={typography.tiny()}>Active RSMs</p>
+            </div>
+            <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+          </div>
+        </div>
+
         {/* PARTNERS */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
@@ -191,9 +209,147 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+        {/* Company Disbursement Target */}
+        <div className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-100 to-indigo-50 rounded-bl-full opacity-50"></div>
+          <div className="relative flex items-center justify-between">
+            <div className="flex-1">
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>
+                Company Disbursement Target
+              </p>
+              <p className={`${typography.h2()} mb-1`}>
+                {formatCurrency(data?.totalDisbursementTarget || 0)}
+              </p>
+              <p className={typography.tiny()}>Monthly company target</p>
+            </div>
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <BarChart3 className="w-5 h-5 text-white" />
+            </div>
+          </div>
+        </div>
+
+        {/* Achieved Company Disbursement */}
+        <div className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-bl-full opacity-50"></div>
+          <div className="relative flex items-center justify-between">
+            <div className="flex-1">
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>
+                Achieved Disbursement
+              </p>
+              <p className={`${typography.h2()} mb-1`}>
+                {formatCurrency(data?.totalRevenue || 0)}
+              </p>
+              <p className={typography.tiny()}>Actual disbursement this period</p>
+            </div>
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+          </div>
+        </div>
+
       </div>
 
-
+      {/* Target Achievement Pie */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className={typography.h3()}>Target Achievement</h2>
+            <p className={`${typography.caption()} mt-1`}>
+              Company disbursement vs monthly target
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-8 flex-wrap">
+          <div className="relative w-32 h-32 flex-shrink-0">
+            {(() => {
+              const pct = data?.totalDisbursementTarget
+                ? Math.min(
+                    100,
+                    Math.round(
+                      (data.totalRevenue / data.totalDisbursementTarget) * 100
+                    )
+                  )
+                : 0;
+              const radius = 52;
+              const circumference = 2 * Math.PI * radius;
+              const offset = circumference - (pct / 100) * circumference;
+              const percentageLabel = data?.totalDisbursementTarget
+                ? `${pct}%`
+                : "—";
+              return (
+                <svg
+                  viewBox="0 0 120 120"
+                  className="w-32 h-32"
+                >
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r={radius}
+                    fill="none"
+                    stroke="#E5E7EB"
+                    strokeWidth="12"
+                  />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r={radius}
+                    fill="none"
+                    stroke="#10B981"
+                    strokeWidth="12"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                  />
+                </svg>
+              );
+            })()}
+          </div>
+          <div className="flex-1 min-w-[220px] space-y-3">
+            <div>
+              <p className={typography.captionSmall()}>Target Achievement</p>
+              <p className={`${typography.h2()} mt-1`}>
+                {data?.totalDisbursementTarget
+                  ? `${Math.min(
+                      100,
+                      Math.round(
+                        (data.totalRevenue / data.totalDisbursementTarget) * 100
+                      )
+                    )}%`
+                  : "—"}
+              </p>
+              <p className={`${typography.caption()} text-gray-500 mt-1`}>
+                Company-level achievement vs target
+              </p>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                <span className={typography.caption()}>Achieved</span>
+              </div>
+              <span className={typography.label()}>
+                {formatCurrency(data?.totalRevenue || 0)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-gray-300" />
+                <span className={typography.caption()}>Remaining to target</span>
+              </div>
+              <span className={typography.label()}>
+                {data?.totalDisbursementTarget
+                  ? formatCurrency(
+                      Math.max(
+                        0,
+                        (data.totalDisbursementTarget || 0) -
+                          (data.totalRevenue || 0)
+                      )
+                    )
+                  : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Additional Dashboard Content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

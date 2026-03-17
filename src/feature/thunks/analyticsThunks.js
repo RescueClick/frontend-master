@@ -58,7 +58,7 @@ export const fetchUniversalAnalytics = createAsyncThunk(
  */
 export const fetchAdminAnalytics = createAsyncThunk(
   "admin/fetchAnalytics",
-  async ({ id }, { rejectWithValue }) => {
+  async ({ id, year }, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
 
@@ -70,6 +70,7 @@ export const fetchAdminAnalytics = createAsyncThunk(
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
+        params: year ? { year } : undefined,
       });
 
       return response.data;

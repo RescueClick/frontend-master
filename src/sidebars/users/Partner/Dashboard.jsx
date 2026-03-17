@@ -29,6 +29,7 @@ import {
   Loader2,
   Plus,
   IndianRupee,
+  Award,
 } from "lucide-react";
 import { getAuthData } from "../../../utils/localStorage";
 
@@ -167,6 +168,7 @@ const Dashboard = () => {
       fileTargetMet: false,
       disbursementTargetMet: false,
       targetAchieved: false,
+      targetExceeded: false,
     };
   }, [data?.currentMonthTarget]);
 
@@ -419,7 +421,19 @@ const Dashboard = () => {
 
       {/* Current Month Target */}
       <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-md border border-gray-200 mb-4 sm:mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Month Target</h3>
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Current Month Target
+          </h3>
+          {currentMonthTarget.targetExceeded && currentMonthTarget.targetAchieved && (
+            <div className="inline-flex items-center gap-2 rounded-full bg-purple-50 border border-purple-200 px-3 py-1">
+              <Award className="w-4 h-4 text-purple-600" />
+              <span className="text-xs font-medium text-purple-800">
+                Congratulations! You&apos;re eligible for incentives this month.
+              </span>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* File Count Target */}
           <div className="space-y-3">

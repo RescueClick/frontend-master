@@ -16,6 +16,7 @@ const Analytics = () => {
   const [userAnalyticsID, setUserAnalyticsID] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   const Analyticsdashboard = useSelector((state) => state.admin?.Analyticsdashboard || { loading: false, error: null, data: null });
 
@@ -72,7 +73,7 @@ const Analytics = () => {
         setIsLoading(true);
         setError(null);
 
-        dispatch(fetchAnalyticsdashboard({ ID, token: adminToken }));
+        dispatch(fetchAnalyticsdashboard({ ID, token: adminToken, year }));
       } catch (err) {
         setError("Failed to fetch analytics data");
         console.error("Analytics fetch error:", err);
@@ -82,7 +83,7 @@ const Analytics = () => {
     };
 
     fetchData();
-  }, [ID, dispatch]);
+  }, [ID, year, dispatch]);
 
   // Get role from location state
   const role = useMemo(() => {
@@ -109,6 +110,7 @@ const Analytics = () => {
       performancePercentage: parsed.performancePercentage,
       targetValue: parsed.assignedTarget.targetValue,
       role: parsed.profile.role || role,
+      monthlyPerformance: parsed.monthlyPerformance || [],
     };
   }, [Analyticsdashboard, role]);
 
@@ -294,50 +296,183 @@ const Analytics = () => {
         />
       </div>
 
-      {/* Performance Section */}
-      <div className={`${designSystem.card.base} ${designSystem.card.padding}`}>
-        <h2 className="text-xl font-bold mb-6" style={{ color: designSystem.colors.text.primary }}>
-          Performance
-        </h2>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="font-medium" style={{ color: designSystem.colors.text.primary }}>
-              {new Date().getFullYear()} Performance
+      {/* Target vs Achievement - Detailed Pie Analytics (This Month) */}
+      <div className={`${designSystem.card.base} ${designSystem.card.padding} mb-8`}>
+        <div className="flex items-baseline justify-between mb-2">
+          <h2 className="text-xl font-bold" style={{ color: designSystem.colors.text.primary }}>
+            Target vs Achievement
+          </h2>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-medium text-gray-500">
+              {/* Current month label */}
+              {(() => {
+                const now = new Date();
+                const monthNames = [
+                  "January","February","March","April","May","June",
+                  "July","August","September","October","November","December",
+                ];
+                const label = `${monthNames[now.getMonth()]} ${year}`;
+                return label;
+              })()}
             </span>
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-              analyticsData.performancePercentage >= 100
-                ? "bg-green-100 text-green-700"
-                : "bg-orange-100 text-orange-700"
-            }`}>
-              {Math.min(analyticsData.performancePercentage.toFixed(2), 100)}%
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between text-sm mb-2" style={{ color: designSystem.colors.text.secondary }}>
-            <span>Disbursed: {formatCurrencyHelper(analyticsData.totalDisburse)}</span>
-            <span>Target: {formatCurrencyHelper(analyticsData.targetValue)}</span>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                analyticsData.performancePercentage >= 100
-                  ? "bg-gradient-to-r from-green-500 to-green-600"
-                  : "bg-gradient-to-r from-orange-500 to-orange-600"
-              }`}
-              style={{
-                width: `${Math.min(analyticsData.performancePercentage, 100).toFixed(2)}%`,
-              }}
-              role="progressbar"
-              aria-valuenow={Math.min(analyticsData.performancePercentage, 100)}
-              aria-valuemin="0"
-              aria-valuemax="100"
-              aria-label={`Performance: ${Math.min(analyticsData.performancePercentage, 100).toFixed(2)}%`}
-            />
+            <div className="flex items-center gap-1 border rounded-full px-2 py-1 bg-white">
+              <button
+                type="button"
+                onClick={() => setYear(new Date().getFullYear())}
+                className={`text-[11px] px-2 py-0.5 rounded-full ${
+                  year === new Date().getFullYear()
+                    ? "bg-emerald-500 text-white"
+                    : "text-gray-600"
+                }`}
+              >
+                This Year
+              </button>
+              <button
+                type="button"
+                onClick={() => setYear(new Date().getFullYear() - 1)}
+                className={`text-[11px] px-2 py-0.5 rounded-full ${
+                  year === new Date().getFullYear() - 1
+                    ? "bg-emerald-500 text-white"
+                    : "text-gray-600"
+                }`}
+              >
+                Prev Year
+              </button>
+            </div>
           </div>
         </div>
+        <p className="text-xs text-gray-500 mb-6">
+          Disbursement vs assigned target for this month
+        </p>
+
+        <div className="flex flex-wrap items-center gap-10">
+          {/* Pie chart */}
+          <div className="relative w-32 h-32 flex-shrink-0">
+            {(() => {
+              const monthlyTarget = analyticsData.targetValue || 0;
+              const monthlyAchieved = analyticsData.totalDisburse || 0;
+              const pct =
+                monthlyTarget > 0
+                  ? Math.min(100, Math.round((monthlyAchieved / monthlyTarget) * 100))
+                  : 0;
+              const radius = 52;
+              const circumference = 2 * Math.PI * radius;
+              const offset = circumference - (pct / 100) * circumference;
+
+              return (
+                <svg viewBox="0 0 120 120" className="w-32 h-32">
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r={radius}
+                    fill="none"
+                    stroke="#E5E7EB"
+                    strokeWidth="12"
+                  />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r={radius}
+                    fill="none"
+                    stroke="#10B981"
+                    strokeWidth="12"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                  />
+                </svg>
+              );
+            })()}
+          </div>
+
+          {/* Details on the right */}
+          <div className="flex-1 min-w-[260px] space-y-4">
+            {/* Monthly summary */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                This Month
+              </p>
+              <p className="text-2xl font-semibold mt-1" style={{ color: designSystem.colors.text.primary }}>
+                {analyticsData.targetValue > 0
+                  ? `${Math.min(analyticsData.performancePercentage.toFixed(0), 100)}%`
+                  : "—"}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Disbursed vs assigned target for this month
+              </p>
+            </div>
+
+            {/* Achieved vs Remaining */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="text-xs text-gray-600">Achieved this month</span>
+                </div>
+                <span className="text-sm font-medium" style={{ color: designSystem.colors.text.primary }}>
+                  {formatCurrencyHelper(analyticsData.totalDisburse)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-gray-300" />
+                  <span className="text-xs text-gray-600">Remaining to monthly target</span>
+                </div>
+                <span className="text-sm font-medium" style={{ color: designSystem.colors.text.primary }}>
+                  {analyticsData.targetValue > 0
+                    ? formatCurrencyHelper(
+                        Math.max(0, analyticsData.targetValue - analyticsData.totalDisburse)
+                      )
+                    : "—"}
+                </span>
+              </div>
+            </div>
+
+            {/* Optional: could add real yearly analytics later when backend provides it */}
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly History - Bar Analytics */}
+      <div className={`${designSystem.card.base} ${designSystem.card.padding}`}>
+        <h2 className="text-xl font-bold mb-2" style={{ color: designSystem.colors.text.primary }}>
+          Monthly History
+        </h2>
+        <p className="text-xs text-gray-500 mb-4">
+          Previous months&apos; disbursement vs target (if available from analytics)
+        </p>
+
+        {analyticsData.monthlyPerformance && analyticsData.monthlyPerformance.length > 0 ? (
+          <div className="w-full overflow-x-auto">
+            <div className="flex items-end gap-4 h-40">
+              {analyticsData.monthlyPerformance.map((m, idx) => {
+                const target = Number(m.target || m.targetValue || 0);
+                const achieved = Number(m.achieved || m.achievedValue || 0);
+                const pct = target > 0 ? Math.min(100, (achieved / target) * 100) : 0;
+                const monthLabel = m.label || `${m.month || ""} ${m.year || ""}`.trim();
+
+                return (
+                  <div key={idx} className="flex flex-col items-center flex-shrink-0 min-w-[40px]">
+                    <div className="relative w-6 bg-gray-100 rounded-md overflow-hidden h-28 flex items-end">
+                      <div
+                        className="w-full bg-emerald-500 rounded-md transition-all duration-300"
+                        style={{ height: `${pct}%` }}
+                        title={`${pct.toFixed(0)}%`}
+                      />
+                    </div>
+                    <span className="mt-1 text-[10px] text-gray-600 text-center">
+                      {monthLabel || `M${idx + 1}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">
+            No monthly history data available yet. Once the backend sends monthlyPerformance, it will appear here as bars.
+          </p>
+        )}
       </div>
       </div>
     </div>

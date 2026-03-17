@@ -530,6 +530,7 @@ export const fetchAsmCustomersPayOutPending = createAsyncThunk(
     try {
       const { asmToken } = getAuthData();
 
+      // ASM should call its own ASM payout API (protected by ASM role)
       const response = await axios.get(`${backendurl}/asm/customers/pending-payouts`, {
         headers: { Authorization: `Bearer ${asmToken}` },
       });
@@ -549,6 +550,7 @@ export const fetchAsmCustomersPayOutDone = createAsyncThunk(
     try {
       const { asmToken } = getAuthData();
 
+      // ASM should call its own ASM payout API (protected by ASM role)
       const response = await axios.get(`${backendurl}/asm/customers/done-payouts`, {
         headers: { Authorization: `Bearer ${asmToken}` },
       });
@@ -707,6 +709,31 @@ export const fetchIncentives = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch incentives"
+      );
+    }
+  }
+);
+
+// Record Incentive Payment (ASM role)
+export const payIncentive = createAsyncThunk(
+  "asm/payIncentive",
+  async ({ partnerId, basis, percentValue, fixedValue, amount, month, year, notes }, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/asm/incentives/${partnerId}/pay`,
+        { basis, percentValue, fixedValue, amount, month, year, notes },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to record incentive payment"
       );
     }
   }

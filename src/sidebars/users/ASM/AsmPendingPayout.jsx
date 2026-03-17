@@ -24,7 +24,6 @@ import {
   fetchAsmCustomersPayOutPending,
   setAsmPayouts,
 } from "../../../feature/thunks/asmThunks";
-import toast from "react-hot-toast";
 
 const AsmPendingPayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,32 +35,18 @@ const AsmPendingPayout = () => {
   const [payoutPercent, setPayoutPercent] = useState("");
 
   const [customerID, setCustomerID] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const dispatch = useDispatch();
 
   const [payoutData, setPayoutData] = useState({
+    applicationId: "",
+    partnerId: "",
     approvalAmount: "",
     payoutPercentage: "",
     totalPayout: "",
-    payOutStatus: ""
-
+    payOutStatus: "PENDING",
   });
-
-  // ✅ Single handleChange method
-  // ✅ Handle change correctly
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setPayoutData((prev) => ({
-      ...prev,
-      [name]: value,
-      totalPayout:
-        name === "approvalAmount" || name === "payoutPercentage"
-          ? ((name === "approvalAmount" ? value : prev.approvalAmount) *
-              (name === "payoutPercentage" ? value : prev.payoutPercentage)) /
-            100
-          : prev.totalPayout,
-    }));
-  };
 
   useEffect(() => {
     if (customerID) {
@@ -69,30 +54,74 @@ const AsmPendingPayout = () => {
     }
   }, [customerID, dispatch]);
 
-  const { data, loading, error } = useSelector((state) => state.asm?.pendingPayout || { data: [], loading: false, error: null });
+  const { data, loading, error } = useSelector(
+    (state) =>
+      state.asm?.pendingPayout || { data: [], loading: false, error: null }
+  );
 
   const { data: customerPartnersPayout } = useSelector(
     (state) => state.asm?.customerPartnersPayout || { data: null }
   );
 
-  // ✅ Get setPayouts loading state
-  const { loading: savingPayout, success: payoutSuccess, error: payoutError } = useSelector(
-    (state) => state.asm?.setPayouts || { loading: false, success: false, error: null }
-  );
-
-  
+  // When modal opens and partner payout data is loaded, prefill payout form
+  useEffect(() => {
+    if (customerID && customerPartnersPayout && customerPartnersPayout.partners?.length) {
+      const partner = customerPartnersPayout.partners[0];
+      setPayoutData((prev) => ({
+        ...prev,
+        applicationId: partner.applicationId || prev.applicationId || "",
+        partnerId: partner._id?.toString() || prev.partnerId || "",
+        totalPayout: partner.payoutAmount ?? prev.totalPayout ?? 0,
+        payOutStatus: partner.payoutStatus || prev.payOutStatus || "PENDING",
+      }));
+    }
+  }, [customerID, customerPartnersPayout]);
 
   useEffect(() => {
     dispatch(fetchAsmCustomersPayOutPending());
   }, [dispatch]);
 
 
-  const handleClose = () => setSelectedCustomer(null);
+  const handleClose = () => {
+    setCustomerID(null);
+  };
 
-  const totalPayout =
-    approvalAmount && payoutPercent
-      ? (parseFloat(approvalAmount) * parseFloat(payoutPercent)) / 100
-      : 0;
+  const computedTotalPayout =
+    payoutData.approvalAmount && payoutData.payoutPercentage
+      ? (parseFloat(payoutData.approvalAmount) *
+          parseFloat(payoutData.payoutPercentage)) / 100
+      : payoutData.totalPayout || 0;
+
+  const handleSavePayout = async () => {
+    if (
+      !payoutData.applicationId ||
+      !payoutData.partnerId ||
+      !payoutData.payoutPercentage
+    ) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await dispatch(
+        setAsmPayouts({
+          applicationId: payoutData.applicationId,
+          partnerId: payoutData.partnerId,
+          payoutPercentage: Number(payoutData.payoutPercentage || 0),
+          note: "",
+          payOutStatus: "PENDING",
+        })
+      ).unwrap();
+
+      // Refresh pending list and close modal
+      dispatch(fetchAsmCustomersPayOutPending());
+      setCustomerID(null);
+    } catch (e) {
+      console.error("Failed to save payout proposal", e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Loan type color
   const getAccountTypeColor = (loanType) => {
@@ -123,108 +152,16 @@ const AsmPendingPayout = () => {
     }
   };
 
-  const handleSavePayout = async (applicationId, partnerId, payoutPercent, note) => {
-    try {
-      await dispatch(
-        setAsmPayouts({
-          applicationId,
-          partnerId,
-          payoutPercentage: Number(payoutPercent), // ✅ Ensures it's a number
-          note,
-          payOutStatus: "DONE",
-        })
-      ).unwrap(); // unwrap() throws error if rejected
-
-      // ✅ Success - refresh data and close modal
-      dispatch(fetchAsmCustomersPayOutPending());
-      setCustomerID(null); // Close modal
-      setPayoutData({ approvalAmount: "", payoutPercentage: "", totalPayout: "", payOutStatus: "" }); // Reset form
-      toast.success("Payout created successfully!");
-    } catch (err) {
-      // Error is handled by Redux state, will show in popup
-      console.error("Failed to save payout:", err);
-      toast.error(err || "Failed to save payout");
-    }
+  const formatCurrency = (amount) => {
+    if (!amount) return "₹0";
+    return `₹${Number(amount).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   return (
     <>
-      {/* ✅ Loading Popup Modal */}
-      {savingPayout && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-[70] overflow-y-auto">
-          <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 relative mx-4">
-            {/* Loading Spinner */}
-            <div className="flex flex-col items-center justify-center">
-              <div className="w-16 h-16 border-4 border-[#12B99C] border-t-transparent rounded-full animate-spin mb-4"></div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">
-                Processing Payout...
-              </h2>
-              <p className="text-sm text-gray-600 text-center">
-                Please wait while we save the payout details. This may take a few moments.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ Success Popup Modal */}
-      {payoutSuccess && !savingPayout && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-[70] overflow-y-auto">
-          <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 relative mx-4">
-            <div className="flex flex-col items-center justify-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">
-                Payout Saved Successfully!
-              </h2>
-              <p className="text-sm text-gray-600 text-center mb-4">
-                The payout details have been saved and the customer list has been updated.
-              </p>
-              <button
-                onClick={() => {
-                  // Reset success state by dispatching a reset action or just closing
-                  window.location.reload(); // Simple refresh
-                }}
-                className="px-6 py-2 bg-[#12B99C] text-white rounded-lg hover:bg-[#0EA688] transition-colors font-medium"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ Error Popup Modal */}
-      {payoutError && !savingPayout && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-[70] overflow-y-auto">
-          <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 relative mx-4">
-            <div className="flex flex-col items-center justify-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <XCircle className="w-8 h-8 text-red-600" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">
-                Failed to Save Payout
-              </h2>
-              <p className="text-sm text-gray-600 text-center mb-4">
-                {payoutError || "An error occurred while saving the payout. Please try again."}
-              </p>
-              <button
-                onClick={() => {
-                  // Reset error by refreshing or dispatching reset
-                  window.location.reload();
-                }}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Popup (Modal) */}
       {customerID && customerPartnersPayout && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/25 bg-opacity-40 z-50 p-4">
@@ -353,9 +290,9 @@ const AsmPendingPayout = () => {
                                 type="number"
                                 name="approvalAmount"
                                 value={payoutData.approvalAmount}
-                                onChange={handleChange}
-                                className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] font-semibold"
-                                placeholder="Enter amount"
+                                readOnly
+                                className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] font-semibold bg-gray-50 cursor-not-allowed"
+                                placeholder="—"
                               />
                             </div>
                           </div>
@@ -370,9 +307,14 @@ const AsmPendingPayout = () => {
                                 type="number"
                                 name="payoutPercentage"
                                 value={payoutData.payoutPercentage}
-                                onChange={handleChange}
-                                className="w-full pr-8 pl-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] font-semibold"
-                                placeholder="Enter percentage"
+                                onChange={(e) =>
+                                  setPayoutData((prev) => ({
+                                    ...prev,
+                                    payoutPercentage: e.target.value,
+                                  }))
+                                }
+                                className="w-full pr-8 pl-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                                placeholder="Enter %"
                               />
                               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#12B99C] font-bold">
                                 %
@@ -381,11 +323,7 @@ const AsmPendingPayout = () => {
                           </div>
 
                           {/* Total Payout Display */}
-                          <button
-                            type="button"
-                            className="bg-gradient-to-r from-[#F59E0B] to-[#EAB308] p-4 rounded-xl text-white w-full focus:outline-none"
-                           
-                          >
+                          <div className="bg-gradient-to-r from-[#F59E0B] to-[#EAB308] p-4 rounded-xl text-white w-full">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <IndianRupee className="w-5 h-5" />
@@ -396,50 +334,34 @@ const AsmPendingPayout = () => {
                               <div className="text-right">
                                 <p className="text-2xl font-bold">
                                   ₹
-                                  {(payoutData.totalPayout || 0).toLocaleString(
-                                    "en-IN",
-                                    {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    }
-                                  )}
+                                  {computedTotalPayout.toLocaleString("en-IN", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
                                 </p>
                                 <p className="text-sm opacity-90">
-                                  Final Amount
+                                  Calculated Amount
                                 </p>
                               </div>
                             </div>
+                          </div>
+
+                          {/* Save proposal button */}
+                          <button
+                            type="button"
+                            onClick={handleSavePayout}
+                            disabled={isSaving}
+                            className={`mt-4 w-full text-white font-semibold py-3 rounded-xl transition-all duration-200 ${
+                              isSaving
+                                ? "bg-[#0f9b82]/70 cursor-not-allowed"
+                                : "bg-[#12B99C] hover:bg-[#0f9b82]"
+                            }`}
+                          >
+                            {isSaving ? "Saving..." : "Save Payout Proposal"}
                           </button>
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
-                      <div className="flex gap-3 pt-4">
-                        <button 
-                          className="flex-1 px-6 py-3 bg-gradient-to-r from-[#12B99C] to-[#0EA688] hover:from-[#0EA688] hover:to-[#12B99C] text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                          onClick={() =>
-                            handleSavePayout(
-                              partner.applicationId,
-                              partner._id,
-                              Number(payoutData.payoutPercentage), // ✅ Convert string → number
-                              "Initial payout"
-                            )
-                          }
-                          disabled={savingPayout || !payoutData.approvalAmount || !payoutData.payoutPercentage}
-                        >
-                          {savingPayout ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="w-4 h-4" />
-                              Save Details
-                            </>
-                          )}
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -476,6 +398,7 @@ const AsmPendingPayout = () => {
                 <th className="px-2 py-4 text-left">Loan Type</th>
                 <th className="px-2 py-4 text-left">Loan Amount</th>
                 <th className="px-2 py-4 text-left">Approval Amount</th>
+                <th className="px-2 py-4 text-left">Proposed Payout</th>
                 <th className="px-2 py-4 text-left">Status</th>
                 <th className="px-2 py-4 text-left">Action</th>
               </tr>
@@ -530,6 +453,11 @@ const AsmPendingPayout = () => {
                         ? `₹${customer.approvedAmount.toLocaleString("en-IN")}`
                         : "—"}
                     </td>
+                    <td className="px-2 py-3 align-middle font-semibold">
+                      {customer.payoutAmount
+                        ? formatCurrency(customer.payoutAmount)
+                        : "—"}
+                    </td>
                     <td className="px-2 py-3 align-middle">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
@@ -540,33 +468,24 @@ const AsmPendingPayout = () => {
                       </span>
                     </td>
                     <td className="px-2 py-3 align-middle">
-                      {customer.payOutStatus === "PENDING" || !customer.payOutStatus ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCustomerID(customer.customerId);
-                            setPayoutData({
-                              approvalAmount: customer.approvedAmount || customer.approvedLoanAmount || "",
-                              payoutPercentage: "",
-                              totalPayout: "",
-                              payOutStatus: "",
-                            });
-                          }}
-                          className="px-4 py-2 bg-[#12B99C] hover:bg-[#0d8a73] text-white text-xs font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-                        >
-                          Create Payout
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCustomerID(customer.customerId);
-                          }}
-                          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold rounded-lg transition-all duration-200"
-                        >
-                          View Details
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPayoutData({
+                            applicationId: "",
+                            partnerId: "",
+                            approvalAmount:
+                              customer.approvedAmount || "",
+                            payoutPercentage: "",
+                            totalPayout: "",
+                            payOutStatus: "PENDING",
+                          });
+                          setCustomerID(customer.customerId);
+                        }}
+                        className="px-4 py-2 bg-[#12B99C] hover:bg-[#0f9b82] text-white text-xs font-semibold rounded-lg transition-all duration-200"
+                      >
+                        Set Payout
+                      </button>
                     </td>
                   </tr>
                 ))

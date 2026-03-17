@@ -24,6 +24,7 @@ import {
   assignPartnerTargetBulk,
   fetchPartnerTargets,
   fetchRsmAnalytics,
+  payIncentive,
 } from "../thunks/asmThunks";
 
 
@@ -468,6 +469,15 @@ const asmSlice = createSlice({
       })
       .addCase(fetchIncentives.rejected, (state, action) => {
         state.incentives.loading = false;
+        state.incentives.error = action.payload;
+      })
+      .addCase(payIncentive.pending, (state) => {
+        state.incentives.error = null;
+      })
+      .addCase(payIncentive.fulfilled, (state, _action) => {
+        // UI will refetch incentives after payment is recorded
+      })
+      .addCase(payIncentive.rejected, (state, action) => {
         state.incentives.error = action.payload;
       })
 

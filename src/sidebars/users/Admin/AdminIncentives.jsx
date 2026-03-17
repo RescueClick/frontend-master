@@ -1,26 +1,31 @@
-import React, { useState, useEffect } from "react";
-import { Award, Clock, CheckCircle, IndianRupee } from "lucide-react";
-import { fetchIncentives } from "../../../feature/thunks/asmThunks";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Award, Clock, CheckCircle, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { fetchAdminIncentives } from "../../../feature/thunks/adminThunks";
 
-const AsmIncentives = () => {
+const AdminIncentives = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [month, setMonth] = useState(new Date().getMonth() + 1);
-
-  const { data, loading } = useSelector(
-    (state) => state.asm.incentives || { data: [], loading: false }
+  const { data = [] } = useSelector(
+    (state) =>
+      state.admin?.incentives || { data: [], loading: false, error: null }
   );
 
+  const [year, setYear] = React.useState(new Date().getFullYear());
+  const [month, setMonth] = React.useState(new Date().getMonth() + 1);
+
   useEffect(() => {
-    dispatch(fetchIncentives({ year, month }));
+    dispatch(fetchAdminIncentives({ year, month }));
   }, [dispatch, year, month]);
 
   const incentives = Array.isArray(data) ? data : [];
-  
+
+  // For admin (same semantics as ASM dashboard):
+  // - Pending Incentive  = partners who are NOT yet eligible for incentive
+  // - Eligible Incentive = partners who are eligible but incentive is NOT paid
+  // - Done Incentive     = partners who are eligible and incentive is PAID
   const pendingCount = incentives.filter((i) => !i.eligibleForIncentive).length;
   const eligibleCount = incentives.filter(
     (i) => i.eligibleForIncentive && !i.incentivePaid
@@ -29,9 +34,9 @@ const AsmIncentives = () => {
     (i) => i.eligibleForIncentive && i.incentivePaid
   ).length;
 
-  const PayoutCard = ({ title, count, iconName, bgGradient, path }) => {
+  const IncentiveCard = ({ title, count, iconName, bgGradient, path }) => {
     const IconComponent = iconName === "Clock" ? Clock : CheckCircle;
-    
+
     return (
       <div
         className="rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
@@ -43,8 +48,6 @@ const AsmIncentives = () => {
             <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
             <p className="text-3xl font-bold text-white">{count || 0}</p>
           </div>
-
-          {/* Icon bubble */}
           <div className="p-3 rounded-full bg-white/20">
             <IconComponent size={32} className="w-8 h-8 text-white" />
           </div>
@@ -56,75 +59,86 @@ const AsmIncentives = () => {
   return (
     <div className="p-6" style={{ backgroundColor: "#F8FAFC" }}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Incentive Management</h1>
-          <p className="text-gray-600">Track partner target achievements and incentives</p>
+        <div className="flex items-center mb-4">
+          <button
+            onClick={() => navigate("/admin/dashboard")}
+            className="flex items-center text-lg text-gray-600 hover:text-gray-800 mr-4"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Dashboard
+          </button>
         </div>
 
-        {/* Filters */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Incentive Management (Admin)
+          </h1>
+          <p className="text-gray-600">
+            Track partner targets, review eligible incentives and confirm payments.
+          </p>
+        </div>
+
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex gap-4">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <Award size={24} className="mr-3 w-6 h-6 text-[#12B99C]" />
+              <h2 className="text-2xl font-semibold" style={{ color: "#111827" }}>
+                Incentives Overview
+              </h2>
+            </div>
+            <div className="flex gap-3 text-sm">
               <select
                 value={year}
                 onChange={(e) => setYear(parseInt(e.target.value))}
-                className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
               >
-                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(
+                  (y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  )
+                )}
               </select>
-
               <select
                 value={month}
                 onChange={(e) => setMonth(parseInt(e.target.value))}
-                className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                   <option key={m} value={m}>
-                    {new Date(2000, m - 1).toLocaleString("default", { month: "long" })}
+                    {new Date(2000, m - 1).toLocaleString("default", {
+                      month: "short",
+                    })}
                   </option>
                 ))}
               </select>
             </div>
           </div>
-        </div>
-
-        {/* Incentive Cards Grid */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center mb-6">
-            <Award size={24} className="mr-3 w-6 h-6 text-[#12B99C]" />
-            <h2 className="text-2xl font-semibold" style={{ color: "#111827" }}>
-              Incentives
-            </h2>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <PayoutCard
+            <IncentiveCard
               title="Pending Incentive"
               count={pendingCount}
               iconName="Clock"
               bgGradient="linear-gradient(135deg, #F59E0B 0%, #D97706 100%)"
-              path="/asm/pending-incentive"
+              path="/admin/incentives/pending"
             />
 
-            <PayoutCard
+            <IncentiveCard
               title="Eligible Incentive"
               count={eligibleCount}
               iconName="Clock"
               bgGradient="linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)"
-              path="/asm/eligible-incentive"
+              path="/admin/incentives/eligible"
             />
 
-            <PayoutCard
+            <IncentiveCard
               title="Done Incentive"
               count={doneCount}
               iconName="CheckCircle"
               bgGradient="linear-gradient(135deg, #10B981 0%, #059669 100%)"
-              path="/asm/done-incentive"
+              path="/admin/incentives/done"
             />
           </div>
         </div>
@@ -133,4 +147,4 @@ const AsmIncentives = () => {
   );
 };
 
-export default AsmIncentives;
+export default AdminIncentives;

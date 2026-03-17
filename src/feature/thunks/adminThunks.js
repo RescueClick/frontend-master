@@ -650,6 +650,58 @@ export const setAdminPayouts = createAsyncThunk(
   }
 );
 
+// ==================== INCENTIVE MANAGEMENT (Admin) ====================
+
+// Fetch Incentives for Admin (optionally filtered by status / year / month)
+// payload: { status?, year?, month? }
+export const fetchAdminIncentives = createAsyncThunk(
+  "admin/fetchIncentives",
+  async (filters = {}, { rejectWithValue }) => {
+    try {
+      const { status, year, month } = filters || {};
+      const { adminToken } = getAuthData();
+      const response = await axios.get(`${backendurl}/admin/incentives`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        params: {
+          ...(status ? { status } : {}),
+          ...(year ? { year } : {}),
+          ...(month ? { month } : {}),
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch incentives"
+      );
+    }
+  }
+);
+
+// Mark incentive as PAID (Admin)
+export const payAdminIncentive = createAsyncThunk(
+  "admin/payIncentive",
+  async (incentiveId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/incentives/${incentiveId}/pay`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to pay incentive"
+      );
+    }
+  }
+);
+
 // Activate Partner
 export const activatePartner = createAsyncThunk(
   "admin/activatePartner",

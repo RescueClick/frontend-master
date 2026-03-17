@@ -197,118 +197,148 @@ const RsmAnalytics = () => {
           />
         </div>
 
-        {/* Performance Section */}
-        <div className={`${designSystem.card.base} ${designSystem.card.padding} mb-8`}>
-          <h2 className="text-xl font-bold mb-6" style={{ color: designSystem.colors.text.primary }}>
-            Performance
-          </h2>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium" style={{ color: designSystem.colors.text.primary }}>
-                {new Date().getFullYear()} Performance
-              </span>
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                analyticsData?.performancePercentage >= 100
-                  ? "bg-green-100 text-green-700"
-                  : "bg-orange-100 text-orange-700"
-              }`}>
-                {Math.min(analyticsData?.performancePercentage || 0, 100).toFixed(2)}%
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-sm mb-2" style={{ color: designSystem.colors.text.secondary }}>
-              <span>Disbursed: {formatCurrencyHelper(parsedData.totalDisbursed || 0)}</span>
-              <span>Target: {formatCurrencyHelper(parsedData.assignedTarget.targetValue || 0)}</span>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden relative">
+        {/* Target vs Achievement - RSM (This Month) */}
+        <div className={`${designSystem.card.base} ${designSystem.card.padding} mb-6`}>
+          <div className="flex items-baseline justify-between mb-2">
+            <h2 className="text-xl font-bold" style={{ color: designSystem.colors.text.primary }}>
+              Target vs Achievement
+            </h2>
+            <span className="text-xs font-medium text-gray-500">
               {(() => {
-                const percentage = Math.min(Math.max(analyticsData?.performancePercentage || 0, 0), 100);
-                const displayWidth = percentage > 0 ? Math.max(percentage, 0.5) : 0;
-                
+                const now = new Date();
+                const monthNames = [
+                  "January","February","March","April","May","June",
+                  "July","August","September","October","November","December",
+                ];
+                return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+              })()}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">
+            Disbursed vs assigned target for this month (RSM hierarchy)
+          </p>
+
+          <div className="flex flex-wrap items-center gap-8">
+            {/* Pie */}
+            <div className="relative w-28 h-28 flex-shrink-0">
+              {(() => {
+                const target = analyticsData.targetValue || 0;
+                const achieved = analyticsData.achievedValue || 0;
+                const pct = target > 0 ? Math.min(100, Math.round((achieved / target) * 100)) : 0;
+                const radius = 44;
+                const circumference = 2 * Math.PI * radius;
+                const offset = circumference - (pct / 100) * circumference;
                 return (
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      percentage >= 100
-                        ? "bg-gradient-to-r from-green-500 to-green-600"
-                        : percentage > 0
-                        ? "bg-gradient-to-r from-orange-500 to-orange-600"
-                        : "bg-gray-300"
-                    }`}
-                    style={{
-                      width: `${displayWidth}%`,
-                      minWidth: percentage > 0 ? '2px' : '0px'
-                    }}
-                    role="progressbar"
-                    aria-valuenow={percentage}
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    aria-label={`Performance: ${percentage.toFixed(2)}%`}
-                  />
+                  <svg viewBox="0 0 100 100" className="w-28 h-28">
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r={radius}
+                      fill="none"
+                      stroke="#E5E7EB"
+                      strokeWidth="10"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r={radius}
+                      fill="none"
+                      stroke="#10B981"
+                      strokeWidth="10"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={offset}
+                      strokeLinecap="round"
+                    />
+                  </svg>
                 );
               })()}
+            </div>
+
+            {/* Details */}
+            <div className="flex-1 min-w-[220px] space-y-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  This Month
+                </p>
+                <p className="text-2xl font-semibold mt-1" style={{ color: designSystem.colors.text.primary }}>
+                  {analyticsData.targetValue > 0
+                    ? `${Math.min(analyticsData.performancePercentage || 0, 100).toFixed(0)}%`
+                    : "—"}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  RSM-level disbursed vs target
+                </p>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="text-xs text-gray-600">Achieved</span>
+                </div>
+                <span className="text-sm font-medium" style={{ color: designSystem.colors.text.primary }}>
+                  {formatCurrencyHelper(analyticsData.achievedValue || 0)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-gray-300" />
+                  <span className="text-xs text-gray-600">Remaining to target</span>
+                </div>
+                <span className="text-sm font-medium" style={{ color: designSystem.colors.text.primary }}>
+                  {analyticsData.targetValue > 0
+                    ? formatCurrencyHelper(
+                        Math.max(0, analyticsData.targetValue - (analyticsData.achievedValue || 0))
+                      )
+                    : "—"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Performance Overview Section */}
+        {/* Monthly History - RSM */}
         <div className={`${designSystem.card.base} ${designSystem.card.padding}`}>
-          <h2 className="text-xl font-bold mb-6" style={{ color: designSystem.colors.text.primary }}>
-            Performance Overview
+          <h2 className="text-xl font-bold mb-2" style={{ color: designSystem.colors.text.primary }}>
+            Monthly History
           </h2>
+          <p className="text-xs text-gray-500 mb-4">
+            Previous months&apos; disbursement vs target (RSM hierarchy)
+          </p>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <p className="text-xs text-gray-600 mb-1">Total Applications</p>
-                <p className="text-2xl font-bold text-blue-700">{formatNumber(analyticsData?.totals?.totalApplications || 0)}</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <p className="text-xs text-gray-600 mb-1">Disbursed</p>
-                <p className="text-2xl font-bold text-green-700">{formatNumber(analyticsData?.totals?.disbursedApplications || 0)}</p>
-              </div>
-              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                <p className="text-xs text-gray-600 mb-1">In Process</p>
-                <p className="text-2xl font-bold text-orange-700">{formatNumber(analyticsData?.totals?.inProcessApplications || 0)}</p>
+          {analyticsData.monthlyPerformance && analyticsData.monthlyPerformance.length > 0 ? (
+            <div className="w-full overflow-x-auto">
+              <div className="flex items-end gap-4 h-40">
+                {analyticsData.monthlyPerformance.map((m, idx) => {
+                  const target = Number(m.targetValue || m.target || 0);
+                  const achieved = Number(m.achievedValue || m.achieved || 0);
+                  const pct = target > 0 ? Math.min(100, (achieved / target) * 100) : 0;
+                  const monthLabel =
+                    m.month && m.year
+                      ? `${new Date(m.year, m.month - 1).toLocaleString("en-US", {
+                          month: "short",
+                        })}`
+                      : `M${idx + 1}`;
+
+                  return (
+                    <div key={idx} className="flex flex-col items-center flex-shrink-0 min-w-[32px]">
+                      <div className="relative w-5 bg-gray-100 rounded-md overflow-hidden h-24 flex items-end">
+                        <div
+                          className="w-full bg-emerald-500 rounded-md transition-all duration-300"
+                          style={{ height: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="mt-1 text-[10px] text-gray-600 text-center">
+                        {monthLabel}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-
-            {/* Monthly Performance Chart */}
-            {analyticsData?.monthlyPerformance && analyticsData.monthlyPerformance.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-4" style={{ color: designSystem.colors.text.primary }}>
-                  Monthly Performance
-                </h3>
-                <div className="space-y-3">
-                  {analyticsData.monthlyPerformance.map((month, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700">
-                          {new Date(0, month._id.month - 1).toLocaleString('en-US', { month: 'long' })}
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {formatCurrencyHelper(month.totalAchieved || 0)}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-gradient-to-r from-[#12B99C] to-[#0EA688] h-2 rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.min(
-                              ((month.totalAchieved || 0) / (analyticsData?.totals?.totalRevenue || 1)) * 100,
-                              100
-                            )}%`
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          ) : (
+            <p className="text-xs text-gray-400">
+              No monthly history data available yet.
+            </p>
+          )}
         </div>
       </div>
     </div>

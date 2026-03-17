@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Search, Award, TrendingUp, Target, Clock, ArrowLeft, IndianRupee } from "lucide-react";
-import { fetchIncentives } from "../../../feature/thunks/asmThunks";
+import { fetchAdminIncentives } from "../../../feature/thunks/adminThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -12,7 +12,7 @@ const colors = {
   text: "#111827",
 };
 
-const AsmPendingIncentive = () => {
+const AdminPendingIncentive = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
@@ -27,11 +27,11 @@ const AsmPendingIncentive = () => {
   );
 
   const { data, loading } = useSelector(
-    (state) => state.asm.incentives || { data: [], loading: false }
+    (state) => state.admin.incentives || { data: [], loading: false }
   );
 
   useEffect(() => {
-    dispatch(fetchIncentives({ year, month }));
+    dispatch(fetchAdminIncentives({ year, month }));
   }, [dispatch, year, month]);
 
   const formatCurrency = (amount) => {
@@ -68,7 +68,7 @@ const AsmPendingIncentive = () => {
       <div className="mb-8">
         <div className="flex items-center mb-4">
           <button
-            onClick={() => navigate("/asm/incentives")}
+            onClick={() => navigate("/admin/incentives")}
             className="flex items-center text-lg text-gray-600 hover:text-gray-800 transition-colors mr-4"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
@@ -76,13 +76,15 @@ const AsmPendingIncentive = () => {
           </button>
         </div>
         <h1 className="text-3xl font-bold text-gray-900">Pending Incentives</h1>
-        <p className="text-gray-600 mt-1">Partners who haven't achieved their targets yet</p>
+        <p className="text-gray-600 mt-1">
+          Partners who haven't yet achieved the required targets for incentives.
+        </p>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex-1 relative w-full md:w-auto">
             <Search
               size={20}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -92,15 +94,15 @@ const AsmPendingIncentive = () => {
               placeholder="Search by partner name or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              className="w-full md:w-80 pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
             />
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-3 text-sm">
             <select
               value={year}
               onChange={(e) => setYear(parseInt(e.target.value))}
-              className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
             >
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
                 <option key={y} value={y}>
@@ -112,11 +114,11 @@ const AsmPendingIncentive = () => {
             <select
               value={month}
               onChange={(e) => setMonth(parseInt(e.target.value))}
-              className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m}>
-                  {new Date(2000, m - 1).toLocaleString("default", { month: "long" })}
+                  {new Date(2000, m - 1).toLocaleString("default", { month: "short" })}
                 </option>
               ))}
             </select>
@@ -234,5 +236,5 @@ const AsmPendingIncentive = () => {
   );
 };
 
-export default AsmPendingIncentive;
+export default AdminPendingIncentive;
 

@@ -19,18 +19,35 @@ const Application = () => {
     dispatch(fetchAsmApplications());
   }, [dispatch]);
 
-  // Sample customer data
+  // Normalize applications data (including payout amount if present)
   const applications = Array.isArray(data)
-    ? data.map((c) => ({
-        name: c.username,
-        id: c.userId,
-        phone: c.phone || "-",
-        applicationDate: new Date(c.applicationDate).toLocaleDateString(), // formatted
-        loanType: c.loanType,
-        loanAmount: c.loanAmount || 0,
-        disburseAmount: c.approvalAmount || 0,
-        status: c.status, // comes as "DISBURSED"
-      }))
+    ? data.map((c) => {
+        // Derive latest payout amount from payouts array if available
+        let latestPayoutAmount = 0;
+        if (Array.isArray(c.payouts) && c.payouts.length > 0) {
+          const latestPayout = c.payouts[c.payouts.length - 1];
+          latestPayoutAmount = Number(latestPayout.amount) || 0;
+        }
+
+        return {
+          name: c.username || c.customerName,
+          id: c.userId || c.appNo || c._id,
+          phone: c.phone || c.customer?.phone || "-",
+          applicationDate: c.applicationDate
+            ? new Date(c.applicationDate).toLocaleDateString()
+            : c.createdAt
+            ? new Date(c.createdAt).toLocaleDateString()
+            : "-", // formatted
+          loanType: c.loanType,
+          loanAmount: c.loanAmount || c.requestedAmount || 0,
+          disburseAmount: c.approvalAmount || c.approvedLoanAmount || 0,
+          payoutAmount:
+            typeof c.payoutAmount === "number" && c.payoutAmount > 0
+              ? c.payoutAmount
+              : latestPayoutAmount,
+          status: c.status, // comes as backend status enum
+        };
+      })
     : [];
 
   // Filter applications based on search and status
@@ -140,6 +157,7 @@ const filteredCustomers = applications.filter((customer) => {
                 <th className="px-3 py-3 text-left">Loan Type</th>
                 <th className="px-3 py-3 text-left">Loan Amount</th>
                 <th className="px-3 py-3 text-left">Disburse Amount</th>
+                <th className="px-3 py-3 text-left">Payout</th>
                 <th className="px-3 py-3 text-left">Status</th>
                 {/* <th className="px-3 py-3 text-left">Action</th> */}
               </tr>
@@ -165,6 +183,14 @@ const filteredCustomers = applications.filter((customer) => {
                   </td>
                   <td className="px-3 py-4 font-semibold">
                     {customer.disburseAmount}
+                  </td>
+                  <td className="px-3 py-4 font-semibold">
+                    {customer.payoutAmount
+                      ? `₹${Number(customer.payoutAmount).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}`
+                      : "—"}
                   </td>
                   <td className="px-3 py-4">
                     <span

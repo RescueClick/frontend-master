@@ -51,6 +51,7 @@ import AdiminASM from "./sidebars/users/Admin/ASM";
 import AdiminCustomer from "./sidebars/users/Admin/Customer";
 import AdminPendingPayout from "./sidebars/users/Admin/AdminPendingPayout";
 import AdminDonePayout from "./sidebars/users/Admin/AdminDonePayout";
+import AdminPayouts from "./sidebars/users/Admin/AdminPayouts";
 import SetTarget from "./sidebars/users/Admin/SetTarget.jsx"
 import PartnerTargets from "./sidebars/users/Admin/PartnerTargets";
 import AdiminBanks from "./sidebars/users/Admin/Banks";
@@ -58,6 +59,10 @@ import Analytics from "./sidebars/users/Admin/Analytics";
 import Banner from "./sidebars/users/Admin/Banner";
 import RMpartner from "./sidebars/users/Admin/RMpartner";
 import DeleteAccountRequests from "./sidebars/users/Admin/DeleteAccountRequests";
+import AdminIncentives from "./sidebars/users/Admin/AdminIncentives";
+import AdminEligibleIncentive from "./sidebars/users/Admin/AdminEligibleIncentive";
+import AdminDoneIncentive from "./sidebars/users/Admin/AdminDoneIncentive";
+import AdminPendingIncentive from "./sidebars/users/Admin/AdminPendingIncentive";
 
 // Import ASM user pages
 import AsmDashboard from "./sidebars/users/ASM/Dashboard";
@@ -68,6 +73,7 @@ import AsmPayouts from "./sidebars/users/ASM/AsmPayouts";
 import AsmIncentives from "./sidebars/users/ASM/AsmIncentives";
 import AsmPendingIncentive from "./sidebars/users/ASM/AsmPendingIncentive";
 import AsmDoneIncentive from "./sidebars/users/ASM/AsmDoneIncentive";
+import AsmEligibleIncentive from "./sidebars/users/ASM/AsmEligibleIncentive";
 import AsmFollowUps from "./sidebars/users/ASM/AsmFollowUps";
 import AsmPendingPayout from "./sidebars/users/ASM/AsmPendingPayout";
 import AsmDonePayout from "./sidebars/users/ASM/AsmDonePayout";
@@ -116,6 +122,8 @@ import KYCDetails from "./sidebars/users/Partner/KYCDetails";
 import CompleteApplication from "./sidebars/users/Partner/CompleteApplication";
 import DocumentUpload from "./sidebars/users/Partner/DocumentUpload";
 import MyTarget from "./sidebars/users/Partner/MyTarget";
+import IncentiveHistory from "./sidebars/users/Partner/IncentiveHistory";
+import PayoutHistory from "./sidebars/users/Partner/PayoutHistory";
 
 
 
@@ -240,8 +248,13 @@ const AppRoutes = () => {
         <Route path="add-rsm-page" element={<AddRSMPage />} /> 
         <Route path="add-partner-page" element={<AddPartnerPage />} /> 
         <Route path="banner" element={<Banner />} />
+        <Route path="payout" element={<AdminPayouts />} />
         <Route path="pending-payout" element={<AdminPendingPayout />} />
         <Route path="done-payout" element={<AdminDonePayout />} />
+        <Route path="incentives" element={<AdminIncentives />} />
+        <Route path="incentives/pending" element={<AdminPendingIncentive />} />
+        <Route path="incentives/eligible" element={<AdminEligibleIncentive />} />
+        <Route path="incentives/done" element={<AdminDoneIncentive />} />
         
       </Route>
       </Route>
@@ -259,6 +272,7 @@ const AppRoutes = () => {
         <Route path="done-payout" element={<AsmDonePayout />} />
         <Route path="incentives" element={<AsmIncentives />} />
         <Route path="pending-incentive" element={<AsmPendingIncentive />} />
+        <Route path="eligible-incentive" element={<AsmEligibleIncentive />} />
         <Route path="done-incentive" element={<AsmDoneIncentive />} />
         <Route path="follow-ups" element={<AsmFollowUps />} />
         <Route path="partner-targets" element={<AsmPartnerTargets />} />
@@ -317,23 +331,25 @@ const AppRoutes = () => {
       {/* Partner routes: Only accessible to Partner users */}
 
       <Route element={<ProtectedRoute allowedRoles={[ROLES.PARTNER]} />}>
-      <Route path="/partner" element={<PartnerSideBar />}>
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<PartnerDashboard />} />
-        <Route path="customers" element={<PartnerCustomers />} />
-        <Route path="applications" element={<PartnerApplications />} />
-        <Route path="EmiCalculator" element={<PartnerEmiCalculator />} />
-        <Route path="KYCDetails" element={<KYCDetails />} />
-        <Route path="complete-application" element={<CompleteApplication />} />
-        <Route path="document-upload" element={<DocumentUpload />} />
-        <Route path="my-target" element={<MyTarget />} />
+        <Route path="/partner" element={<PartnerSideBar />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<PartnerDashboard />} />
+          <Route path="customers" element={<PartnerCustomers />} />
+          <Route path="applications" element={<PartnerApplications />} />
+          <Route path="EmiCalculator" element={<PartnerEmiCalculator />} />
+          <Route path="KYCDetails" element={<KYCDetails />} />
+          <Route path="complete-application" element={<CompleteApplication />} />
+          <Route path="document-upload" element={<DocumentUpload />} />
+          <Route path="my-target" element={<MyTarget />} />
+          <Route path="incentives" element={<IncentiveHistory />} />
+          <Route path="payouts" element={<PayoutHistory />} />
 
-        <Route path="get-loan" element={<GetLoan />}/>
-        <Route path="personal-loan" element={<PersonalLoan />}  />
-        <Route path="bussiness-loan" element={<BusinessLoan />}  />
-        <Route path="home-loan-salaried" element={<HomeLoanSalaried />}  />
-        <Route path="home-loan-self-employee" element={<HomeLoanSelfEmployee />}  />
-      </Route>
+          <Route path="get-loan" element={<GetLoan />} />
+          <Route path="personal-loan" element={<PersonalLoan />} />
+          <Route path="bussiness-loan" element={<BusinessLoan />} />
+          <Route path="home-loan-salaried" element={<HomeLoanSalaried />} />
+          <Route path="home-loan-self-employee" element={<HomeLoanSelfEmployee />} />
+        </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[ROLES.CUSTOMER]} />}>
       <Route path="/customer" element={<Customer />} />
