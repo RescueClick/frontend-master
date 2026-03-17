@@ -73,6 +73,7 @@ const Partners = () => {
   const dispatch = useDispatch();
 
   const { loading, error, data } = useSelector((state) => state.rm.partner);
+  
 
   // Real-time data fetching with 30 second polling
   const { refetch } = useRealtimeData(fetchPartners, {
@@ -127,10 +128,10 @@ const Partners = () => {
       return `₹${amount}`;
     }
   };
-  
+
   const filteredPartners = useMemo(() => {
     if (!data) return [];
-    
+
     return data.filter((partner) => {
       const matchesSearch =
         partner.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,10 +168,10 @@ const Partners = () => {
           oldPartnerId: selectedPartner.id,
         })
       ).unwrap();
-      
+
       // Refetch partners after deactivation
       refetchPartners();
-      
+
       setModalOpen(false);
       setSelectedPartner(null);
     } catch (error) {
@@ -181,10 +182,10 @@ const Partners = () => {
   const handlePartnerActive = useCallback(async () => {
     try {
       await dispatch(activatePartner({ partnerId: selectedPartner.id })).unwrap();
-      
+
       // Refetch partners after activation
       refetchPartners();
-      
+
       setActivateModel(null);
       setSelectedPartner(null);
     } catch (error) {
@@ -198,7 +199,7 @@ const Partners = () => {
       alert("No data available to export");
       return;
     }
-  
+
     // Create new object with easy-to-read column names
     const formattedData = data.map((item) => ({
       "Partner ID": item.id,
@@ -217,43 +218,43 @@ const Partners = () => {
       "Total Disbursed": item.totalDisbursed,
       "Assigned Target": item.assignedTarget,
       "Performance": item.performance,
-      
+
     }));
-  
+
     // Convert JSON to worksheet
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
-  
+
     // Create workbook and append worksheet
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Partners");
-  
+
     // Write workbook and save as Excel file
     const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-  
+
     const blobData = new Blob([excelBuffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-  
+
     saveAs(blobData, "partners.xlsx");
   };
 
-  
+
   const loginAsUser = async (userId, navigate) => {
     try {
       const { rmToken } = getAuthData();
       if (!rmToken) throw new Error("Admin not authenticated");
-  
+
       const res = await axios.post(
         `${backendurl}/auth/login-as/${userId}`,
         {},
         { headers: { Authorization: `Bearer ${rmToken}` } }
       );
-  
+
       const { token, user } = res.data;
-  
+
       // Save impersonated token without removing admin token
       saveAuthData(token, user, true);
-  
+
       // Navigate to role
       switch (user.role) {
         case "ASM": navigate("/asm"); break;
@@ -267,12 +268,36 @@ const Partners = () => {
       alert(err.response?.data?.message || err.message || "Login as user failed");
     }
   };
+
+  // Usage in component
+  const handleLoginAs = (userId) => {
+    console.log(userId)
+    loginAsUser(userId, navigate);
+  };
+
+
+  const handleDeletePartner = async (partnerId) => {
+    console.log("Deleting partner:", partnerId);
   
- // Usage in component
-const handleLoginAs = (userId) => {
-  console.log(userId)
-loginAsUser(userId, navigate);
-};
+    try {
+      const { rmToken } = getAuthData(); // get token
+  
+      const res = await axios.delete(
+        `${backendurl}/partners/${partnerId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${rmToken}`,
+          },
+        }
+      );
+  
+      console.log("Delete response:", res.data);
+  
+      refetchPartners(); // refresh list
+    } catch (error) {
+      console.error("Delete error:", error.response?.data || error.message);
+    }
+  };
 
   return (
     <>
@@ -353,7 +378,7 @@ loginAsUser(userId, navigate);
                     </p>
                   </div>
                 </div>
-                
+
                 {/* Close Button */}
                 <div className="flex items-center">
                   <button
@@ -552,39 +577,39 @@ loginAsUser(userId, navigate);
         </div>
       )}
 
-{modalOpen && (
+      {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
 
 
-        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Suspend Partner
-          </h3>
-          <p className="text-gray-700 mb-6">
-            Are you sure you want to <span className="font-semibold text-red-600">suspend</span> the partner{" "}
-            <span className="font-semibold">{selectedPartner?.name}</span>?<br />
-            This will deactivate their account and they will not be able to log in.
-          </p>
-          <div className="flex justify-end gap-3">
-            <button
-              className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition"
-              onClick={handleCancelDeactivation}
-            >
-              Cancel
-            </button>
-            <button
-              className="px-4 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition"
-              onClick={() => {
-                handleConfirmDeactivation();
-                setModalOpen(false);
-                setSelectedPartner(null);
-              }}
-            >
-              Yes, Suspend
-            </button>
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              Suspend Partner
+            </h3>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to <span className="font-semibold text-red-600">suspend</span> the partner{" "}
+              <span className="font-semibold">{selectedPartner?.name}</span>?<br />
+              This will deactivate their account and they will not be able to log in.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition"
+                onClick={handleCancelDeactivation}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+                onClick={() => {
+                  handleConfirmDeactivation();
+                  setModalOpen(false);
+                  setSelectedPartner(null);
+                }}
+              >
+                Yes, Suspend
+              </button>
+            </div>
           </div>
-        </div>
-         
+
         </div>
       )}
       <div className="min-h-screen" style={{ backgroundColor: "#F8FAFC" }}>
@@ -595,7 +620,7 @@ loginAsUser(userId, navigate);
               <div className="flex items-center space-x-3">
 
                 <button className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                onClick={()=>{handleExport()}}                >
+                  onClick={() => { handleExport() }}                >
                   <Download size={16} className="inline mr-2" />
                   Export
                 </button>
@@ -779,15 +804,30 @@ loginAsUser(userId, navigate);
                                 </button>
                               )}
                             </td>
-                            <td className="px-2 py-3 align-middle">
-                              <div className="flex items-center gap-1 h-full">
+
+                            <td className="px-3 py-3 align-middle">
+                              <div className="flex items-center gap-3">
+
+                                {/* View Profile */}
                                 <button
-                                  className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                                   onClick={() => setPartnerProfile(partner)}
+                                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition"
                                   title="View Profile"
                                 >
                                   <Eye size={14} />
+                                  View
                                 </button>
+
+                                {/* Delete Button (only if suspended) */}
+                                {partner.status === "SUSPENDED" && (
+                                  <button
+                                    onClick={() => handleDeletePartner(partner.id)}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+
                               </div>
                             </td>
                           </tr>

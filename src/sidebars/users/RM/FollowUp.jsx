@@ -21,8 +21,6 @@ import { fetchPartnersWithFollowUp, updateFollowUp } from "../../../feature/thun
 
 const FollowUp = () => {
 
-
-
     // ✅ Add this
   const [formData, setFormData] = useState({
     partnerName: "",
