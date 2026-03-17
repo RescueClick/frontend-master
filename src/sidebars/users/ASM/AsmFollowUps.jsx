@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Search, Phone, Calendar, MessageSquare, User, CheckCircle, XCircle, Clock } from "lucide-react";
+import {
+  Search,
+  Phone,
+  Calendar,
+  MessageSquare,
+  User,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Filter,
+  Download,
+  Edit3,
+} from "lucide-react";
 import { fetchRsmFollowUps, recordRsmFollowUp } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 
 const AsmFollowUps = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [selectedRsm, setSelectedRsm] = useState(null);
   const [status, setStatus] = useState("Connected");
@@ -46,17 +59,50 @@ const AsmFollowUps = () => {
 
   const followUps = Array.isArray(data) ? data : [];
 
-  const filteredFollowUps = followUps.filter((item) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      item.rsm?.name?.toLowerCase().includes(term) ||
-      item.rsm?.employeeId?.toLowerCase().includes(term) ||
-      item.rsm?.email?.toLowerCase().includes(term)
-    );
-  });
+  const statusOptions = [
+    {
+      value: "Ringing",
+      label: "Ringing",
+      color: "bg-amber-500",
+      textColor: "text-amber-700",
+      bgColor: "bg-amber-100",
+    },
+    {
+      value: "Connected",
+      label: "Connected",
+      color: "bg-emerald-500",
+      textColor: "text-emerald-700",
+      bgColor: "bg-emerald-100",
+    },
+    {
+      value: "Switch Off",
+      label: "Switch Off",
+      color: "bg-red-500",
+      textColor: "text-red-700",
+      bgColor: "bg-red-100",
+    },
+    {
+      value: "Not Reachable",
+      label: "Not Reachable",
+      color: "bg-gray-500",
+      textColor: "text-gray-700",
+      bgColor: "bg-gray-100",
+    },
+  ];
 
-  const getStatusIcon = (status) => {
-    switch (status) {
+  const getStatusStyle = (s) => {
+    const option = statusOptions.find((opt) => opt.value === s);
+    return (
+      option || {
+        color: "bg-gray-500",
+        textColor: "text-gray-700",
+        bgColor: "bg-gray-100",
+      }
+    );
+  };
+
+  const getStatusIcon = (s) => {
+    switch (s) {
       case "Connected":
         return <CheckCircle size={16} className="text-green-600" />;
       case "Ringing":
@@ -69,154 +115,218 @@ const AsmFollowUps = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Connected":
-        return "bg-green-100 text-green-800";
-      case "Ringing":
-        return "bg-blue-100 text-blue-800";
-      case "Switch Off":
-        return "bg-orange-100 text-orange-800";
-      case "Not Reachable":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const formatDate = (date) => {
     if (!date) return "Never";
     const d = new Date(date);
-    return d.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return d
+      .toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+      .replace(",", "");
   };
+
+  const filteredFollowUps = followUps.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      item.rsm?.name?.toLowerCase().includes(term) ||
+      item.rsm?.employeeId?.toLowerCase().includes(term) ||
+      item.rsm?.email?.toLowerCase().includes(term);
+
+    const itemStatus = item.followUp?.status || "";
+    const matchesStatus =
+      statusFilter === "" || itemStatus === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">RSM Follow-ups</h1>
-        <p className="text-gray-600 mt-1">Track and manage follow-ups with Regional Sales Managers</p>
-      </div>
+      {/* Header & controls styled like RM */}
 
-      {/* Search */}
-      <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
-        <div className="relative">
-          <Search
-            size={20}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            type="text"
-            placeholder="Search by RSM name, ID, or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
-          />
+      <div className="bg-white rounded-2xl p-6 mb-6 border border-emerald-100">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search by RSM name, ID, or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="appearance-none bg-white border-2 border-gray-200 rounded-xl px-4 py-3 pr-10 transition-all duration-200"
+            >
+              <option value="">All Status</option>
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+          </div>
+
+          {/* Export Button */}
+          <button className="bg-white border-2 border-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold flex items-center">
+            <Download className="w-5 h-5 mr-2" />
+            Export
+          </button>
         </div>
       </div>
 
-      {/* Follow-ups List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {loading ? (
-          <div className="col-span-full text-center py-8 text-gray-500">Loading follow-ups...</div>
-        ) : filteredFollowUps.length === 0 ? (
-          <div className="col-span-full text-center py-8 text-gray-500">No RSM follow-ups found</div>
-        ) : (
-          filteredFollowUps.map((item) => (
-            <div
-              key={item.rsm.id}
-              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow"
+      {/* Table layout like RM */}
+      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-emerald-100">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead
+              className="text-white"
+              style={{ backgroundColor: "#12B99C" }}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[#12B99C] rounded-full text-white">
-                    <User size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{item.rsm.name}</h3>
-                    <p className="text-xs text-gray-500">{item.rsm.employeeId}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Email:</span>
-                  <span className="text-sm font-medium text-gray-900">{item.rsm.email}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Phone:</span>
-                  <span className="text-sm font-medium text-gray-900">{item.rsm.phone}</span>
-                </div>
-
-                {item.followUp ? (
-                  <>
-                    <div className="border-t pt-3 mt-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Last Follow-up:</span>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(
-                            item.followUp.status
-                          )}`}
-                        >
-                          {getStatusIcon(item.followUp.status)}
-                          {item.followUp.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                        <Calendar size={14} />
-                        {formatDate(item.followUp.lastCall)}
-                      </div>
-                      {item.followUp.remarks && (
-                        <div className="bg-gray-50 p-2 rounded-lg">
-                          <div className="flex items-start gap-2">
-                            <MessageSquare size={14} className="text-gray-400 mt-0.5" />
-                            <p className="text-xs text-gray-700">{item.followUp.remarks}</p>
+              <tr>
+                <th className="px-2 py-4 text-left font-semibold">
+                  RSM Name
+                </th>
+                <th className="px-2 py-4 text-left font-semibold">
+                  Employee ID
+                </th>
+                <th className="px-2 py-4 text-left font-semibold">Email</th>
+                <th className="px-2 py-4 text-left font-semibold">Phone</th>
+                <th className="px-2 py-4 text-left font-semibold">Status</th>
+                <th className="px-2 py-4 text-left font-semibold">Remarks</th>
+                <th className="px-2 py-4 text-center font-semibold">
+                  Actions
+                </th>
+                <th className="px-2 py-4 text-center font-semibold">
+                  Last Call
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
+                    Loading follow-ups...
+                  </td>
+                </tr>
+              ) : filteredFollowUps.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
+                    No RSM follow-ups found
+                  </td>
+                </tr>
+              ) : (
+                filteredFollowUps.map((item, index) => {
+                  const s = item.followUp?.status || "";
+                  const statusStyle = getStatusStyle(s);
+                  return (
+                    <tr
+                      key={item.rsm.id}
+                      className={`hover:bg-gray-50 transition-colors duration-200 ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                        }`}
+                    >
+                      <td className="px-2 py-2 text-sm">
+                        <div className="flex items-center">
+                          <div
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold mr-3"
+                            style={{ backgroundColor: "#12B99C" }}
+                          >
+                            {item.rsm.name?.charAt(0)}
                           </div>
+                          <span className="font-semibold text-gray-800 text-sm">
+                            {item.rsm.name}
+                          </span>
                         </div>
-                      )}
-                      {item.followUp.updatedBy && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Updated by: {item.followUp.updatedBy.name} ({item.followUp.updatedBy.employeeId})
-                        </p>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="border-t pt-3 mt-3">
-                    <p className="text-sm text-gray-500 text-center">No follow-up recorded yet</p>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => {
-                    setSelectedRsm(item);
-                    setShowFollowUpModal(true);
-                  }}
-                  className="w-full bg-[#12B99C] text-white px-4 py-2 rounded-lg hover:bg-[#0fa085] transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-                >
-                  <Phone size={16} />
-                  Record Follow-up
-                </button>
-              </div>
-            </div>
-          ))
-        )}
+                      </td>
+                      <td className="px-2 py-2 text-sm">
+                        <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-mono">
+                          {item.rsm.employeeId}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-sm text-gray-700">
+                        {item.rsm.email}
+                      </td>
+                      <td className="px-2 py-2 text-sm text-gray-700">
+                        {item.rsm.phone}
+                      </td>
+                      <td className="px-2 py-2 text-sm">
+                        {s ? (
+                          <span
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${statusStyle.bgColor} ${statusStyle.textColor}`}
+                          >
+                            {/* {getStatusIcon(s)} */}
+                            <span className="ml-1">
+                              {
+                                statusOptions.find(
+                                  (opt) => opt.value === s
+                                )?.label
+                              }
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">
+                            No follow-up
+                          </span>
+                        )}
+                      </td>
+                      <td
+                        className="px-2 py-2 text-sm text-gray-700 max-w-xs truncate"
+                        title={item.followUp?.remarks || ""}
+                      >
+                        {item.followUp?.remarks || "-"}
+                      </td>
+                      <td className="px-2 py-2 text-sm">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedRsm(item);
+                              setShowFollowUpModal(true);
+                            }}
+                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition-colors duration-200"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 text-sm text-center text-gray-700">
+                        {item.followUp?.lastCall
+                          ? formatDate(item.followUp.lastCall)
+                          : "N/A"}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Follow-up Modal */}
       {showFollowUpModal && selectedRsm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/25 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Record Follow-up</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Record Follow-up
+              </h2>
               <button
                 onClick={() => {
                   setShowFollowUpModal(false);
@@ -231,13 +341,16 @@ const AsmFollowUps = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-xl">
-                <p className="text-sm text-gray-600">
-                  <strong>RSM:</strong> {selectedRsm.rsm.name}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Employee ID:</strong> {selectedRsm.rsm.employeeId}
-                </p>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm">
+                <div className="grid grid-cols-[140px_1fr] py-1">
+                  <span className="font-medium text-gray-600">RSM</span>
+                  <span className="text-gray-900">{selectedRsm.rsm.name}</span>
+                </div>
+
+                <div className="grid grid-cols-[140px_1fr] py-1">
+                  <span className="font-medium text-gray-600">Employee ID</span>
+                  <span className="text-gray-900">{selectedRsm.rsm.employeeId}</span>
+                </div>
               </div>
 
               <div>

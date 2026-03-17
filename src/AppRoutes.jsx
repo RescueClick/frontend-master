@@ -84,6 +84,7 @@ import RsmFollowUps from "./sidebars/users/RSM/RsmFollowUps";
 import RsmApplicationView from "./sidebars/users/RSM/RsmApplicationView";
 import RsmPartnerTargets from "./sidebars/users/RSM/RsmPartnerTargets";
 import RsmAnalytics from "./sidebars/users/RSM/RsmAnalytics";
+import Banks from "./sidebars/users/RSM/Banks";
 
 
 // Import RM user pages
@@ -187,36 +188,25 @@ const AppRoutes = () => {
 
 
 {/* ⭐ PUBLIC LOAN FORM ROUTES (For Apply Now Buttons) */}
-<Route
-  path="/partner/application/personal-loan"
-  element={<PersonalLoan />}
-/>
+      <Route
+        path="/partner/application/personal-loan"
+        element={<PersonalLoan />}
+      />
 
-<Route
-  path="/partner/application/business-loan"
-  element={<BusinessLoan />}
-/>
+      <Route
+        path="/partner/application/business-loan"
+        element={<BusinessLoan />}
+      />
 
-<Route
-  path="/partner/application/home-loan-salaried"
-  element={<HomeLoanSalaried />}
-/>
+      <Route
+        path="/partner/application/home-loan-salaried"
+        element={<HomeLoanSalaried />}
+      />
 
-<Route
-  path="/partner/application/home-loan-self-employed"
-  element={<HomeLoanSelfEmployee />}
-/>
-
-
-   
-
-
-
-
-
-
-
-
+      <Route
+        path="/partner/application/home-loan-self-employed"
+        element={<HomeLoanSelfEmployee />}
+      />
       {/* Admin routes: Only accessible to Admin users */}
       <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
       <Route path="/admin" element={<AdmainSideBar />}>
@@ -278,6 +268,7 @@ const AppRoutes = () => {
         <Route path="applications/view" element={<RsmApplicationView />} />
         <Route path="analytics" element={<RsmAnalytics />} />
         <Route path="follow-ups" element={<RsmFollowUps />} />
+        <Route path="banks" element={<Banks />} />
       </Route>
       </Route>
 

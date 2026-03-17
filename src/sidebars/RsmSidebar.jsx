@@ -80,7 +80,8 @@ const RsmSidebar = () => {
     { name: "Dashboard", icon: LayoutGrid, path: "/rsm/dashboard" },
     { name: "My RMs", icon: Users, path: "/rsm/rms" },
     { name: "Applications", icon: FileText, path: "/rsm/applications" },
-    { name: "Follow Ups", icon: Phone, path: "/rsm/follow-ups" },
+    {name: "Follow Up", icon: CalendarCheck, path: "/rsm/follow-ups" },
+    { name: "Banks", icon: Building2, path: "/rsm/banks" },
   //   { name: "Analytics", icon: BarChart2, path: "/rsm/analytics" },
   ];
 

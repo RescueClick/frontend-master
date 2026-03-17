@@ -19,6 +19,7 @@ import {
   Mail,
   Calendar,
   Briefcase,
+  CalendarCheck,
   MapPin,
   Edit,
   Lock,
@@ -86,7 +87,7 @@ const AsmSiderbar = () => {
     { name: "Applications", icon: FileText, path: "/asm/applications" },
     { name: "Payouts", icon: IndianRupee, path: "/asm/payouts" },
     { name: "Incentives", icon: Award, path: "/asm/incentives" },
-    { name: "Follow-ups", icon: Phone, path: "/asm/follow-ups" },
+    { name: "Follow Up", icon: CalendarCheck, path: "/asm/follow-ups" },
   ];
 
 
