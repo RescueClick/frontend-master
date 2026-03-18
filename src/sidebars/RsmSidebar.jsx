@@ -21,7 +21,6 @@ import {
   Briefcase,
   MapPin,
   Edit,
-  Lock,
   X,
   TrendingUp,
 } from "lucide-react";
@@ -31,8 +30,6 @@ import { fetchRsmProfile } from "../feature/thunks/rsmThunks";
 import { clearAuthData, getAuthData } from "../utils/localStorage";
 import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
 import { useDispatch, useSelector } from "react-redux";
-import axios from "axios"
-import { backendurl } from "../feature/urldata";
 import logo from "../assets/logo.png";
 import NotificationBell from "../components/NotificationBell";
 
@@ -40,12 +37,6 @@ import NotificationBell from "../components/NotificationBell";
 const RsmSidebar = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
-
-  const [loadingPassChange, setLoading] = useState(false);
-  const [errorPassChange, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const [ChangePasswordModel, setChangePasswordModel] = useState(null);
 
   const dispatch = useDispatch();
   const location = useLocation();
@@ -84,79 +75,13 @@ const RsmSidebar = () => {
     // highlight banks for RSM
     { name: "Banks", icon: Building2, path: "/rsm/banks", highlight: true },
     //   { name: "Analytics", icon: BarChart2, path: "/rsm/analytics" },
+    { name: "Settings", icon: Settings, path: "/rsm/settings" },
   ];
 
   // Logout function
   const handleLogout = () => {
     clearAuthData();
     navigate('/');
-  };
-
-  const [formData, setFormData] = useState({
-    oldPassword: "",
-    password: "",
-    confirmPassword: "",
-  });
-
-  // Handle input change
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log("handleSubmit called");
-    setError("");
-    setSuccess("");
-
-    // Basic validation
-    if (!formData.oldPassword || !formData.password || !formData.confirmPassword) {
-      console.log("Validation failed: missing fields", formData);
-      setError("All fields are required.");
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const { rsmToken } = getAuthData();
-
-      const response = await axios.post(
-        `${backendurl}/auth/change-password`,
-        {
-          oldPassword: formData.oldPassword,
-          newPassword: formData.password,
-          confirmPassword: formData.confirmPassword,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${rsmToken}`,
-          },
-        }
-      );
-
-      setSuccess(response.data.message);
-      setFormData({ oldPassword: "", password: "", confirmPassword: "" });
-
-      // Close modal if needed
-      console.log("Closing change password modal");
-      setChangePasswordModel(false);
-    } catch (err) {
-      console.error("API error:", err.response?.data || err);
-      setError(err.response?.data?.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-      console.log("handleSubmit finished, loading set to false");
-    }
   };
 
   return (
@@ -293,101 +218,6 @@ const RsmSidebar = () => {
         </main>
       </div>
 
-      {/* Change Password */}
-      {ChangePasswordModel && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative mx-4">
-            {/* Close Button */}
-            <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
-              onClick={() => setChangePasswordModel(false)}
-            >
-              <span className="text-2xl">&times;</span>
-            </button>
-
-            {/* Title */}
-            <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-              Change Password
-            </h2>
-
-            {/* Form */}
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Old Password */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                  htmlFor="oldPassword"
-                >
-                  Old Password
-                </label>
-                <input
-                  type="password"
-                  id="oldPassword"
-                  name="oldPassword"
-                  value={formData.oldPassword}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-300"
-                  placeholder="Enter old password"
-                />
-              </div>
-
-              {/* New Password */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                  htmlFor="password"
-                >
-                  New Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-300"
-                  placeholder="Enter new password"
-                />
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                  htmlFor="confirmPassword"
-                >
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-300"
-                  placeholder="Confirm new password"
-                />
-              </div>
-
-              {/* Error Message */}
-              {errorPassChange && (
-                <div className="text-red-600 text-sm">{errorPassChange}</div>
-              )}
-              {success && (
-                <div className="text-green-600 text-sm">{success}</div>
-              )}
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 rounded-lg transition duration-300"
-              >
-                Change Password
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Profile Side Panel */}
       {profileOpen && (
@@ -522,19 +352,8 @@ const RsmSidebar = () => {
 
                     </div>
 
-                    {/* Settings Section */}
-                    <div className="mt-4 space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-[#12B99C]" /> Settings
-                      </h3>
-
-                      {/* Change Password */}
-                      <div className="flex items-center gap-3 cursor-pointer hover:text-[#12B99C]">
-                        <Lock className="w-5 h-5" />
-                        <button className="text-[#111827]" onClick={() => { setChangePasswordModel(true) }} >Change Password</button>
-                      </div>
-
-                      {/* Logout */}
+                    {/* Logout */}
+                    <div className="mt-4">
                       <div className="flex items-center gap-3 cursor-pointer hover:text-red-500"
                         onClick={() => { handleLogout() }}
                       >

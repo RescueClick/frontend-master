@@ -79,6 +79,7 @@ const PartnerSideBar = () => {
     { name: "Payout History", icon: IndianRupee, path: "/partner/payouts" },
     { name: "Emi Calculator", icon: Calculator, path: "/partner/EmiCalculator" },
     { name: "KYC Details", icon: IdCard, path: "/partner/KYCDetails" },
+    { name: "Settings", icon: Settings, path: "/partner/settings" },
   ];
 
 
