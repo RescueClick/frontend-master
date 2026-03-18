@@ -10,6 +10,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import axios from "axios"
 import { backendurl } from "../../../feature/urldata";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 
@@ -65,10 +66,12 @@ export default function AsmPartner() {
         id.includes(term) ||
         email.includes(term) ||
         rmId.includes(term) ||
-        employeeId.newPartnerId(term)
+        employeeId.includes(term)
       );
     });
   }, [Partners, searchQuery]);
+
+  const sortedFilteredCustomers = sortNewestFirst(filteredCustomers, { dateKeys: ["createdAt"] });
 
   const handleViewCustomer = (customer) => {
     setCustomerToView(customer);
@@ -111,6 +114,7 @@ export default function AsmPartner() {
         PartnersID: p._id,
         employeeId: p.employeeId,
         profilePic: p.profilePic,
+        createdAt: p.createdAt,
 
         createdOn: new Date(p.createdAt).toLocaleDateString("en-IN", {
           day: "2-digit",
@@ -239,7 +243,7 @@ loginAsUser(userId, navigate);
               </thead>
               <tbody>
                 {filteredCustomers.length > 0 ? (
-                  filteredCustomers.map((c) => (
+                  sortedFilteredCustomers.map((c) => (
                     <tr key={c.id} className="border-b hover:bg-gray-50">
                       <td className="px-2 py-3 align-top">
                         <div className="flex items-center gap-3">

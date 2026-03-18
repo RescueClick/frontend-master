@@ -15,6 +15,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { fetchRmFollowUps, recordRmFollowUp } from "../../../feature/thunks/rsmThunks";
 import toast from "react-hot-toast";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const RsmFollowUps = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -146,6 +147,14 @@ const RsmFollowUps = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const sortedFilteredFollowUps = sortNewestFirst(
+    filteredFollowUps.map((item) => ({
+      ...item,
+      lastCallSort: item.followUp?.lastCall || item.followUp?.createdAt || item.rm?.createdAt,
+    })),
+    { dateKeys: ["lastCallSort"] }
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       {/* Header */}
@@ -230,7 +239,7 @@ const RsmFollowUps = () => {
                     Loading follow-ups...
                   </td>
                 </tr>
-              ) : filteredFollowUps.length === 0 ? (
+              ) : sortedFilteredFollowUps.length === 0 ? (
                 <tr>
                   <td
                     colSpan={8}
@@ -240,7 +249,7 @@ const RsmFollowUps = () => {
                   </td>
                 </tr>
               ) : (
-                filteredFollowUps.map((item, index) => {
+                sortedFilteredFollowUps.map((item, index) => {
                   const s = item.followUp?.status || "";
                   const statusStyle = getStatusStyle(s);
                   return (

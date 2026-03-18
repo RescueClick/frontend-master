@@ -8,6 +8,7 @@ import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import toast from "react-hot-toast";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const colors = {
   primary: "#12B99C",
@@ -159,10 +160,11 @@ export default function AsmRSM() {
 
   // Format data for table
   const tableData = useMemo(() => {
-    return filteredRsms.map((rsm) => ({
+    const rows = filteredRsms.map((rsm) => ({
       ...rsm,
       name: `${rsm.firstName || ""} ${rsm.lastName || ""}`,
     }));
+    return sortNewestFirst(rows, { dateKeys: ["createdAt", "updatedAt"] });
   }, [filteredRsms]);
 
   return (

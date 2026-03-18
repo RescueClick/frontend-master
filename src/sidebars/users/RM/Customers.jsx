@@ -209,6 +209,12 @@ const Customers = () => {
     return matchesSearch && matchesStatus && matchesLoanType;
   });
 
+  const sortedFilteredCustomers = [...(filteredCustomers || [])].sort((a, b) => {
+    const aTime = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bTime - aTime; // newest first
+  });
+
   const loanTypeOptions = [
     { label: "All", value: "All" },
     { label: "Business Loan", value: "BUSINESS" },
@@ -578,7 +584,7 @@ loginAsUser(userId, navigate);
                 </thead>
 
                 <tbody>
-                  {filteredCustomers.map((customer) => (
+                    {sortedFilteredCustomers.map((customer) => (
                     <tr
                       key={customer.id}
                       className="border-b border-gray-100 hover:bg-gray-50"
@@ -685,7 +691,7 @@ loginAsUser(userId, navigate);
               </table>
             </div>
 
-            {filteredCustomers.length === 0 && (
+            {sortedFilteredCustomers.length === 0 && (
               <div className="py-12 text-center">
                 <Users size={48} className="mx-auto text-gray-300 mb-4" />
 

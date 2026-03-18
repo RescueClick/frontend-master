@@ -171,15 +171,6 @@ const AdminSideBar = () => {
               {/* Go Back Buttons - Show when impersonating */}
               {isImpersonating && originalRole && (
                 <>
-                  {/* Back to immediate parent */}
-                  <button
-                    onClick={() => backToOriginalRole(navigate)}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
-                    title={`Go back to ${originalRole.displayName || formatRoleName(originalRole.role)} Panel`}
-                  >
-                    <ArrowLeft size={16} />
-                    <span>Back to {originalRole.displayName || formatRoleName(originalRole.role)}</span>
-                  </button>
                   {/* Back directly to Admin if available */}
                   <button
                     onClick={() => backToAdmin(navigate)}

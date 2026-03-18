@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Search, Filter, Eye, Users, Phone, FileText } from "lucide-react";
 import { fetchRsmApplications } from "../../../feature/thunks/rsmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const colors = {
   primary: "#12B99C",
@@ -50,6 +52,7 @@ export default function RsmApplications() {
           partnerName: app.partnerId
             ? `${app.partnerId.firstName || ""} ${app.partnerId.lastName || ""}`.trim()
             : null,
+          applicationDateRaw: app.createdAt,
           applicationDate: app.createdAt
             ? new Date(app.createdAt).toLocaleDateString()
             : "-",
@@ -69,26 +72,25 @@ export default function RsmApplications() {
       })
     : [];
 
-  // Filter applications based on search and status
-  const filteredApplications = applications.filter((app) => {
-    const term = searchTerm.toLowerCase();
+  const filteredApplications = useMemo(() => {
+    const filtered = applications.filter((app) => {
+      const matchesSearch = matchesSearchTerm(searchTerm, [
+        app.customerName,
+        app.customerId,
+        app.customerPhone,
+        app.customerEmail,
+        app.appNo,
+        app.rmName,
+        app.rmEmployeeId,
+      ]);
 
-    const matchesSearch =
-      app.customerName?.toLowerCase().includes(term) ||
-      app.customerId?.toLowerCase().includes(term) ||
-      app.customerPhone?.toLowerCase().includes(term) ||
-      app.customerEmail?.toLowerCase().includes(term) ||
-      app.appNo?.toLowerCase().includes(term) ||
-      app.rmName?.toLowerCase().includes(term) ||
-      app.rmEmployeeId?.toLowerCase().includes(term);
+      const status = normalizeStatus(app.status);
+      const matchesFilter = matchesStatusFilter(status, filterStatus);
 
-    const normalizedStatus = app.status === "DRAFT" ? "SUBMITTED" : app.status;
-    const matchesFilter =
-      filterStatus === "All" ||
-      normalizedStatus?.toLowerCase() === filterStatus.toLowerCase();
-
-    return matchesSearch && matchesFilter;
-  });
+      return matchesSearch && matchesFilter;
+    });
+    return sortNewestFirst(filtered, { dateKeys: ["applicationDateRaw"] });
+  }, [applications, searchTerm, filterStatus]);
 
   // Helpers for status color
   const getStatusColor = (status) => {

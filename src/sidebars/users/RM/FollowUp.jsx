@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPartnersWithFollowUp, updateFollowUp } from "../../../feature/thunks/rmThunks";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 const FollowUp = () => {
@@ -183,6 +184,8 @@ const FollowUp = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const sortedFilteredFollowUps = sortNewestFirst(filteredFollowUps, { dateKeys: ["lastCall"] });
+
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       {/* Background decoration */}
@@ -283,7 +286,7 @@ const FollowUp = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredFollowUps.map((followUp, index) => {
+                {sortedFilteredFollowUps.map((followUp, index) => {
                   const statusStyle = getStatusStyle(followUp.status);
                   return (
                     <tr
@@ -361,7 +364,7 @@ const FollowUp = () => {
             </table>
           </div>
 
-          {filteredFollowUps.length === 0 && (
+          {sortedFilteredFollowUps.length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-400 text-lg">No follow-ups found</div>
               <p className="text-gray-500 mt-2">

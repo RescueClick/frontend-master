@@ -31,14 +31,23 @@ const Banks = () => {
                     },
                 });
 
+                const { rsmUser } = getAuthData() || {};
+                const rsmType = String(rsmUser?.rsmType || "").trim().toUpperCase();
+
+                const normalizeLoanType = (lt) => {
+                    const raw = String(lt || "").trim().toUpperCase();
+                    if (raw === "PERSONAL_LOAN") return "PERSONAL";
+                    if (raw === "BUSINESS_LOAN") return "BUSINESS";
+                    return raw;
+                };
+
                 const data = Array.isArray(response.data?.banks)
                     ? response.data.banks
                     : Array.isArray(response.data)
                     ? response.data
                     : [];
 
-                setBanks(
-                    data.map((b, index) => ({
+                const mapped = data.map((b, index) => ({
                         id: b._id || b.id || index,
                         // backend uses bankName
                         name: b.bankName || b.name || "Unnamed Bank",
@@ -55,8 +64,17 @@ const Banks = () => {
                             : b.rsmTypes
                             ? [b.rsmTypes]
                             : [],
-                    }))
-                );
+                    }));
+
+                // UI safety filter (same as backend) aligned with Application.js LOAN_TYPES.
+                const filtered = mapped.filter((bank) => {
+                    const lt = normalizeLoanType(bank.loanType);
+                    if (rsmType === "PERSONAL") return lt === "PERSONAL";
+                    if (rsmType === "BUSINESS_HOME") return lt === "BUSINESS" || lt.startsWith("HOME_LOAN_");
+                    return true;
+                });
+
+                setBanks(filtered);
             } catch (err) {
                 setError(
                     err?.response?.data?.message ||

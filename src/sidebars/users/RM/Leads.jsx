@@ -3,6 +3,7 @@ import { User, Phone, Mail, Star } from "lucide-react";
 import axios from "axios";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const COLORS = {
   primary: "#12B99C",
@@ -72,6 +73,7 @@ const Leads = () => {
         email: app.email,
         phone: app.contact,
         status: app.status,
+        createdAt: app.createdAt,
         score: Math.floor(Math.random() * 21) + 80, // example score 80-100
         loanType: app.loanType,
         requestedAmount: app.requestedAmount,
@@ -103,6 +105,8 @@ const Leads = () => {
   const filteredLeads = leads.filter((lead) =>
     STATUS_MAPPING[activeStatus]?.includes(lead.status)
   );
+
+  const sortedFilteredLeads = sortNewestFirst(filteredLeads, { dateKeys: ["createdAt"] });
 
   // Count leads for each status
   const statusCounts = statuses.reduce((acc, status) => {
@@ -168,13 +172,13 @@ const Leads = () => {
         <div className="text-center text-gray-500">Loading leads...</div>
       ) : error ? (
         <div className="text-center text-red-500">{error}</div>
-      ) : filteredLeads.length === 0 ? (
+      ) : sortedFilteredLeads.length === 0 ? (
         <div className="col-span-full flex flex-col items-center justify-center h-40 text-gray-400 italic">
           No {activeStatus} leads available.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredLeads.map((lead) => (
+          {sortedFilteredLeads.map((lead) => (
             <div
               key={lead.id}
               className="bg-white rounded-2xl p-5 border border-gray-100 shadow-md hover:shadow-xl hover:scale-[1.02] transition-all"

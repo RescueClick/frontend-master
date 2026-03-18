@@ -73,7 +73,6 @@ const RmSidebar = () => {
     { name: "Manage Loans", icon: Users, path: "/rm/customers" },
     { name: "Follow Up", icon: CalendarCheck, path: "/rm/Follow-up" },
     { name: "Leads & Pipeline", icon: LineChart, path: "/rm/leads" },
-    { name: "Targets & Reports", icon: BarChart2, path: "/rm/reports" },
     { name: "Settings", icon: Settings, path: "/rm/settings" },
   ];
 
@@ -163,15 +162,6 @@ const RmSidebar = () => {
               {/* Go Back Buttons - Show when impersonating */}
               {isImpersonating && originalRole && (
                 <>
-                  {/* Back to parent (e.g., ASM / RSM) */}
-                  <button
-                    onClick={() => backToOriginalRole(navigate)}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
-                    title={`Go back to ${originalRole.displayName || formatRoleName(originalRole.role)} Panel`}
-                  >
-                    <ArrowLeft size={16} />
-                    <span>Back to {originalRole.displayName || formatRoleName(originalRole.role)}</span>
-                  </button>
                   {/* Back directly to Admin if available */}
                   <button
                     onClick={() => backToAdmin(navigate)}

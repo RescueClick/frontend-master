@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { ArrowLeft, Search, Calendar, Award, IndianRupee } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchPartnerDashboard } from "../../../feature/thunks/partnerThunks";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const IncentiveHistory = () => {
   const dispatch = useDispatch();
@@ -33,6 +34,8 @@ const IncentiveHistory = () => {
 
     return sameYear && matchesText;
   });
+
+  const sortedFiltered = sortNewestFirst(filtered, { dateKeys: ["createdAt", "updatedAt"] });
 
   const formatCurrency = (amount) => {
     if (!amount) return "₹0";
@@ -101,7 +104,7 @@ const IncentiveHistory = () => {
               </p>
               <p className="text-2xl font-bold text-purple-700 mt-2">
                 {formatCurrency(
-                  filtered
+                  sortedFiltered
                     .filter((i) => i.status === "PAID")
                     .reduce((sum, i) => sum + (i.amount || 0), 0)
                 )}
@@ -132,14 +135,14 @@ const IncentiveHistory = () => {
                     Loading incentives...
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : sortedFiltered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-4 text-gray-500">
                     No incentives found for this year.
                   </td>
                 </tr>
               ) : (
-                filtered.map((inv) => {
+                sortedFiltered.map((inv) => {
                   const dateObj = new Date(inv.createdAt || inv.updatedAt || Date.now());
                   const monthName = dateObj.toLocaleString("default", {
                     month: "short",

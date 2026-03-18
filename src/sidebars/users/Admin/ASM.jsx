@@ -25,6 +25,7 @@ import { faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import { loginAsUserThunk } from "../../../feature/thunks/adminThunks";
 import { backendurl } from "../../../feature/urldata";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 const colors = {
@@ -64,6 +65,7 @@ export default function ASM() {
 
   // 🔹 Fix: Access the correct state structure from adminSlice
   const { data: asm, loading, error } = useSelector((state) => state.admin.asm);
+  const sortedAsm = sortNewestFirst(Array.isArray(asm) ? asm : [], { dateKeys: ["createdAt"] });
 
   const navigate = useNavigate();
 
@@ -420,8 +422,8 @@ const handleLoginAs = (userId) => {
                     Loading...
                   </td>
                 </tr>
-              ) : asm && asm.length > 0 ? (
-                asm.map((c) => (
+              ) : sortedAsm.length > 0 ? (
+                sortedAsm.map((c) => (
                   <tr key={c._id} className="border-b hover:bg-gray-50">
                     <td
                       className="px-2 py-3 align-top cursor-pointer"

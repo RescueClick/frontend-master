@@ -1,9 +1,12 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { Copy, ExternalLink, Eye, EyeOff, Trash2 } from "lucide-react";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 
 const Banks = () => {
+
+  const [activeTab, setActiveTab] = useState("add"); // add | list
 
   const [bank, setBank] = useState({
     name: "",
@@ -16,9 +19,46 @@ const Banks = () => {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+  const [banks, setBanks] = useState([]);
   const [toast, setToast] = useState({ visible: false, message: "", type: "success" });
 
   const fileInputRef = useRef(null);
+
+  const loanTypeOptions = useMemo(
+    () => [
+      { value: "PERSONAL", label: "Personal Loan" },
+      { value: "BUSINESS", label: "Business Loan" },
+      { value: "HOME_LOAN_SALARIED", label: "Home Loan (Salaried)" },
+      { value: "HOME_LOAN_SELF_EMPLOYED", label: "Home Loan (Self Employed)" },
+    ],
+    []
+  );
+
+  const fetchBanks = async () => {
+    try {
+      setLoadingBanks(true);
+      const { adminToken } = getAuthData() || {};
+      if (!adminToken) return;
+      const res = await axios.get(`${backendurl}/admin/banks`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      const list = Array.isArray(res.data?.banks) ? res.data.banks : Array.isArray(res.data) ? res.data : [];
+      setBanks(list);
+    } catch (error) {
+      setToast({
+        visible: true,
+        message: error?.response?.data?.message || "Failed to fetch banks.",
+        type: "error",
+      });
+    } finally {
+      setLoadingBanks(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBanks();
+  }, []);
 
   const handleChange = (e) => {
     setBank({
@@ -84,6 +124,9 @@ const Banks = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+
+      await fetchBanks();
+      setActiveTab("list");
     } catch (error) {
       setToast({
         visible: true,
@@ -97,9 +140,45 @@ const Banks = () => {
     }
   };
 
+  const [showPassword, setShowPassword] = useState({});
+  const [showId, setShowId] = useState({});
+
+  const togglePw = (id) => setShowPassword((p) => ({ ...p, [id]: !p[id] }));
+  const toggleId = (id) => setShowId((p) => ({ ...p, [id]: !p[id] }));
+
+  const copyText = (text) => {
+    navigator.clipboard.writeText(text);
+    setToast({ visible: true, message: "Copied to clipboard", type: "success" });
+  };
+
+  const maskText = (text) => {
+    if (!text || typeof text !== "string") return "";
+    return "*".repeat(text.length);
+  };
+
+  const handleDelete = async (bankId) => {
+    try {
+      const ok = window.confirm("Delete this bank? RSMs will no longer see it.");
+      if (!ok) return;
+      const { adminToken } = getAuthData() || {};
+      if (!adminToken) return;
+      await axios.delete(`${backendurl}/admin/banks/${bankId}`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      setToast({ visible: true, message: "Bank deleted.", type: "success" });
+      await fetchBanks();
+    } catch (error) {
+      setToast({
+        visible: true,
+        message: error?.response?.data?.message || "Failed to delete bank.",
+        type: "error",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         {/* <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
@@ -110,18 +189,56 @@ const Banks = () => {
           </p>
         </div> */}
 
-        {/* Form card */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
-          <div className="border-b border-gray-100 px-6 py-4">
-            <h2 className="text-md font-bold text-gray-800">
-              Add Bank Details
-            </h2>
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+          {/* Top Header + Horizontal Tabs */}
+          <div className="px-6 py-4 border-b border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-gray-900">Bank Master</p>
+                <p className="text-xs text-gray-500 mt-1">Add and manage banks</p>
+              </div>
+
+              <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("add")}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    activeTab === "add"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-gray-700 hover:bg-white"
+                  }`}
+                >
+                  Add Bank
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("list")}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    activeTab === "list"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-gray-700 hover:bg-white"
+                  }`}
+                >
+                  Banks List
+                  <span className={`ml-2 text-xs font-bold ${activeTab === "list" ? "text-emerald-50" : "text-gray-500"}`}>
+                    ({banks.filter((b) => b?.isActive !== false).length})
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="px-6 py-6 space-y-6"
-          >
+          {/* Content */}
+          <div>
+            {activeTab === "add" ? (
+              <>
+                <div className="border-b border-gray-100 px-6 py-4">
+                  <h2 className="text-md font-bold text-gray-800">
+                    Add Bank Details
+                  </h2>
+                </div>
+
+                <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
             {/* Bank name + loan type in two columns on desktop */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Bank Name */}
@@ -150,12 +267,14 @@ const Banks = () => {
                   value={bank.loanType}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white  outline-none"
+                  required
                 >
                   <option value="">Select loan type</option>
-                  <option value="PERSONAL_LOAN">Personal Loan</option>
-                  <option value="BUSINESS_LOAN">Business Loan</option>
-                  <option value="HOME_LOAN_SALARIED">Home Loan (Salaried)</option>
-                  <option value="HOME_LOAN_SELF_EMPLOYED">Home Loan (Self Employed)</option>
+                  {loanTypeOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -316,7 +435,155 @@ const Banks = () => {
                 {submitting ? "Adding Bank..." : "Add Bank"}
               </button>
             </div>
-          </form>
+                  </form>
+                </>
+              ) : (
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900">Added Banks</h3>
+                      <p className="text-xs text-gray-500 mt-1">Visible banks for RSM based on type</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchBanks}
+                      className="text-xs font-semibold px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+
+                  {loadingBanks ? (
+                    <div className="text-center text-gray-600 text-sm">Loading banks...</div>
+                  ) : banks.filter((b) => b?.isActive !== false).length === 0 ? (
+                    <div className="text-center text-gray-600 text-sm">No banks added yet.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {banks
+                        .filter((b) => b?.isActive !== false)
+                        .map((b, index) => {
+                          const id = b._id || b.id || index;
+                          return (
+                            <div
+                              key={id}
+                              className="group bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all duration-200 flex flex-col gap-4"
+                            >
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-4 min-w-0">
+                                  <div className="w-14 h-14 rounded-full border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                                    <img
+                                      src={b.bankLogoUrl || ""}
+                                      alt={b.bankName || "Bank"}
+                                      className="w-11 h-11 object-contain"
+                                    />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h2 className="text-base font-semibold text-gray-900 truncate">
+                                      {b.bankName || "Unnamed Bank"}
+                                    </h2>
+                                    <p className="mt-0.5 text-xs text-gray-500 truncate">
+                                      {Array.isArray(b.rsmTypes) && b.rsmTypes.length ? b.rsmTypes.join(", ") : "No RSM type"}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(id)}
+                                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100"
+                                  title="Delete bank"
+                                >
+                                  <Trash2 size={14} />
+                                  Delete
+                                </button>
+                              </div>
+
+                              <div className="h-px bg-gray-100" />
+
+                              <div className="space-y-3">
+                                {/* Login ID */}
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                      Login ID
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl">
+                                    <span className="font-medium text-gray-800 text-xs md:text-sm break-all max-w-[70%]">
+                                      {showId[id] ? b.portalLoginId : maskText(b.portalLoginId)}
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleId(id)}
+                                        className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                                      >
+                                        {showId[id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => copyText(b.portalLoginId)}
+                                        className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                                      >
+                                        <Copy size={16} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Password */}
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                      Password
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl">
+                                    <span className="font-medium text-gray-800 text-xs md:text-sm break-all max-w-[70%]">
+                                      {showPassword[id] ? b.portalPassword : maskText(b.portalPassword)}
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => togglePw(id)}
+                                        className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                                      >
+                                        {showPassword[id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => copyText(b.portalPassword)}
+                                        className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                                      >
+                                        <Copy size={16} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-3 pt-3 border-t border-dashed border-gray-200 flex items-center justify-between">
+                                <span className="px-3 py-2 text-xs font-semibold rounded-md bg-emerald-100 text-emerald-700">
+                                  {b.loanType || "N/A"}
+                                </span>
+                                <a
+                                  href={b.portalLink || "#"}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 bg-emerald-500 text-white text-xs md:text-sm px-3 py-1.5 rounded-lg hover:bg-emerald-600 transition"
+                                >
+                                  Visit
+                                  <ExternalLink size={14} />
+                                </a>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              )}
+          </div>
         </div>
       </div>
 

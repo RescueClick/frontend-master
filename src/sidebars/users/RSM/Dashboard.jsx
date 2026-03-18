@@ -33,6 +33,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
+import MetricCard from "../../../components/shared/MetricCard";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -139,6 +140,43 @@ const Dashboard = () => {
   // Get RSM user data for profile modal
   const { rsmUser } = getAuthData();
 
+  const metricCards = useMemo(
+    () => [
+      {
+        title: "Relationship Managers",
+        value: data?.totals?.totalRMs || 0,
+        icon: Users,
+        onClick: () => navigate("/rsm/rms"),
+        subtitle: "Under your management",
+        colorIndex: 0,
+      },
+      {
+        title: "Active Partners",
+        value: data?.totals?.activePartners || 0,
+        icon: Building2,
+        onClick: () => navigate("/rsm/partners"),
+        subtitle: "Active partners",
+        colorIndex: 1,
+      },
+      {
+        title: "Total Customers",
+        value: data?.totals?.totalCustomers || 0,
+        icon: UserCheck,
+        onClick: () => navigate("/rsm/customers"),
+        subtitle: "Customer base",
+        colorIndex: 2,
+      },
+      {
+        title: "Total Disbursed",
+        value: formatCurrency(data?.totals?.totalRevenue),
+        icon: IndianRupee,
+        subtitle: "Disbursed amount",
+        colorIndex: 3,
+      },
+    ],
+    [data?.totals, navigate]
+  );
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#F8FAFC" }}>
       {/* modal start */}
@@ -204,105 +242,18 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto p-6">
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div
-            className="cursor-pointer bg-white rounded-2xl p-6 transition-shadow shadow-md border border-gray-200"
-            onClick={() => {
-              navigate("/rsm/rms");
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{ backgroundColor: "#12B99C" }}
-              >
-                <Users className="text-white" size={24} />
-              </div>
-            </div>
-            <div>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#111827" }}
-              >
-                {data?.totals?.totalRMs || 0}
-              </p>
-              <p className="text-sm font-medium text-gray-600">
-                Relationship Managers
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="cursor-pointer bg-white rounded-2xl p-6 hover:shadow-md transition-shadow shadow-md border border-gray-200"
-            onClick={() => {
-              navigate("/rsm/partners");
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{ backgroundColor: "#F59E0B" }}
-              >
-                <Building2 className="text-white" size={24} />
-              </div>
-            </div>
-            <div>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#111827" }}
-              >
-                {data?.totals?.activePartners || 0}
-              </p>
-              <p className="text-sm font-medium text-gray-600">
-                Active Partners
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="cursor-pointer bg-white rounded-2xl p-6 hover:shadow-md transition-shadow shadow-md border border-gray-200"
-            onClick={() => {
-              navigate("/rsm/customers");
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-blue-500">
-                <UserCheck className="text-white" size={24} />
-              </div>
-            </div>
-            <div>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#111827" }}
-              >
-                {data?.totals?.totalCustomers || 0}
-              </p>
-              <p className="text-sm font-medium text-gray-600">
-                Total Customers
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 hover:shadow-md transition-shadow shadow-md border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{ backgroundColor: "#12B99C" }}
-              >
-                <IndianRupee className="text-white" size={24} />
-              </div>
-            </div>
-            <div>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#111827" }}
-              >
-                {formatCurrency(data?.totals?.totalRevenue)}
-              </p>
-              <p className="text-sm font-medium text-gray-600">
-                Total Disbursed
-              </p>
-            </div>
-          </div>
+          {metricCards.map((m, idx) => (
+            <MetricCard
+              key={m.title}
+              title={m.title}
+              value={m.value}
+              icon={m.icon}
+              subtitle={m.subtitle}
+              onClick={m.onClick}
+              colorIndex={m.colorIndex ?? idx}
+              isLoading={loading}
+            />
+          ))}
         </div>
 
         {/* Current Month Target - RSM focuses on Disbursement (Business Metric) */}

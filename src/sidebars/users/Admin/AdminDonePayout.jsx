@@ -22,6 +22,7 @@ import {
   fetchAdminCustomerPartnersPayout,
   fetchAdminCustomersPayOutDone,
 } from "../../../feature/thunks/adminThunks";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const AdminDonePayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,6 +52,10 @@ const AdminDonePayout = () => {
   const { data, loading, error } = useSelector(
     (state) => state.admin?.donePayout || { data: [], loading: false, error: null }
   );
+
+  const sortedRows = sortNewestFirst(Array.isArray(data) ? data : [], {
+    dateKeys: ["createdAt", "applicationDate"],
+  });
 
   const { data: customerPartnersPayout } = useSelector(
     (state) => state.admin?.customerPartnersPayout || { data: null }
@@ -339,8 +344,8 @@ const AdminDonePayout = () => {
                     {error}
                   </td>
                 </tr>
-              ) : data && data.length > 0 ? (
-                data.map((customer) => (
+              ) : sortedRows.length > 0 ? (
+                sortedRows.map((customer) => (
                   <tr
                     key={customer.customerId || customer.applicationId}
                     className="border-b hover:bg-gray-50"

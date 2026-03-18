@@ -24,6 +24,7 @@ import {
   fetchAsmCustomersPayOutPending,
   setAsmPayouts,
 } from "../../../feature/thunks/asmThunks";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const AsmPendingPayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -58,6 +59,10 @@ const AsmPendingPayout = () => {
     (state) =>
       state.asm?.pendingPayout || { data: [], loading: false, error: null }
   );
+
+  const sortedRows = sortNewestFirst(Array.isArray(data) ? data : [], {
+    dateKeys: ["createdAt", "applicationDate"],
+  });
 
   const { data: customerPartnersPayout } = useSelector(
     (state) => state.asm?.customerPartnersPayout || { data: null }
@@ -416,8 +421,8 @@ const AsmPendingPayout = () => {
                     {error}
                   </td>
                 </tr>
-              ) : data && data.length > 0 ? (
-                data.map((customer) => (
+              ) : sortedRows.length > 0 ? (
+                sortedRows.map((customer) => (
                   <tr
                     key={customer.customerId || customer.applicationId}
                     className="border-b hover:bg-gray-50"

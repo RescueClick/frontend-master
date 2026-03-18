@@ -22,6 +22,7 @@ import {
   fetchAsmCustomerPartnersPayout,
   fetchAsmCustomersPayOutDone,
 } from "../../../feature/thunks/asmThunks";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const AsmDonePayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,6 +50,10 @@ const AsmDonePayout = () => {
   }, [customerID, dispatch]);
 
   const { data, loading, error } = useSelector((state) => state.asm?.donePayout || { data: [], loading: false, error: null });
+
+  const sortedRows = sortNewestFirst(Array.isArray(data) ? data : [], {
+    dateKeys: ["createdAt", "applicationDate"],
+  });
 
   const { data: customerPartnersPayout } = useSelector(
     (state) => state.asm?.customerPartnersPayout || { data: null }
@@ -338,8 +343,8 @@ const AsmDonePayout = () => {
                     {error}
                   </td>
                 </tr>
-              ) : data && data.length > 0 ? (
-                data.map((customer) => (
+              ) : sortedRows.length > 0 ? (
+                sortedRows.map((customer) => (
                   <tr
                     key={customer.customerId || customer.applicationId}
                     className="border-b hover:bg-gray-50"

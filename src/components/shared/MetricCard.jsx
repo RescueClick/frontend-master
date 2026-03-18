@@ -11,12 +11,23 @@ const MetricCard = ({
   isLoading = false 
 }) => {
   const colorScheme = designSystem.metricColors[colorIndex % designSystem.metricColors.length];
+  const isInteractive = typeof onClick === "function";
+  const onKeyDown = (e) => {
+    if (!isInteractive) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick?.(e);
+    }
+  };
   
   return (
     <div
       onClick={onClick}
+      onKeyDown={onKeyDown}
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
       className={`${designSystem.card.base} ${designSystem.card.hover} ${designSystem.card.padding} ${
-        onClick ? "cursor-pointer transform hover:-translate-y-1" : ""
+        isInteractive ? "cursor-pointer transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-emerald-400/50" : ""
       } relative overflow-hidden`}
     >
       {/* Gradient Background Accent */}

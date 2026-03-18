@@ -14,6 +14,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
+import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const Application = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -158,15 +160,20 @@ const Application = () => {
   };
 
   const filteredApplications = applications.filter((application) => {
-    const matchesSearch =
-      application.customerName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      application.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      application.loanType.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "All" || application.status === statusFilter;
+    const matchesSearch = matchesSearchTerm(searchTerm, [
+      application.customerName,
+      application.id,
+      application.loanType,
+    ]);
+
+    const status = normalizeStatus(application.status);
+    const matchesStatus = matchesStatusFilter(status, statusFilter);
+
     return matchesSearch && matchesStatus;
+  });
+
+  const sortedFilteredApplications = sortNewestFirst(filteredApplications, {
+    dateKeys: ["dateSubmitted"],
   });
 
   const summaryStats = {
@@ -364,7 +371,7 @@ const Application = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredApplications.map((application) => (
+                {sortedFilteredApplications.map((application) => (
                   <tr
                     key={application.id}
                     className="border-b hover:bg-gray-50"
@@ -505,7 +512,7 @@ const Application = () => {
 
           {/* Applications Cards - Mobile & Tablet */}
           <div className="lg:hidden space-y-4">
-            {filteredApplications.map((application) => (
+            {sortedFilteredApplications.map((application) => (
               <div key={application.id} className="bg-white rounded-xl shadow-sm p-4">
                 {/* Header with avatar and name */}
                 <div className="flex items-center justify-between mb-4">
@@ -614,7 +621,7 @@ const Application = () => {
             ))}
           </div>
 
-          {filteredApplications.length === 0 && (
+          {sortedFilteredApplications.length === 0 && (
             <div className="bg-white rounded-xl shadow-sm text-center py-12 text-gray-500">
               <div className="mb-4">
                 <Search size={48} className="mx-auto text-gray-300" />
@@ -627,9 +634,9 @@ const Application = () => {
           )}
 
           {/* Results Summary */}
-          {filteredApplications.length > 0 && (
+          {sortedFilteredApplications.length > 0 && (
             <div className="mt-6 text-center text-sm text-gray-600">
-              Showing {filteredApplications.length} of {applications.length}{" "}
+              Showing {sortedFilteredApplications.length} of {applications.length}{" "}
               applications
             </div>
           )}

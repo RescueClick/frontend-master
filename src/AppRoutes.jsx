@@ -121,6 +121,8 @@ import DocumentUpload from "./sidebars/users/Partner/DocumentUpload";
 import MyTarget from "./sidebars/users/Partner/MyTarget";
 import IncentiveHistory from "./sidebars/users/Partner/IncentiveHistory";
 import PayoutHistory from "./sidebars/users/Partner/PayoutHistory";
+import PartnerAnalytics from "./sidebars/users/Partner/PartnerAnalytics";
+// Partner settings uses shared PasswordSettings (same as ASM/RSM/RM)
 
 
 
@@ -327,6 +329,8 @@ const AppRoutes = () => {
           <Route path="dashboard" element={<PartnerDashboard />} />
           <Route path="customers" element={<PartnerCustomers />} />
           <Route path="applications" element={<PartnerApplications />} />
+          <Route path="analytics" element={<PartnerAnalytics />} />
+          <Route path="settings" element={<PasswordSettings />} />
           <Route path="EmiCalculator" element={<PartnerEmiCalculator />} />
           <Route path="KYCDetails" element={<KYCDetails />} />
           <Route path="complete-application" element={<CompleteApplication />} />

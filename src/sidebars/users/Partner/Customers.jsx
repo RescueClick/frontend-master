@@ -83,6 +83,12 @@ const Customer = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const sortedFilteredCustomers = [...(filteredCustomers || [])].sort((a, b) => {
+    const aTime = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bTime - aTime; // newest first
+  });
+
   const { totalLoanAmount, count } = customersData.reduce(
     (acc, customer) => {
       let amount = 0;
@@ -261,7 +267,7 @@ const Customer = () => {
         {isMobileView ? (
           // Mobile Card Layout
           <div className="space-y-4">
-            {filteredCustomers?.map((customer) => (
+            {sortedFilteredCustomers?.map((customer) => (
               <MobileCustomerCard key={customer.customerId} customer={customer} />
             ))}
           </div>
@@ -291,7 +297,7 @@ const Customer = () => {
                   </thead>
       
                   <tbody className="divide-y divide-gray-100">
-                    {filteredCustomers?.map((customer) => (
+                    {sortedFilteredCustomers?.map((customer) => (
                       <tr key={customer.customerId} className="hover:bg-gray-50 transition-colors">
                     <td className="px-3 lg:px-5 py-3">
                           <div className="flex items-center">
@@ -338,7 +344,7 @@ const Customer = () => {
         )}
   
         {/* No Results */}
-        {filteredCustomers.length === 0 && (
+        {sortedFilteredCustomers.length === 0 && (
           <div className="text-center py-12 text-gray-500 bg-white rounded-lg sm:rounded-xl shadow-sm">
             <div className="mb-4">
               <Search size={40} className="mx-auto text-gray-300 sm:w-12 sm:h-12" />
@@ -349,9 +355,9 @@ const Customer = () => {
         )}
   
         {/* Results Summary */}
-        {filteredCustomers.length > 0 && (
+        {sortedFilteredCustomers.length > 0 && (
           <div className="mt-6 text-center text-sm text-gray-600 px-4">
-            Showing {filteredCustomers.length} of {customersData.length} customers
+            Showing {sortedFilteredCustomers.length} of {customersData.length} customers
           </div>
         )}
       </div>

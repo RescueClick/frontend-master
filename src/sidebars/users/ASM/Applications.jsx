@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Search, Filter, Eye, Users, Phone } from "lucide-react";
 import { fetchAsmApplications } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
+import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const Application = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,6 +35,7 @@ const Application = () => {
           name: c.username || c.customerName,
           id: c.userId || c.appNo || c._id,
           phone: c.phone || c.customer?.phone || "-",
+          applicationDateRaw: c.applicationDate || c.createdAt,
           applicationDate: c.applicationDate
             ? new Date(c.applicationDate).toLocaleDateString()
             : c.createdAt
@@ -50,33 +53,34 @@ const Application = () => {
       })
     : [];
 
-  // Filter applications based on search and status
-const filteredCustomers = applications.filter((customer) => {
-  const term = searchTerm.toLowerCase();
+  const filteredCustomers = useMemo(() => {
+    const filtered = applications.filter((customer) => {
+      const matchesSearch = matchesSearchTerm(searchTerm, [
+        customer.name,
+        customer.id,
+        customer.phone,
+      ]);
 
-  const matchesSearch =
-    customer.name?.toLowerCase().includes(term) ||
-    customer.id?.toLowerCase().includes(term) ||
-    customer.phone?.toLowerCase().includes(term);
+      const status = normalizeStatus(customer.status);
+      const matchesFilter = matchesStatusFilter(status, filterStatus);
 
-      // Normalize DRAFT to SUBMITTED for filtering
-      const normalizedStatus = customer.status === "DRAFT" ? "SUBMITTED" : customer.status;
-      const matchesFilter =
-        filterStatus === "All" ||
-        normalizedStatus?.toLowerCase() === filterStatus.toLowerCase();
-
-  return matchesSearch && matchesFilter;
-});
+      return matchesSearch && matchesFilter;
+    });
+    return sortNewestFirst(filtered, { dateKeys: ["applicationDateRaw"] });
+  }, [applications, searchTerm, filterStatus]);
 
 
   // Helpers for status color
   const getStatusColor = (status) => {
-    switch (status) {
-      case "Disbursed":
+    switch (normalizeStatus(status)) {
+      case "DISBURSED":
         return "bg-green-100 text-green-800";
-      case "In Process":
+      case "UNDER_REVIEW":
+      case "APPROVED":
+      case "AGREEMENT":
+      case "LOGIN":
         return "bg-amber-100 text-amber-800";
-      case "Rejected":
+      case "REJECTED":
         return "bg-red-100 text-red-800";
       default:
         return "bg-slate-100 text-slate-800";
