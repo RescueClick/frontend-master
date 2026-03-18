@@ -282,18 +282,8 @@ const Partners = () => {
     try {
       const { rmToken } = getAuthData(); // get token
   
-      const res = await axios.delete(
-        `${backendurl}/partners/${partnerId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${rmToken}`,
-          },
-        }
-      );
-  
-      console.log("Delete response:", res.data);
-  
-      refetchPartners(); // refresh list
+      // Old hard-delete API removed; keep behavior to just log for now.
+      console.warn("Hard delete for partners is disabled. Use suspend/deactivate flow instead.");
     } catch (error) {
       console.error("Delete error:", error.response?.data || error.message);
     }

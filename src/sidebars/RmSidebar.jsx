@@ -175,8 +175,7 @@ const RmSidebar = () => {
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
       <div
-        className={`${sidebarOpen ? "w-55" : "w-20"
-          } bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200`}
+        className={`${sidebarOpen ? "w-60" : "w-20"} bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200`}
       >
         {/* Logo */}
         <div className="flex items-center justify-center py-6 border-b border-gray-100">
@@ -198,18 +197,26 @@ const RmSidebar = () => {
         <nav className="mt-6 flex-1 overflow-y-auto px-3">
           {sidebarItems.map((item, index) => {
             const active = location.pathname === item.path;
+
+            const baseClasses =
+              "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+
+            const activeClasses =
+              "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md";
+
             return (
               <Link
                 key={index}
                 to={item.path}
-                className={`w-full flex items-center space-x-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${active
-                  ? "bg-gradient-to-r bg-teal-500  text-white shadow-lg transform scale-105"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
-                  }`}
+                className={`w-full flex items-center space-x-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${
+                  active ? activeClasses : baseClasses
+                }`}
               >
                 <item.icon size={22} className={active ? "text-white" : ""} />
                 {sidebarOpen && (
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <span className="text-sm font-medium truncate">
+                    {item.name}
+                  </span>
                 )}
               </Link>
             );

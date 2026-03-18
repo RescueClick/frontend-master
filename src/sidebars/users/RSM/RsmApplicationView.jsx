@@ -290,8 +290,15 @@ const RsmApplicationView = () => {
         return;
       }
 
-      // ✅ RSM can only handle processing statuses
-      const RSM_ALLOWED_STATUSES = ["UNDER_REVIEW", "APPROVED", "AGREEMENT", "REJECTED", "DISBURSED"];
+      // ✅ RSM can only handle processing statuses (including LOGIN)
+      const RSM_ALLOWED_STATUSES = [
+        "LOGIN",
+        "UNDER_REVIEW",
+        "APPROVED",
+        "AGREEMENT",
+        "REJECTED",
+        "DISBURSED",
+      ];
       if (!RSM_ALLOWED_STATUSES.includes(status)) {
         toast.error(`RSM can only transition to processing statuses: ${RSM_ALLOWED_STATUSES.join(", ")}`);
         setSubmitLoading(false);
@@ -301,7 +308,8 @@ const RsmApplicationView = () => {
       // Validate transitions
       const currentStatus = applicationData.status;
       const allowedTransitions = {
-        DOC_COMPLETE: ["UNDER_REVIEW"],
+        DOC_COMPLETE: ["LOGIN"],
+        LOGIN: ["UNDER_REVIEW"],
         UNDER_REVIEW: ["APPROVED", "REJECTED"],
         APPROVED: ["AGREEMENT", "DISBURSED"],
         AGREEMENT: ["DISBURSED"],
@@ -388,6 +396,8 @@ const RsmApplicationView = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
+      case "LOGIN":
+        return "bg-amber-100 text-amber-800 border-amber-200";
       case "UNDER_REVIEW":
         return "bg-indigo-100 text-indigo-800 border-indigo-200";
       case "APPROVED":
@@ -436,6 +446,7 @@ const RsmApplicationView = () => {
   };
 
   const statusColors = {
+    LOGIN: "bg-amber-100 text-amber-700 border border-amber-300",
     UNDER_REVIEW: "bg-indigo-100 text-indigo-700 border border-indigo-300",
     APPROVED: "bg-green-100 text-green-700 border border-green-300",
     AGREEMENT: "bg-cyan-100 text-cyan-700 border border-cyan-300",
@@ -535,7 +546,8 @@ const RsmApplicationView = () => {
   const getAllowedStatuses = () => {
     const currentStatus = applicationData.status;
     const allowedTransitions = {
-      DOC_COMPLETE: ["UNDER_REVIEW"],
+      DOC_COMPLETE: ["LOGIN"],
+      LOGIN: ["UNDER_REVIEW"],
       UNDER_REVIEW: ["APPROVED", "REJECTED"],
       APPROVED: ["AGREEMENT", "DISBURSED"],
       AGREEMENT: ["DISBURSED"],

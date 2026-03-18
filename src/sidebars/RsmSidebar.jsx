@@ -80,9 +80,10 @@ const RsmSidebar = () => {
     { name: "Dashboard", icon: LayoutGrid, path: "/rsm/dashboard" },
     { name: "My RMs", icon: Users, path: "/rsm/rms" },
     { name: "Applications", icon: FileText, path: "/rsm/applications" },
-    {name: "Follow Up", icon: CalendarCheck, path: "/rsm/follow-ups" },
-    { name: "Banks", icon: Building2, path: "/rsm/banks" },
-  //   { name: "Analytics", icon: BarChart2, path: "/rsm/analytics" },
+    { name: "Follow Up", icon: CalendarCheck, path: "/rsm/follow-ups" },
+    // highlight banks for RSM
+    { name: "Banks", icon: Building2, path: "/rsm/banks", highlight: true },
+    //   { name: "Analytics", icon: BarChart2, path: "/rsm/analytics" },
   ];
 
   // Logout function
@@ -185,18 +186,29 @@ const RsmSidebar = () => {
         <nav className="mt-6 flex-1 overflow-y-auto px-3">
           {sidebarItems.map((item, index) => {
             const active = location.pathname === item.path;
+            const isHighlight = item.highlight;
+
+            const baseClasses = isHighlight
+              ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+
+            const activeClasses = isHighlight
+              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
+              : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md";
+
             return (
               <Link
                 key={index}
                 to={item.path}
-                className={`w-full flex items-center space-x-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${active
-                  ? "bg-gradient-to-r bg-teal-500  text-white shadow-lg transform scale-105"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
-                  }`}
+                className={`w-full flex items-center space-x-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${
+                  active ? activeClasses : baseClasses
+                }`}
               >
                 <item.icon size={22} className={active ? "text-white" : ""} />
                 {sidebarOpen && (
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <span className="text-sm font-medium truncate">
+                    {item.name}
+                  </span>
                 )}
               </Link>
             );

@@ -1,40 +1,74 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
-
-const bankData = [
-    {
-        id: 1,
-        name: "DMI Finance",
-        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVXsf9Q2820foCibdlTtxo1nmxvyMBg5uGdA&s",
-        loginId: "dmi.partner@loan.com",
-        password: "DMI@1234",
-        loanType: "Personal Loan",
-        link: "https://portal.dmifinance.com/apply",
-    },
-    {
-        id: 2,
-        name: "IndusInd Bank",
-        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQvhv54BCIZTc_imhpq7Us0LQwuEYVuWKTDEA&s",
-        loginId: "indus.partner@loan.com",
-        password: "Indus@456",
-        loanType: "Business Loan",
-        link: "https://partner.indusind.com/apply",
-    },
-    {
-        id: 3,
-        name: "Muthoot Finance",
-        logo: "https://upload.wikimedia.org/wikipedia/en/2/20/Muthoot_Finance_Logo.svg",
-        loginId: "muthoot.partner@loan.com",
-        password: "Muthoot@789",
-        loanType: "Home Loan",
-        link: "https://muthootfinance.com/apply",
-    },
-];
+import axios from "axios";
+import { backendurl } from "../../../feature/urldata";
+import { getAuthData } from "../../../utils/localStorage";
 
 const Banks = () => {
 
     const [showPassword, setShowPassword] = useState({});
     const [showId, setShowId] = useState({});
+    const [banks, setBanks] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const fetchBanks = async () => {
+            try {
+                setLoading(true);
+                setError("");
+
+                const { rsmToken } = getAuthData() || {};
+                if (!rsmToken) {
+                    setError("Not authenticated as RSM");
+                    setLoading(false);
+                    return;
+                }
+
+                const response = await axios.get(`${backendurl}/rsm/banks`, {
+                    headers: {
+                        Authorization: `Bearer ${rsmToken}`,
+                    },
+                });
+
+                const data = Array.isArray(response.data?.banks)
+                    ? response.data.banks
+                    : Array.isArray(response.data)
+                    ? response.data
+                    : [];
+
+                setBanks(
+                    data.map((b, index) => ({
+                        id: b._id || b.id || index,
+                        // backend uses bankName
+                        name: b.bankName || b.name || "Unnamed Bank",
+                        // backend stores logo as bankLogoUrl
+                        logo: b.bankLogoUrl || b.logoUrl || b.logo || "",
+                        // backend uses portalLoginId / portalPassword / portalLink
+                        loginId: b.portalLoginId || b.loginId || "",
+                        password: b.portalPassword || b.password || "",
+                        loanType: b.loanType || "",
+                        link: b.portalLink || b.link || "#",
+                        // rsmTypes may be array or single string
+                        rsmTypes: Array.isArray(b.rsmTypes)
+                            ? b.rsmTypes
+                            : b.rsmTypes
+                            ? [b.rsmTypes]
+                            : [],
+                    }))
+                );
+            } catch (err) {
+                setError(
+                    err?.response?.data?.message ||
+                        "Failed to load banks for RSM"
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchBanks();
+    }, []);
 
     const togglePassword = (id) => {
         setShowPassword((prev) => ({
@@ -56,6 +90,7 @@ const Banks = () => {
     };
 
     const maskText = (text) => {
+        if (!text || typeof text !== "string") return "";
         return "*".repeat(text.length);
     };
 
@@ -73,8 +108,23 @@ const Banks = () => {
                 </div>
 
                 {/* Banks grid */}
+                {error && (
+                    <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+
+                {loading ? (
+                    <div className="text-center text-gray-600 text-sm">
+                        Loading banks...
+                    </div>
+                ) : banks.length === 0 ? (
+                    <div className="text-center text-gray-600 text-sm">
+                        No banks available for your profile yet.
+                    </div>
+                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {bankData.map((bank) => (
+                    {banks.map((bank) => (
                         <div
                             key={bank.id}
                             className="group bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all duration-200 flex flex-col gap-4"
@@ -179,7 +229,7 @@ const Banks = () => {
                                     </span> */}
 
                                 <span className="px-3 py-2 text-xs font-semibold rounded-md bg-emerald-100 text-emerald-700">
-                                    {bank.loanType}
+                                    {bank.loanType || "N/A"}
                                 </span>
 
                                 {/* </div> */}
@@ -196,6 +246,7 @@ const Banks = () => {
                         </div>
                     ))}
                 </div>
+                )}
             </div>
         </div>
     );

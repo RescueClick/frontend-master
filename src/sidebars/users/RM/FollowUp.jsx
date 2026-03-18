@@ -158,11 +158,7 @@ const FollowUp = () => {
 
 
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this follow-up?")) {
-      setFollowUps((prev) => prev.filter((item) => item.id !== id));
-    }
-  };
+  // No hard delete for partners from follow-up screen; RM only manages follow-ups here.
 
   const resetForm = () => {
     setFormData({

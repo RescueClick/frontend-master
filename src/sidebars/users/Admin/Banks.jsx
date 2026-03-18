@@ -1,4 +1,7 @@
 import React, { useState, useRef } from "react";
+import axios from "axios";
+import { backendurl } from "../../../feature/urldata";
+import { getAuthData } from "../../../utils/localStorage";
 
 const Banks = () => {
 
@@ -6,10 +9,14 @@ const Banks = () => {
     name: "",
     logo: null,
     loanType: "",
+    rsmType: "",
     loginId: "",
     password: "",
     link: ""
   });
+
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: "", type: "success" });
 
   const fileInputRef = useRef(null);
 
@@ -20,24 +27,74 @@ const Banks = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("Bank Data:", bank);
+    try {
+      setSubmitting(true);
+      const { adminToken } = getAuthData() || {};
 
-    // Later you will send this to backend API
-    // axios.post("/api/banks", bank)
+      if (!adminToken) {
+        setToast({
+          visible: true,
+          message: "Admin not authenticated. Please login again.",
+          type: "error",
+        });
+        setSubmitting(false);
+        return;
+      }
 
-    alert("Bank added successfully");
+      const formData = new FormData();
+      formData.append("bankName", bank.name);
+      if (bank.logo) {
+        formData.append("bankLogo", bank.logo);
+      }
+      formData.append("loanType", bank.loanType);
+      formData.append("portalLoginId", bank.loginId);
+      formData.append("portalPassword", bank.password);
+      formData.append("portalLink", bank.link);
+      // backend expects rsmTypes (array or string)
+      if (bank.rsmType) {
+        formData.append("rsmTypes", bank.rsmType);
+      }
 
-    setBank({
-      name: "",
-      logo: "",
-      loanType: "",
-      loginId: "",
-      password: "",
-      link: ""
-    });
+      await axios.post(`${backendurl}/admin/banks`, formData, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setToast({
+        visible: true,
+        message: "Bank added successfully.",
+        type: "success",
+      });
+
+      setBank({
+        name: "",
+        logo: null,
+        loanType: "",
+        rsmType: "",
+        loginId: "",
+        password: "",
+        link: "",
+      });
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      setToast({
+        visible: true,
+        message:
+          error?.response?.data?.message ||
+          "Failed to add bank. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -95,9 +152,32 @@ const Banks = () => {
                   className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white  outline-none"
                 >
                   <option value="">Select loan type</option>
-                  <option value="Personal Loan">Personal Loan</option>
-                  <option value="Business Loan">Business Loan</option>
-                  <option value="Home Loan">Home Loan</option>
+                  <option value="PERSONAL_LOAN">Personal Loan</option>
+                  <option value="BUSINESS_LOAN">Business Loan</option>
+                  <option value="HOME_LOAN_SALARIED">Home Loan (Salaried)</option>
+                  <option value="HOME_LOAN_SELF_EMPLOYED">Home Loan (Self Employed)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* RSM Type */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                  RSM Type
+                </label>
+                <select
+                  name="rsmType"
+                  value={bank.rsmType}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white outline-none"
+                  required
+                >
+                  <option value="">Select RSM Type</option>
+                  <option value="PERSONAL">Personal Loan RSM</option>
+                  <option value="BUSINESS_HOME">
+                    Business &amp; Home Loan RSM
+                  </option>
                 </select>
               </div>
             </div>
@@ -208,6 +288,7 @@ const Banks = () => {
                     name: "",
                     logo: null,
                     loanType: "",
+                    rsmType: "",
                     loginId: "",
                     password: "",
                     link: "",
@@ -225,14 +306,43 @@ const Banks = () => {
 
               <button
                 type="submit"
-                className="px-6 py-2.5 text-sm font-semibold rounded-xl text-white bg-teal-500 hover:bg-teal-600 shadow-sm transition"
+                disabled={submitting}
+                className={`px-6 py-2.5 text-sm font-semibold rounded-xl text-white shadow-sm transition ${
+                  submitting
+                    ? "bg-teal-400 cursor-not-allowed opacity-80"
+                    : "bg-teal-500 hover:bg-teal-600"
+                }`}
               >
-                Add Bank
+                {submitting ? "Adding Bank..." : "Add Bank"}
               </button>
             </div>
           </form>
         </div>
       </div>
+
+      {/* Toast notification */}
+      {toast.visible && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-lg text-sm flex items-center gap-3 ${
+              toast.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            }`}
+          >
+            <span className="font-medium">
+              {toast.type === "success" ? "Success" : "Error"}
+            </span>
+            <span className="text-xs">{toast.message}</span>
+            <button
+              onClick={() => setToast((prev) => ({ ...prev, visible: false }))}
+              className="ml-2 text-xs opacity-70 hover:opacity-100"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -66,16 +66,22 @@ const AdminSideBar = () => {
     { name: "RM", icon: Users, path: "/admin/RM" },
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
     { name: "Customer", icon: Users, path: "/admin/customer" },
-    { name: "Payout", icon: IndianRupee, path: "/admin/payout" },
-    { name: "Incentives", icon: Award, path: "/admin/incentives" },
-    { name: "Set Target", icon: TrendingUp, path: "/admin/target" },
+    // highlight payout / incentives / target / add bank
+    { name: "Payout", icon: IndianRupee, path: "/admin/payout", highlight: true },
+    { name: "Incentives", icon: Award, path: "/admin/incentives", highlight: true },
+    { name: "Set Target", icon: TrendingUp, path: "/admin/target", highlight: true },
     { name: "Banner", icon: Download, path: "/admin/banner" },
     { name: "Admin → Partner", icon: UserCheck, path: "/admin/RM-partner" },
-    { name: "Banks", icon: Building2, path: "/admin/banks" },
+    { name: "Add Bank", icon: Building2, path: "/admin/banks", highlight: true },
     {
       name: "Delete Requests",
       icon: Trash2,
       path: "/admin/delete-requests",
+    },
+    {
+      name: "Settings",
+      icon: Settings,
+      path: "/admin/settings",
     },
   ];
 
@@ -92,8 +98,7 @@ const AdminSideBar = () => {
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
       <div
-        className={`${sidebarOpen ? "w-55" : "w-20"
-          } bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200`}
+        className={`${sidebarOpen ? "w-60" : "w-20"} bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200`}
       >
         {/* Logo */}
         <div className="flex items-center justify-center py-6 border-b border-gray-100">
@@ -115,18 +120,29 @@ const AdminSideBar = () => {
         <nav className="mt-6 flex-1 overflow-y-auto px-3">
           {sidebarItems.map((item, index) => {
             const active = location.pathname === item.path;
+            const isHighlight = item.highlight;
+
+            const baseClasses = isHighlight
+              ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+
+            const activeClasses = isHighlight
+              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
+              : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md";
+
             return (
               <Link
                 key={index}
                 to={item.path}
-                className={`w-full flex items-center space-x-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${active
-                  ? "bg-gradient-to-r bg-teal-500  text-white shadow-lg transform scale-105"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
-                  }`}
+                className={`w-full flex items-center space-x-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${
+                  active ? activeClasses : baseClasses
+                }`}
               >
                 <item.icon size={22} className={active ? "text-white" : ""} />
                 {sidebarOpen && (
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <span className="text-sm font-medium truncate">
+                    {item.name}
+                  </span>
                 )}
               </Link>
             );

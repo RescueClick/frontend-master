@@ -282,8 +282,7 @@ export const fetchPartnersWithFollowUp = createAsyncThunk(
   }
 );
 
-
-
+// Delete Partner (RM soft delete via /rm/partners/:partnerId)
 
 export const updateFollowUp = createAsyncThunk(
   "followUp/updateFollowUp",
