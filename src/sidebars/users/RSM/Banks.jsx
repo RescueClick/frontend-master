@@ -11,8 +11,7 @@ const Banks = () => {
     const [showPassword, setShowPassword] = useState({});
     const [showId, setShowId] = useState({});
     const [banks, setBanks] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+
 
     useEffect(() => {
         const fetchBanks = async () => {
