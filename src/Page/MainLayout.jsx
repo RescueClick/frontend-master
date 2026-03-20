@@ -1,25 +1,24 @@
-import Home from './Home'
 import React, { useState, useEffect } from "react";
 import { Menu, X, ChevronDown, Phone, Mail, Clock } from "lucide-react";
 import { FaPhoneAlt, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
 import { FaFacebookF, FaInstagram, FaWhatsapp } from "react-icons/fa";
-import { Link, Outlet, useLocation } from "react-router-dom";
-import { useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import logo from '../assets/logo.png'
 
 
 const MainLayout = () => {
 
   const navigate = useNavigate();
+  const location = useLocation();
 
 
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentPath, setCurrentPath] = useState("/"); // State to hold the current path
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   const navItems = [
-    { name: "Home", href: "/home" },
+    // Keep paths aligned with `AppRoutes.jsx` (note: `Home` uses uppercase path today)
+    { name: "Home", href: "/Home" },
     { name: "Services", href: "/services" },
     { name: "Channel Partner", href: "/channel-partner" },
     { name: "Documents", href: "/documents" },
@@ -28,9 +27,21 @@ const MainLayout = () => {
 
   ];
 
+  // Close mobile menu on route change
   useEffect(() => {
-    setCurrentPath(window.location.pathname);
-  }, []);
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  const isPathActive = (href) => {
+    // Treat "/" as Home and make matching case-insensitive
+    const current = (location.pathname || "/").toLowerCase();
+    const target = (href || "/").toLowerCase();
+
+    if (target === "/home") {
+      return current === "/" || current === "/home";
+    }
+    return current === target || current.startsWith(`${target}/`);
+  };
 
   return (
 
@@ -102,14 +113,11 @@ const MainLayout = () => {
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center space-x-6">
                 {navItems.map((item, index) => {
-                  const isActive =
-                    (item.href === "/Home" &&
-                      (currentPath === "/" || currentPath === "/Home")) ||
-                    (item.href !== "/Home" && currentPath.startsWith(item.href));
+                  const isActive = isPathActive(item.href);
                   return (
                     <div key={index} className="relative group nav-link">
-                      <a
-                        href={item.href}
+                      <NavLink
+                        to={item.href}
                         className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-all duration-200 ${isActive
                           ? "text-[#12B99C] bg-[#12B99C]/10"
                           : "text-gray-700 hover:text-[#12B99C] hover:bg-[#12B99C]/5"
@@ -117,7 +125,7 @@ const MainLayout = () => {
                       >
                         {item.name}
                         {item.dropdown && <ChevronDown className="w-4 h-4" />}
-                      </a>
+                      </NavLink>
                     </div>
                   );
                 })}
@@ -180,22 +188,18 @@ const MainLayout = () => {
             </div>
             <nav className="flex flex-col space-y-4 flex-grow">
               {navItems.map((item, index) => {
-                const isActive =
-                  (item.href === "/Home" &&
-                    (currentPath === "/" || currentPath === "/Home")) ||
-                  (item.href !== "/Home" && currentPath.startsWith(item.href));
+                const isActive = isPathActive(item.href);
                 return (
-                  <a
+                  <NavLink
                     key={index}
-                    href={item.href}
+                    to={item.href}
                     className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${isActive
                       ? "text-[#12B99C] bg-[#12B99C]/10"
                       : "text-gray-700 hover:text-[#12B99C] hover:bg-[#12B99C]/5"
                       }`}
-                    onClick={toggleMenu}
                   >
                     {item.name}
-                  </a>
+                  </NavLink>
                 );
               })}
             </nav>

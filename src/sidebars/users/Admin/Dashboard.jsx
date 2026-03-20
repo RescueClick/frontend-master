@@ -22,8 +22,10 @@ import {
   User,
   IndianRupee
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { formatCurrency, formatNumber, typography } from '../../../utils/designSystem';
+import PageHeader from "../../../components/shared/PageHeader";
+import FiltersBar from "../../../components/shared/FiltersBar";
 
 
 
@@ -76,11 +78,23 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
-      {/* Header Section */}
-      <div className="mb-6">
-        <h1 className={typography.h1()}>Dashboard Overview</h1>
-        <p className={`${typography.bodySmall()} mt-2`}>Monitor your business metrics and activities</p>
+      <div className="mb-4">
+        <PageHeader
+          title="Dashboard Overview"
+          subtitle="Monitor your business metrics and activities"
+          right={
+            <button
+              type="button"
+              onClick={() => navigate("/admin/payout")}
+              className="text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-md hover:shadow-lg transition-shadow"
+            >
+              View Payouts
+            </button>
+          }
+        />
       </div>
+
+  
 
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-5 mb-6">
@@ -138,6 +152,25 @@ const Dashboard = () => {
           </div>
         </div>
 
+         {/* RSMs */}
+         <div
+          className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
+          onClick={() => navigate("/admin/rsm")}
+        >
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-teal-100 to-teal-50 rounded-bl-full opacity-50"></div>
+          <div className="relative flex items-center justify-between">
+            <div className="flex-1">
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Regional Sales Managers</p>
+              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalRSM || 0)}</p>
+              <p className={typography.tiny()}>Active RSMs</p>
+            </div>
+            <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+          </div>
+        </div>
+
+
         {/* RM */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
@@ -156,24 +189,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* RSMs */}
-        <div
-          className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
-          onClick={() => navigate("/admin/rsm")}
-        >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-teal-100 to-teal-50 rounded-bl-full opacity-50"></div>
-          <div className="relative flex items-center justify-between">
-            <div className="flex-1">
-              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Regional Sales Managers</p>
-              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalRSM || 0)}</p>
-              <p className={typography.tiny()}>Active RSMs</p>
-            </div>
-            <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Users className="w-5 h-5 text-white" />
-            </div>
-          </div>
-        </div>
-
+       
         {/* PARTNERS */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"

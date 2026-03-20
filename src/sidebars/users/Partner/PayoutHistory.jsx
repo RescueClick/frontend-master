@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
+import { matchesSearchTerm } from "../../../utils/tableFilter";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const PayoutHistory = () => {
   const navigate = useNavigate();
@@ -62,21 +64,18 @@ const PayoutHistory = () => {
     const sameYear = !year || rowYear === Number(year);
     const sameMonth = !month || rowMonth === Number(month);
 
-    const term = searchTerm.toLowerCase();
-    const matchesText =
-      !term ||
-      String(row?.application?.appNo || "")
-        .toLowerCase()
-        .includes(term) ||
-      String(row?.application?.loanType || "")
-        .toLowerCase()
-        .includes(term) ||
-      String(row.amount || 0).includes(term);
+    const matchesText = matchesSearchTerm(searchTerm, [
+      row?.application?.appNo,
+      row?.application?.loanType,
+      row?.amount,
+    ]);
 
     return sameYear && sameMonth && matchesText;
   });
 
-  const totalPaid = filtered.reduce((sum, r) => sum + (r.amount || 0), 0);
+  const sortedFiltered = sortNewestFirst(filtered, { dateKeys: ["createdAt"] });
+
+  const totalPaid = sortedFiltered.reduce((sum, r) => sum + (r.amount || 0), 0);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -189,14 +188,14 @@ const PayoutHistory = () => {
                     Loading payouts...
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : sortedFiltered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-4 text-gray-500">
                     No payout data found for this filter.
                   </td>
                 </tr>
               ) : (
-                filtered.map((row, idx) => (
+                sortedFiltered.map((row, idx) => (
                   <tr key={idx} className="border-b hover:bg-gray-50">
                     <td className="px-3 py-3 align-middle text-xs">
                       {row.createdAt

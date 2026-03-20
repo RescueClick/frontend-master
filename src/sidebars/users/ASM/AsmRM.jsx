@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import axios from "axios"
 import { backendurl } from "../../../feature/urldata";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 
@@ -75,6 +76,8 @@ export default function AsmRM() {
       );
     });
   }, [rmList, searchQuery]);
+
+  const sortedFilteredRms = sortNewestFirst(filteredRms, { dateKeys: ["createdAt"] });
 
   // Handle view RM details
   const handleViewRM = (rm) => {
@@ -215,8 +218,8 @@ loginAsUser(userId, navigate);
                     Loading...
                   </td>
                 </tr>
-              ) : filteredRms.length > 0 ? (
-                filteredRms.map((rm) => (
+              ) : sortedFilteredRms.length > 0 ? (
+                sortedFilteredRms.map((rm) => (
                   <tr key={rm._id} className="border-b hover:bg-gray-50">
                     <td
                       className="px-2 py-3 align-top cursor-pointer"

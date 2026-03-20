@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchRSMs, createRSM, fetchAsms, activateRSM, deactivateRSM } from "../../../feature/thunks/adminThunks";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -97,6 +98,8 @@ export default function RSM() {
       );
     });
   }, [rsms, searchQuery]);
+
+  const sortedFilteredRsms = sortNewestFirst(filteredRsms, { dateKeys: ["createdAt"] });
 
   // Handle view RSM details
   const handleViewRSM = (rsm) => {
@@ -393,8 +396,8 @@ export default function RSM() {
                     Loading...
                   </td>
                 </tr>
-              ) : filteredRsms.length > 0 ? (
-                filteredRsms.map((rsm) => (
+              ) : sortedFilteredRsms.length > 0 ? (
+                sortedFilteredRsms.map((rsm) => (
                   <tr key={rsm._id} className="border-b hover:bg-gray-50">
                     <td
                       className="px-2 py-3 align-top cursor-pointer"

@@ -54,6 +54,43 @@ export const fetchUniversalAnalytics = createAsyncThunk(
 );
 
 /**
+ * Proper KPI analytics (funnel, conversion, SLA, financials).
+ * GET /api/analytics/:id/kpis
+ */
+export const fetchAnalyticsKpis = createAsyncThunk(
+  "analytics/fetchKpis",
+  async ({ id, start, end, loanType }, { rejectWithValue }) => {
+    try {
+      const authData = getAuthData();
+      const token =
+        authData.adminToken ||
+        authData.asmToken ||
+        authData.rsmToken ||
+        authData.rmToken ||
+        authData.partnerToken ||
+        null;
+
+      if (!token) return rejectWithValue("No authentication token found");
+
+      const response = await axios.get(`${backendurl}/analytics/${id}/kpis`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          ...(start ? { start } : {}),
+          ...(end ? { end } : {}),
+          ...(loanType ? { loanType } : {}),
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch analytics KPIs"
+      );
+    }
+  }
+);
+
+/**
  * Fetch Analytics for Admin (can view any user)
  */
 export const fetchAdminAnalytics = createAsyncThunk(

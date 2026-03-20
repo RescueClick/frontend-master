@@ -41,27 +41,28 @@ const Dashboard = () => {
       title: "Regional Sales Managers",
       value: formatNumber(data?.totals?.totalRSMs || 0),
       icon: Users,
-      path: '/asm/RSM',
+      path: "/asm/rsms",
       subtitle: "RSMs under your management"
     },
     {
       title: "Active Partners",
       value: formatNumber(data?.totals?.activePartners || 0),
       icon: Building2,
-      path: '/asm/partners',
+      path: "/asm/rms",
       subtitle: "Active partners in region"
     },
     {
       title: "Total Customers",
       value: formatNumber(data?.totals?.totalCustomers || 0),
       icon: UserCheck,
-      path: '/asm/customers',
+      path: "/asm/applications",
       subtitle: "Total customer base"
     },
     {
       title: "Total Disbursed",
       value: formatCurrency(data?.totals?.totalRevenue || 0),
       icon: IndianRupee,
+      path: "/asm/applications",
       subtitle: "Disbursed amount"
     },
   ], [data?.totals]);

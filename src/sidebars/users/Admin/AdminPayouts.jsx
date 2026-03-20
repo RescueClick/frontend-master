@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { IndianRupee, Clock, CheckCircle, ArrowLeft } from "lucide-react";
 import {
@@ -6,10 +6,14 @@ import {
   fetchAdminCustomersPayOutDone,
 } from "../../../feature/thunks/adminThunks";
 import { useNavigate } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
 
 const AdminPayouts = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
 
   const { data: pendingData = [] } = useSelector(
     (state) => state.admin?.pendingPayout || { data: [] }
@@ -17,6 +21,16 @@ const AdminPayouts = () => {
   const { data: doneData = [] } = useSelector(
     (state) => state.admin?.donePayout || { data: [] }
   );
+
+  const filteredPending = useMemo(() => {
+    const list = Array.isArray(pendingData) ? pendingData : [];
+    return list.filter((row) => matchesMonthYear(row, { year, month }));
+  }, [pendingData, year, month]);
+
+  const filteredDone = useMemo(() => {
+    const list = Array.isArray(doneData) ? doneData : [];
+    return list.filter((row) => matchesMonthYear(row, { year, month }));
+  }, [doneData, year, month]);
 
   useEffect(() => {
     dispatch(fetchAdminCustomersPayOutPending());
@@ -30,7 +44,7 @@ const AdminPayouts = () => {
       <div
         className="rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
         style={{ background: bgGradient }}
-        onClick={() => navigate(path)}
+        onClick={() => navigate(path, { state: { year, month } })}
       >
         <div className="flex items-center justify-between">
           <div>
@@ -68,15 +82,45 @@ const AdminPayouts = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center mb-6">
-            <IndianRupee size={24} className="mr-3 w-6 h-6 text-emerald-600" />
-            <h2 className="text-2xl font-semibold text-gray-900">Payouts</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <IndianRupee size={24} className="mr-3 w-6 h-6 text-emerald-600" />
+              <h2 className="text-2xl font-semibold text-gray-900">Payouts</h2>
+            </div>
+
+            <div className="flex gap-3 text-sm">
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value))}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              >
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={month}
+                onChange={(e) => setMonth(parseInt(e.target.value))}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {new Date(2000, m - 1).toLocaleString("default", {
+                      month: "short",
+                    })}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <PayoutCard
               title="Pending Payout"
-              count={pendingData?.length || 0}
+              count={filteredPending?.length || 0}
               iconName="Clock"
               bgGradient="linear-gradient(135deg, #F59E0B 0%, #D97706 100%)"
               path="/admin/pending-payout"
@@ -84,7 +128,7 @@ const AdminPayouts = () => {
 
             <PayoutCard
               title="Done Payout"
-              count={doneData?.length || 0}
+              count={filteredDone?.length || 0}
               iconName="CheckCircle"
               bgGradient="linear-gradient(135deg, #10B981 0%, #059669 100%)"
               path="/admin/done-payout"

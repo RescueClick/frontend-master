@@ -1,108 +1,64 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Copy, ExternalLink, Eye, EyeOff, Search } from "lucide-react";
-
-import { useDispatch, useSelector } from "react-redux";
-import { createBank, deleteBank, fetchAdminBanks } from "../../../feature/thunks/adminThunks";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import axios from "axios";
+import { Copy, ExternalLink, Eye, EyeOff, Trash2 } from "lucide-react";
+import { backendurl } from "../../../feature/urldata";
+import { getAuthData } from "../../../utils/localStorage";
 
 const Banks = () => {
 
-  const dispatch = useDispatch();
-
-  const { error: addBankError } = useSelector((state) => state.admin.addBank);
-
-
-  const { data: banks, loading: banksLoading, error: banksError } = useSelector((state) => state.admin.fetchBanksData);
-
-  // console.log("Banks Data:", banks);
-
-
-  const [activeTab, setActiveTab] = useState("add");
-
-  const [showPassword, setShowPassword] = useState({});
-  const [showId, setShowId] = useState({});
-  const [loanTypeSearch, setLoanTypeSearch] = useState("");
-
-  const loanTypeLabels = {
-    PERSONAL_LOAN: "Personal Loan",
-    PERSONAL: "Personal Loan",
-    BUSINESS_LOAN: "Business Loan",
-    BUSINESS: "Business Loan",
-    HOME_LOAN_SALARIED: "Home Loan Salaried",
-    HOME_LOAN_SELF_EMPLOYED: "Home Loan Self Employed",
-  };
-
-  const getLoanTypeLabel = (type) => {
-    if (!type) return "";
-    return loanTypeLabels[type] || type;
-  };
-
-  const maskText = (text) => {
-    if (!text) return "";
-    return "*".repeat(String(text).length);
-  };
-
-  const togglePassword = (id) => {
-    setShowPassword((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
-  const toggleId = (id) => {
-    setShowId((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
-  const copyText = (text) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    alert("Copied to clipboard");
-  };
-
-  const handleDelete = (bankId) => {
-    if (!bankId) return;
-
-    const ok = window.confirm("Delete this bank?");
-    if (!ok) return;
-
-    dispatch(deleteBank(bankId)).then(() => {
-      dispatch(fetchAdminBanks());
-    });
-  };
-
-  const banksList = Array.isArray(banks)
-    ? banks.filter((b) => b?.isActive !== false)
-    : [];
-  const loanTypeQuery = loanTypeSearch.trim().toLowerCase();
-  const filteredBanks = loanTypeQuery
-    ? banksList.filter((b) => {
-      const normalize = (s) =>
-        String(s || "")
-          .toLowerCase()
-          .replace(/[\s_-]+/g, "")
-          .replace(/[^a-z0-9]/g, "");
-
-      const raw = normalize(b?.loanType);
-      const label = normalize(getLoanTypeLabel(b?.loanType));
-      const q = normalize(loanTypeSearch);
-
-      return raw.includes(q) || label.includes(q);
-    })
-    : banksList;
+  const [activeTab, setActiveTab] = useState("add"); // add | list
 
   const [bank, setBank] = useState({
     bankName: "",
     bankLogo: null,
     loanType: "",
-    portalLoginId: "",
-    portalPassword: "",
-    portalLink: "",
-    rsmTypes: "",
+    rsmType: "",
+    loginId: "",
+    password: "",
+    link: ""
   });
 
+  const [submitting, setSubmitting] = useState(false);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+  const [banks, setBanks] = useState([]);
+  const [toast, setToast] = useState({ visible: false, message: "", type: "success" });
+
   const fileInputRef = useRef(null);
+
+  const loanTypeOptions = useMemo(
+    () => [
+      { value: "PERSONAL", label: "Personal Loan" },
+      { value: "BUSINESS", label: "Business Loan" },
+      { value: "HOME_LOAN_SALARIED", label: "Home Loan (Salaried)" },
+      { value: "HOME_LOAN_SELF_EMPLOYED", label: "Home Loan (Self Employed)" },
+    ],
+    []
+  );
+
+  const fetchBanks = async () => {
+    try {
+      setLoadingBanks(true);
+      const { adminToken } = getAuthData() || {};
+      if (!adminToken) return;
+      const res = await axios.get(`${backendurl}/admin/banks`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      const list = Array.isArray(res.data?.banks) ? res.data.banks : Array.isArray(res.data) ? res.data : [];
+      setBanks(list);
+    } catch (error) {
+      setToast({
+        visible: true,
+        message: error?.response?.data?.message || "Failed to fetch banks.",
+        type: "error",
+      });
+    } finally {
+      setLoadingBanks(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBanks();
+  }, []);
 
   const handleChange = (e) => {
     setBank({
@@ -111,35 +67,113 @@ const Banks = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const formData = new FormData();
+    try {
+      setSubmitting(true);
+      const { adminToken } = getAuthData() || {};
 
-    formData.append("bankName", bank.bankName);
-    formData.append("bankLogo", bank.bankLogo);
-    formData.append("loanType", bank.loanType);
-    formData.append("portalLoginId", bank.portalLoginId);
-    formData.append("portalPassword", bank.portalPassword);
-    formData.append("portalLink", bank.portalLink);
-    formData.append("rsmTypes", bank.rsmTypes);
+      if (!adminToken) {
+        setToast({
+          visible: true,
+          message: "Admin not authenticated. Please login again.",
+          type: "error",
+        });
+        setSubmitting(false);
+        return;
+      }
 
-    dispatch(createBank(formData));
+      const formData = new FormData();
+      formData.append("bankName", bank.name);
+      if (bank.logo) {
+        formData.append("bankLogo", bank.logo);
+      }
+      formData.append("loanType", bank.loanType);
+      formData.append("portalLoginId", bank.loginId);
+      formData.append("portalPassword", bank.password);
+      formData.append("portalLink", bank.link);
+      // backend expects rsmTypes (array or string)
+      if (bank.rsmType) {
+        formData.append("rsmTypes", bank.rsmType);
+      }
 
-    setBank({
-      bankName: "",
-      bankLogo: null,
-      loanType: "",
-      portalLoginId: "",
-      portalPassword: "",
-      portalLink: "",
-      rsmTypes: ""
-    });
+      await axios.post(`${backendurl}/admin/banks`, formData, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      setToast({
+        visible: true,
+        message: "Bank added successfully.",
+        type: "success",
+      });
+
+      setBank({
+        name: "",
+        logo: null,
+        loanType: "",
+        rsmType: "",
+        loginId: "",
+        password: "",
+        link: "",
+      });
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      await fetchBanks();
+      setActiveTab("list");
+    } catch (error) {
+      setToast({
+        visible: true,
+        message:
+          error?.response?.data?.message ||
+          "Failed to add bank. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setSubmitting(false);
     }
+  };
 
+  const [showPassword, setShowPassword] = useState({});
+  const [showId, setShowId] = useState({});
+
+  const togglePw = (id) => setShowPassword((p) => ({ ...p, [id]: !p[id] }));
+  const toggleId = (id) => setShowId((p) => ({ ...p, [id]: !p[id] }));
+
+  const copyText = (text) => {
+    navigator.clipboard.writeText(text);
+    setToast({ visible: true, message: "Copied to clipboard", type: "success" });
+  };
+
+  const maskText = (text) => {
+    if (!text || typeof text !== "string") return "";
+    return "*".repeat(text.length);
+  };
+
+  const handleDelete = async (bankId) => {
+    try {
+      const ok = window.confirm("Delete this bank? RSMs will no longer see it.");
+      if (!ok) return;
+      const { adminToken } = getAuthData() || {};
+      if (!adminToken) return;
+      await axios.delete(`${backendurl}/admin/banks/${bankId}`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      setToast({ visible: true, message: "Bank deleted.", type: "success" });
+      await fetchBanks();
+    } catch (error) {
+      setToast({
+        visible: true,
+        message: error?.response?.data?.message || "Failed to delete bank.",
+        type: "error",
+      });
+    }
   };
 
   useEffect(() => {
@@ -148,97 +182,127 @@ const Banks = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        {/* <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Add Lending Partner
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Add bank or NBFC partner credentials for RSM access.
+          </p>
+        </div> */}
 
-      <div className="fixed top-22 left-1/2 -translate-x-1/2 w-[100%] max-w-5xl z-50 bg-slate-50 py-4 pb-6 flex justify-center px-6">
-        <div className="flex justify-center">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+          {/* Top Header + Horizontal Tabs */}
+          <div className="px-6 py-4 border-b border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-gray-900">Bank Master</p>
+                <p className="text-xs text-gray-500 mt-1">Add and manage banks</p>
+              </div>
 
-          <div className="bg-gray-100 p-1 rounded-2xl flex gap-1 shadow-sm">
-
-            {/* Add Bank Tab */}
-            <button
-              onClick={() => setActiveTab("add")}
-              className={`px-6.5 py-3 text-md font-semibold rounded-xl transition-all duration-200 ${activeTab === "add"
-                ? "bg-teal-500 text-white shadow"
-                : "text-gray-600 hover:text-gray-800"
-                }`}
-            >
-              Add Bank
-            </button>
-
-            {/* Show Banks Tab */}
-            <button
-              onClick={() => setActiveTab("list")}
-              className={`px-6.5 py-3 text-md font-semibold rounded-xl transition-all duration-200 ${activeTab === "list"
-                ? "bg-teal-500 text-white shadow"
-                : "text-gray-600 hover:text-gray-800"
-                }`}
-            >
-              Show Banks
-            </button>
-
+              <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("add")}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    activeTab === "add"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-gray-700 hover:bg-white"
+                  }`}
+                >
+                  Add Bank
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("list")}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    activeTab === "list"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-gray-700 hover:bg-white"
+                  }`}
+                >
+                  Banks List
+                  <span className={`ml-2 text-xs font-bold ${activeTab === "list" ? "text-emerald-50" : "text-gray-500"}`}>
+                    ({banks.filter((b) => b?.isActive !== false).length})
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
 
-        </div>
-      </div>
+          {/* Content */}
+          <div>
+            {activeTab === "add" ? (
+              <>
+                <div className="border-b border-gray-100 px-6 py-4">
+                  <h2 className="text-md font-bold text-gray-800">
+                    Add Bank Details
+                  </h2>
+                </div>
 
-
-      {activeTab === "add" && (
-        <div className="max-w-4xl mx-auto mt-25">
-          {/* Header */}
-          {/* Form card */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-4">
-              <h2 className="text-md font-bold text-gray-800">
-                Add Bank Details
-              </h2>
-            </div>
-
-            {addBankError && (
-              <div className="px-6 py-3">
-                <p className="text-red-600 text-sm">{String(addBankError)}</p>
+                <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+            {/* Bank name + loan type in two columns on desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Bank Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                  Bank Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={bank.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm  outline-none placeholder:text-gray-400"
+                  placeholder="Enter bank or NBFC name"
+                />
               </div>
             )}
 
-            <form
-              onSubmit={handleSubmit}
-              className="px-6 py-6 space-y-6"
-            >
-              {/* Bank name + loan type in two columns on desktop */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Bank Name */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Bank Name
-                  </label>
-                  <input
-                    type="text"
-                    name="bankName"
-                    value={bank.bankName}
-                    onChange={handleChange}
-                    required
-                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm  outline-none placeholder:text-gray-400"
-                    placeholder="Enter bank or NBFC name"
-                  />
-                </div>
+              {/* Loan Type */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                  Loan Type
+                </label>
+                <select
+                  name="loanType"
+                  value={bank.loanType}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white  outline-none"
+                  required
+                >
+                  <option value="">Select loan type</option>
+                  {loanTypeOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-                {/* Loan Type */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Loan Type
-                  </label>
-                  <select
-                    name="loanType"
-                    value={bank.loanType}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white  outline-none"
-                  >
-                    <option value="">Select loan type</option>
-                    <option value="PERSONAL_LOAN">Personal Loan</option>
-                    <option value="BUSINESS_LOAN">Business Loan</option>
-                    <option value="HOME_LOAN_SALARIED">Home Loan Salaried</option>
-                    <option value="HOME_LOAN_SELF_EMPLOYED">Home Loan Self Employed</option>
-                  </select>
-                </div>
+            {/* RSM Type */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                  RSM Type
+                </label>
+                <select
+                  name="rsmType"
+                  value={bank.rsmType}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white outline-none"
+                  required
+                >
+                  <option value="">Select RSM Type</option>
+                  <option value="PERSONAL">Personal Loan RSM</option>
+                  <option value="BUSINESS_HOME">
+                    Business &amp; Home Loan RSM
+                  </option>
+                </select>
               </div>
 
               {/* Logo URL */}
@@ -442,140 +506,216 @@ const Banks = () => {
                   {/* Header */}
                   <div className="flex items-center justify-between">
 
-                    {/* LEFT SIDE (Logo + Name) */}
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-full border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
-                        <img
-                          src={bank.bankLogoUrl}
-                          alt={bank.bankName}
-                          className="w-11 h-11 object-contain"
-                        />
-                      </div>
+            {/* Actions */}
+            <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setBank({
+                    name: "",
+                    logo: null,
+                    loanType: "",
+                    rsmType: "",
+                    loginId: "",
+                    password: "",
+                    link: "",
+                  });
+                
+                  // ✅ THIS IS THE KEY FIX
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                  }
+                }}
+                className="px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition"
+              >
+                Clear
+              </button>
 
-                      <h2 className="text-base font-semibold text-gray-900 truncate">
-                        {bank.bankName}
-                      </h2>
+              <button
+                type="submit"
+                disabled={submitting}
+                className={`px-6 py-2.5 text-sm font-semibold rounded-xl text-white shadow-sm transition ${
+                  submitting
+                    ? "bg-teal-400 cursor-not-allowed opacity-80"
+                    : "bg-teal-500 hover:bg-teal-600"
+                }`}
+              >
+                {submitting ? "Adding Bank..." : "Add Bank"}
+              </button>
+            </div>
+                  </form>
+                </>
+              ) : (
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900">Added Banks</h3>
+                      <p className="text-xs text-gray-500 mt-1">Visible banks for RSM based on type</p>
                     </div>
-
-                    {/* RIGHT SIDE (Delete Button) */}
-                    <a
-                      href={bank.portalLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 bg-purple-500 text-white text-xs md:text-sm px-3 py-1.5 rounded-lg hover:bg-purple-600 transition"
-                    >
-                      Visit
-                      <ExternalLink size={14} />
-                    </a>
-
-                  </div>
-
-                  <div className="h-px bg-gray-100" />
-
-                  {/* Login ID */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                        Login ID
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl">
-                      <span className="font-medium text-gray-800 text-xs md:text-sm break-all max-w-[70%]">
-                        {showId[bank?._id]
-                          ? bank.portalLoginId
-                          : maskText(bank.portalLoginId)}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => toggleId(bank?._id)}
-                          className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
-                          type="button"
-                        >
-                          {showId[bank?._id] ? (
-                            <EyeOff size={16} />
-                          ) : (
-                            <Eye size={16} />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => copyText(bank.portalLoginId)}
-                          className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
-                          type="button"
-                        >
-                          <Copy size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Password */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                        Password
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl">
-                      <span className="font-medium text-gray-800 text-xs md:text-sm break-all max-w-[70%]">
-                        {showPassword[bank?._id]
-                          ? bank.portalPassword
-                          : maskText(bank.portalPassword)}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => togglePassword(bank?._id)}
-                          className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
-                          type="button"
-                        >
-                          {showPassword[bank?._id] ? (
-                            <EyeOff size={16} />
-                          ) : (
-                            <Eye size={16} />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => copyText(bank.portalPassword)}
-                          className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
-                          type="button"
-                        >
-                          <Copy size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* RSM Type */}
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      RSM Type
-                    </span>
-                    <span className="text-xs text-gray-700 text-right">
-                      {Array.isArray(bank.rsmTypes) ? bank.rsmTypes.join(", ") : ""}
-                    </span>
-                  </div>
-
-                  {/* Loan Type + Portal Link */}
-                  <div className="mt-3 pt-3 border-t border-dashed border-gray-200 flex items-center justify-between">
-                    <span className="px-3 py-2 text-xs font-semibold rounded-md bg-teal-100 text-teal-700">
-                      {getLoanTypeLabel(bank.loanType)}
-                    </span>
-
                     <button
                       type="button"
-                      onClick={() => handleDelete(bank?._id)}
-                      className="px-3.5 py-1.5 text-xs font-semibold text-red-700 bg-red-100 hover:bg-red-600 hover:text-white rounded-md transition"
+                      onClick={fetchBanks}
+                      className="text-xs font-semibold px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                     >
-                      Delete
+                      Refresh
                     </button>
-
                   </div>
 
-                  {/* Actions */}
+                  {loadingBanks ? (
+                    <div className="text-center text-gray-600 text-sm">Loading banks...</div>
+                  ) : banks.filter((b) => b?.isActive !== false).length === 0 ? (
+                    <div className="text-center text-gray-600 text-sm">No banks added yet.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {banks
+                        .filter((b) => b?.isActive !== false)
+                        .map((b, index) => {
+                          const id = b._id || b.id || index;
+                          return (
+                            <div
+                              key={id}
+                              className="group bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all duration-200 flex flex-col gap-4"
+                            >
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-4 min-w-0">
+                                  <div className="w-14 h-14 rounded-full border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                                    <img
+                                      src={b.bankLogoUrl || ""}
+                                      alt={b.bankName || "Bank"}
+                                      className="w-11 h-11 object-contain"
+                                    />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h2 className="text-base font-semibold text-gray-900 truncate">
+                                      {b.bankName || "Unnamed Bank"}
+                                    </h2>
+                                    <p className="mt-0.5 text-xs text-gray-500 truncate">
+                                      {Array.isArray(b.rsmTypes) && b.rsmTypes.length ? b.rsmTypes.join(", ") : "No RSM type"}
+                                    </p>
+                                  </div>
+                                </div>
 
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(id)}
+                                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100"
+                                  title="Delete bank"
+                                >
+                                  <Trash2 size={14} />
+                                  Delete
+                                </button>
+                              </div>
+
+                              <div className="h-px bg-gray-100" />
+
+                              <div className="space-y-3">
+                                {/* Login ID */}
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                      Login ID
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl">
+                                    <span className="font-medium text-gray-800 text-xs md:text-sm break-all max-w-[70%]">
+                                      {showId[id] ? b.portalLoginId : maskText(b.portalLoginId)}
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleId(id)}
+                                        className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                                      >
+                                        {showId[id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => copyText(b.portalLoginId)}
+                                        className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                                      >
+                                        <Copy size={16} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Password */}
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                      Password
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl">
+                                    <span className="font-medium text-gray-800 text-xs md:text-sm break-all max-w-[70%]">
+                                      {showPassword[id] ? b.portalPassword : maskText(b.portalPassword)}
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => togglePw(id)}
+                                        className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                                      >
+                                        {showPassword[id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => copyText(b.portalPassword)}
+                                        className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                                      >
+                                        <Copy size={16} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-3 pt-3 border-t border-dashed border-gray-200 flex items-center justify-between">
+                                <span className="px-3 py-2 text-xs font-semibold rounded-md bg-emerald-100 text-emerald-700">
+                                  {b.loanType || "N/A"}
+                                </span>
+                                <a
+                                  href={b.portalLink || "#"}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 bg-emerald-500 text-white text-xs md:text-sm px-3 py-1.5 rounded-lg hover:bg-emerald-600 transition"
+                                >
+                                  Visit
+                                  <ExternalLink size={14} />
+                                </a>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
+          </div>
+        </div>
+      </div>
+
+      {/* Toast notification */}
+      {toast.visible && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-lg text-sm flex items-center gap-3 ${
+              toast.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            }`}
+          >
+            <span className="font-medium">
+              {toast.type === "success" ? "Success" : "Error"}
+            </span>
+            <span className="text-xs">{toast.message}</span>
+            <button
+              onClick={() => setToast((prev) => ({ ...prev, visible: false }))}
+              className="ml-2 text-xs opacity-70 hover:opacity-100"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
     </div>

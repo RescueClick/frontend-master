@@ -33,6 +33,12 @@ export default function CustomerTable() {
   const { loading, data, error } = useSelector((state) => state.admin.allCustomers);
 
   console.log("data : ",data);
+
+  const sortedData = [...(data || [])].sort((a, b) => {
+    const aTime = a?.applicationDate ? new Date(a.applicationDate).getTime() : (a?.createdAt ? new Date(a.createdAt).getTime() : 0);
+    const bTime = b?.applicationDate ? new Date(b.applicationDate).getTime() : (b?.createdAt ? new Date(b.createdAt).getTime() : 0);
+    return bTime - aTime; // newest first
+  });
   
 
 
@@ -386,7 +392,7 @@ export default function CustomerTable() {
 
 
           <tbody>
-  {data?.map((c, idx) => (
+  {sortedData?.map((c, idx) => (
     <tr key={idx} className="border-b hover:bg-gray-50">
       <td className="px-3 py-2">{`${c.firstName} ${c.lastName}`}</td>
       <td className="px-3 py-2">{c.employeeId}</td>

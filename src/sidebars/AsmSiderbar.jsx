@@ -22,13 +22,11 @@ import {
   CalendarCheck,
   MapPin,
   Edit,
-  Lock,
   X,
   IndianRupee,
   Award,
   TrendingUp,
 } from "lucide-react";
-import axios from "axios"
 
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getAuthData, clearAuthData } from "../utils/localStorage";
@@ -36,7 +34,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchAsmProfile } from "../feature/thunks/asmThunks";
 import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
 
-import { backendurl } from "../feature/urldata";
 import Profile from "./users/userProfile/Profile";
 import logo from "../assets/logo.png";
 import NotificationBell from "../components/NotificationBell";
@@ -45,15 +42,9 @@ import NotificationBell from "../components/NotificationBell";
 const AsmSiderbar = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [loadingPassChange, setLoading] = useState(false);
-  const [errorPassChange, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
-  const [ChangePasswordModel, setChangePasswordModel] = useState(null);
 
   // Get Redux profile state
   const { loading, error, data } = useSelector((state) => state.asm.profile);
@@ -85,9 +76,10 @@ const AsmSiderbar = () => {
     { name: "Dashboard", icon: LayoutGrid, path: "/asm/dashboard" },
     { name: "RSMs", icon: Users, path: "/asm/rsms" },
     { name: "Applications", icon: FileText, path: "/asm/applications" },
-    { name: "Payouts", icon: IndianRupee, path: "/asm/payouts" },
-    { name: "Incentives", icon: Award, path: "/asm/incentives" },
+    { name: "Payouts", icon: IndianRupee, path: "/asm/payouts", highlight: true },
+    { name: "Incentives", icon: Award, path: "/asm/incentives", highlight: true },
     { name: "Follow Up", icon: CalendarCheck, path: "/asm/follow-ups" },
+    { name: "Settings", icon: Settings, path: "/asm/settings" },
   ];
 
 
@@ -96,73 +88,6 @@ const AsmSiderbar = () => {
     navigate("/");
   };
 
-  const [formData, setFormData] = useState({
-    oldPassword: "",
-    password: "",
-    confirmPassword: "",
-  });
-
-  // Handle input change
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  // Handle form submit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-   
-    setError("");
-    setSuccess("");
-  
-    // Basic validation
-    if (!formData.oldPassword || !formData.password || !formData.confirmPassword) {
-      setError("All fields are required.");
-      return;
-    }
-  
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-  
-    try {
-      setLoading(true);
-  
-      const { asmToken} = getAuthData(); // or however you store JWT
-  
-      const response = await axios.post(
-        `${backendurl}/auth/change-password`,
-        {
-          oldPassword: formData.oldPassword,
-          newPassword: formData.password,
-          confirmPassword: formData.confirmPassword,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${asmToken}`,
-          },
-        }
-      );
-  
-  
-      setSuccess(response.data.message);
-      setFormData({ oldPassword: "", password: "", confirmPassword: "" });
-  
-      // Close modal if needed
-      setChangePasswordModel(false);
-    } catch (err) {
-      console.error("API error:", err.response?.data || err);
-      setError(err.response?.data?.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-      console.log("handleSubmit finished, loading set to false");
-    }
-    
-  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -192,19 +117,29 @@ const AsmSiderbar = () => {
         <nav className="mt-6 flex-1 overflow-y-auto px-3">
           {sidebarItems.map((item, index) => {
             const active = location.pathname === item.path;
+            const isHighlight = item.highlight;
+
+            const baseClasses = isHighlight
+              ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+
+            const activeClasses = isHighlight
+              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
+              : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md";
+
             return (
               <Link
                 key={index}
                 to={item.path}
                 className={`w-full flex items-center space-x-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${
-                  active
-                    ? "bg-gradient-to-r bg-teal-500  text-white shadow-lg transform scale-105"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
+                  active ? activeClasses : baseClasses
                 }`}
               >
                 <item.icon size={22} className={active ? "text-white" : ""} />
                 {sidebarOpen && (
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <span className="text-sm font-medium truncate">
+                    {item.name}
+                  </span>
                 )}
               </Link>
             );
@@ -233,15 +168,6 @@ const AsmSiderbar = () => {
               {/* Go Back Buttons - Show when impersonating */}
               {isImpersonating && originalRole && (
                 <>
-                  {/* Back to parent (e.g., Admin → ASM) */}
-                  <button
-                    onClick={() => backToOriginalRole(navigate)}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
-                    title={`Go back to ${originalRole.displayName || formatRoleName(originalRole.role)} Panel`}
-                  >
-                    <ArrowLeft size={16} />
-                    <span>Back to {originalRole.displayName || formatRoleName(originalRole.role)}</span>
-                  </button>
                   {/* Back directly to Admin if available */}
                   <button
                     onClick={() => backToAdmin(navigate)}
@@ -285,95 +211,6 @@ const AsmSiderbar = () => {
         </main>
       </div>
 
-      {/* Change Password */}
-
-      {ChangePasswordModel && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative mx-4">
-            {/* Close Button */}
-            <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
-              onClick={() => setChangePasswordModel(false)}
-            >
-              <span className="text-2xl">&times;</span>
-            </button>
-
-            {/* Title */}
-            <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-              Change Password
-            </h2>
-
-            {/* Form */}
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Old Password */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                  htmlFor="oldPassword"
-                >
-                  Old Password
-                </label>
-                <input
-                  type="password"
-                  id="oldPassword"
-                  name="oldPassword"
-                  value={formData.oldPassword}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-300"
-                  placeholder="Enter old password"
-                />
-              </div>
-
-              {/* New Password */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                  htmlFor="password"
-                >
-                  New Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-300"
-                  placeholder="Enter new password"
-                />
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                  htmlFor="confirmPassword"
-                >
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-300"
-                  placeholder="Confirm new password"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 rounded-lg transition duration-300"
-              >
-                Change Password
-
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Profile Side Panel */}
       {profileOpen && (
@@ -500,26 +337,8 @@ const AsmSiderbar = () => {
                       {/* ASM Details */}
                     </div>
 
-                    {/* Settings Section */}
-                    <div className="mt-4 space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-[#12B99C]" /> Settings
-                      </h3>
-
-                      {/* Change Password */}
-                      <div className="flex items-center gap-3 cursor-pointer hover:text-[#12B99C]">
-                        <Lock className="w-5 h-5" />
-                        <button
-                          className="text-[#111827]"
-                          onClick={() => {
-                            setChangePasswordModel(true);
-                          }}
-                        >
-                          Change Password
-                        </button>
-                      </div>
-
-                      {/* Logout */}
+                    {/* Logout */}
+                    <div className="mt-4">
                       <div
                         className="flex items-center gap-3 cursor-pointer hover:text-red-500"
                         onClick={() => handleLogout()}

@@ -5,6 +5,7 @@ import {
   fetchDeleteAccountRequests,
   updateDeleteAccountRequestStatus,
 } from "../../../feature/thunks/adminThunks";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const DeleteAccountRequests = () => {
   const dispatch = useDispatch();
@@ -15,6 +16,10 @@ const DeleteAccountRequests = () => {
   useEffect(() => {
     dispatch(fetchDeleteAccountRequests());
   }, [dispatch]);
+
+  const sortedRequests = sortNewestFirst(Array.isArray(data) ? data : [], {
+    dateKeys: ["createdAt"],
+  });
 
   const handleUpdateStatus = (id, status) => {
     if (
@@ -111,7 +116,7 @@ const DeleteAccountRequests = () => {
                     Loading delete-account requests...
                   </td>
                 </tr>
-              ) : !data || data.length === 0 ? (
+              ) : sortedRequests.length === 0 ? (
                 <tr>
                   <td
                     colSpan={8}
@@ -121,7 +126,7 @@ const DeleteAccountRequests = () => {
                   </td>
                 </tr>
               ) : (
-                data.map((req) => (
+                sortedRequests.map((req) => (
                   <tr
                     key={req._id}
                     className="border-t border-gray-100 hover:bg-gray-50"

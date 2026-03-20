@@ -37,6 +37,7 @@ const Customer = () => {
           name: c.userName,
           id: c.employeeId,
           phone: c.phone || "-",
+          applicationDateRaw: c.applicationDate,
           applicationDate: new Date(c.applicationDate).toLocaleDateString(), // formatted
           loanType: c.loanType,
           loanAmount: c.loanAmount || 0,
@@ -49,7 +50,7 @@ const Customer = () => {
 
   // Memoized filtered customers
   const filteredCustomers = useMemo(() => {
-    return customers.filter((customer) => {
+    const filtered = customers.filter((customer) => {
       const term = searchTerm.toLowerCase();
 
       const matchesSearch =
@@ -64,6 +65,11 @@ const Customer = () => {
         normalizedStatus?.toLowerCase() === filterStatus.toLowerCase();
 
       return matchesSearch && matchesFilter;
+    });
+    return [...filtered].sort((a, b) => {
+      const aTime = a?.applicationDateRaw ? new Date(a.applicationDateRaw).getTime() : 0;
+      const bTime = b?.applicationDateRaw ? new Date(b.applicationDateRaw).getTime() : 0;
+      return bTime - aTime; // newest first
     });
   }, [customers, searchTerm, filterStatus]);
 

@@ -3,12 +3,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { ArrowLeft, Search, Calendar, Award, IndianRupee } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchPartnerDashboard } from "../../../feature/thunks/partnerThunks";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const IncentiveHistory = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const [year, setYear] = useState(new Date().getFullYear());
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data, loading } = useSelector(
@@ -25,14 +27,17 @@ const IncentiveHistory = () => {
   const filtered = incentives.filter((inv) => {
     const date = new Date(inv.createdAt || inv.updatedAt || Date.now());
     const sameYear = date.getFullYear() === Number(year);
+    const sameMonth = date.getMonth() + 1 === Number(month);
     const term = searchTerm.toLowerCase();
     const matchesText =
       !term ||
       inv.status?.toLowerCase().includes(term) ||
       String(inv.amount || 0).includes(term);
 
-    return sameYear && matchesText;
+    return sameYear && sameMonth && matchesText;
   });
+
+  const sortedFiltered = sortNewestFirst(filtered, { dateKeys: ["createdAt", "updatedAt"] });
 
   const formatCurrency = (amount) => {
     if (!amount) return "₹0";
@@ -59,7 +64,7 @@ const IncentiveHistory = () => {
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Incentive History</h1>
           <p className="text-gray-600 mt-1">
-            View all incentives you have earned, by year.
+            View all incentives you have earned, by month and year.
           </p>
         </div>
 
@@ -89,6 +94,18 @@ const IncentiveHistory = () => {
               min="2020"
               max="2100"
             />
+
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="w-32 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent text-sm bg-white"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {new Date(2000, m - 1).toLocaleString("default", { month: "short" })}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -101,7 +118,7 @@ const IncentiveHistory = () => {
               </p>
               <p className="text-2xl font-bold text-purple-700 mt-2">
                 {formatCurrency(
-                  filtered
+                  sortedFiltered
                     .filter((i) => i.status === "PAID")
                     .reduce((sum, i) => sum + (i.amount || 0), 0)
                 )}
@@ -132,14 +149,14 @@ const IncentiveHistory = () => {
                     Loading incentives...
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : sortedFiltered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-4 text-gray-500">
-                    No incentives found for this year.
+                    No incentives found for this month/year.
                   </td>
                 </tr>
               ) : (
-                filtered.map((inv) => {
+                sortedFiltered.map((inv) => {
                   const dateObj = new Date(inv.createdAt || inv.updatedAt || Date.now());
                   const monthName = dateObj.toLocaleString("default", {
                     month: "short",

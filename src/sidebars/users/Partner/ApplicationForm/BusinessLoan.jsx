@@ -479,14 +479,34 @@ const handleSubmit = async () => {
     // Handle different error types
     if (axios.isCancel(err)) {
       setError("Request was cancelled. Please try again.");
-    } else if (err.code === 'ECONNABORTED') {
+    } else if (err.code === "ECONNABORTED") {
       setError("Request timeout. Please check your connection and try again.");
     } else if (err.response) {
-      // Server responded with error status
-      setError(
-        err.response?.data?.message || err.message || "Failed to save application. Try again."
-      );
-      setValidationErrors(err.response?.data?.errors || []);
+      const backendMessage = err.response?.data?.message;
+      const backendError = err.response?.data?.error || "";
+
+      // Friendly messages for duplicate keys (email / phone)
+      if (typeof backendError === "string" && backendError.includes("E11000")) {
+        if (backendError.includes("email_1")) {
+          setError(
+            "An account with this email already exists. Please login or use a different email."
+          );
+        } else if (backendError.includes("phone_1")) {
+          setError(
+            "An account with this mobile number already exists. Please login or use a different number."
+          );
+        } else {
+          setError(
+            "A record with these details already exists. Please login or use different details."
+          );
+        }
+      } else {
+        // Generic server-side validation / error
+        setError(
+          backendMessage || err.message || "Failed to save application. Try again."
+        );
+        setValidationErrors(err.response?.data?.errors || []);
+      }
     } else if (err.request) {
       // Request was made but no response received
       setError("Network error. Please check your connection and try again.");
@@ -661,7 +681,7 @@ const handleSubmit = async () => {
     >
       <div className="max-w-4xl mx-auto">
         {successMessage && (
-          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-semibold">{successMessage}</p>
@@ -679,6 +699,21 @@ const handleSubmit = async () => {
                 Dismiss
               </button>
             </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+            <p className="font-semibold">
+              {error}
+            </p>
+            {Array.isArray(validationErrors) && validationErrors.length > 0 && (
+              <ul className="list-disc list-inside mt-2 text-sm space-y-1">
+                {validationErrors.map((msg, idx) => (
+                  <li key={idx}>{msg}</li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
@@ -2297,17 +2332,43 @@ const handleSubmit = async () => {
               </div>
             </section>
 
-            {/* Submit Button */}
-            <div className="flex justify-center pt-8">
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                style={{ backgroundColor: "#12B99C" }}
-                disabled={loading}
-              >
-                {loading ? "Saving..." : "Submit Loan"}
-              </button>
+            {/* Submit Button + inline messages */}
+            <div className="pt-8">
+              {successMessage && (
+                <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+                  <p className="font-semibold">{successMessage}</p>
+                  {savedApplication?.appNo && (
+                    <p className="text-sm mt-1">
+                      Application ID: {savedApplication.appNo}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {error && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+                  <p className="font-semibold">{error}</p>
+                  {Array.isArray(validationErrors) && validationErrors.length > 0 && (
+                    <ul className="list-disc list-inside mt-2 text-sm space-y-1">
+                      {validationErrors.map((msg, idx) => (
+                        <li key={idx}>{msg}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                  style={{ backgroundColor: "#12B99C" }}
+                  disabled={loading}
+                >
+                  {loading ? "Saving..." : "Submit Loan"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

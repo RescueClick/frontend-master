@@ -3,6 +3,7 @@ import { Search, Award, TrendingUp, Target, CheckCircle, ArrowLeft, IndianRupee 
 import { fetchAdminIncentives } from "../../../feature/thunks/adminThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const colors = {
   primary: "#12B99C",
@@ -52,6 +53,10 @@ const AdminDoneIncentive = () => {
       incentive.partnerName?.toLowerCase().includes(term) ||
       incentive.partnerEmployeeId?.toLowerCase().includes(term)
     );
+  });
+
+  const sortedFilteredIncentives = sortNewestFirst(filteredIncentives, {
+    dateKeys: ["createdAt", "updatedAt"],
   });
 
   // Admin cannot change status here; this screen is view-only for done incentives
@@ -125,7 +130,7 @@ const AdminDoneIncentive = () => {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-gray-600 text-sm font-medium">Total Done Incentives</p>
-            <p className="text-2xl font-bold text-green-600 mt-2">{filteredIncentives.length}</p>
+            <p className="text-2xl font-bold text-green-600 mt-2">{sortedFilteredIncentives.length}</p>
           </div>
           <div className="p-3 rounded-full bg-green-100 text-green-600">
             <CheckCircle size={24} />
@@ -155,14 +160,14 @@ const AdminDoneIncentive = () => {
                   Loading incentives...
                 </td>
               </tr>
-            ) : filteredIncentives.length === 0 ? (
+            ) : sortedFilteredIncentives.length === 0 ? (
               <tr>
                 <td colSpan="8" className="text-center py-4">
                   No done incentives found
                 </td>
               </tr>
             ) : (
-              filteredIncentives.map((incentive) => {
+              sortedFilteredIncentives.map((incentive) => {
                 const fileTarget = incentive.fileCountTarget ?? 4;
                 const disbursementTarget = incentive.disbursementTarget ?? 2000000;
                 const filesAchieved =

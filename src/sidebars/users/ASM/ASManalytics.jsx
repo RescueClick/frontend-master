@@ -1,12 +1,68 @@
-import React, { useCallback, useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Users, DollarSign, UserCheck, Banknote, TrendingUp, IndianRupee, FileText } from "lucide-react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchRsmAnalytics } from '../../../feature/thunks/asmThunks';
+import { fetchAnalyticsKpis } from "../../../feature/thunks/analyticsThunks";
 import { designSystem, formatCurrency, formatNumber } from '../../../utils/designSystem';
 import { parseAnalyticsData } from '../../../utils/analyticsParser';
 import MetricCard from '../../../components/shared/MetricCard';
+import PageHeader from "../../../components/shared/PageHeader";
+import ChartCard from "../../../components/shared/ChartCard";
+import FiltersBar from "../../../components/shared/FiltersBar";
+import { FunnelChart, ConversionChart, FinancialsChart, AgingChart } from "../../../components/shared/KpiCharts";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  BarChart,
+  Bar,
+} from "recharts";
+
+function toYmd(d) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function presetToRange(preset, customStart, customEnd) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+
+  if (preset === "custom") return { start: customStart || null, end: customEnd || null };
+  if (preset === "today") return { start: toYmd(todayStart), end: toYmd(tomorrowStart) };
+  if (preset === "7d") {
+    const s = new Date(todayStart);
+    s.setDate(s.getDate() - 7);
+    return { start: toYmd(s), end: toYmd(tomorrowStart) };
+  }
+  if (preset === "30d") {
+    const s = new Date(todayStart);
+    s.setDate(s.getDate() - 30);
+    return { start: toYmd(s), end: toYmd(tomorrowStart) };
+  }
+  if (preset === "mtd") {
+    return { start: toYmd(new Date(now.getFullYear(), now.getMonth(), 1)), end: toYmd(tomorrowStart) };
+  }
+  if (preset === "qtd") {
+    const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    return { start: toYmd(new Date(now.getFullYear(), qStartMonth, 1)), end: toYmd(tomorrowStart) };
+  }
+  if (preset === "ytd") {
+    return { start: toYmd(new Date(now.getFullYear(), 0, 1)), end: toYmd(tomorrowStart) };
+  }
+  const s = new Date(todayStart);
+  s.setDate(s.getDate() - 30);
+  return { start: toYmd(s), end: toYmd(tomorrowStart) };
+}
 
 
 const ASManalytics = () => {
@@ -23,6 +79,10 @@ const ASManalytics = () => {
 
   const location = useLocation();
   const { id, role } = location.state || {};
+  const [filters, setFilters] = useState({ preset: "30d" });
+  const [kpis, setKpis] = useState(null);
+  const [kpisLoading, setKpisLoading] = useState(false);
+  const [kpisError, setKpisError] = useState(null);
 
   // Call API when component mounts
   useEffect(() => {
@@ -32,6 +92,18 @@ const ASManalytics = () => {
     }
     dispatch(fetchRsmAnalytics(id)); // Fetch RSM analytics
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const { start, end } = presetToRange(filters.preset, filters.start, filters.end);
+    setKpisLoading(true);
+    setKpisError(null);
+    dispatch(fetchAnalyticsKpis({ id, start, end }))
+      .unwrap()
+      .then((res) => setKpis(res?.data?.kpis || null))
+      .catch((e) => setKpisError(typeof e === "string" ? e : "Failed to load KPI analytics"))
+      .finally(() => setKpisLoading(false));
+  }, [id, filters, dispatch]);
 
   // Process analytics data using universal parser
   const parsedData = useMemo(() => parseAnalyticsData(data, "RSM"), [data]);
@@ -106,6 +178,21 @@ const ASManalytics = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: designSystem.colors.background }}>
       <div className="max-w-7xl mx-auto p-6">
+        <div className="mb-6">
+          <PageHeader
+            title="Analytics"
+            subtitle="ASM view (RSM performance and monthly history)"
+            right={
+              <button
+                type="button"
+                onClick={() => navigate("/asm/dashboard")}
+                className="text-sm px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50"
+              >
+                Back to Dashboard
+              </button>
+            }
+          />
+        </div>
         {/* RSM Info Card */}
         <div className={`${designSystem.card.base} ${designSystem.card.padding} mb-6`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -141,6 +228,8 @@ const ASManalytics = () => {
                 </div>
               </div>
             </div>
+
+      {/* KPI section moved below Metrics Cards */}
 
             {/* Column 3 - System Information */}
             <div>
@@ -194,6 +283,80 @@ const ASManalytics = () => {
             subtitle="Disbursed amount"
           />
         </div>
+
+        <FiltersBar value={filters} onChange={setFilters} className="mb-6" />
+
+        {kpisError ? (
+          <div className="mb-8 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+            {kpisError}
+          </div>
+        ) : null}
+
+        {!kpisError ? (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <ChartCard title="Funnel" subtitle="Application → Approved → Disbursed">
+                {kpisLoading ? (
+                  <p className="text-sm text-gray-500">Loading KPI analytics…</p>
+                ) : (
+                  <FunnelChart kpis={kpis} />
+                )}
+              </ChartCard>
+
+              <ChartCard title="Conversion" subtitle="Stage-to-stage conversion rates">
+                {kpisLoading ? (
+                  <p className="text-sm text-gray-500">Loading KPI analytics…</p>
+                ) : (
+                  <ConversionChart kpis={kpis} />
+                )}
+              </ChartCard>
+
+              <ChartCard title="Financials" subtitle="Payouts and incentives (by status)">
+                {kpisLoading ? (
+                  <p className="text-sm text-gray-500">Loading KPI analytics…</p>
+                ) : (
+                  <FinancialsChart kpis={kpis} />
+                )}
+              </ChartCard>
+            </div>
+
+            <div className="mb-8">
+              <ChartCard title="SLA / Aging" subtitle="Open application aging buckets (by status)">
+                {kpisLoading ? (
+                  <p className="text-sm text-gray-500">Loading KPI analytics…</p>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                        <p className="text-[11px] text-gray-500">Disbursed avg (days)</p>
+                        <p className="text-lg font-bold text-gray-900 mt-1">{kpis?.sla?.disbursedSla?.avgDays ?? 0}</p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                        <p className="text-[11px] text-gray-500">Median (days)</p>
+                        <p className="text-lg font-bold text-gray-900 mt-1">{kpis?.sla?.disbursedSla?.medianDays ?? "—"}</p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                        <p className="text-[11px] text-gray-500">Disbursed count</p>
+                        <p className="text-lg font-bold text-gray-900 mt-1">{kpis?.sla?.disbursedSla?.count ?? 0}</p>
+                      </div>
+                    </div>
+
+                    {Number(kpis?.sla?.openCount || 0) > 0 ? (
+                      <AgingChart kpis={kpis} variant="pie" />
+                    ) : (
+                      <div className="h-[260px] rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-center px-6">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">No open applications</p>
+                          <p className="text-xs text-gray-500 mt-1">Try expanding the date range to see pending cases.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </ChartCard>
+            </div>
+          </>
+        ) : null}
 
         {/* Target vs Achievement - ASM (This Month) */}
         <div className={`${designSystem.card.base} ${designSystem.card.padding} mb-6`}>
@@ -293,50 +456,78 @@ const ASManalytics = () => {
           </div>
         </div>
 
-        {/* Monthly History - ASM */}
-        <div className={`${designSystem.card.base} ${designSystem.card.padding}`}>
-          <h2 className="text-xl font-bold mb-2" style={{ color: designSystem.colors.text.primary }}>
-            Monthly History
-          </h2>
-          <p className="text-xs text-gray-500 mb-4">
-            Previous months&apos; disbursement vs target (ASM hierarchy)
-          </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ChartCard
+            title="Disbursement Trend"
+            subtitle="Monthly achieved amount (from monthlyPerformance)"
+          >
+            {analyticsData.monthlyPerformance && analyticsData.monthlyPerformance.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart
+                  data={analyticsData.monthlyPerformance.map((m, idx) => ({
+                    label:
+                      m.label ||
+                      (m.month && m.year
+                        ? new Date(m.year, m.month - 1).toLocaleString("en-US", { month: "short" })
+                        : `M${idx + 1}`),
+                    achieved: Number(m.achievedValue || m.achieved || 0),
+                    target: Number(m.targetValue || m.target || 0),
+                  }))}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#6B7280" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
+                  <Tooltip
+                    formatter={(v, k) => [
+                      typeof v === "number" ? formatCurrency(v) : v,
+                      k === "achieved" ? "Achieved" : "Target",
+                    ]}
+                  />
+                  <Line type="monotone" dataKey="target" stroke="#F59E0B" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="achieved" stroke="#10B981" strokeWidth={3} dot={{ r: 2 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-xs text-gray-400">No monthly history data available yet.</p>
+            )}
+          </ChartCard>
 
-          {analyticsData.monthlyPerformance && analyticsData.monthlyPerformance.length > 0 ? (
-            <div className="w-full overflow-x-auto">
-              <div className="flex items-end gap-4 h-40">
-                {analyticsData.monthlyPerformance.map((m, idx) => {
-                  const target = Number(m.targetValue || m.target || 0);
-                  const achieved = Number(m.achievedValue || m.achieved || 0);
-                  const pct = target > 0 ? Math.min(100, (achieved / target) * 100) : 0;
-                  const monthLabel =
-                    m.month && m.year
-                      ? `${new Date(m.year, m.month - 1).toLocaleString("en-US", {
-                          month: "short",
-                        })}`
-                      : `M${idx + 1}`;
-
-                  return (
-                    <div key={idx} className="flex flex-col items-center flex-shrink-0 min-w-[32px]">
-                      <div className="relative w-5 bg-gray-100 rounded-md overflow-hidden h-24 flex items-end">
-                        <div
-                          className="w-full bg-emerald-500 rounded-md transition-all duration-300"
-                          style={{ height: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="mt-1 text-[10px] text-gray-600 text-center">
-                        {monthLabel}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-gray-400">
-              No monthly history data available yet.
-            </p>
-          )}
+          <ChartCard
+            title="Target vs Achieved"
+            subtitle="Monthly target and achieved (bar comparison)"
+          >
+            {analyticsData.monthlyPerformance && analyticsData.monthlyPerformance.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={analyticsData.monthlyPerformance.map((m, idx) => ({
+                    label:
+                      m.label ||
+                      (m.month && m.year
+                        ? new Date(m.year, m.month - 1).toLocaleString("en-US", { month: "short" })
+                        : `M${idx + 1}`),
+                    achieved: Number(m.achievedValue || m.achieved || 0),
+                    target: Number(m.targetValue || m.target || 0),
+                  }))}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#6B7280" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
+                  <Tooltip
+                    formatter={(v, k) => [
+                      typeof v === "number" ? formatCurrency(v) : v,
+                      k === "achieved" ? "Achieved" : "Target",
+                    ]}
+                  />
+                  <Bar dataKey="target" fill="#F59E0B" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="achieved" fill="#10B981" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-xs text-gray-400">No monthly history data available yet.</p>
+            )}
+          </ChartCard>
         </div>
       </div>
     </div>

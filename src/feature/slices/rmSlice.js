@@ -382,11 +382,11 @@ const rmSlice = createSlice({
     state.partnerTargets.data = action.payload;
     state.partnerTargets.success = true;
   })
-  .addCase(fetchRmPartnerTargets.rejected, (state, action) => {
-    state.partnerTargets.loading = false;
-    state.partnerTargets.error = action.payload;
-    state.partnerTargets.success = false;
-  });
+      .addCase(fetchRmPartnerTargets.rejected, (state, action) => {
+        state.partnerTargets.loading = false;
+        state.partnerTargets.error = action.payload;
+        state.partnerTargets.success = false;
+      });
   },
 });
 

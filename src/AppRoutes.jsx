@@ -4,13 +4,8 @@
 
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-
-
-
 import LoginPage from "./LoginPage";
-
 import MainLayout from "./Page/MainLayout";
-
 import Home from "./Page/Home";
 import Services from "./Page/Services";
 import ChannelPartner from "./Page/ChannelPartner";
@@ -63,6 +58,7 @@ import AdminIncentives from "./sidebars/users/Admin/AdminIncentives";
 import AdminEligibleIncentive from "./sidebars/users/Admin/AdminEligibleIncentive";
 import AdminDoneIncentive from "./sidebars/users/Admin/AdminDoneIncentive";
 import AdminPendingIncentive from "./sidebars/users/Admin/AdminPendingIncentive";
+import AdminSettings from "./sidebars/users/Admin/AdminSettings";
 
 // Import ASM user pages
 import AsmDashboard from "./sidebars/users/ASM/Dashboard";
@@ -125,10 +121,13 @@ import DocumentUpload from "./sidebars/users/Partner/DocumentUpload";
 import MyTarget from "./sidebars/users/Partner/MyTarget";
 import IncentiveHistory from "./sidebars/users/Partner/IncentiveHistory";
 import PayoutHistory from "./sidebars/users/Partner/PayoutHistory";
+import PartnerAnalytics from "./sidebars/users/Partner/PartnerAnalytics";
+// Partner settings uses shared PasswordSettings (same as ASM/RSM/RM)
 
 // import Costomer
 import Customer from "./sidebars/users/Customer/Customer";
 import FollowUp from "./sidebars/users/RM/FollowUp";
+import PasswordSettings from "./sidebars/users/common/PasswordSettings";
 
 import Agreement from "../public/Agreement";
 import AuthLetter from "../public/AuthLetter";
@@ -220,6 +219,7 @@ const AppRoutes = () => {
         <Route path="Analytics" element={<Analytics />} />
         <Route path="RM-partner" element={<RMpartner />} />
         <Route path="delete-requests" element={<DeleteAccountRequests />} />
+        <Route path="settings" element={<AdminSettings />} />
 
         {/* Fixed child route paths (relative, no leading /) */}
         <Route path="add-asm-page" element={<AddASMPage />} />
@@ -255,7 +255,7 @@ const AppRoutes = () => {
         <Route path="done-incentive" element={<AsmDoneIncentive />} />
         <Route path="follow-ups" element={<AsmFollowUps />} />
         <Route path="partner-targets" element={<AsmPartnerTargets />} />
-        <Route path="settings" element={<Settings  />} />
+        <Route path="settings" element={<PasswordSettings  />} />
         <Route path="EditProfile" element={<EditProfile />} />
         <Route path="ASManalytics" element={<ASManalytics />} />
       </Route>
@@ -272,6 +272,7 @@ const AppRoutes = () => {
         <Route path="analytics" element={<RsmAnalytics />} />
         <Route path="follow-ups" element={<RsmFollowUps />} />
         <Route path="banks" element={<Banks />} />
+        <Route path="settings" element={<PasswordSettings />} />
       </Route>
       </Route>
 
@@ -292,6 +293,7 @@ const AppRoutes = () => {
         <Route path="RManalytics" element={<RManalytics/>}/>
         <Route path="Rm-Application" element={<RmApplication/>}/>
         <Route path="partner-targets" element={<RmPartnerTargets />} />
+        <Route path="settings" element={<PasswordSettings />} />
         {/* Payout routes moved to ASM and Admin */}
 
 
@@ -316,6 +318,8 @@ const AppRoutes = () => {
           <Route path="dashboard" element={<PartnerDashboard />} />
           <Route path="customers" element={<PartnerCustomers />} />
           <Route path="applications" element={<PartnerApplications />} />
+          <Route path="analytics" element={<PartnerAnalytics />} />
+          <Route path="settings" element={<PasswordSettings />} />
           <Route path="EmiCalculator" element={<PartnerEmiCalculator />} />
           <Route path="KYCDetails" element={<KYCDetails />} />
           <Route path="complete-application" element={<CompleteApplication />} />

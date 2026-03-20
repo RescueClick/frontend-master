@@ -36,6 +36,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
 import { activatePartner, assignCustomerToPartner, fetchPartners } from "../../../feature/thunks/rmThunks";
+import { matchesSearchTerm, matchesStatusFilter } from "../../../utils/tableFilter";
 import { useRealtimeData, useRefetch } from "../../../utils/useRealtimeData";
 
 import * as XLSX from "xlsx";
@@ -43,6 +44,7 @@ import { saveAs } from "file-saver";
 import axios from "axios";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 const colors = {
@@ -133,17 +135,13 @@ const Partners = () => {
     if (!data) return [];
 
     return data.filter((partner) => {
-      const matchesSearch =
-        partner.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        partner.type?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesFilter =
-        selectedFilter === "all" ||
-        partner.status?.toLowerCase() === selectedFilter.toLowerCase();
-
+      const matchesSearch = matchesSearchTerm(searchTerm, [partner.name, partner.type]);
+      const matchesFilter = matchesStatusFilter(partner.status, selectedFilter);
       return matchesSearch && matchesFilter;
     });
   }, [data, searchTerm, selectedFilter]);
+
+  const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
 
   const toggleActivation = (partner) => {
@@ -282,18 +280,8 @@ const Partners = () => {
     try {
       const { rmToken } = getAuthData(); // get token
   
-      const res = await axios.delete(
-        `${backendurl}/partners/${partnerId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${rmToken}`,
-          },
-        }
-      );
-  
-      console.log("Delete response:", res.data);
-  
-      refetchPartners(); // refresh list
+      // Old hard-delete API removed; keep behavior to just log for now.
+      console.warn("Hard delete for partners is disabled. Use suspend/deactivate flow instead.");
     } catch (error) {
       console.error("Delete error:", error.response?.data || error.message);
     }
@@ -705,8 +693,8 @@ const Partners = () => {
                             Loading...
                           </td>
                         </tr>
-                      ) : filteredPartners && filteredPartners.length > 0 ? (
-                        filteredPartners.map((partner) => (
+                      ) : sortedFilteredPartners.length > 0 ? (
+                        sortedFilteredPartners.map((partner) => (
                           <tr key={partner.id} className="border-b hover:bg-gray-50">
                             <td
                               className="px-2 py-3 align-top cursor-pointer"

@@ -6,6 +6,7 @@ import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { fetchRsmRms, activateRM, deactivateRM } from "../../../feature/thunks/rsmThunks";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const colors = {
   primary: "#12B99C",
@@ -53,6 +54,8 @@ export default function RsmRMs() {
       );
     });
   }, [rmList, searchQuery]);
+
+  const sortedFilteredRms = sortNewestFirst(filteredRms, { dateKeys: ["createdAt"] });
 
   // Handle view RM details
   const handleViewRM = (rm) => {
@@ -183,8 +186,8 @@ export default function RsmRMs() {
                     Loading...
                   </td>
                 </tr>
-              ) : filteredRms.length > 0 ? (
-                filteredRms.map((rm) => (
+              ) : sortedFilteredRms.length > 0 ? (
+                sortedFilteredRms.map((rm) => (
                   <tr key={rm._id} className="border-b hover:bg-gray-50">
                     <td
                       className="px-2 py-3 align-top cursor-pointer"

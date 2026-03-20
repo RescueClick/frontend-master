@@ -3,6 +3,7 @@ import { Search, Award, TrendingUp, Target, Clock, ArrowLeft, IndianRupee } from
 import { fetchAdminIncentives } from "../../../feature/thunks/adminThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const colors = {
   primary: "#12B99C",
@@ -55,6 +56,10 @@ const AdminPendingIncentive = () => {
       incentive.partnerName?.toLowerCase().includes(term) ||
       incentive.partnerEmployeeId?.toLowerCase().includes(term)
     );
+  });
+
+  const sortedFilteredIncentives = sortNewestFirst(filteredIncentives, {
+    dateKeys: ["createdAt", "updatedAt"],
   });
 
   // Pending count = partners that are NOT yet eligible for incentive
@@ -160,14 +165,14 @@ const AdminPendingIncentive = () => {
                   Loading incentives...
                 </td>
               </tr>
-            ) : filteredIncentives.length === 0 ? (
+            ) : sortedFilteredIncentives.length === 0 ? (
               <tr>
                 <td colSpan="7" className="text-center py-4">
                   No pending incentives found
                 </td>
               </tr>
             ) : (
-              filteredIncentives.map((incentive) => {
+              sortedFilteredIncentives.map((incentive) => {
                 const fileTarget = incentive.fileCountTarget ?? 4;
                 const disbursementTarget = incentive.disbursementTarget ?? 2000000;
                 const filesAchieved =

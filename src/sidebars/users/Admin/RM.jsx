@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { activateRM, assignPartnersToRM, deleteRm, fetchRMs } from "../../../feature/thunks/adminThunks";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 
@@ -96,6 +97,8 @@ export default function RM() {
       );
     });
   }, [rms, searchQuery]);
+
+  const sortedFilteredRms = sortNewestFirst(filteredRms, { dateKeys: ["createdAt"] });
 
   // Handle view RM details
   const handleViewRM = (rm) => {
@@ -304,8 +307,8 @@ loginAsUser(userId, navigate);
                     Loading...
                   </td>
                 </tr>
-              ) : filteredRms.length > 0 ? (
-                filteredRms.map((rm) => (
+              ) : sortedFilteredRms.length > 0 ? (
+                sortedFilteredRms.map((rm) => (
                   <tr key={rm._id} className="border-b hover:bg-gray-50">
                     <td
                       className="px-2 py-3 align-top  "

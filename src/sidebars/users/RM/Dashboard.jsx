@@ -31,6 +31,7 @@ import { fetchDashboard } from "../../../feature/thunks/rmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import {backendurl} from "../../../feature/urldata"
+import MetricCard from "../../../components/shared/MetricCard";
 
 
 
@@ -47,13 +48,39 @@ const Dashboard = () => {
     enabled: true,
   });
 
-  // Sample data
-  const metrics = {
-    partners: data?.activePartners ? data?.activePartners : "NA",
-    customers: data?.avgRating ? data?.avgRating : "NA",
-    leads: data?.totalPartners ? data?.totalPartners : "NA",
-    revenue: data?.totalRevenu ? data?.totalRevenu : "NA"
-  };
+  const metricCards = useMemo(
+    () => [
+      {
+        title: "Active Partners",
+        value: data?.totals?.activePartners ?? 0,
+        icon: Users,
+        onClick: () => navigate("/rm/partners"),
+        subtitle: "Partners under you",
+      },
+      {
+        title: "Total Customers",
+        value: data?.totals?.totalCustomers ?? 0,
+        icon: UserCheck,
+        onClick: () => navigate("/rm/customers"),
+        subtitle: "Customer base",
+      },
+      {
+        title: "Active Pipeline",
+        value: data?.totals?.inProcessApplications ?? 0,
+        icon: TrendingUp,
+        onClick: () => navigate("/rm/Rm-Application"),
+        subtitle: "In-process applications",
+      },
+      {
+        title: "Total Disbursed",
+        value: formatCurrency(data?.totals?.totalRevenue ?? 0),
+        icon: IndianRupee,
+        onClick: () => navigate("/rm/Revenue-generated"),
+        subtitle: "Disbursed amount",
+      },
+    ],
+    [data?.totals, navigate]
+  );
 
   const targetVsAchievement = useMemo(() => {
     return (data?.targets || [])?.map((item) => {
@@ -235,7 +262,7 @@ const Dashboard = () => {
 
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  const formatCurrency = (amount) => {
+  function formatCurrency(amount) {
     if (amount >= 10000000) {
       // 1 Crore = 1 Cr = 10000000
       return `₹ ${(amount / 10000000).toFixed(1)}Cr`;
@@ -249,7 +276,7 @@ const Dashboard = () => {
       // For amounts less than 1K
       return `₹ ${amount}`;
     }
-  };
+  }
   
 
   const getStatusColor = (status) => {
@@ -346,115 +373,19 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto p-6">
         {/* Key Metrics Cards */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 ">
-          <div
-            className="cursor-pointer bg-white rounded-2xl p-6 transition-shadow shadow-md border border-gray-200"
-            onClick={() => {
-              navigate("/rm/partners");
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{ backgroundColor: "#12B99C" }}
-              >
-                <Users className="text-white" size={24} />
-              </div>
-           
-            </div>
-            <div>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#111827" }}
-              >
-                {data?.totals?.activePartners}
-              </p>
-              <p className="text-sm font-medium text-gray-600">
-                Active Partners
-              </p>
-
-              {/* <p className="text-xs text-gray-500 mt-1">3 new this month</p> */}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 hover:shadow-md transition-shadow shadow-md border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{ backgroundColor: "#F59E0B" }}
-              >
-                <UserCheck className=" text-white" size={24} />
-              </div>
-            
-            </div>
-            <div className="cursor-pointer"
-              onClick={() => {
-                navigate("/rm/customers");
-              }}
-            >
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#111827" }}
-              >
-                {data?.totals?.totalCustomers}
-              </p>
-              <p className="text-sm font-medium text-gray-600">
-                Total Customers
-              </p>
-              {/* <p className="text-xs text-gray-500 mt-1">12 new acquisitions</p> */}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 hover:shadow-md transition-shadow shadow-md border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-blue-500">
-                <TrendingUp className="text-white" size={24} />
-              </div>
-            
-            </div>
-            <div>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#111827" }}
-              >
-                {data?.totals?.inProcessApplications}
-              </p>
-              <p className="text-sm font-medium text-gray-600">
-                Active Pipeline
-              </p>
-              {/* <p className="text-xs text-gray-500 mt-1">
-                ₹2.8Cr potential value
-              </p> */}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 hover:shadow-md transition-shadow shadow-md border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{ backgroundColor: "#12B99C" }}
-              >
-                <IndianRupee className="text-white" size={24} />
-              </div>
-              <div className="text-right">
-            
-              </div>
-            </div>
-            <div>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#111827" }}
-              >
-                {formatCurrency(data?.totals?.totalRevenue)}
-              </p>
-              <p className="text-sm font-medium text-gray-600">
-                Total Disbursed
-              </p>
-              {/* <p className="text-xs text-gray-500 mt-1">
-                95% of quarterly target
-              </p> */}
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {metricCards.map((m, idx) => (
+            <MetricCard
+              key={m.title}
+              title={m.title}
+              value={m.value}
+              icon={m.icon}
+              subtitle={m.subtitle}
+              onClick={m.onClick}
+              colorIndex={idx}
+              isLoading={loading}
+            />
+          ))}
         </div>
 
         {/* Current Month Target - RM focuses on Disbursement (Business Metric) */}

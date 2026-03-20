@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { backendurl } from "../feature/urldata";
-
-const colors = {
-    primary: "#12B99C",
-    background: "#F8FAFC",
-    accent: "#F59E0B",
-    text: "#111827",
-};
+import logo from "../assets/logo.png";
 
 export function RequestResetForm() {
     const [email, setEmail] = useState("");
@@ -30,46 +24,55 @@ export function RequestResetForm() {
     };
 
     return (
-        <div
-            className="min-h-screen flex items-center justify-center p-4"
-            style={{ backgroundColor: colors.background }}
-        >
-            <div className="max-w-md w-full bg-white shadow-lg rounded-2xl p-6">
-                <h2
-                    className="text-2xl font-bold mb-4 text-center"
-                    style={{ color: colors.text }}
-                >
-                    Request Password Reset
-                </h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <input
-                        type="email"
-                        placeholder="Enter your email"
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                        style={{
-                            borderColor: colors.primary,
-                            color: colors.text,
-                        }}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-                    <button
-                        type="submit"
-                        className="w-full py-2 rounded-lg font-semibold transition-colors"
-                        style={{
-                            backgroundColor: colors.primary,
-                            color: "#fff",
-                        }}
-                    >
-                        Send Reset Link
-                    </button>
-                </form>
-                {message && (
-                    <p className="mt-4 text-center" style={{ color: colors.accent }}>
-                        {message}
-                    </p>
-                )}
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+            <div className="w-full min-h-screen flex items-center justify-center px-4">
+                <div className="max-w-xl w-full bg-white/95 rounded-3xl shadow-2xl border border-slate-100 px-6 py-8 sm:px-8 sm:py-10">
+                    <div className="text-center mb-6">
+                        <div className="flex justify-center mb-4">
+                            <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-white border border-gray-100">
+                                <img
+                                    src={logo}
+                                    alt="Trustline Fintech"
+                                    className="w-12 h-12 object-contain"
+                                />
+                            </div>
+                        </div>
+                        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                            Forgot your password?
+                        </h2>
+                        <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+                            Enter the email address associated with your account and we&apos;ll send you a secure link to reset your password.
+                        </p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Email address
+                            </label>
+                            <input
+                                type="email"
+                                placeholder="you@example.com"
+                                className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-[#12B99C] text-slate-900 placeholder:text-slate-400"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="w-full py-2.5 rounded-lg font-semibold text-white bg-[#12B99C] hover:bg-[#0f9e82] transition-colors duration-200"
+                        >
+                            Send reset link
+                        </button>
+                    </form>
+
+                    {message && (
+                        <p className="mt-4 text-center text-sm text-amber-600">
+                            {message}
+                        </p>
+                    )}
+                </div>
             </div>
         </div>
     );

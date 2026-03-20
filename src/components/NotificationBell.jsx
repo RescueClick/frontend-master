@@ -614,6 +614,13 @@ const NotificationBell = () => {
                                 <p className="text-sm text-gray-600 mt-1">
                                   {formatted.message}
                                 </p>
+                                {typeof formatted?.data?.amount === "number" &&
+                                  (formatted.type === "payout" || formatted.type === "incentive") && (
+                                    <p className="text-xs text-gray-700 mt-1">
+                                      <span className="font-semibold">Amount:</span>{" "}
+                                      ₹{formatted.data.amount.toLocaleString("en-IN")}
+                                    </p>
+                                  )}
                                 {formatted.loanInfo && (
                                   <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
                                     {formatted.loanInfo.appNo && (

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowLeft, Search, CheckCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   fetchAdminIncentives,
   payAdminIncentive,
@@ -11,11 +11,12 @@ import toast from "react-hot-toast";
 const AdminEligibleIncentive = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIncentive, setSelectedIncentive] = useState(null);
   const [isPaying, setIsPaying] = useState(false);
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [year, setYear] = useState(location.state?.year || new Date().getFullYear());
+  const [month, setMonth] = useState(location.state?.month || new Date().getMonth() + 1);
 
   const { data = [], loading, error } = useSelector(
     (state) =>

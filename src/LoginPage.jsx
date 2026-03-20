@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser } from './feature/thunks/adminThunks';
 import { getAuthData } from './utils/localStorage';
+import logo from './assets/logo.png';
 
 
 const ErrorModal = ({ isOpen, onClose, error }) => {
@@ -217,25 +218,82 @@ const LoginPage = () => {
 
 
   return (
-
     <>
+      {/* Background */}
+      <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        {/* Full-screen split layout */}
+        <div className="w-full min-h-screen grid grid-cols-1 lg:grid-cols-2">
+          {/* Left: Brand / Marketing panel */}
+          <div className="hidden lg:flex flex-col justify-between p-10 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 relative">
+            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top,_#ffffff,_transparent_55%),radial-gradient(circle_at_bottom,_#0f172a,_transparent_55%)]" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/40 flex items-center justify-center shadow-lg">
+                  <img
+                    src={logo}
+                    alt="Trustline Fintech"
+                    className="w-9 h-9 object-contain"
+                  />
+                </div>
+                <div>
+                  <p className="text-white text-lg font-semibold leading-tight">
+                    Trustline Fintech
+                  </p>
+                  <p className="text-emerald-50 text-xs font-medium">
+                    Unified Lending & Partner Platform
+                  </p>
+                </div>
+              </div>
 
-      <div className="w-full h-screen flex items-center justify-center px-4 bg-slate-50" style={{ backgroundColor: '#F8FAFC' }}>
-        <div className="max-w-md w-full space-y-8">
-          {/* Header */}
-          <div className="text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#12B99C' }}>
-                <Shield className="w-8 h-8 text-white" />
+              <h2 className="text-3xl xl:text-4xl font-extrabold text-white mb-4 leading-tight">
+                One login for your entire financial ecosystem.
+              </h2>
+              <p className="text-sm xl:text-base text-emerald-50/90 leading-relaxed max-w-sm">
+                Securely manage applications, customers, partners, payouts and incentives in a single, real‑time dashboard built for scale.
+              </p>
+            </div>
+
+            <div className="relative z-10 mt-10 space-y-4">
+              <div className="flex items-center gap-3 text-sm text-emerald-50">
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/30">
+                  <Shield className="w-4 h-4 text-white" />
+                </div>
+                <p>Bank‑grade security with role‑based access for Admin, ASM, RSM, RM, Partner & Customer.</p>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-emerald-50">
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/30">
+                  <Lock className="w-4 h-4 text-white" />
+                </div>
+                <p>All activity is tracked for compliance, audit and performance analytics.</p>
               </div>
             </div>
-            <h2 className="text-3xl font-bold" style={{ color: '#111827' }}> Login page</h2>
-
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-xl p-8 border border-gray-100">
-            <div className="space-y-6">
+          {/* Right: Login form */}
+          <div className="relative bg-white/95 lg:bg-white px-6 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12 flex items-center justify-center">
+            <div className="max-w-md w-full space-y-8 mx-auto">
+              {/* Header */}
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-white border border-gray-100">
+                    <img
+                      src={logo}
+                      alt="Trustline Fintech"
+                      className="w-12 h-12 object-contain"
+                    />
+                  </div>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                  Sign in to your account
+                </h2>
+                <p className="mt-2 text-sm text-slate-500">
+                  Enter your registered email and password to continue.
+                </p>
+              </div>
+
+              {/* Login Form */}
+              <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-gray-100">
+                <div className="space-y-6">
               {/* Username Field */}
               <div>
                 <label htmlFor="username" className="block text-sm font-medium mb-2" style={{ color: '#111827' }}>Email Address</label>
@@ -330,6 +388,8 @@ const LoginPage = () => {
               </div>
             </div>
           </form>
+            </div>
+          </div>
         </div>
       </div>
 

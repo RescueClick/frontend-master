@@ -152,7 +152,7 @@ const Home = () => {
               </h1>
 
               <p className="text-base sm:text-lg lg:text-xl text-gray-300 mb-8 sm:mb-10 leading-relaxed max-w-xl mx-auto lg:mx-0 font-light">
-                Get Loan in minutes, Low Cibil Score no issue, Tie-up with 100+ lenders.
+                Get fast, hassle-free loans with flexible credit profiles and access to 100+ trusted lending partners.
               </p>
 
               {/* <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6"> */}
@@ -276,14 +276,13 @@ const Home = () => {
 
       {/* Services */}
 
-      <section className="bg-[#12B99C]/20 py-16 px-4 overflow-x-hidden">
-        <div className="max-w-7xl mx-auto text-center mb-10">
-          <h2 className="text-4xl font-bold text-[#0f3d3e] mb-4">
-            We Love To Serve
+      <section className="bg-slate-50 py-16 px-4 overflow-x-hidden">
+        <div className="max-w-7xl mx-auto text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4 tracking-tight">
+            Smart loan solutions for every need
           </h2>
-          <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-            We fill our work space with new excitement every day. We indulge in
-            amazingly exciting tasks.
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
+            Choose from our curated products designed for salaried, self‑employed and business customers, with a single simple digital journey.
           </p>
         </div>
 
@@ -291,17 +290,19 @@ const Home = () => {
           {services.map((service, index) => (
             <div
               key={index}
-              className="service-card bg-white rounded-xl shadow-md p-6 flex flex-col items-center text-center hover:shadow-lg transition-shadow duration-300 h-full"
+              className="service-card bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col items-center text-center hover:shadow-md hover:-translate-y-1 transition-all duration-300 h-full"
             >
-              <div className="bg-[#FFEDE1] p-4 rounded-full mb-4 text-[#12B99C]">
+              <div className="bg-emerald-50 p-4 rounded-2xl mb-4 text-[#12B99C]">
                 {service.icon}
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
                 {service.title}
               </h3>
-              <p className="text-gray-600 text-sm mb-4">{service.description}</p>
+              <p className="text-slate-600 text-sm mb-4 leading-relaxed">
+                {service.description}
+              </p>
               <button
-                className="cursor-pointer bg-[#12B99C] text-white px-5 py-2 rounded-full hover:bg-[#0f4f28] text-sm font-semibold mt-auto"
+                className="cursor-pointer bg-[#12B99C] text-white px-5 py-2.5 rounded-full hover:bg-[#0f4f28] text-sm font-semibold mt-auto"
                 onClick={() => {
                   switch (service.title) {
                     case "Personal Loan":
@@ -369,15 +370,24 @@ const Home = () => {
 
       <section className="bg-white text-gray-800 overflow-hidden py-20 px-6">
         <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3 tracking-tight">
+              Built for speed, trust and scale
+            </h2>
+            <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto">
+              A single platform that connects customers, partners and lenders with transparent journeys and strong governance.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {cardData.map((card, index) => (
               <div
                 key={index}
-                className="bg-gray-50 rounded-2xl p-8 border border-gray-100 h-full flex flex-col text-center"
+                className="bg-slate-50 rounded-2xl p-7 border border-slate-100 h-full flex flex-col text-center hover:bg-white hover:shadow-sm transition-all duration-200"
               >
                 <div className="flex justify-center items-center mb-4">{card.icon}</div>
-                <h3 className="text-lg font-bold mb-2">{card.title}</h3>
-                <p className="text-sm text-gray-600">{card.desc}</p>
+                <h3 className="text-base font-semibold mb-2 text-slate-900">{card.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{card.desc}</p>
               </div>
             ))}
           </div>

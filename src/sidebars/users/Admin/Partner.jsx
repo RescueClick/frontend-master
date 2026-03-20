@@ -13,6 +13,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
+import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 const colors = {
@@ -176,6 +177,8 @@ export default function PartnerTable() {
       );
     });
   }, [data, searchQuery]);
+
+  const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
   
   const loginAsUser = async (userId, navigate) => {
@@ -504,7 +507,7 @@ loginAsUser(userId, navigate);
                   </td>
                 </tr>
               ) : (
-                filteredPartners.map((p) => (
+                sortedFilteredPartners.map((p) => (
                   <tr key={p._id} className="border-b hover:bg-gray-50">
                     <td
                       className="px-2 py-3 align-top"
