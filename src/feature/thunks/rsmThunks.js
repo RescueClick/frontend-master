@@ -213,14 +213,14 @@ export const fetchRmAnalytics = createAsyncThunk(
   async (rmId, { rejectWithValue }) => {
     try {
       const { rsmToken } = getAuthData();
-      
+
       // Use universal analytics endpoint
       const response = await axios.get(`${backendurl}/analytics/${rmId}`, {
         headers: {
           Authorization: `Bearer ${rsmToken}`,
         },
       });
-      
+
       return response.data;
     } catch (error) {
       return rejectWithValue(
@@ -284,7 +284,7 @@ export const fetchRsmPartnerTargets = createAsyncThunk(
       const params = new URLSearchParams();
       if (year) params.append("year", year);
       if (month) params.append("month", month);
-      
+
       const response = await axios.get(
         `${backendurl}/rsm/partners/targets?${params.toString()}`,
         {
@@ -301,4 +301,25 @@ export const fetchRsmPartnerTargets = createAsyncThunk(
     }
   }
 );
+
+// get bank details
+
+export const fetchBanks = createAsyncThunk("rsm/fetchBanks", async (_, { rejectWithValue}) => {
+  try {
+
+    const { rsmToken } = getAuthData();
+    const response = await axios.get(`${backendurl}/rsm/banks`, {
+      headers: {
+        Authorization: `Bearer ${rsmToken}`,
+      }
+    })
+
+    return response.data;
+  }
+  catch (error) {
+    return rejectWithValue(error.response?.data?.message || "Failed to fetch banks");
+  }
+})
+
+
 

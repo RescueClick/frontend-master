@@ -126,14 +126,9 @@ import MyTarget from "./sidebars/users/Partner/MyTarget";
 import IncentiveHistory from "./sidebars/users/Partner/IncentiveHistory";
 import PayoutHistory from "./sidebars/users/Partner/PayoutHistory";
 
-
-
-
 // import Costomer
 import Customer from "./sidebars/users/Customer/Customer";
 import FollowUp from "./sidebars/users/RM/FollowUp";
-
-
 
 import Agreement from "../public/Agreement";
 import AuthLetter from "../public/AuthLetter";
@@ -156,12 +151,6 @@ const ROLES = {
   PARTNER: "PARTNER",
   CUSTOMER: "CUSTOMER",
 };
-
-
-
-
-
-
 
 const AppRoutes = () => {
   return (

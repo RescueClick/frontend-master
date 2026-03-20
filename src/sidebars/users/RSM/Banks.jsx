@@ -1,41 +1,26 @@
-import React, { useState } from "react";
+import React, { useState , useEffect} from "react";
 import { Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
-
-const bankData = [
-    {
-        id: 1,
-        name: "DMI Finance",
-        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVXsf9Q2820foCibdlTtxo1nmxvyMBg5uGdA&s",
-        loginId: "dmi.partner@loan.com",
-        password: "DMI@1234",
-        loanType: "Personal Loan",
-        link: "https://portal.dmifinance.com/apply",
-    },
-    {
-        id: 2,
-        name: "IndusInd Bank",
-        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQvhv54BCIZTc_imhpq7Us0LQwuEYVuWKTDEA&s",
-        loginId: "indus.partner@loan.com",
-        password: "Indus@456",
-        loanType: "Business Loan",
-        link: "https://partner.indusind.com/apply",
-    },
-    {
-        id: 3,
-        name: "Muthoot Finance",
-        logo: "https://upload.wikimedia.org/wikipedia/en/2/20/Muthoot_Finance_Logo.svg",
-        loginId: "muthoot.partner@loan.com",
-        password: "Muthoot@789",
-        loanType: "Home Loan",
-        link: "https://muthootfinance.com/apply",
-    },
-];
+import { useDispatch, useSelector} from "react-redux";
+import { fetchBanks } from "../../../feature/thunks/rsmThunks";
 
 const Banks = () => {
+
+    // const [bankData, setBankData] = useState([]);
 
     const [showPassword, setShowPassword] = useState({});
     const [showId, setShowId] = useState({});
 
+    const dispatch = useDispatch();
+
+
+    const { data: banksData, loading, error } = useSelector((state) => state.rsm.banksData);
+
+    console.log("Banks Data:", banksData);
+
+    useEffect(()=>{
+        dispatch(fetchBanks());
+    }, [dispatch]);
+    
     const togglePassword = (id) => {
         setShowPassword((prev) => ({
             ...prev,
@@ -56,6 +41,7 @@ const Banks = () => {
     };
 
     const maskText = (text) => {
+        if(!text) return "";
         return "*".repeat(text.length);
     };
 
@@ -74,24 +60,24 @@ const Banks = () => {
 
                 {/* Banks grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {bankData.map((bank) => (
+                    {banksData.map((bank) => (
                         <div
-                            key={bank.id}
+                            key={bank?._id}
                             className="group bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all duration-200 flex flex-col gap-4"
                         >
                             {/* Header */}
                             <div className="flex items-center gap-4">
                                 <div className="w-14 h-14 rounded-full border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
                                     <img
-                                        src={bank.logo}
-                                        alt={bank.name}
+                                        src={bank.bankLogoUrl}
+                                        alt={bank.bankName}
                                         className="w-11 h-11 object-contain"
                                     />
                                 </div>
 
                                 <div className="min-w-0">
                                     <h2 className="text-base font-semibold text-gray-900 truncate">
-                                        {bank.name}
+                                        {bank.bankName}
                                     </h2>
                                     {/* <p className="mt-0.5 text-xs text-gray-500">
                                         Loan Partner Portal
@@ -111,23 +97,23 @@ const Banks = () => {
                                 </div>
                                 <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl">
                                     <span className="font-medium text-gray-800 text-xs md:text-sm break-all max-w-[70%]">
-                                        {showId[bank.id]
-                                            ? bank.loginId
-                                            : maskText(bank.loginId)}
+                                        {showId[bank?._id]
+                                            ? bank.portalLoginId
+                                            : maskText(bank.portalLoginId)}
                                     </span>
                                     <div className="flex items-center gap-1.5">
                                         <button
-                                            onClick={() => toggleId(bank.id)}
+                                            onClick={() => toggleId(bank?._id)}
                                             className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
                                         >
-                                            {showId[bank.id] ? (
+                                            {showId[bank?._id] ? (
                                                 <EyeOff size={16} />
                                             ) : (
                                                 <Eye size={16} />
                                             )}
                                         </button>
                                         <button
-                                            onClick={() => copyText(bank.loginId)}
+                                            onClick={() => copyText(bank.portalLoginId)}
                                             className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
                                         >
                                             <Copy size={16} />
@@ -145,23 +131,23 @@ const Banks = () => {
                                 </div>
                                 <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl">
                                     <span className="font-medium text-gray-800 text-xs md:text-sm break-all max-w-[70%]">
-                                        {showPassword[bank.id]
-                                            ? bank.password
-                                            : maskText(bank.password)}
+                                        {showPassword[bank?._id]
+                                            ? bank.portalPassword
+                                            : maskText(bank.portalPassword)}
                                     </span>
                                     <div className="flex items-center gap-1.5">
                                         <button
-                                            onClick={() => togglePassword(bank.id)}
+                                            onClick={() => togglePassword(bank?._id)}
                                             className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
                                         >
-                                            {showPassword[bank.id] ? (
+                                            {showPassword[bank?._id] ? (
                                                 <EyeOff size={16} />
                                             ) : (
                                                 <Eye size={16} />
                                             )}
                                         </button>
                                         <button
-                                            onClick={() => copyText(bank.password)}
+                                            onClick={() => copyText(bank.portalPassword)}
                                             className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
                                         >
                                             <Copy size={16} />
@@ -184,10 +170,10 @@ const Banks = () => {
 
                                 {/* </div> */}
                                 <a
-                                    href={bank.link}
+                                    href={bank.portalLink}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-flex items-center gap-1 bg-emerald-500 text-white text-xs md:text-sm px-3 py-1.5 rounded-lg hover:bg-emerald-600 transition"
+                                    className="inline-flex items-center gap-1 bg-purple-500 text-white text-xs md:text-sm px-3 py-1.5 rounded-lg hover:bg-purple-600 transition"
                                 >
                                     Visit
                                     <ExternalLink size={14} />
