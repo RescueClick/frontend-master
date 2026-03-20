@@ -9,8 +9,8 @@ const Banks = () => {
   const [activeTab, setActiveTab] = useState("add"); // add | list
 
   const [bank, setBank] = useState({
-    name: "",
-    logo: null,
+    bankName: "",
+    bankLogo: null,
     loanType: "",
     rsmType: "",
     loginId: "",
@@ -176,6 +176,10 @@ const Banks = () => {
     }
   };
 
+  useEffect(() => {
+    dispatch(fetchAdminBanks());
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6">
       <div className="max-w-6xl mx-auto">
@@ -256,6 +260,7 @@ const Banks = () => {
                   placeholder="Enter bank or NBFC name"
                 />
               </div>
+            )}
 
               {/* Loan Type */}
               <div className="space-y-1.5">
@@ -299,104 +304,207 @@ const Banks = () => {
                   </option>
                 </select>
               </div>
-            </div>
 
-            {/* Logo URL */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                Bank Logo
-              </label>
+              {/* Logo URL */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Bank Logo
+                  </label>
 
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                name="logo"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    setBank({
-                      ...bank,
-                      logo: file
-                    });
-                  }
-                }}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-teal-500 file:text-white hover:file:bg-teal-600"
-              />
-              {/* Preview */}
-              {/* {bank.preview && (
-                <div className="mt-3 inline-flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
-                  <span className="text-xs text-gray-500">Preview</span>
-
-                  <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden">
-                    <img
-                      src={bank.preview}
-                      alt="Logo preview"
-                      className="w-8 h-8 object-contain"
-                    />
-                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    name="bankLogo"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setBank({
+                          ...bank,
+                          bankLogo: file
+                        });
+                      }
+                    }}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-teal-500 file:text-white hover:file:bg-teal-600"
+                  />
                 </div>
-              )} */}
-            </div>
-            {/* Credentials section title */}
-            <div className="pt-2 border-t border-dashed border-gray-100">
-              <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">
-                Portal Credentials
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                These details will be shared with RSMs for partner portal access.
-              </p>
-            </div>
 
-            {/* Login & password side by side on desktop */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Login ID */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    RSM Types
+                  </label>
+                  <select
+                    name="rsmTypes"
+                    value={bank.rsmTypes}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white  outline-none"
+                  >
+                    <option value="">Select RSM types</option>
+                    <option value="PERSONAL">Personal</option>
+                    <option value="BUSINESS_HOME">Business & Home</option>
+
+                  </select>
+                </div>
+              </div>
+
+
+              {/* Credentials section title */}
+              <div className="pt-2 border-t border-dashed border-gray-100">
+                <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                  Portal Credentials
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  These details will be shared with RSMs for partner portal access.
+                </p>
+              </div>
+
+              {/* Login & password side by side on desktop */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Login ID */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Login ID
+                  </label>
+                  <input
+                    type="text"
+                    name="portalLoginId"
+                    value={bank.portalLoginId}
+                    onChange={handleChange}
+                    required
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-gray-400"
+                    placeholder="Enter portal login ID"
+                  />
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    Password
+                  </label>
+                  <input
+                    type="text"
+                    name="portalPassword"
+                    value={bank.portalPassword}
+                    onChange={handleChange}
+                    required
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-gray-400"
+                    placeholder="Enter portal password"
+                  />
+                </div>
+              </div>
+
+              {/* Portal link */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                  Login ID
+                  Portal Link
                 </label>
                 <input
                   type="text"
-                  name="loginId"
-                  value={bank.loginId}
+                  name="portalLink"
+                  value={bank.portalLink}
                   onChange={handleChange}
-                  required
                   className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-gray-400"
-                  placeholder="Enter portal login ID"
+                  placeholder="https://bankportal.com"
                 />
               </div>
 
-              {/* Password */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                  Password
-                </label>
-                <input
-                  type="text"
-                  name="password"
-                  value={bank.password}
-                  onChange={handleChange}
-                  required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-gray-400"
-                  placeholder="Enter portal password"
-                />
-              </div>
-            </div>
+              {/* Actions */}
+              <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBank({
+                      bankName: "",
+                      bankLogo: null,
+                      loanType: "",
+                      portalLoginId: "",
+                      portalPassword: "",
+                      portalLink: "",
+                      rsmTypes: "",
+                    });
 
-            {/* Portal link */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                Portal Link
-              </label>
-              <input
-                type="text"
-                name="link"
-                value={bank.link}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-gray-400"
-                placeholder="https://bankportal.com"
-              />
+                    // ✅ THIS IS THE KEY FIX
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                  }}
+                  className="px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition"
+                >
+                  Clear
+                </button>
+
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 text-sm font-semibold rounded-xl text-white bg-teal-500 hover:bg-teal-600 shadow-sm transition"
+                >
+                  Add Bank
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {activeTab === "list" && (
+        <div className="max-w-6xl mx-auto mt-25">
+          {/* Page header */}
+
+
+          {/* Loan type search */}
+          <div className="mb-6 flex justify-end">
+            <div className="w-full max-w-lg">
+
+              <div className="flex items-center gap-2">
+
+                {/* Input with icon */}
+                <div className="relative flex-1">
+                  <Search
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    value={loanTypeSearch}
+                    onChange={(e) => setLoanTypeSearch(e.target.value)}
+                    placeholder="Search by loan type..."
+                    className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-200 focus:border-teal-400 transition"
+                  />
+                </div>
+
+                {/* Search Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    // you already filter live, so this is optional
+                    console.log("Searching:", loanTypeSearch);
+                  }}
+                  className="px-4 py-2.5 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition"
+                >
+                  Search
+                </button>
+
+              </div>
+
             </div>
+          </div>
+
+          {banksLoading ? (
+            <p className="text-gray-500 text-sm">Loading banks...</p>
+          ) : banksError ? (
+            <p className="text-red-600 text-sm">{String(banksError)}</p>
+          ) : !filteredBanks.length ? (
+            <p className="text-gray-500 text-sm">No banks available</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredBanks.map((bank) => (
+                <div
+                  key={bank?._id}
+                  className="group bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-teal-200 transition-all duration-200 flex flex-col gap-4"
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
 
             {/* Actions */}
             <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">

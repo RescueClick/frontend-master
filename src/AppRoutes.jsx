@@ -124,15 +124,10 @@ import PayoutHistory from "./sidebars/users/Partner/PayoutHistory";
 import PartnerAnalytics from "./sidebars/users/Partner/PartnerAnalytics";
 // Partner settings uses shared PasswordSettings (same as ASM/RSM/RM)
 
-
-
-
 // import Costomer
 import Customer from "./sidebars/users/Customer/Customer";
 import FollowUp from "./sidebars/users/RM/FollowUp";
 import PasswordSettings from "./sidebars/users/common/PasswordSettings";
-
-
 
 import Agreement from "../public/Agreement";
 import AuthLetter from "../public/AuthLetter";
@@ -155,12 +150,6 @@ const ROLES = {
   PARTNER: "PARTNER",
   CUSTOMER: "CUSTOMER",
 };
-
-
-
-
-
-
 
 const AppRoutes = () => {
   return (

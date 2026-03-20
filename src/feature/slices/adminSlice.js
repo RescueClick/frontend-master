@@ -44,6 +44,9 @@ import {
   distributeHierarchicalTargets,
   fetchAdminIncentives,
   payAdminIncentive,
+  createBank,
+  fetchAdminBanks,
+  deleteBank,
 } from "../thunks/adminThunks";
 
 
@@ -178,7 +181,7 @@ const initialState = {
     data: null,
   },
   // Dashboard metrics for a specific ASM
-  Analyticsdashboard : {
+  Analyticsdashboard: {
     loading: false,
     error: null,
     success: false,
@@ -191,7 +194,7 @@ const initialState = {
     success: false,
     data: null,
   },
-  
+
   dashboard: {
     loading: false,
     error: null,
@@ -220,75 +223,96 @@ const initialState = {
     data: null,
   },
 
-
-
   allCustomers: {
-      loading: false,
-      error: null,
-      success: false,
-      data: null,
-    },
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  allBanners: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
 
+  recentActivities: {
+    loading: false,
+    error: null,
+    success: false,
+    activities: [],
+  },
 
-    allBanners: {
-      loading: false,
-      error: null,
-      success: false,
-      data: null,
-    },
+  deleteAccountRequests: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  // Payout Management (Pending/Done)
+  pendingPayout: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  donePayout: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  customerPartnersPayout: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  setPayouts: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
 
-    recentActivities: {
-      loading: false,
-      error: null,
-      success: false,
-      activities: [],
-    },
+  // Incentive management (Admin)
+  incentives: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  payIncentive: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
 
-    deleteAccountRequests: {
-      loading: false,
-      error: null,
-      success: false,
-      data: [],
-    },
-    // Payout Management (Pending/Done)
-    pendingPayout: {
-      loading: false,
-      error: null,
-      success: false,
-      data: [],
-    },
-    donePayout: {
-      loading: false,
-      error: null,
-      success: false,
-      data: [],
-    },
-    customerPartnersPayout: {
-      loading: false,
-      error: null,
-      success: false,
-      data: null,
-    },
-    setPayouts: {
-      loading: false,
-      error: null,
-      success: false,
-      data: null,
-    },
+  // add bank
+  addBank: {
+    loading: false,
+    success: false,
+    error: null,
+    bank: null,
+  },
 
-    // Incentive management (Admin)
-    incentives: {
-      loading: false,
-      error: null,
-      success: false,
-      data: [],
-    },
-    payIncentive: {
-      loading: false,
-      error: null,
-      success: false,
-      data: null,
-    },
+  // fetch banks
+
+  fetchBanksData: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+
+  // delete bank (soft delete)
+  deleteBank: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  }
 
 };
 
@@ -325,6 +349,10 @@ const adminSlice = createSlice({
     resetCreateRmState: (state) => {
       state.createRmAdmin = { ...initialState.createRmAdmin };
     },
+
+    resetBankState: (state) => {
+      state.addBank = { ...initialState.addBank };
+    }
 
 
   },
@@ -444,7 +472,7 @@ const adminSlice = createSlice({
         state.createRmAdmin.error = null;
         state.createRmAdmin.success = false;
       })
-      
+
       .addCase(createRm.fulfilled, (state, action) => {
         state.createRmAdmin.loading = false;
         state.createRmAdmin.data = action.payload;
@@ -546,7 +574,7 @@ const adminSlice = createSlice({
         state.Analyticsdashboard.success = false;
       });
 
-      builder
+    builder
       .addCase(fetchAdminProfile.pending, (state) => {
         state.profile = {
           loading: true,
@@ -572,7 +600,7 @@ const adminSlice = createSlice({
         };
       });
 
-      builder
+    builder
       .addCase(fetchAdminDashboard.pending, (state) => {
         state.dashboard = {
           loading: true,
@@ -643,7 +671,7 @@ const adminSlice = createSlice({
         state.partners.success = false;
       });
 
-      // Fetch Unassigned Partners
+    // Fetch Unassigned Partners
     builder
       .addCase(getUnassignedPartners.pending, (state) => {
         state.unassignedPartners.loading = true;
@@ -661,7 +689,7 @@ const adminSlice = createSlice({
       });
 
 
-      // Fetch All Customers
+    // Fetch All Customers
     builder
       .addCase(getAllCustomers.pending, (state) => {
         state.allCustomers.loading = true;
@@ -679,7 +707,7 @@ const adminSlice = createSlice({
       });
 
 
-      builder
+    builder
       // Fetch Banners
       .addCase(fetchBanners.pending, (state) => {
         state.allBanners.loading = true;
@@ -690,8 +718,8 @@ const adminSlice = createSlice({
         state.allBanners.loading = false;
         state.allBanners.success = true;
         // Handle both array and object with banners property
-        state.allBanners.data = Array.isArray(action.payload) 
-          ? action.payload 
+        state.allBanners.data = Array.isArray(action.payload)
+          ? action.payload
           : (action.payload?.banners || []);
       })
       .addCase(fetchBanners.rejected, (state, action) => {
@@ -709,8 +737,8 @@ const adminSlice = createSlice({
         state.allBanners.loading = false;
         state.allBanners.success = true;
         // Handle both array and object with banners property
-        state.allBanners.data = Array.isArray(action.payload) 
-          ? action.payload 
+        state.allBanners.data = Array.isArray(action.payload)
+          ? action.payload
           : (action.payload?.banners || []);
       })
       .addCase(uploadBanners.rejected, (state, action) => {
@@ -728,8 +756,8 @@ const adminSlice = createSlice({
         state.allBanners.loading = false;
         state.allBanners.success = true;
         // Handle both array and object with banners property
-        state.allBanners.data = Array.isArray(action.payload) 
-          ? action.payload 
+        state.allBanners.data = Array.isArray(action.payload)
+          ? action.payload
           : (action.payload?.banners || []);
         // If delete was successful, refetch banners
         if (action.payload && !Array.isArray(action.payload) && !action.payload.banners) {
@@ -759,116 +787,116 @@ const adminSlice = createSlice({
         state.partner.success = false;
       });
 
-      // 🔹 Delete RM
-      builder
-        .addCase(deleteRm.pending, (state) => {
-          state.deleteRm.loading = true;
-          state.deleteRm.error = null;
-          state.deleteRm.success = false;
-        })
-        .addCase(deleteRm.fulfilled, (state, action) => {
-          state.deleteRm.loading = false;
-          state.deleteRm.data = action.payload;
-          state.deleteRm.success = true;
-        })
-        .addCase(deleteRm.rejected, (state, action) => {
-          state.deleteRm.loading = false;
-          state.deleteRm.error = action.payload;
-          state.deleteRm.success = false;
-        });
+    // 🔹 Delete RM
+    builder
+      .addCase(deleteRm.pending, (state) => {
+        state.deleteRm.loading = true;
+        state.deleteRm.error = null;
+        state.deleteRm.success = false;
+      })
+      .addCase(deleteRm.fulfilled, (state, action) => {
+        state.deleteRm.loading = false;
+        state.deleteRm.data = action.payload;
+        state.deleteRm.success = true;
+      })
+      .addCase(deleteRm.rejected, (state, action) => {
+        state.deleteRm.loading = false;
+        state.deleteRm.error = action.payload;
+        state.deleteRm.success = false;
+      });
 
-      // 🔹 Reject Partner
-      builder
-        .addCase(rejectPartner.pending, (state) => {
-          state.rejectPartner.loading = true;
-          state.rejectPartner.error = null;
-          state.rejectPartner.success = false;
-        })
-        .addCase(rejectPartner.fulfilled, (state, action) => {
-          state.rejectPartner.loading = false;
-          state.rejectPartner.data = action.payload;
-          state.rejectPartner.success = true;
-          
-          // Remove rejected partner from partners list
-          if (state.partners.data) {
-            state.partners.data = state.partners.data.filter(
-              (p) => p._id !== action.meta.arg
-            );
-          }
-          
-          // Remove rejected partner from unassignedPartners list (optimistic update)
-          if (state.unassignedPartners.data) {
-            state.unassignedPartners.data = state.unassignedPartners.data.filter(
-              (p) => p._id !== action.meta.arg
-            );
-          }
-        })
-        .addCase(rejectPartner.rejected, (state, action) => {
-          state.rejectPartner.loading = false;
-          state.rejectPartner.error = action.payload;
-          state.rejectPartner.success = false;
-        });
+    // 🔹 Reject Partner
+    builder
+      .addCase(rejectPartner.pending, (state) => {
+        state.rejectPartner.loading = true;
+        state.rejectPartner.error = null;
+        state.rejectPartner.success = false;
+      })
+      .addCase(rejectPartner.fulfilled, (state, action) => {
+        state.rejectPartner.loading = false;
+        state.rejectPartner.data = action.payload;
+        state.rejectPartner.success = true;
 
-      // 🔹 Fetch delete-account requests
-      builder
-        .addCase(fetchDeleteAccountRequests.pending, (state) => {
-          state.deleteAccountRequests.loading = true;
-          state.deleteAccountRequests.error = null;
-          state.deleteAccountRequests.success = false;
-        })
-        .addCase(fetchDeleteAccountRequests.fulfilled, (state, action) => {
-          state.deleteAccountRequests.loading = false;
-          state.deleteAccountRequests.data = action.payload || [];
-          state.deleteAccountRequests.success = true;
-        })
-        .addCase(fetchDeleteAccountRequests.rejected, (state, action) => {
-          state.deleteAccountRequests.loading = false;
-          state.deleteAccountRequests.error = action.payload;
-          state.deleteAccountRequests.success = false;
-        });
-
-      // 🔹 Update delete-account request status
-      builder
-        .addCase(updateDeleteAccountRequestStatus.pending, (state) => {
-          // no separate loading slice; keep it simple
-        })
-        .addCase(updateDeleteAccountRequestStatus.fulfilled, (state, action) => {
-          const updated = action.payload;
-          if (!updated) return;
-          const idx = state.deleteAccountRequests.data.findIndex(
-            (r) => r._id === updated._id
+        // Remove rejected partner from partners list
+        if (state.partners.data) {
+          state.partners.data = state.partners.data.filter(
+            (p) => p._id !== action.meta.arg
           );
-          if (idx !== -1) {
-            state.deleteAccountRequests.data[idx] = updated;
-          }
-        })
-        .addCase(updateDeleteAccountRequestStatus.rejected, (_state, _action) => {
-          // ignore; UI will surface via thunk reject message
-        });
+        }
 
-      // 🔹 Login As (impersonation) Thunk
-builder
-.addCase(loginAsUserThunk.pending, (state) => {
-  state.login.loading = true;
-  state.login.error = null;
-})
-.addCase(loginAsUserThunk.fulfilled, (state, action) => {
-  state.login.loading = false;
-  state.login.token = action.payload?.token || null;
-  state.login.user = action.payload?.user || null;
-  state.login.isAuthenticated = !!(action.payload?.token && action.payload?.user);
-  state.login.success = true;
+        // Remove rejected partner from unassignedPartners list (optimistic update)
+        if (state.unassignedPartners.data) {
+          state.unassignedPartners.data = state.unassignedPartners.data.filter(
+            (p) => p._id !== action.meta.arg
+          );
+        }
+      })
+      .addCase(rejectPartner.rejected, (state, action) => {
+        state.rejectPartner.loading = false;
+        state.rejectPartner.error = action.payload;
+        state.rejectPartner.success = false;
+      });
 
-  if (action.payload?.token && action.payload?.user) {
-    // Save impersonation with a flag
-    saveAuthData(action.payload.token, action.payload.user, true);
-  }
-})
-.addCase(loginAsUserThunk.rejected, (state, action) => {
-  state.login.loading = false;
-  state.login.error = action.payload || "Login as user failed";
-  state.login.isAuthenticated = false;
-})
+    // 🔹 Fetch delete-account requests
+    builder
+      .addCase(fetchDeleteAccountRequests.pending, (state) => {
+        state.deleteAccountRequests.loading = true;
+        state.deleteAccountRequests.error = null;
+        state.deleteAccountRequests.success = false;
+      })
+      .addCase(fetchDeleteAccountRequests.fulfilled, (state, action) => {
+        state.deleteAccountRequests.loading = false;
+        state.deleteAccountRequests.data = action.payload || [];
+        state.deleteAccountRequests.success = true;
+      })
+      .addCase(fetchDeleteAccountRequests.rejected, (state, action) => {
+        state.deleteAccountRequests.loading = false;
+        state.deleteAccountRequests.error = action.payload;
+        state.deleteAccountRequests.success = false;
+      });
+
+    // 🔹 Update delete-account request status
+    builder
+      .addCase(updateDeleteAccountRequestStatus.pending, (state) => {
+        // no separate loading slice; keep it simple
+      })
+      .addCase(updateDeleteAccountRequestStatus.fulfilled, (state, action) => {
+        const updated = action.payload;
+        if (!updated) return;
+        const idx = state.deleteAccountRequests.data.findIndex(
+          (r) => r._id === updated._id
+        );
+        if (idx !== -1) {
+          state.deleteAccountRequests.data[idx] = updated;
+        }
+      })
+      .addCase(updateDeleteAccountRequestStatus.rejected, (_state, _action) => {
+        // ignore; UI will surface via thunk reject message
+      });
+
+    // 🔹 Login As (impersonation) Thunk
+    builder
+      .addCase(loginAsUserThunk.pending, (state) => {
+        state.login.loading = true;
+        state.login.error = null;
+      })
+      .addCase(loginAsUserThunk.fulfilled, (state, action) => {
+        state.login.loading = false;
+        state.login.token = action.payload?.token || null;
+        state.login.user = action.payload?.user || null;
+        state.login.isAuthenticated = !!(action.payload?.token && action.payload?.user);
+        state.login.success = true;
+
+        if (action.payload?.token && action.payload?.user) {
+          // Save impersonation with a flag
+          saveAuthData(action.payload.token, action.payload.user, true);
+        }
+      })
+      .addCase(loginAsUserThunk.rejected, (state, action) => {
+        state.login.loading = false;
+        state.login.error = action.payload || "Login as user failed";
+        state.login.isAuthenticated = false;
+      })
 
       // Pending Payout
       .addCase(fetchAdminCustomersPayOutPending.pending, (state) => {
@@ -1163,6 +1191,66 @@ builder
         state.payIncentive.success = false;
       });
 
+      builder
+      .addCase(createBank.pending, (state) => {
+           state.addBank.loading = true;
+           state.addBank.error = null;
+           state.addBank.success = false;
+      })
+      .addCase(createBank.fulfilled, (state, action) =>{
+         state.addBank.loading = false;
+         state.addBank.success = true;
+         state.addBank.bank = action.payload;
+      })
+      .addCase(createBank.rejected, (state, action) =>{
+         state.addBank.loading = false;
+         state.addBank.success = false;
+         state.addBank.error = action.payload;
+      })
+
+      //fetch banks
+      .addCase(fetchAdminBanks.pending, (state) => {
+        state.fetchBanksData.loading = true;
+        state.fetchBanksData.error = null;
+        state.fetchBanksData.success = false;
+      })
+      .addCase(fetchAdminBanks.fulfilled, (state, action) => {
+        state.fetchBanksData.loading = false;
+        state.fetchBanksData.data = action.payload;
+        state.fetchBanksData.success = true;
+      })
+      .addCase(fetchAdminBanks.rejected, (state, action) => {
+        state.fetchBanksData.loading = false;
+        state.fetchBanksData.error = action.payload;
+        state.fetchBanksData.success = false;
+      })
+
+
+      // delete bank
+
+      .addCase(deleteBank.pending, (state) => {
+        state.deleteBank.loading = true;
+        state.deleteBank.error = null;
+        state.deleteBank.success = false;
+      })
+      .addCase(deleteBank.fulfilled, (state, action) => {
+        state.deleteBank.loading = false;
+        state.deleteBank.success = true;
+        state.deleteBank.error = null;
+
+        // Soft delete: backend returns updated bank with `isActive=false`.
+        // We update the cached list so the UI reflects immediately.
+        const deletedId = action.meta.arg;
+        state.fetchBanksData.data = state.fetchBanksData.data.map((b) =>
+          b?._id === deletedId ? { ...b, isActive: false } : b
+        );
+      })
+      .addCase(deleteBank.rejected, (state, action) => {
+        state.deleteBank.loading = false;
+        state.deleteBank.error = action.payload;
+        state.deleteBank.success = false;
+      });
+
   },
 });
 
@@ -1174,6 +1262,7 @@ export const {
   resetCustomerState,
   resetAllAdminState,
   resetCreateRmState,
+  resetBankState,
 
 } = adminSlice.actions;
 

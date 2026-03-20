@@ -10,6 +10,7 @@ import {
   fetchRmAnalytics,
   fetchRmFollowUps,
   recordRmFollowUp,
+  fetchBanks,
 } from "../thunks/rsmThunks";
 
 const initialState = {
@@ -74,6 +75,14 @@ const initialState = {
     success: false,
     data: [],
   },
+
+  // fetch bank state
+
+  banksData: {
+    data: [],
+    loading: false,
+    error: null,
+  }
 };
 
 const rsmSlice = createSlice({
@@ -134,6 +143,7 @@ const rsmSlice = createSlice({
         state.rms.loading = false;
         state.rms.error = action.payload;
       });
+
 
     // Fetch Applications
     builder
@@ -230,6 +240,21 @@ const rsmSlice = createSlice({
       })
       .addCase(recordRmFollowUp.fulfilled, (state) => {
         // no-op: UI will refetch follow-ups after successful record
+      })
+
+    
+    // fetch banks
+      .addCase(fetchBanks.pending, (state) => {
+        state.banksData.loading = true;
+        state.banksData.error = null;
+      })
+      .addCase(fetchBanks.fulfilled, (state, action) => {
+        state.banksData.loading = false;
+        state.banksData.data = action.payload;
+      })
+      .addCase(fetchBanks.rejected, (state, action) => {
+        state.banksData.loading = false;
+        state.banksData.error = action.payload;
       });
   },
 });

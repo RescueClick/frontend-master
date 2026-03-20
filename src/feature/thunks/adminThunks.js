@@ -1054,3 +1054,82 @@ export const distributeHierarchicalTargets = createAsyncThunk(
     }
   }
 );
+
+
+export const createBank = createAsyncThunk(
+  "admin/createBank",
+  async (formData, {rejectWithValue}) =>{
+      try{
+        const {adminToken} = getAuthData();
+        console.log("Admin Token:", adminToken);  
+        console.log("Form Data:", formData);
+
+        const response = await axios.post(`${backendurl}/admin/banks`,
+          formData,
+          {
+              headers:{
+                 Authorization: `Bearer ${adminToken}`,
+              }
+          }
+        )
+
+        return response.data;
+
+      }
+      catch(error)
+      {
+        return rejectWithValue(error.response?.data?.message || "Failed to create bank")
+
+      }
+  }
+)
+
+
+export const fetchAdminBanks = createAsyncThunk(
+  "admin/fetchAdminBanks",
+  async (_, { rejectWithValue }) => {
+    try {
+      console.log("Fetch Admin Banks");
+      const { adminToken } = getAuthData();
+      console.log("Admin Token:", adminToken);
+      const response = await axios.get(`${backendurl}/admin/banks`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+
+      console.log("Fetch Admin Banks Response:", response.data);
+
+      return response.data.banks;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch banks"
+      );
+    }
+  }
+);
+
+export const deleteBank = createAsyncThunk(
+  "admin/deleteBank",
+  async (bankId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.delete(
+        `${backendurl}/admin/banks/${bankId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete bank"
+      );
+    }
+  }
+);
+
+
+
+
+       
