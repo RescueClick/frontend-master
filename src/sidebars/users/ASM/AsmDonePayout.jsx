@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Eye,
   ArrowLeft,
@@ -17,17 +17,23 @@ import {
 
 import { useDispatch, useSelector } from "react-redux";
 
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   fetchAsmCustomerPartnersPayout,
   fetchAsmCustomersPayOutDone,
 } from "../../../feature/thunks/asmThunks";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import { matchesSearchTerm, matchesStatusFilter } from "../../../utils/tableFilter";
 
 const AsmDonePayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [year, setYear] = useState(location.state?.year || new Date().getFullYear());
+  const [month, setMonth] = useState(location.state?.month || new Date().getMonth() + 1);
 
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [approvalAmount, setApprovalAmount] = useState("");
@@ -51,9 +57,21 @@ const AsmDonePayout = () => {
 
   const { data, loading, error } = useSelector((state) => state.asm?.donePayout || { data: [], loading: false, error: null });
 
-  const sortedRows = sortNewestFirst(Array.isArray(data) ? data : [], {
-    dateKeys: ["createdAt", "applicationDate"],
-  });
+  const filteredRows = useMemo(() => {
+    const rows = Array.isArray(data) ? data : [];
+    const filtered = rows.filter((row) => {
+      const matchesSearch = matchesSearchTerm(searchTerm, [
+        row.customerName,
+        row.customerEmployeeId,
+        row.contact,
+        row.loanType,
+      ]);
+      const matchesStatus = matchesStatusFilter(row.payOutStatus, selectedFilter);
+      const matchesDate = matchesMonthYear(row, { year, month });
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+    return sortNewestFirst(filtered, { dateKeys: ["createdAt", "applicationDate"] });
+  }, [data, searchTerm, selectedFilter, year, month]);
 
   const { data: customerPartnersPayout } = useSelector(
     (state) => state.asm?.customerPartnersPayout || { data: null }
@@ -314,6 +332,50 @@ const AsmDonePayout = () => {
           <p className="text-gray-600 text-sm">
             Manage and view all done payout customers
           </p>
+
+          <div className="mt-4 flex flex-col md:flex-row gap-3">
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name, ID, phone, loan type..."
+              className="w-full md:flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+            />
+
+            <select
+              value={selectedFilter}
+              onChange={(e) => setSelectedFilter(e.target.value)}
+              className="w-full md:w-56 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+            >
+              <option value="all">All Status</option>
+              <option value="PENDING">PENDING</option>
+              <option value="DONE">DONE</option>
+              <option value="REJECTED">REJECTED</option>
+            </select>
+
+            <select
+              value={year}
+              onChange={(e) => setYear(parseInt(e.target.value))}
+              className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+            >
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={month}
+              onChange={(e) => setMonth(parseInt(e.target.value))}
+              className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {new Date(2000, m - 1).toLocaleString("default", { month: "short" })}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="overflow-x-auto rounded-lg shadow-sm">
@@ -343,8 +405,8 @@ const AsmDonePayout = () => {
                     {error}
                   </td>
                 </tr>
-              ) : sortedRows.length > 0 ? (
-                sortedRows.map((customer) => (
+              ) : filteredRows.length > 0 ? (
+                filteredRows.map((customer) => (
                   <tr
                     key={customer.customerId || customer.applicationId}
                     className="border-b hover:bg-gray-50"

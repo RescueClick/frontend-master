@@ -17,7 +17,7 @@ import {
 
 import { useDispatch, useSelector } from "react-redux";
 
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   fetchAdminCustomerPartnersPayout,
@@ -26,12 +26,17 @@ import {
 } from "../../../feature/thunks/adminThunks";
 
 import { matchesSearchTerm, matchesStatusFilter } from "../../../utils/tableFilter";
+import { matchesMonthYear } from "../../../utils/dateFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const AdminPendingPayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [year, setYear] = useState(location.state?.year || new Date().getFullYear());
+  const [month, setMonth] = useState(location.state?.month || new Date().getMonth() + 1);
 
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [approvalAmount, setApprovalAmount] = useState("");
@@ -170,10 +175,11 @@ const AdminPendingPayout = () => {
         row.loanType,
       ]);
       const matchesStatus = matchesStatusFilter(row.payOutStatus, selectedFilter);
-      return matchesSearch && matchesStatus;
+      const matchesDate = matchesMonthYear(row, { year, month });
+      return matchesSearch && matchesStatus && matchesDate;
     });
     return sortNewestFirst(filtered, { dateKeys: ["createdAt", "applicationDate"] });
-  }, [data, searchTerm, selectedFilter]);
+  }, [data, searchTerm, selectedFilter, year, month]);
 
   return (
     <>
@@ -440,6 +446,30 @@ const AdminPendingPayout = () => {
               <option value="PENDING">PENDING</option>
               <option value="DONE">DONE</option>
               <option value="REJECTED">REJECTED</option>
+            </select>
+
+            <select
+              value={year}
+              onChange={(e) => setYear(parseInt(e.target.value))}
+              className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+            >
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={month}
+              onChange={(e) => setMonth(parseInt(e.target.value))}
+              className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {new Date(2000, m - 1).toLocaleString("default", { month: "short" })}
+                </option>
+              ))}
             </select>
           </div>
         </div>
