@@ -48,7 +48,7 @@ import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   accent: "#F59E0B",
@@ -309,7 +309,7 @@ const Partners = () => {
                   handlePartnerActive()
                 }}
 
-                className=" cursor-pointer px-4 py-2 rounded-lg bg-[#12B99C] text-white "
+                className=" cursor-pointer px-4 py-2 rounded-lg bg-brand-primary text-white "
               >
                 Yes
               </button>
@@ -331,7 +331,7 @@ const Partners = () => {
               className="p-6 text-white rounded-t-3xl relative overflow-hidden"
               style={{
                 background:
-                  "linear-gradient(135deg, #12B99C 0%, #0EA589 50%, #0B8A73 100%)",
+                  "linear-gradient(135deg, var(--color-brand-primary) 0%, #0d7a72 50%, var(--color-brand-primary-hover) 100%)",
               }}
             >
               <div className="relative z-10 flex flex-col md:flex-row items-center justify-between">
@@ -385,7 +385,7 @@ const Partners = () => {
               <div className="flex items-center space-x-3 mb-2">
                 <div
                   className="p-3 rounded-xl shadow-lg"
-                  style={{ backgroundColor: "#12B99C" }}
+                  style={{ backgroundColor: "var(--color-brand-primary)" }}
                 >
                   <Users className="w-4 h-4 text-white" />
                 </div>
@@ -413,11 +413,11 @@ const Partners = () => {
                     Email
                   </h3>
                   <div className="flex items-center space-x-3">
-                    <Mail className="w-5 h-5" style={{ color: "#12B99C" }} />
+                    <Mail className="w-5 h-5" style={{ color: "var(--color-brand-primary)" }} />
                     <a
                       href={`mailto:${PartnerProfile.email}`}
                       className="font-semibold transition-colors hover:opacity-80"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     >
                       {PartnerProfile.email}
                     </a>
@@ -430,11 +430,11 @@ const Partners = () => {
                     Phone
                   </h3>
                   <div className="flex items-center space-x-3">
-                    <Phone className="w-5 h-5" style={{ color: "#12B99C" }} />
+                    <Phone className="w-5 h-5" style={{ color: "var(--color-brand-primary)" }} />
                     <a
                       href={`tel:${PartnerProfile.phone}`}
                       className="font-semibold transition-colors hover:opacity-80"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     >
                       {PartnerProfile.phone}
                     </a>
@@ -449,12 +449,12 @@ const Partners = () => {
               <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-200/50">
                 <div
                   className="absolute top-0 left-0 w-full h-1"
-                  style={{ backgroundColor: "#12B99C" }}
+                  style={{ backgroundColor: "var(--color-brand-primary)" }}
                 ></div>
                 <div className="flex items-center justify-between mb-6">
                   <div
                     className="p-4 rounded-2xl shadow-lg"
-                    style={{ backgroundColor: "#12B99C" }}
+                    style={{ backgroundColor: "var(--color-brand-primary)" }}
                   >
                     <Target className="w-4 h-4 text-white" />
                   </div>
@@ -615,7 +615,7 @@ const Partners = () => {
 
                 <button
                   className="px-4 py-2 text-sm text-white rounded-lg hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: "#12B99C" }}
+                  style={{ backgroundColor: "var(--color-brand-primary)" }}
                   onClick={() => navigate("/rm/add-partner")}
                 >
                   <Plus size={16} className="inline mr-2" />

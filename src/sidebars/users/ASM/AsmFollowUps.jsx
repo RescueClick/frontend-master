@@ -201,7 +201,7 @@ const AsmFollowUps = () => {
           <table className="w-full">
             <thead
               className="text-white"
-              style={{ backgroundColor: "#12B99C" }}
+              style={{ backgroundColor: "var(--color-brand-primary)" }}
             >
               <tr>
                 <th className="px-2 py-4 text-left font-semibold">
@@ -255,7 +255,7 @@ const AsmFollowUps = () => {
                         <div className="flex items-center">
                           <div
                             className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold mr-3"
-                            style={{ backgroundColor: "#12B99C" }}
+                            style={{ backgroundColor: "var(--color-brand-primary)" }}
                           >
                             {item.rsm.name?.charAt(0)}
                           </div>
@@ -369,7 +369,7 @@ const AsmFollowUps = () => {
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 >
                   <option value="Connected">Connected</option>
                   <option value="Ringing">Ringing</option>
@@ -386,7 +386,7 @@ const AsmFollowUps = () => {
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   rows={4}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   placeholder="Add any remarks about the follow-up..."
                 />
               </div>
@@ -394,7 +394,7 @@ const AsmFollowUps = () => {
               <div className="flex gap-4 pt-4">
                 <button
                   onClick={handleRecordFollowUp}
-                  className="flex-1 bg-[#12B99C] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#0fa085] transition-colors"
+                  className="flex-1 bg-brand-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#0fa085] transition-colors"
                 >
                   Record Follow-up
                 </button>

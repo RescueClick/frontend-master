@@ -721,7 +721,7 @@ const handleSubmit = async () => {
           {/* Header */}
           <div
             className="px-8 py-6 text-white"
-            style={{ backgroundColor: "#12B99C" }}
+            style={{ backgroundColor: "var(--color-brand-primary)" }}
           >
             <h1 className="text-3xl font-bold text-center">
               Business Loan Application
@@ -738,7 +738,7 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <User className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <User className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Personal Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -757,7 +757,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     placeholder="Enter your first name"
@@ -780,7 +780,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     placeholder="Enter your middle name"
@@ -801,7 +801,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     placeholder="Enter your last name"
@@ -824,7 +824,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     placeholder="Enter your mother's name"
@@ -847,7 +847,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     placeholder="Enter your PAN number"
@@ -869,7 +869,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     required
@@ -895,7 +895,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     required
@@ -919,7 +919,7 @@ const handleSubmit = async () => {
                   <div className="relative">
                     <Phone
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     />
                     <input
                       type="tel"
@@ -928,7 +928,7 @@ const handleSubmit = async () => {
                       onChange={handleInputChange}
                       className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your contact number"
@@ -948,7 +948,7 @@ const handleSubmit = async () => {
                   <div className="relative">
                     <Phone
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     />
                     <input
                       type="tel"
@@ -957,7 +957,7 @@ const handleSubmit = async () => {
                       onChange={handleInputChange}
                       className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter alternate contact number"
@@ -975,7 +975,7 @@ const handleSubmit = async () => {
                   <div className="relative">
                     <Mail
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     />
                     <input
                       type="email"
@@ -984,7 +984,7 @@ const handleSubmit = async () => {
                       onChange={handleInputChange}
                       className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your email address"
@@ -1010,7 +1010,7 @@ const handleSubmit = async () => {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter Spouse's name"
@@ -1028,14 +1028,14 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <MapPin className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <MapPin className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Address Information
               </h2>
               <div className="space-y-6">
                 {/* Current Address */}
                 <div
                   className="p-6 rounded-lg border-2"
-                  style={{ borderColor: "#12B99C", backgroundColor: "#F8FAFC" }}
+                  style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
                 >
                   <h3
                     className="text-lg font-semibold mb-4"
@@ -1057,7 +1057,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         rows="3"
@@ -1080,7 +1080,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="Enter pincode"
@@ -1101,7 +1101,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         required
@@ -1126,7 +1126,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="e.g., 2 years"
@@ -1148,7 +1148,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="Enter nearby landmark"
@@ -1165,7 +1165,7 @@ const handleSubmit = async () => {
                     checked={sameAddress}
                     onChange={handleSameAddressChange}
                     className="w-5 h-5 rounded"
-                    style={{ accentColor: "#12B99C" }}
+                    style={{ accentColor: "var(--color-brand-primary)" }}
                   />
                   <label
                     htmlFor="sameAddress"
@@ -1179,7 +1179,7 @@ const handleSubmit = async () => {
                 {/* Permanent Address */}
                 <div
                   className="p-6 rounded-lg border-2"
-                  style={{ borderColor: "#12B99C", backgroundColor: "#F8FAFC" }}
+                  style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
                 >
                   <h3
                     className="text-lg font-semibold mb-4"
@@ -1201,7 +1201,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         rows="3"
@@ -1225,7 +1225,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="Enter pincode"
@@ -1247,7 +1247,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         disabled={sameAddress}
@@ -1273,7 +1273,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="e.g., 5 years"
@@ -1296,7 +1296,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="Enter nearby landmark"
@@ -1313,7 +1313,7 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <FileText className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Loan Amount Details
               </h2>
               <div className="space-y-6">
@@ -1337,7 +1337,7 @@ const handleSubmit = async () => {
                     }}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     placeholder="Enter loan amount"
@@ -1355,7 +1355,7 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <FileText className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Address Proof Documents
               </h2>
               <div className="space-y-6">
@@ -1372,7 +1372,7 @@ const handleSubmit = async () => {
                         )
                       }
                       className="w-5 h-5 rounded"
-                      style={{ accentColor: "#12B99C" }}
+                      style={{ accentColor: "var(--color-brand-primary)" }}
                     />
                     <span
                       className="text-sm font-medium"
@@ -1388,7 +1388,7 @@ const handleSubmit = async () => {
                       onChange={handleFileChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       accept=".pdf,.jpg,.jpeg,.png"
@@ -1408,7 +1408,7 @@ const handleSubmit = async () => {
                         )
                       }
                       className="w-5 h-5 rounded"
-                      style={{ accentColor: "#12B99C" }}
+                      style={{ accentColor: "var(--color-brand-primary)" }}
                     />
                     <span
                       className="text-sm font-medium"
@@ -1424,7 +1424,7 @@ const handleSubmit = async () => {
                       onChange={handleFileChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       accept=".pdf,.jpg,.jpeg,.png"
@@ -1444,7 +1444,7 @@ const handleSubmit = async () => {
                         )
                       }
                       className="w-5 h-5 rounded"
-                      style={{ accentColor: "#12B99C" }}
+                      style={{ accentColor: "var(--color-brand-primary)" }}
                     />
                     <span
                       className="text-sm font-medium"
@@ -1460,7 +1460,7 @@ const handleSubmit = async () => {
                       onChange={handleFileChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       accept=".pdf,.jpg,.jpeg,.png"
@@ -1476,7 +1476,7 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <FileText className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Personal Documents
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1495,7 +1495,7 @@ const handleSubmit = async () => {
                       onChange={handleFileChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       accept=".pdf,.jpg,.jpeg,.png"
@@ -1535,7 +1535,7 @@ const handleSubmit = async () => {
                       onChange={handleFileChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       accept=".pdf,.jpg,.jpeg,.png"
@@ -1575,7 +1575,7 @@ const handleSubmit = async () => {
                       onChange={handleFileChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       accept=".pdf,.jpg,.jpeg,.png"
@@ -1611,7 +1611,7 @@ const handleSubmit = async () => {
                     onChange={handleFileChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -1634,7 +1634,7 @@ const handleSubmit = async () => {
                       onChange={handleFileChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       accept=".jpg,.jpeg,.png"
@@ -1670,12 +1670,12 @@ const handleSubmit = async () => {
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <Users className="w-6 h-6" style={{ color: "#12B99C" }} />
+                  <Users className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                   Co-applicant Information
                 </h2>
                 <div
                   className="p-6 rounded-lg border-2"
-                  style={{ borderColor: "#12B99C", backgroundColor: "#F8FAFC" }}
+                  style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -1691,7 +1691,7 @@ const handleSubmit = async () => {
                         onChange={handleFileChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -1712,7 +1712,7 @@ const handleSubmit = async () => {
                         onChange={handleFileChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -1733,7 +1733,7 @@ const handleSubmit = async () => {
                         onChange={handleFileChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -1751,7 +1751,7 @@ const handleSubmit = async () => {
                       <div className="relative">
                         <Phone
                           className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                          style={{ color: "#12B99C" }}
+                          style={{ color: "var(--color-brand-primary)" }}
                         />
                         <input
                           type="tel"
@@ -1760,7 +1760,7 @@ const handleSubmit = async () => {
                           onChange={handleInputChange}
                           className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "white",
                           }}
                           placeholder="Enter co-applicant mobile number"
@@ -1782,7 +1782,7 @@ const handleSubmit = async () => {
                         onChange={handleFileChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         accept=".jpg,.jpeg,.png"
@@ -1801,7 +1801,7 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <Store className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <Store className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Business Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1815,7 +1815,7 @@ const handleSubmit = async () => {
                   <div className="relative">
                     <Building
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     />
                     <input
                       type="text"
@@ -1824,7 +1824,7 @@ const handleSubmit = async () => {
                       onChange={handleInputChange}
                       className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your business name"
@@ -1847,7 +1847,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     placeholder="Enter business vintage in years"
@@ -1869,7 +1869,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     rows="3"
@@ -1892,7 +1892,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     placeholder="Enter business landmark"
@@ -1911,7 +1911,7 @@ const handleSubmit = async () => {
                   <div className="relative">
                     <Receipt
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     />
                     <input
                       type="text"
@@ -1920,7 +1920,7 @@ const handleSubmit = async () => {
                       onChange={handleInputChange}
                       className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter GST number (if applicable)"
@@ -1937,7 +1937,7 @@ const handleSubmit = async () => {
                   <div className="relative">
                     <span
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 text-lg"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     >
                       ₹
                     </span>
@@ -1948,7 +1948,7 @@ const handleSubmit = async () => {
                       onChange={handleInputChange}
                       className="w-full pl-10 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter annual turnover in INR"
@@ -1966,7 +1966,7 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <Shield className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <Shield className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Business Documents
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1983,7 +1983,7 @@ const handleSubmit = async () => {
                     onChange={handleFileChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -2004,7 +2004,7 @@ const handleSubmit = async () => {
                     onChange={handleFileChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -2025,7 +2025,7 @@ const handleSubmit = async () => {
                     onChange={handleFileChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -2046,7 +2046,7 @@ const handleSubmit = async () => {
                     onChange={handleFileChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -2062,7 +2062,7 @@ const handleSubmit = async () => {
                   <div className="relative">
                     <Camera
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     />
                     <input
                       type="file"
@@ -2070,7 +2070,7 @@ const handleSubmit = async () => {
                       onChange={handleFileChange}
                       className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       accept=".jpg,.jpeg,.png"
@@ -2092,7 +2092,7 @@ const handleSubmit = async () => {
                     onChange={handleFileChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -2107,7 +2107,7 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <FileText className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Financial Documents
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2124,7 +2124,7 @@ const handleSubmit = async () => {
                     onChange={handleFileChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -2151,7 +2151,7 @@ const handleSubmit = async () => {
                     onChange={handleFileChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -2166,13 +2166,13 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <Users className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <Users className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 References
               </h2>
               <div className="space-y-6">
                 <div
                   className="p-6 rounded-lg border-2"
-                  style={{ borderColor: "#12B99C", backgroundColor: "#F8FAFC" }}
+                  style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
                 >
                   <h3
                     className="text-lg font-semibold mb-4"
@@ -2195,7 +2195,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="Enter reference name"
@@ -2213,7 +2213,7 @@ const handleSubmit = async () => {
                       <div className="relative">
                         <Phone
                           className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
-                          style={{ color: "#12B99C" }}
+                          style={{ color: "var(--color-brand-primary)" }}
                         />
                         <input
                           type="tel"
@@ -2222,7 +2222,7 @@ const handleSubmit = async () => {
                           onChange={handleInputChange}
                           className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "white",
                           }}
                           placeholder="Enter contact number"
@@ -2235,7 +2235,7 @@ const handleSubmit = async () => {
                 </div>
                 <div
                   className="p-6 rounded-lg border-2"
-                  style={{ borderColor: "#12B99C", backgroundColor: "#F8FAFC" }}
+                  style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
                 >
                   <h3
                     className="text-lg font-semibold mb-4"
@@ -2258,7 +2258,7 @@ const handleSubmit = async () => {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="Enter reference name"
@@ -2276,7 +2276,7 @@ const handleSubmit = async () => {
                       <div className="relative">
                         <Phone
                           className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
-                          style={{ color: "#12B99C" }}
+                          style={{ color: "var(--color-brand-primary)" }}
                         />
                         <input
                           type="tel"
@@ -2285,7 +2285,7 @@ const handleSubmit = async () => {
                           onChange={handleInputChange}
                           className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "white",
                           }}
                           placeholder="Enter contact number"
@@ -2305,7 +2305,7 @@ const handleSubmit = async () => {
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <FileText className="w-6 h-6" style={{ color: "#12B99C" }} />
+                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Partner Referral
               </h2>
               <div className="grid grid-cols-1 gap-6">
@@ -2323,7 +2323,7 @@ const handleSubmit = async () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                     placeholder="Enter partner code"
@@ -2363,7 +2363,7 @@ const handleSubmit = async () => {
                   type="button"
                   onClick={handleSubmit}
                   className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                  style={{ backgroundColor: "#12B99C" }}
+                  style={{ backgroundColor: "var(--color-brand-primary)" }}
                   disabled={loading}
                 >
                   {loading ? "Saving..." : "Submit Loan"}

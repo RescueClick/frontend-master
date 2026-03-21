@@ -86,7 +86,7 @@ const GetLoan = () => {
                 className="h-full p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border-2 hover:border-opacity-100 border-opacity-20"
                 style={{
                   backgroundColor: '#F8FAFC',
-                  borderColor: '#12B99C',
+                  borderColor: 'var(--color-brand-primary)',
                   boxShadow: selectedLoan === loan.id 
                     ? '0 25px 50px -12px rgba(18, 185, 156, 0.4)' 
                     : '0 10px 25px -3px rgba(0, 0, 0, 0.1)'
@@ -97,7 +97,7 @@ const GetLoan = () => {
                   <div 
                     className="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl mb-3 transition-all duration-300 group-hover:scale-110"
                     style={{ 
-                      backgroundColor: '#12B99C',
+                      backgroundColor: 'var(--color-brand-primary)',
                       color: '#F8FAFC'
                     }}
                   >
@@ -115,7 +115,7 @@ const GetLoan = () => {
                   </h3>
                   <p 
                     className="text-sm font-medium mb-3 opacity-80"
-                    style={{ color: '#12B99C' }}
+                    style={{ color: 'var(--color-brand-primary)' }}
                   >
                     {loan.subtitle}
                   </p>
@@ -129,14 +129,14 @@ const GetLoan = () => {
 
                 {/* Hover Effect Overlay */}
                 <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"
-                  style={{ backgroundColor: '#12B99C' }}
+                  style={{ backgroundColor: 'var(--color-brand-primary)' }}
                 />
 
                 {/* Selection Indicator */}
                 {selectedLoan === loan.id && (
                   <div 
                     className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: '#12B99C' }}
+                    style={{ backgroundColor: 'var(--color-brand-primary)' }}
                   >
                     <span className="text-white text-sm">✓</span>
                   </div>
@@ -148,7 +148,7 @@ const GetLoan = () => {
                 <div 
                   className="absolute -bottom-12 left-0 right-0 text-center text-sm font-medium py-2 px-4 rounded-lg mx-4"
                   style={{
-                    backgroundColor: '#12B99C',
+                    backgroundColor: 'var(--color-brand-primary)',
                     color: '#F8FAFC',
                     animation: 'pulse 1.5s infinite'
                   }}
@@ -168,7 +168,7 @@ const GetLoan = () => {
           >
             Need help choosing? <span 
               className="font-semibold cursor-pointer hover:underline transition-all duration-200"
-              style={{ color: '#12B99C' }}
+              style={{ color: 'var(--color-brand-primary)' }}
             >
               Contact our experts
             </span>

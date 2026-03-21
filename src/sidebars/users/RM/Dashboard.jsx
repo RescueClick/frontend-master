@@ -333,7 +333,7 @@ const Dashboard = () => {
             <div className="text-center">
               <div
                 className="w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-4"
-                style={{ backgroundColor: "#12B99C" }} // primary color
+                style={{ backgroundColor: "var(--color-brand-primary)" }} // primary color
               >
                 <span className="text-white font-bold text-xl">RM</span>
               </div>
@@ -356,7 +356,7 @@ const Dashboard = () => {
               <button
                 className="mt-4 w-full py-2 rounded-lg hover:opacity-90 transition-opacity"
                 style={{
-                  backgroundColor: "#12B99C", // primary color
+                  backgroundColor: "var(--color-brand-primary)", // primary color
                   color: "white",
                 }}
                 onClick={() => alert("Edit profile clicked")}
@@ -530,7 +530,7 @@ const Dashboard = () => {
                           const percent = (item.achievement / item.target) * 100;
                           if (percent < 50) return "#EF4444"; // red
                           else if (percent < 90) return "#F59E0B"; // yellow
-                          else return "#12B99C"; // green
+                          else return "var(--color-brand-primary)"; // green
                         })(),
                       }}
                     ></div>
@@ -597,7 +597,7 @@ const Dashboard = () => {
                     <div className="flex items-center space-x-4">
                       <p
                         className="text-sm font-bold"
-                        style={{ color: "#12B99C" }}
+                        style={{ color: "var(--color-brand-primary)" }}
                       >
                         ₹{customer.maxLoan.toLocaleString()}
                       </p>
@@ -661,7 +661,7 @@ const Dashboard = () => {
                     <div className="flex items-center space-x-4">
                       <p
                         className="text-sm font-bold"
-                        style={{ color: "#12B99C" }}
+                        style={{ color: "var(--color-brand-primary)" }}
                       >
                         {lead.maxLoan}
                       </p>

@@ -88,7 +88,7 @@ const Application = () => {
   };
 
   const colors = {
-    primary: "#12B99C",
+    primary: "var(--color-brand-primary)",
     secondary: "#1E3A8A",
   };
 

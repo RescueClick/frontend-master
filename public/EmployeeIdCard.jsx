@@ -43,7 +43,7 @@ const EmployeeIdCard = () => {
             Our Great Collaborations
           </div>
           <div className="text-[10px] opacity-90 font-light">
-            Trustlinefintech
+            DhanSource Capital
           </div>
           
           {/* ID Number Badge */}

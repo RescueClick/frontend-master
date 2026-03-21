@@ -69,7 +69,7 @@ const { data: doneData, loading: doneLoading, error: doneError } =
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center mb-6">
             {/* Title icon */}
-            <AppIcon name="FileText" size={24} className="mr-3 w-6 h-6 text-[#12B99C]" />
+            <AppIcon name="FileText" size={24} className="mr-3 w-6 h-6 text-brand-primary" />
             <h2 className="text-2xl font-semibold" style={{ color: "#111827" }}>
               Application
             </h2>

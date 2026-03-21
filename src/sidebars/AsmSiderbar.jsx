@@ -35,7 +35,7 @@ import { fetchAsmProfile } from "../feature/thunks/asmThunks";
 import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
 
 import Profile from "./users/userProfile/Profile";
-import logo from "../assets/logo.png";
+import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
 
 // Admin sidebar component
@@ -95,21 +95,16 @@ const AsmSiderbar = () => {
       <div
         className={`${
           sidebarOpen ? "w-55" : "w-20"
-        } bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200`}
+        } shrink-0 bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200 overflow-x-hidden`}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-center py-6 border-b border-gray-100">
-          <div className="flex items-center space-x-3">
-          <div className="w-10 h-10  rounded-lg flex items-center justify-center ">
-              <span className="text-white font-bold text-lg">
-                <img src={logo} alt="logo" />
-              </span>
-            </div>
-            {sidebarOpen && (
-              <span className="text-xl font-bold text-gray-800 tracking-wide">
-                TRUSTLINE
-              </span>
-            )}
+        {/* Logo — match Admin */}
+        <div
+          className={`flex w-full min-w-0 items-center border-b border-gray-800 py-5 min-h-[72px] ${
+            sidebarOpen ? "justify-start px-4 gap-3" : "justify-center px-2"
+          }`}
+        >
+          <div className="w-full min-w-0 h-[55px] rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+            <img src={brandLogo} alt={COMPANY_NAME} className="h-full w-full object-cover" />
           </div>
         </div>
 
@@ -241,7 +236,7 @@ const AsmSiderbar = () => {
                   <div className="p-6">
                     {/* Avatar & Name */}
                     <div className="flex flex-col items-center text-center mb-8">
-                      <div className="w-20 h-20 rounded-full bg-[#12B99C] flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
+                      <div className="w-20 h-20 rounded-full bg-brand-primary flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
                         {(data?.fullName?.charAt(0) || data?.firstName?.charAt(0) || fallbackUser?.firstName?.charAt(0) || "U").toUpperCase()}
                       </div>
                       <h2 className="text-2xl font-semibold text-[#111827] mb-2">
@@ -253,7 +248,7 @@ const AsmSiderbar = () => {
                     <div className="space-y-6">
                       {/* Mobile No */}
                       <div className="flex items-start gap-4">
-                        <Phone className="w-5 h-5 text-[#12B99C]" />
+                        <Phone className="w-5 h-5 text-brand-primary" />
                         <div>
                           <p className="text-sm font-semibold text-gray-500">
                             Mobile No
@@ -266,7 +261,7 @@ const AsmSiderbar = () => {
 
                       {/* Email */}
                       <div className="flex items-start gap-4">
-                        <Mail className="w-5 h-5 text-[#12B99C]" />
+                        <Mail className="w-5 h-5 text-brand-primary" />
                         <div>
                           <p className="text-sm font-semibold text-gray-500">
                             Email
@@ -279,7 +274,7 @@ const AsmSiderbar = () => {
 
                       {/* DOB */}
                       <div className="flex items-start gap-4">
-                        <Calendar className="w-5 h-5 text-[#12B99C]" />
+                        <Calendar className="w-5 h-5 text-brand-primary" />
                         <div>
                           <p className="text-sm font-semibold text-gray-500">
                             Date of Birth
@@ -301,7 +296,7 @@ const AsmSiderbar = () => {
 
                       {/* DOJ */}
                       <div className="flex items-start gap-4">
-                        <Briefcase className="w-5 h-5 text-[#12B99C]" />
+                        <Briefcase className="w-5 h-5 text-brand-primary" />
                         <div>
                           <p className="text-sm font-semibold text-gray-500">
                             Date of Joining
@@ -323,7 +318,7 @@ const AsmSiderbar = () => {
 
                       {/* Region */}
                       <div className="flex items-start gap-4">
-                        <MapPin className="w-5 h-5 text-[#12B99C]" />
+                        <MapPin className="w-5 h-5 text-brand-primary" />
                         <div>
                           <p className="text-sm font-semibold text-gray-500">
                             Region

@@ -154,7 +154,7 @@ const Agreement = () => {
           <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent rounded"></div>
           
           <h1 className="text-3xl font-extrabold text-emerald-600 mb-4 tracking-wide drop-shadow-sm">
-            TRUSTLINE FINTECH
+            DHANSOURCE CAPITAL
           </h1>
           <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-5 tracking-wide">
             PARTNERSHIP AGREEMENT
@@ -229,7 +229,7 @@ const Agreement = () => {
           </div>
           
           <div className="mb-6 p-5 bg-slate-50/80 rounded-xl border-l-4 border-amber-500  text-justify">
-            <strong>Trustline Fintech Private Limited</strong> (from this point will be known as <strong>TRUSTLINEFINTECH.COM</strong>), a private limited company incorporated under the Company's Act 2013, and having its registered office at{' '}
+            <strong>DhanSource Capital</strong> (from this point will be known as <strong>DHANSOURCECAPITAL.COM</strong>), a private limited company incorporated under the Company's Act 2013, and having its registered office at{' '}
             <span className={`inline-block min-w-48 ${errors.companyAddress ? 'bg-red-50' : ''}`}>
               <EditableField
                 value={formData.companyAddress}
@@ -406,7 +406,7 @@ const Agreement = () => {
               <div className="h-12 border-b-4 border-emerald-500 mb-4 rounded-sm relative">
                 <div className="absolute right-2 bottom-1 text-lg">✒️</div>
               </div>
-              <div className="font-bold">For TRUSTLINE FINTECH PRIVATE LIMITED</div>
+              <div className="font-bold">For DHANSOURCE CAPITAL</div>
               <div>Authorized Signatory</div>
             </div>
             

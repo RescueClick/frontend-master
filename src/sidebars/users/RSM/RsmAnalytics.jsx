@@ -135,7 +135,7 @@ const RsmAnalytics = () => {
       <div className="min-h-screen" style={{ backgroundColor: designSystem.colors.background }}>
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
-            <div className="w-16 h-16 border-4 border-[#12B99C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-16 h-16 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600">Loading RM analytics...</p>
           </div>
         </div>
@@ -154,7 +154,7 @@ const RsmAnalytics = () => {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-[#12B99C] text-white px-6 py-2.5 rounded-lg font-medium hover:bg-[#0EA688] transition-colors"
+            className="bg-brand-primary text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-primary-hover transition-colors"
           >
             🔄 Retry
           </button>

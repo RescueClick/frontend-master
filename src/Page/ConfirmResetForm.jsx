@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { backendurl } from "../feature/urldata";
-import logo from "../assets/logo.png";
+import { brandLogo, COMPANY_NAME } from "../config/branding";
 
 export function ConfirmResetForm() {
     const location = useLocation();
@@ -48,8 +48,8 @@ export function ConfirmResetForm() {
                         <div className="flex justify-center mb-4">
                             <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-white border border-gray-100">
                                 <img
-                                    src={logo}
-                                    alt="Trustline Fintech"
+                                    src={brandLogo}
+                                    alt={COMPANY_NAME}
                                     className="w-12 h-12 object-contain"
                                 />
                             </div>
@@ -70,7 +70,7 @@ export function ConfirmResetForm() {
                             <input
                                 type="password"
                                 placeholder="Enter new password"
-                                className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-[#12B99C] text-slate-900 placeholder:text-slate-400"
+                                className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-slate-900 placeholder:text-slate-400"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 required
@@ -83,7 +83,7 @@ export function ConfirmResetForm() {
                             <input
                                 type="password"
                                 placeholder="Re-enter new password"
-                                className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-[#12B99C] text-slate-900 placeholder:text-slate-400"
+                                className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-slate-900 placeholder:text-slate-400"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
@@ -91,7 +91,7 @@ export function ConfirmResetForm() {
                         </div>
                         <button
                             type="submit"
-                            className="w-full py-2.5 rounded-lg font-semibold text-white bg-[#12B99C] hover:bg-[#0f9e82] transition-colors duration-200"
+                            className="w-full py-2.5 rounded-lg font-semibold text-white bg-brand-primary hover:bg-[#0f9e82] transition-colors duration-200"
                         >
                             Reset password
                         </button>

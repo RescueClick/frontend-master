@@ -9,7 +9,7 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   accent: "#F59E0B",
@@ -149,7 +149,7 @@ export default function RsmRMs() {
               />
               <input
                 type="text"
-                className="border border-gray-300 rounded-lg pl-10 pr-4 py-3 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+                className="border border-gray-300 rounded-lg pl-10 pr-4 py-3 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                 placeholder="Search by name, RM code, or ID"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -275,7 +275,7 @@ export default function RsmRMs() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-6 border-b border-gray-100 bg-[#12B99C] text-white rounded-t-2xl">
+            <div className="p-6 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl">
               <div className="flex items-start justify-between">
                 <h3 className="text-xl font-semibold">RM Details</h3>
                 <button

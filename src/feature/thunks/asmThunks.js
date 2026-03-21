@@ -43,8 +43,12 @@ export const updateAsmProfile = createAsyncThunk(
         }
       );
 
-     
-      return res.data.profile;
+      const p = res.data.profile || res.data;
+      return {
+        ...p,
+        emailChangePending: !!res.data.emailChangePending,
+        emailChangeMessage: res.data.message,
+      };
     } catch (err) {
       const data = err.response?.data;
       const msg =

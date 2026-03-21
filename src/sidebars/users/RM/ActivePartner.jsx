@@ -380,14 +380,14 @@ const ActivePartner = () => {
 
                         <button
                           className="px-3 py-1 text-white rounded-lg hover:opacity-90 transition-opacity"
-                          style={{ backgroundColor: "#12B99C" }}
+                          style={{ backgroundColor: "var(--color-brand-primary)" }}
                         >
                           View Details
                         </button>
 
                         <button
                           className="px-3 py-1 text-white rounded-lg hover:opacity-90 transition-opacity"
-                          style={{ backgroundColor: "#12B99C" }}
+                          style={{ backgroundColor: "var(--color-brand-primary)" }}
                         >
                           Show Customers
                         </button>
@@ -456,7 +456,7 @@ const ActivePartner = () => {
                       <div className="flex items-center space-x-4">
                         <p
                           className="text-sm font-bold"
-                          style={{ color: "#12B99C" }}
+                          style={{ color: "var(--color-brand-primary)" }}
                         >
                           {lead.value}
                         </p>

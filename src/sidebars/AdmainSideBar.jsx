@@ -22,7 +22,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchAdminProfile } from "../feature/thunks/adminThunks";
 import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
 
-import logo from "../assets/logo.png";
+import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
 
 // Admin sidebar component
@@ -96,28 +96,29 @@ const AdminSideBar = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
+      {/* Sidebar — same pattern as ASM/RSM/Partner: wide when open, narrow icon rail (w-20) when collapsed */}
       <div
-        className={`${sidebarOpen ? "w-60" : "w-20"} bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200`}
+        className={`${
+          sidebarOpen ? "w-60" : "w-20"
+        } shrink-0 bg-white shadow-xl transition-all duration-300 ease-in-out flex flex-col sticky top-0 h-screen border-r border-gray-200 overflow-x-hidden`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-center py-6 border-b border-gray-100">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10  rounded-lg flex items-center justify-center ">
-              <span className="text-white font-bold text-lg">
-                <img src={logo} alt="logo" />
-              </span>
-            </div>
-            {sidebarOpen && (
-              <span className="text-xl font-bold text-gray-800 tracking-wide">
-                TRUSTLINE
-              </span>
-            )}
+        <div
+          className={`flex w-full min-w-0 items-center border-b border-gray-800 py-5 min-h-[72px] ${
+            sidebarOpen ? "justify-start px-4 gap-3" : "justify-center px-2"
+          }`}
+        >
+          <div className="w-full min-w-0 h-[55px] rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+            <img src={brandLogo} alt={COMPANY_NAME} className="h-full w-full object-cover" />
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="mt-6 flex-1 overflow-y-auto px-3">
+        <nav
+          className={`mt-4 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-4 ${
+            sidebarOpen ? "px-3" : "px-2"
+          }`}
+        >
           {sidebarItems.map((item, index) => {
             const active = location.pathname === item.path;
             const isHighlight = item.highlight;
@@ -134,13 +135,17 @@ const AdminSideBar = () => {
               <Link
                 key={index}
                 to={item.path}
-                className={`w-full flex items-center space-x-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${
-                  active ? activeClasses : baseClasses
-                }`}
+                title={item.name}
+                className={`w-full flex items-center mb-2 rounded-xl transition-all duration-200 ${
+                  sidebarOpen ? "space-x-3 px-3 py-3" : "justify-center px-2 py-3"
+                } ${active ? activeClasses : baseClasses}`}
               >
-                <item.icon size={22} className={active ? "text-white" : ""} />
+                <item.icon
+                  size={22}
+                  className={`shrink-0 ${active ? "text-white" : ""}`}
+                />
                 {sidebarOpen && (
-                  <span className="text-sm font-medium truncate">
+                  <span className="text-sm font-medium truncate min-w-0">
                     {item.name}
                   </span>
                 )}
@@ -151,7 +156,7 @@ const AdminSideBar = () => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
           <div className="flex items-center justify-between px-6 py-4">

@@ -30,26 +30,24 @@ class SocketManager {
       return null;
     }
 
-    // Extract base URL from backendurl
-    let socketUrl = backendurl.replace("/api", "");
-    
-    // Ensure proper URL format for socket.io
-    // Remove trailing slashes
-    socketUrl = socketUrl.replace(/\/+$/, "");
-    
-    // Handle different URL formats
-    if (socketUrl.includes("://")) {
-      // Already has protocol, use as is
-      socketUrl = socketUrl;
-    } else if (socketUrl.match(/^\d+\.\d+\.\d+\.\d+/)) {
-      // IP address format (e.g., 10.100.12.2:5000)
-      socketUrl = `http://${socketUrl}`;
-    } else if (socketUrl.includes("localhost") || socketUrl.includes("127.0.0.1")) {
-      // Localhost
-      socketUrl = `http://${socketUrl}`;
+    // Dev: connect via Vite same-origin origin so /socket.io is proxied (see vite.config.js) — avoids CORS
+    let socketUrl;
+    if (import.meta.env.DEV && typeof window !== "undefined") {
+      socketUrl = window.location.origin;
     } else {
-      // Domain name or other format
-      socketUrl = `http://${socketUrl}`;
+      // Extract base URL from backendurl
+      socketUrl = backendurl.replace("/api", "");
+      // Ensure proper URL format for socket.io
+      socketUrl = socketUrl.replace(/\/+$/, "");
+      if (socketUrl.includes("://")) {
+        socketUrl = socketUrl;
+      } else if (socketUrl.match(/^\d+\.\d+\.\d+\.\d+/)) {
+        socketUrl = `http://${socketUrl}`;
+      } else if (socketUrl.includes("localhost") || socketUrl.includes("127.0.0.1")) {
+        socketUrl = `http://${socketUrl}`;
+      } else {
+        socketUrl = `http://${socketUrl}`;
+      }
     }
 
     this.socket = io(socketUrl, {

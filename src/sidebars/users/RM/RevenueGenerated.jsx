@@ -125,7 +125,7 @@ const RevenueGenerated = () => {
                     <div className="flex items-center space-x-4">
                       <p
                         className="text-sm font-bold"
-                        style={{ color: "#12B99C" }}
+                        style={{ color: "var(--color-brand-primary)" }}
                       >
                         {lead.value}
                       </p>

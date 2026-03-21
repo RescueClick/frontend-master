@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   accent: "#F59E0B",
@@ -93,7 +93,7 @@ const AdminDoneIncentive = () => {
               placeholder="Search by partner name or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:w-80 pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              className="w-full md:w-80 pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent"
             />
           </div>
 
@@ -101,7 +101,7 @@ const AdminDoneIncentive = () => {
             <select
               value={year}
               onChange={(e) => setYear(parseInt(e.target.value))}
-              className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent"
             >
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
                 <option key={y} value={y}>
@@ -113,7 +113,7 @@ const AdminDoneIncentive = () => {
             <select
               value={month}
               onChange={(e) => setMonth(parseInt(e.target.value))}
-              className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m}>

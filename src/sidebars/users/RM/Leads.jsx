@@ -6,7 +6,7 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const COLORS = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   background: "#F8FAFC",
   accent: "#F59E0B",
   text: "#111827",
@@ -14,8 +14,8 @@ const COLORS = {
 
 const statusStyle = {
   New: {
-    gradient: "from-[#12B99C] to-[#5EEAD4]",
-    badge: "bg-[#E0F7F4] text-[#12B99C] border border-[#BBF7F0]",
+    gradient: "from-brand-primary to-[#5EEAD4]",
+    badge: "bg-[#E0F7F4] text-brand-primary border border-[#BBF7F0]",
   },
   InProcess: {
     gradient: "from-[#111827] to-[#4B5563]",

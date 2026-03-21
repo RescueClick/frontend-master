@@ -49,7 +49,7 @@ const ASMaddRM = () => {
   const [loading, setLoading] = useState(false);
 
   const colors = {
-    primary: "#12B99C",
+    primary: "var(--color-brand-primary)",
     background: "#F8FAFC",
     text: "#111827",
   };

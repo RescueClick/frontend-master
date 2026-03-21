@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser } from './feature/thunks/adminThunks';
 import { getAuthData } from './utils/localStorage';
-import logo from './assets/logo.png';
+import { brandLogo, COMPANY_NAME, COMPANY_TAGLINE } from "./config/branding";
 
 
 const ErrorModal = ({ isOpen, onClose, error }) => {
@@ -48,7 +48,7 @@ const ErrorModal = ({ isOpen, onClose, error }) => {
           <button
             onClick={onClose}
             className="w-full inline-flex justify-center px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
-            style={{ backgroundColor: '#12B99C' }}
+            style={{ backgroundColor: 'var(--color-brand-primary)' }}
           >
             Try Again
           </button>
@@ -230,17 +230,17 @@ const LoginPage = () => {
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/40 flex items-center justify-center shadow-lg">
                   <img
-                    src={logo}
-                    alt="Trustline Fintech"
+                    src={brandLogo}
+                    alt={COMPANY_NAME}
                     className="w-9 h-9 object-contain"
                   />
                 </div>
                 <div>
                   <p className="text-white text-lg font-semibold leading-tight">
-                    Trustline Fintech
+                    {COMPANY_NAME}
                   </p>
                   <p className="text-emerald-50 text-xs font-medium">
-                    Unified Lending & Partner Platform
+                    {COMPANY_TAGLINE}
                   </p>
                 </div>
               </div>
@@ -277,8 +277,8 @@ const LoginPage = () => {
                 <div className="flex justify-center mb-4">
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-white border border-gray-100">
                     <img
-                      src={logo}
-                      alt="Trustline Fintech"
+                      src={brandLogo}
+                      alt={COMPANY_NAME}
                       className="w-12 h-12 object-contain"
                     />
                   </div>
@@ -307,7 +307,7 @@ const LoginPage = () => {
                     type="text"
                     value={formData.username}
                     onChange={handleInputChange}
-                    className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${errors.username ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-[#12B99C]'
+                    className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${errors.username ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-brand-primary'
                       }`}
                     placeholder="Enter your email address"
                   />
@@ -328,7 +328,7 @@ const LoginPage = () => {
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-[#12B99C]'
+                    className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-brand-primary'
                       }`}
                     placeholder="Enter your password"
                   />
@@ -346,7 +346,7 @@ const LoginPage = () => {
               {/* Remember Me & Forgot Password */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 rounded border-gray-300 focus:ring-2" style={{ accentColor: '#12B99C' }} />
+                  <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 rounded border-gray-300 focus:ring-2" style={{ accentColor: 'var(--color-brand-primary)' }} />
                   <label htmlFor="remember-me" className="ml-2 block text-sm" style={{ color: '#6B7280' }}>Remember me</label>
                 </div>
                 <div className="text-sm">
@@ -356,7 +356,7 @@ const LoginPage = () => {
                     type="button"
                     onClick={() => navigate("/reset-password/request")}
                     className="cursor-pointer font-medium hover:underline transition-colors"
-                    style={{ color: '#12B99C' }}
+                    style={{ color: 'var(--color-brand-primary)' }}
                   >
                     Forgot password?
                   </button>
@@ -370,7 +370,7 @@ const LoginPage = () => {
                   disabled={loading}
                   className={`cursor-pointer group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ${loading ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-lg transform hover:-translate-y-0.5'
                     }`}
-                  style={{ backgroundColor: '#12B99C' }}
+                  style={{ backgroundColor: 'var(--color-brand-primary)' }}
                 >
                   {loading ? (
                     <div className="flex items-center">

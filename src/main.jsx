@@ -6,13 +6,16 @@ import App from "./App.jsx";
 import { store } from "./App/store.js";
 import { Provider } from "react-redux";
 import { SocketProvider } from "./components/SocketProvider";
+import { AppLoaderProvider } from "./components/AppLoaderProvider";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
      <Provider store={store}> 
       <BrowserRouter>
         <SocketProvider>
-          <App />
+          <AppLoaderProvider>
+            <App />
+          </AppLoaderProvider>
         </SocketProvider>
       </BrowserRouter>
     </Provider> 

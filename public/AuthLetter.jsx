@@ -58,8 +58,7 @@ const AuthLetter = () => {
 
         {/* Logo */}
         <div className="text-center mb-7">
-          <span className="text-4xl font-bold text-teal-500">Trustline</span>
-          <span className="text-4xl font-bold text-teal-500 ml-1">Fintech</span>
+          <span className="text-3xl font-bold text-teal-500">DhanSource Capital</span>
         </div>
 
         {/* Certificate Title */}
@@ -75,7 +74,7 @@ const AuthLetter = () => {
         {/* Authorization Text */}
         <div className="text-center text-lg italic leading-relaxed text-gray-700 mb-10">
           You are hereby authorized to promote and provide consultation<br />
-          for all the Financial Products and Services offered by Trustline Fintech
+          for all the Financial Products and Services offered by DhanSource Capital
         </div>
 
         {/* Signatures Section */}
@@ -86,14 +85,14 @@ const AuthLetter = () => {
             <div className="text-base font-bold text-gray-800 mb-1">Anil Bagad</div>
             <div className="text-sm font-bold text-teal-500">
               CEO & Director<br />
-              Trustline Fintech
+              DhanSource Capital
             </div>
           </div>
 
           {/* Medal */}
           <div className="absolute left-1/2 transform -translate-x-1/2 bottom-0 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full border-[3px] border-yellow-400 shadow-lg flex items-center justify-center text-center text-xs font-bold text-yellow-800">
             <div className="relative">
-              Trustline Fintech<br />Certified<br />
+              DhanSource Capital<br />Certified<br />
               {new Date().getFullYear()}
               {/* Medal ribbon */}
               <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[15px] border-t-yellow-400"></div>
@@ -106,7 +105,7 @@ const AuthLetter = () => {
             <div className="text-base font-bold text-gray-800 mb-1">Kanchan Ghorpade</div>
             <div className="text-sm font-bold text-teal-500">
               MD<br />
-              Trustline Fintech
+              DhanSource Capital
             </div>
           </div>
         </div>

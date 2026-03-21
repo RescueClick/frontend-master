@@ -58,7 +58,7 @@ const AddRMPage = () => {
  
 
   const colors = {
-    primary: "#12B99C",
+    primary: "var(--color-brand-primary)",
     background: "#F8FAFC",
     text: "#111827",
   };
@@ -680,7 +680,7 @@ const handleSubmit = async (e) => {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
               {/* Modal Header */}
-              <div className="bg-[#12B99C] p-3 text-white">
+              <div className="bg-brand-primary p-3 text-white">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold">Select Personal Loan RSM</h3>
                   <button
@@ -707,7 +707,7 @@ const handleSubmit = async (e) => {
                     placeholder="Search Personal Loan RSM by name, employee ID, or email..."
                     value={rsmSearchTerm}
                     onChange={handleRsmSearchChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12B99C]/30 focus:border-[#12B99C]/50 transition-all duration-200"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary/50 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -716,7 +716,7 @@ const handleSubmit = async (e) => {
               <div className="flex-1 p-6 overflow-y-auto">
                 {rsmLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#12B99C]"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
                     <span className="ml-3 text-gray-600">
                       Loading RSM list...
                     </span>
@@ -737,15 +737,15 @@ const handleSubmit = async (e) => {
                         onClick={() => handlePersonalRsmSelection(rsm)}
                         className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
                           formData.personalRsm?._id === rsm._id
-                            ? "border-[#12B99C] bg-[#12B99C]/5"
-                            : "border-gray-200 hover:border-[#12B99C]/30"
+                            ? "border-brand-primary bg-brand-primary/5"
+                            : "border-gray-200 hover:border-brand-primary/30"
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-[#12B99C]/10 rounded-full flex items-center justify-center">
-                                <span className="text-[#12B99C] font-semibold text-sm">
+                              <div className="w-10 h-10 bg-brand-primary/10 rounded-full flex items-center justify-center">
+                                <span className="text-brand-primary font-semibold text-sm">
                                   {rsm.firstName?.charAt(0)}
                                   {rsm.lastName?.charAt(0)}
                                 </span>
@@ -768,7 +768,7 @@ const handleSubmit = async (e) => {
                             </div>
                           </div>
                           {formData.personalRsm?._id === rsm._id && (
-                            <div className="w-6 h-6 bg-[#12B99C] rounded-full flex items-center justify-center">
+                            <div className="w-6 h-6 bg-brand-primary rounded-full flex items-center justify-center">
                               <Check className="w-4 h-4 text-white" />
                             </div>
                           )}
@@ -821,7 +821,7 @@ const handleSubmit = async (e) => {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
               {/* Modal Header */}
-              <div className="bg-[#12B99C] p-3 text-white">
+              <div className="bg-brand-primary p-3 text-white">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold">Select Business & Home Loan RSM</h3>
                   <button
@@ -848,7 +848,7 @@ const handleSubmit = async (e) => {
                     placeholder="Search Business & Home Loan RSM by name, employee ID, or email..."
                     value={rsmSearchTerm}
                     onChange={handleRsmSearchChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12B99C]/30 focus:border-[#12B99C]/50 transition-all duration-200"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary/50 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -857,7 +857,7 @@ const handleSubmit = async (e) => {
               <div className="flex-1 p-6 overflow-y-auto">
                 {rsmLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#12B99C]"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
                     <span className="ml-3 text-gray-600">
                       Loading RSM list...
                     </span>
@@ -878,15 +878,15 @@ const handleSubmit = async (e) => {
                         onClick={() => handleBusinessHomeRsmSelection(rsm)}
                         className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
                           formData.businessHomeRsm?._id === rsm._id
-                            ? "border-[#12B99C] bg-[#12B99C]/5"
-                            : "border-gray-200 hover:border-[#12B99C]/30"
+                            ? "border-brand-primary bg-brand-primary/5"
+                            : "border-gray-200 hover:border-brand-primary/30"
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-[#12B99C]/10 rounded-full flex items-center justify-center">
-                                <span className="text-[#12B99C] font-semibold text-sm">
+                              <div className="w-10 h-10 bg-brand-primary/10 rounded-full flex items-center justify-center">
+                                <span className="text-brand-primary font-semibold text-sm">
                                   {rsm.firstName?.charAt(0)}
                                   {rsm.lastName?.charAt(0)}
                                 </span>
@@ -909,7 +909,7 @@ const handleSubmit = async (e) => {
                             </div>
                           </div>
                           {formData.businessHomeRsm?._id === rsm._id && (
-                            <div className="w-6 h-6 bg-[#12B99C] rounded-full flex items-center justify-center">
+                            <div className="w-6 h-6 bg-brand-primary rounded-full flex items-center justify-center">
                               <Check className="w-4 h-4 text-white" />
                             </div>
                           )}

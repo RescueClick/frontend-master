@@ -271,7 +271,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 p-4 md:p-8">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200/80 overflow-hidden">
-          <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-gradient-to-r from-[#12B99C] to-[#0d9d84] text-white">
+          <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-gradient-to-r from-brand-primary to-[#0d9d84] text-white">
             <div className="flex items-center gap-3 min-w-0">
               <button
                 type="button"
@@ -326,7 +326,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
             <div className="p-6 space-y-8">
               <section>
                 <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <User className="w-5 h-5 text-[#12B99C]" />
+                  <User className="w-5 h-5 text-brand-primary" />
                   Personal information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -338,7 +338,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                       name="fullName"
                       value={formData.fullName}
                       onChange={(e) => handleInputChange("fullName", e.target.value)}
-                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#12B99C]/40 transition ${
+                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 transition ${
                         errors.fullName ? "border-red-400" : "border-slate-200"
                       }`}
                       placeholder="As per official records"
@@ -349,7 +349,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                   </div>
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
-                      <Mail className="w-4 h-4 text-[#12B99C]" />
+                      <Mail className="w-4 h-4 text-brand-primary" />
                       Email *
                     </label>
                     <input
@@ -357,7 +357,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                       type="email"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
-                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#12B99C]/40 ${
+                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 ${
                         errors.email ? "border-red-400" : "border-slate-200"
                       }`}
                     />
@@ -367,14 +367,14 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                   </div>
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
-                      <Phone className="w-4 h-4 text-[#12B99C]" />
+                      <Phone className="w-4 h-4 text-brand-primary" />
                       Mobile *
                     </label>
                     <input
                       name="phone"
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
-                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#12B99C]/40 ${
+                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 ${
                         errors.phone ? "border-red-400" : "border-slate-200"
                       }`}
                       placeholder="10-digit number"
@@ -385,7 +385,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                   </div>
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
-                      <Calendar className="w-4 h-4 text-[#12B99C]" />
+                      <Calendar className="w-4 h-4 text-brand-primary" />
                       Date of birth *
                     </label>
                     <input
@@ -393,7 +393,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                       type="date"
                       value={formData.dob}
                       onChange={(e) => handleInputChange("dob", e.target.value)}
-                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#12B99C]/40 ${
+                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 ${
                         errors.dob ? "border-red-400" : "border-slate-200"
                       }`}
                     />
@@ -404,7 +404,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
 
               <section>
                 <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <Home className="w-5 h-5 text-[#12B99C]" />
+                  <Home className="w-5 h-5 text-brand-primary" />
                   Address & work
                 </h3>
                 <div className="space-y-5">
@@ -415,7 +415,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                       rows={3}
                       value={formData.address}
                       onChange={(e) => handleInputChange("address", e.target.value)}
-                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#12B99C]/40 resize-y ${
+                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 resize-y ${
                         errors.address ? "border-red-400" : "border-slate-200"
                       }`}
                       placeholder="House no., street, city, PIN"
@@ -427,14 +427,14 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                       <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
-                        <Briefcase className="w-4 h-4 text-[#12B99C]" />
+                        <Briefcase className="w-4 h-4 text-brand-primary" />
                         Experience *
                       </label>
                       <select
                         name="experience"
                         value={formData.experience}
                         onChange={(e) => handleInputChange("experience", e.target.value)}
-                        className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#12B99C]/40 ${
+                        className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 ${
                           errors.experience ? "border-red-400" : "border-slate-200"
                         }`}
                       >
@@ -451,7 +451,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
-                        <MapPin className="w-4 h-4 text-[#12B99C]" />
+                        <MapPin className="w-4 h-4 text-brand-primary" />
                         Region *
                       </label>
                       <input
@@ -459,7 +459,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                         value={formData.region}
                         onChange={(e) => handleInputChange("region", e.target.value)}
                         placeholder="Your region / territory"
-                        className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#12B99C]/40 ${
+                        className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 ${
                           errors.region ? "border-red-400" : "border-slate-200"
                         }`}
                       />
@@ -488,7 +488,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 bg-[#12B99C] text-white rounded-xl hover:bg-[#0ea688] font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+                className="px-6 py-2.5 bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover font-medium flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 <Save className="w-4 h-4" />
                 {loading ? "Saving…" : "Save changes"}

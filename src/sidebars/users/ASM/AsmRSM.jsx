@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   accent: "#F59E0B",
@@ -194,7 +194,7 @@ export default function AsmRSM() {
             />
             <input
               type="text"
-              className="border border-gray-300 rounded-lg pl-10 pr-4 py-3 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              className="border border-gray-300 rounded-lg pl-10 pr-4 py-3 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
               placeholder="Search by name, employee ID, or RSM type"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -316,7 +316,7 @@ export default function AsmRSM() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with gradient */}
-            <div className="bg-[#12B99C] p-6 text-white relative">
+            <div className="bg-brand-primary p-6 text-white relative">
               <button
                 onClick={() => setShowViewModal(false)}
                 className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
@@ -355,7 +355,7 @@ export default function AsmRSM() {
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
                       rsmToView.status === "ACTIVE"
-                        ? "bg-[#12B99C]/10 text-[#12B99C]"
+                        ? "bg-brand-primary/10 text-brand-primary"
                         : "bg-gray-100 text-gray-600"
                     }`}
                   >
@@ -389,7 +389,7 @@ export default function AsmRSM() {
               {/* System Info */}
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <h5 className="font-semibold text-[#111827] mb-3 flex items-center">
-                  <div className="w-2 h-2 bg-[#12B99C] rounded-full mr-2"></div>
+                  <div className="w-2 h-2 bg-brand-primary rounded-full mr-2"></div>
                   System Information
                 </h5>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -427,7 +427,7 @@ export default function AsmRSM() {
             className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-[#12B99C] p-6 text-white relative">
+            <div className="bg-brand-primary p-6 text-white relative">
               <button
                 onClick={() => setRsmToActivate(null)}
                 className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
@@ -449,7 +449,7 @@ export default function AsmRSM() {
                 </button>
                 <button
                   onClick={confirmActivate}
-                  className="px-4 py-2 text-sm rounded-md text-white bg-[#12B99C] hover:opacity-90"
+                  className="px-4 py-2 text-sm rounded-md text-white bg-brand-primary hover:opacity-90"
                 >
                   OK
                 </button>
@@ -466,7 +466,7 @@ export default function AsmRSM() {
             className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-[#12B99C] p-6 text-white relative">
+            <div className="bg-brand-primary p-6 text-white relative">
               <button
                 onClick={() => setRsmToDeactivate(null)}
                 className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"

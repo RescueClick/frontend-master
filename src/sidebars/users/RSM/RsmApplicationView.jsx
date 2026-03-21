@@ -495,7 +495,7 @@ const RsmApplicationView = () => {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
           <div className="bg-white rounded-xl p-8 shadow-lg">
             <div className="flex items-center gap-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#12B99C]"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
               <span className="text-gray-700 text-lg">Loading application data...</span>
             </div>
           </div>
@@ -515,7 +515,7 @@ const RsmApplicationView = () => {
             <p className="text-gray-600 mb-4">{error}</p>
             <button
               onClick={fetchApplicationData}
-              className="px-6 py-2 bg-[#12B99C] text-white rounded-lg hover:bg-[#0FA485] transition"
+              className="px-6 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition"
             >
               Retry
             </button>
@@ -620,7 +620,7 @@ const RsmApplicationView = () => {
                   {previewLoading && (
                     <div className="w-full h-96 flex items-center justify-center bg-gray-100">
                       <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#12B99C] mx-auto mb-4"></div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
                         <p className="text-gray-600">Loading preview...</p>
                       </div>
                     </div>
@@ -648,7 +648,7 @@ const RsmApplicationView = () => {
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => handleDownload(selectedDoc)}
-                    className="px-4 py-2 bg-[#12B99C] text-white rounded-lg hover:bg-[#0FA485] transition flex items-center gap-2"
+                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition flex items-center gap-2"
                   >
                     <Download className="w-4 h-4" />
                     Download
@@ -673,7 +673,7 @@ const RsmApplicationView = () => {
                 <p className="text-gray-600">{modalMessage}</p>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="mt-4 px-4 py-2 bg-[#12B99C] text-white rounded-lg hover:bg-[#0FA485] transition"
+                  className="mt-4 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition"
                 >
                   Close
                 </button>
@@ -687,7 +687,7 @@ const RsmApplicationView = () => {
         <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#12B99C] to-[#0FA485] px-6 sm:px-8 py-6 sm:py-8">
+            <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover px-6 sm:px-8 py-6 sm:py-8">
               <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                 <div className="text-white">
                   <h1 className="text-2xl sm:text-3xl font-bold mb-2">
@@ -718,8 +718,8 @@ const RsmApplicationView = () => {
                 {/* Customer Information */}
                 <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 border border-gray-100 shadow-sm">
                   <div className="flex items-center mb-6">
-                    <div className="p-2 rounded-lg bg-[#12B99C]/10">
-                      <User className="w-6 h-6 text-[#12B99C]" />
+                    <div className="p-2 rounded-lg bg-brand-primary/10">
+                      <User className="w-6 h-6 text-brand-primary" />
                     </div>
                     <h2 className="text-xl font-bold text-gray-900 ml-3">Customer Details</h2>
                   </div>
@@ -737,14 +737,14 @@ const RsmApplicationView = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-500 mb-1">Email Address</p>
                       <p className="font-medium text-gray-700 flex items-center">
-                        <Mail className="w-4 h-4 mr-2 text-[#12B99C]" />
+                        <Mail className="w-4 h-4 mr-2 text-brand-primary" />
                         {applicationData.customerId?.email || applicationData.customer?.email || "N/A"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500 mb-1">Phone Number</p>
                       <p className="font-medium text-gray-700 flex items-center">
-                        <Phone className="w-4 h-4 mr-2 text-[#12B99C]" />
+                        <Phone className="w-4 h-4 mr-2 text-brand-primary" />
                         {applicationData.customerId?.phone || applicationData.customer?.phone || "N/A"}
                       </p>
                     </div>
@@ -800,7 +800,7 @@ const RsmApplicationView = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500 mb-1">Loan Amount</p>
-                      <p className="font-bold text-3xl text-[#12B99C]">
+                      <p className="font-bold text-3xl text-brand-primary">
                         {formatCurrency(applicationData.customer?.loanAmount || 0)}
                       </p>
                     </div>
@@ -934,7 +934,7 @@ const RsmApplicationView = () => {
                           <button
                             onClick={() => handleDownload(doc)}
                             disabled={downloading}
-                            className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-[#12B99C] to-[#0FA485] rounded-lg hover:from-[#0ea889] hover:to-[#0d8a73] transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {downloading ? (
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -982,7 +982,7 @@ const RsmApplicationView = () => {
                         Select New Status
                       </label>
                       <select
-                        className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent transition-all duration-300"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
                         disabled={allowedStatuses.length === 0}
@@ -1038,7 +1038,7 @@ const RsmApplicationView = () => {
                         <MessageSquare className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                         <textarea
                           placeholder="Enter your remarks here..."
-                          className="w-full border border-gray-300 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent transition-all duration-300 resize-none h-20"
+                          className="w-full border border-gray-300 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 resize-none h-20"
                           value={remark}
                           onChange={(e) => setRemark(e.target.value)}
                         />
@@ -1054,7 +1054,7 @@ const RsmApplicationView = () => {
                         <input
                           type="number"
                           placeholder="Enter approved loan amount"
-                          className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent transition-all duration-300"
+                          className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
                           value={approvalAmount}
                           onChange={(e) => setApprovalAmount(e.target.value)}
                           min="0"
@@ -1066,7 +1066,7 @@ const RsmApplicationView = () => {
                     <button
                       onClick={handleSubmit}
                       disabled={submitLoading || !status || !remark.trim() || (status === "APPROVED" && !approvalAmount)}
-                      className="w-full flex items-center justify-center bg-gradient-to-r from-[#12B99C] to-[#0FA485] text-white py-3 px-6 rounded-xl shadow-lg hover:from-[#0ea889] hover:to-[#0d8a73] transition-all duration-300 hover:shadow-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white py-3 px-6 rounded-xl shadow-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 hover:shadow-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {submitLoading ? (
                         <>

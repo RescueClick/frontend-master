@@ -230,7 +230,7 @@ const Application = () => {
             </div>
             <button
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-colors hover:opacity-90 text-sm sm:text-base w-full sm:w-auto justify-center"
-              style={{ backgroundColor: "#12B99C" }}
+              style={{ backgroundColor: "var(--color-brand-primary)" }}
               onClick={() => {
                 navigate("/partner/get-loan");
               }}
@@ -320,7 +320,7 @@ const Application = () => {
                   type="text"
                   placeholder="Search applications by ID, customer name, or loan type..."
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 text-sm sm:text-base"
-                  style={{ focusRingColor: "#12B99C" }}
+                  style={{ focusRingColor: "var(--color-brand-primary)" }}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -332,7 +332,7 @@ const Application = () => {
                 />
                 <select
                   className="w-full lg:w-auto pl-10 pr-8 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 bg-white text-sm sm:text-base"
-                  style={{ focusRingColor: "#12B99C" }}
+                  style={{ focusRingColor: "var(--color-brand-primary)" }}
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
@@ -354,7 +354,7 @@ const Application = () => {
           {/* Applications Table - Desktop */}
           <div className="hidden lg:block overflow-x-auto rounded-lg shadow-sm">
             <table className="w-full border-collapse bg-white text-sm">
-              <thead style={{ background: "#12B99C", color: "white" }}>
+              <thead style={{ background: "var(--color-brand-primary)", color: "white" }}>
                 <tr>
                   <th className="px-2 py-4 text-left">Name</th>
                   <th className="px-2 py-4 text-left">App ID</th>
@@ -490,7 +490,7 @@ const Application = () => {
                         {application.applicationId && application.customerId && (
                           <button
                             className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs flex items-center gap-1"
-                            style={{ backgroundColor: "#12B99C" }}
+                            style={{ backgroundColor: "var(--color-brand-primary)" }}
                             title="Upload Documents"
                             onClick={() => {
                               navigate(
@@ -605,7 +605,7 @@ const Application = () => {
                   {application.applicationId && application.customerId && (
                     <button
                       className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity text-sm flex items-center gap-1"
-                      style={{ backgroundColor: "#12B99C" }}
+                      style={{ backgroundColor: "var(--color-brand-primary)" }}
                       onClick={() => {
                         navigate(
                           `/partner/complete-application?applicationId=${application.applicationId}&customerId=${application.customerId}`

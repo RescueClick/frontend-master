@@ -130,7 +130,7 @@ const SetTarget = () => {
     return (
       <div className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#12B99C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading target policy...</p>
         </div>
       </div>
@@ -184,7 +184,7 @@ const SetTarget = () => {
         {/* Unified Target Management Form */}
         <div className="bg-white rounded-xl shadow-lg p-8">
           <div className="flex items-center gap-3 mb-6">
-            <Target className="w-6 h-6 text-[#12B99C]" />
+            <Target className="w-6 h-6 text-brand-primary" />
             <h2 className="text-xl font-semibold text-gray-900">Set & Distribute Targets</h2>
           </div>
 
@@ -301,7 +301,7 @@ const SetTarget = () => {
             {/* Partner File Count Target */}
             <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
               <div className="flex items-center gap-3 mb-4">
-                <FileText className="w-6 h-6 text-[#12B99C] flex-shrink-0" />
+                <FileText className="w-6 h-6 text-brand-primary flex-shrink-0" />
                 <div className="flex-1">
                   <label className="text-lg font-semibold text-gray-700 block">
                     Partner File Count Target
@@ -319,7 +319,7 @@ const SetTarget = () => {
                     name="partnerFileCountTarget"
                     value={formData.partnerFileCountTarget}
                     onChange={handleChange}
-                    className="w-full px-4 py-4 pr-20 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:border-[#12B99C] text-lg font-semibold bg-white transition-all"
+                    className="w-full px-4 py-4 pr-20 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-lg font-semibold bg-white transition-all"
                     required
                     min="1"
                     step="1"
@@ -376,7 +376,7 @@ const SetTarget = () => {
               className={`w-full py-4 rounded-xl text-white font-semibold shadow-lg transition-all duration-200 flex items-center justify-center gap-2 ${
                 loading
                   ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-[#12B99C] to-[#0EA688] hover:from-[#0EA688] hover:to-[#12B99C] hover:shadow-xl transform hover:-translate-y-0.5"
+                  : "bg-gradient-to-r from-brand-primary to-brand-primary-hover hover:from-brand-primary-hover hover:to-brand-primary hover:shadow-xl transform hover:-translate-y-0.5"
               }`}
             >
               {loading ? (

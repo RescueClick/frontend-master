@@ -65,7 +65,7 @@
 //       <div className="flex justify-between items-center mb-6">
 //         <h2 className="text-2xl font-bold text-[#111827]">🎯 Targets & Reports</h2>
 //         <button
-//           className="bg-[#12B99C] text-white px-4 py-2 rounded-lg hover:bg-[#0d8a73] transition"
+//           className="bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-primary-hover transition"
 //           onClick={() => setIsModalOpen(true)}
 //         >
 //           Set Target
@@ -77,12 +77,12 @@
 //         <div className="bg-white rounded-2xl shadow-md p-6">
 //           <div className="flex items-center justify-between">
 //             <h4 className="text-sm font-medium text-gray-500">Monthly Target</h4>
-//             <Target className="w-5 h-5 text-[#12B99C]" />
+//             <Target className="w-5 h-5 text-brand-primary" />
 //           </div>
 //           <p className="text-2xl font-bold text-[#111827] mt-2">
 //             ₹{formData.target || "120K"}
 //           </p>
-//           <p className="text-sm text-[#12B99C] mt-1">+15% from last month</p>
+//           <p className="text-sm text-brand-primary mt-1">+15% from last month</p>
 //         </div>
 
 //         <div className="bg-white rounded-2xl shadow-md p-6">
@@ -91,16 +91,16 @@
 //             <BarChart3 className="w-5 h-5 text-[#F59E0B]" />
 //           </div>
 //           <p className="text-2xl font-bold text-[#111827] mt-2">85</p>
-//           <p className="text-sm text-[#12B99C] mt-1">+12 this week</p>
+//           <p className="text-sm text-brand-primary mt-1">+12 this week</p>
 //         </div>
 
 //         <div className="bg-white rounded-2xl shadow-md p-6">
 //           <div className="flex items-center justify-between">
 //             <h4 className="text-sm font-medium text-gray-500">Revenue Growth</h4>
-//             <TrendingUp className="w-5 h-5 text-[#12B99C]" />
+//             <TrendingUp className="w-5 h-5 text-brand-primary" />
 //           </div>
 //           <p className="text-2xl font-bold text-[#111827] mt-2">32%</p>
-//           <p className="text-sm text-[#12B99C] mt-1">Positive trend</p>
+//           <p className="text-sm text-brand-primary mt-1">Positive trend</p>
 //         </div>
 
 //         <div className="bg-white rounded-2xl shadow-md p-6">
@@ -122,7 +122,7 @@
 //             <div>
 //               <p className="text-sm text-gray-600">Sales Target</p>
 //               <div className="w-full bg-gray-200 h-3 rounded-full mt-1">
-//                 <div className="bg-[#12B99C] h-3 rounded-full w-[75%]"></div>
+//                 <div className="bg-brand-primary h-3 rounded-full w-[75%]"></div>
 //               </div>
 //               <p className="text-sm text-[#111827] mt-1">75% Achieved</p>
 //             </div>
@@ -166,7 +166,7 @@
 //                     name="month"
 //                     value={formData.month}
 //                     onChange={handleChange}
-//                     className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:outline-none transition-colors appearance-none pr-10"
+//                     className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:outline-none transition-colors appearance-none pr-10"
 //                     required
 //                   >
 //                     <option value="" disabled>Select a month</option>
@@ -186,7 +186,7 @@
 //                     name="year"
 //                     value={formData.year}
 //                     onChange={handleChange}
-//                     className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:outline-none transition-colors appearance-none pr-10"
+//                     className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:outline-none transition-colors appearance-none pr-10"
 //                     required
 //                   >
 //                     {years.map(year => (
@@ -210,7 +210,7 @@
 //                     placeholder="Enter target amount"
 //                     value={formData.target}
 //                     onChange={handleChange}
-//                     className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:outline-none transition-colors"
+//                     className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:outline-none transition-colors"
 //                     required
 //                     min="0"
 //                   />
@@ -220,7 +220,7 @@
 //               {/* Submit Button */}
 //               <button
 //                 type="submit"
-//                 className="w-full bg-[#12B99C] text-white py-3 rounded-xl hover:bg-[#0d8a73] transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+//                 className="w-full bg-brand-primary text-white py-3 rounded-xl hover:bg-brand-primary-hover transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
 //               >
 //                 Save Target
 //               </button>
@@ -314,7 +314,7 @@ const Reports = () => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-[#111827]">🎯 Targets & Reports</h2>
         <button
-          className="bg-[#12B99C] text-white px-4 py-2 rounded-lg hover:bg-[#0d8a73] transition"
+          className="bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-primary-hover transition"
           onClick={() => setIsModalOpen(true)}
         >
           Set Target
@@ -326,19 +326,19 @@ const Reports = () => {
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-gray-500">Monthly Target</h4>
-            <Target className="w-5 h-5 text-[#12B99C]" />
+            <Target className="w-5 h-5 text-brand-primary" />
           </div>
           <p className="text-2xl font-bold text-[#111827]">₹{totalTarget}</p>
-          <p className="text-sm text-[#12B99C] mt-1">Calculated dynamically</p>
+          <p className="text-sm text-brand-primary mt-1">Calculated dynamically</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-md p-6">
     <div className="flex items-center justify-between">
       <h4 className="text-sm font-medium text-gray-500">Achieved Target</h4>
-      <TrendingUp className="w-5 h-5 text-[#12B99C]" />
+      <TrendingUp className="w-5 h-5 text-brand-primary" />
     </div>
     <p className="text-2xl font-bold text-[#111827]">₹{totalRevenue}</p>
-    <p className="text-sm text-[#12B99C] mt-1">
+    <p className="text-sm text-brand-primary mt-1">
       {totalTarget > 0 ? Math.min(100, ((totalRevenue / totalTarget) * 100).toFixed(0)) : 0}% of target
     </p>
   </div>
@@ -349,16 +349,16 @@ const Reports = () => {
             <BarChart3 className="w-5 h-5 text-[#F59E0B]" />
           </div>
           <p className="text-2xl font-bold text-[#111827]">{totalApplications}</p>
-          <p className="text-sm text-[#12B99C] mt-1">Aggregated from partners</p>
+          <p className="text-sm text-brand-primary mt-1">Aggregated from partners</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-gray-500">Revenue</h4>
-            <TrendingUp className="w-5 h-5 text-[#12B99C]" />
+            <TrendingUp className="w-5 h-5 text-brand-primary" />
           </div>
           <p className="text-2xl font-bold text-[#111827]">₹{totalRevenue}</p>
-          <p className="text-sm text-[#12B99C] mt-1">Aggregated from disbursed loans</p>
+          <p className="text-sm text-brand-primary mt-1">Aggregated from disbursed loans</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-md p-6">
@@ -422,7 +422,7 @@ const Reports = () => {
                   name="month"
                   value={formData.month}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#12B99C]"
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-brand-primary"
                   required
                 >
                   {months.map((month) => (
@@ -436,7 +436,7 @@ const Reports = () => {
                   name="year"
                   value={formData.year}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#12B99C]"
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-brand-primary"
                   required
                 >
                   {years.map((year) => (
@@ -455,7 +455,7 @@ const Reports = () => {
                     name="target"
                     value={formData.target}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 pl-12 border rounded-xl focus:ring-2 focus:ring-[#12B99C]"
+                    className="w-full px-4 py-3 pl-12 border rounded-xl focus:ring-2 focus:ring-brand-primary"
                     min="0"
                     required
                   />
@@ -463,7 +463,7 @@ const Reports = () => {
               </div>
               <button
                 type="submit"
-                className="w-full bg-[#12B99C] text-white py-3 rounded-xl hover:bg-[#0d8a73]"
+                className="w-full bg-brand-primary text-white py-3 rounded-xl hover:bg-brand-primary-hover"
               >
                 Save Target
               </button>

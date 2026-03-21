@@ -75,7 +75,7 @@
 //   <div className="text-xs font-bold tracking-widest uppercase mt-5 leading-tight">
 //     Our Great Collaborations
 //   </div>
-//   <div className="text-[10px] opacity-90 font-light">Trustline Fintech</div>
+//   <div className="text-[10px] opacity-90 font-light">DhanSource Capital</div>
 
 //   {/* ID Number Badge */}
 //   <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-md text-white px-2 py-1 rounded-xl text-[8px] font-bold border border-white/30 whitespace-nowrap">
@@ -331,7 +331,7 @@ const IdCard = () => {
           <div className="text-xs font-bold tracking-widest uppercase mt-5 leading-tight">
             Our Great Collaborations
           </div>
-          <div className="text-[10px] opacity-90 font-light">Trustline Fintech</div>
+          <div className="text-[10px] opacity-90 font-light">DhanSource Capital</div>
 
           {/* ID Number */}
           <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-md text-white px-2 py-1 rounded-xl text-[8px] font-bold border border-white/30 whitespace-nowrap">

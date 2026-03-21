@@ -73,7 +73,7 @@ const AsmPayouts = () => {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
-              <IndianRupee size={24} className="mr-3 w-6 h-6 text-[#12B99C]" />
+              <IndianRupee size={24} className="mr-3 w-6 h-6 text-brand-primary" />
               <h2 className="text-2xl font-semibold" style={{ color: "#111827" }}>
                 Payouts
               </h2>
@@ -83,7 +83,7 @@ const AsmPayouts = () => {
               <select
                 value={year}
                 onChange={(e) => setYear(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
               >
                 {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
                   <option key={y} value={y}>
@@ -95,7 +95,7 @@ const AsmPayouts = () => {
               <select
                 value={month}
                 onChange={(e) => setMonth(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                   <option key={m} value={m}>

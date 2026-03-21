@@ -12,7 +12,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   accent: "#F59E0B",
@@ -347,7 +347,7 @@ export default function RSM() {
               />
               <input
                 type="text"
-                className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-100 focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-100 focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 placeholder="Search by name, RSM type, or ID"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -495,7 +495,7 @@ export default function RSM() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-5 border-b border-gray-100 bg-[#12B99C] text-white rounded-t-2xl">
+            <div className="p-5 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">RSM Details</h3>
@@ -628,7 +628,7 @@ export default function RSM() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-5 border-b border-gray-100 bg-[#12B99C] text-white rounded-t-2xl sticky top-0 z-10">
+            <div className="p-5 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl sticky top-0 z-10">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">Create New RSM</h3>
@@ -906,7 +906,7 @@ export default function RSM() {
                 onClick={() => {
                   handleRSMactive();
                 }}
-                className="px-4 py-2 rounded-lg bg-[#12B99C] text-white"
+                className="px-4 py-2 rounded-lg bg-brand-primary text-white"
               >
                 Yes
               </button>

@@ -3,13 +3,16 @@ import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
 import { FaHandshake, FaLaptop, FaBolt, FaHeadset } from "react-icons/fa";
 import { Users, Building, MapPin, Shield, Star ,Target,Phone ,Mail} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import backgroundImage from "../assets/background_image.jpg";
+import { COMPANY_NAME, SUPPORT_EMAIL } from "../../config/branding";
 
 
 gsap.registerPlugin(useGSAP);
 
 const Home = () => {
+  const navigate = useNavigate();
   const container = useRef(null);
   const button = useRef(null);
 
@@ -63,22 +66,22 @@ const Home = () => {
 
   const cardData = [
     {
-      icon: <FaHandshake size={32} className="text-[#12B99C]" />,
+      icon: <FaHandshake size={32} className="text-brand-primary" />,
       title: "Tie-up with Leading NBFCs",
       desc: "Our top-grade collaborations ensure an extended range of financial services for our customers.",
     },
     {
-      icon: <FaLaptop size={32} className="text-[#12B99C]" />,
+      icon: <FaLaptop size={32} className="text-brand-primary" />,
       title: "Online Financial Process",
       desc: "With a few clicks, your consultation process gets started without time wastage or splurging.",
     },
     {
-      icon: <FaBolt size={32} className="text-[#12B99C]" />,
+      icon: <FaBolt size={32} className="text-brand-primary" />,
       title: "Quick Service as Lightning",
       desc: "Customers and Partners Will Get Fast Services on time With Full Support.",
     },
     {
-      icon: <FaHeadset size={32} className="text-[#12B99C]" />,
+      icon: <FaHeadset size={32} className="text-brand-primary" />,
       title: "Free Loan Consultancy",
       desc: "Our experts are always ready to help & guide you in streamlining and scaling your finances.",
     },
@@ -120,7 +123,7 @@ const Home = () => {
 
           <button
             ref={button}
-            className="px-8 py-4 mt-6 bg-gradient-to-r from-[#12B99C] to-[#0ea688] text-white font-semibold rounded-full shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
+            className="px-8 py-4 mt-6 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white font-semibold rounded-full shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
           >
             Apply Now
           </button>
@@ -130,7 +133,7 @@ const Home = () => {
 
 {/* Services */}
 
-      <section className="bg-[#12B99C]/20 py-16 px-4 overflow-x-hidden">
+      <section className="bg-brand-primary/20 py-16 px-4 overflow-x-hidden">
       <div className="max-w-7xl mx-auto text-center mb-10">
         <h2 className="text-4xl font-bold text-[#0f3d3e] mb-4">
           We Love To Serve
@@ -158,7 +161,7 @@ const Home = () => {
               {service.title}
             </h3>
             <p className="text-gray-600 text-sm mb-4">{service.description}</p>
-            {/* <button className="bg-[#12B99C] text-white px-5 py-2 rounded-full hover:bg-[#0f4f28] text-sm font-semibold">
+            {/* <button className="bg-brand-primary text-white px-5 py-2 rounded-full hover:bg-brand-primary-hover text-sm font-semibold">
               Apply Now
             </button> */}
           </div>
@@ -168,7 +171,7 @@ const Home = () => {
       <div className="flex justify-center items-center mt-12">
         <button
           onClick={() => navigate("/services")}
-          className="flex items-center gap-2 bg-[#12B99C] text-white px-8 py-3 rounded-full font-semibold text-lg shadow-md hover:bg-[#0f4f28] hover:shadow-lg transform hover:scale-105 transition-all duration-300 border-2 border-transparent"
+          className="flex items-center gap-2 bg-brand-primary text-white px-8 py-3 rounded-full font-semibold text-lg shadow-md hover:bg-brand-primary-hover hover:shadow-lg transform hover:scale-105 transition-all duration-300 border-2 border-transparent"
         >
           More Services
           <svg
@@ -193,7 +196,7 @@ const Home = () => {
 
     <section className="relative min-h-screen w-full flex items-center justify-center bg-gray-900 px-4 py-10 overflow-hidden">
       {/* Background color wash for subtle effect */}
-      <div className="absolute inset-0" style={{ backgroundColor: '#12B99C', opacity: 0.1 }}></div>
+      <div className="absolute inset-0" style={{ backgroundColor: 'var(--color-brand-primary)', opacity: 0.1 }}></div>
       
       <div className="relative z-10 bg-white rounded-3xl shadow-2xl p-8 md:p-16 max-w-6xl w-full flex flex-col md:flex-row items-center gap-12 border border-gray-100 transform transition-transform duration-500 hover:scale-[1.02]">
         
@@ -210,15 +213,15 @@ const Home = () => {
         {/* Right Content */}
         <div className="w-full md:w-1/2 text-center md:text-left space-y-6">
           <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
-            Become a <span style={{ color: '#12B99C' }}>TrustlineFin</span> Partner
+            Become a <span style={{ color: 'var(--color-brand-primary)' }}>{COMPANY_NAME}</span> Partner
           </h2>
           <p className="text-gray-600 text-lg leading-relaxed">
             Partner with us to unlock new financial growth opportunities. As a trusted associate, you’ll help clients reach their goals while earning generous rewards.
           </p>
           <p className="text-2xl text-gray-900 font-bold">
-            Earn up to <span style={{ color: '#12B99C' }} className="font-extrabold">₹1,00,000</span> per month by becoming a trusted financial partner.
+            Earn up to <span style={{ color: 'var(--color-brand-primary)' }} className="font-extrabold">₹1,00,000</span> per month by becoming a trusted financial partner.
           </p>
-          <button className="mt-6 px-10 py-4 text-white text-lg font-bold rounded-full shadow-lg transition-all transform hover:-translate-y-1 hover:shadow-xl duration-300" style={{ backgroundColor: '#12B99C', hover: { backgroundColor: '#0e9c7d' } }}>
+          <button className="mt-6 px-10 py-4 text-white text-lg font-bold rounded-full shadow-lg transition-all transform hover:-translate-y-1 hover:shadow-xl duration-300" style={{ backgroundColor: 'var(--color-brand-primary)', hover: { backgroundColor: '#0e9c7d' } }}>
             Join Now
           </button>
         </div>
@@ -249,7 +252,7 @@ const Home = () => {
           <h2 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
             Why Choose
             <br />
-            <span style={{ color: '#12B99C' }}>TrustlineFin</span>
+            <span style={{ color: 'var(--color-brand-primary)' }}>{COMPANY_NAME}</span>
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
             Experience the future of finance with our comprehensive suite of services,
@@ -299,7 +302,7 @@ const Home = () => {
                 <div className={`w-16 h-16 bg-gradient-to-r ${item.color} rounded-full flex items-center justify-center mx-auto mb-4`}>
                   {item.icon}
                 </div>
-                <div className="text-4xl font-bold mb-2" style={{ color: '#12B99C' }}>
+                <div className="text-4xl font-bold mb-2" style={{ color: 'var(--color-brand-primary)' }}>
                   {item.value}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
@@ -334,7 +337,7 @@ const Home = () => {
       <div className="space-y-6">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/10">
           <p className="text-lg text-gray-300 leading-relaxed mb-6">
-            <span className="text-teal-400 font-bold text-xl">Trustline Fintech</span> focuses mainly on crucial customer groups, reaching out to individuals and small businesses often untapped in urban, semi-urban, and rural areas of India.
+            <span className="text-teal-400 font-bold text-xl">{COMPANY_NAME}</span> focuses mainly on crucial customer groups, reaching out to individuals and small businesses often untapped in urban, semi-urban, and rural areas of India.
           </p>
           <p className="text-lg text-gray-300 leading-relaxed">
             Our goal is to provide <span className="text-teal-400 font-semibold">easy-to-use, transparent financial products</span> that cater to the rapidly evolving financial needs of India.
@@ -386,8 +389,8 @@ const Home = () => {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white mb-1">Email Us</h3>
-              <a href="mailto:support@trustlinefintech.com" className="text-lg font-bold text-teal-400 hover:text-teal-300 transition-colors break-all">
-                support@trustlinefintech.com
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="text-lg font-bold text-teal-400 hover:text-teal-300 transition-colors break-all">
+                {SUPPORT_EMAIL}
               </a>
             </div>
           </div>

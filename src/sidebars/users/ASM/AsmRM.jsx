@@ -17,7 +17,7 @@ import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   accent: "#F59E0B",
@@ -185,7 +185,7 @@ loginAsUser(userId, navigate);
               />
               <input
                 type="text"
-                className="border border-gray-300 rounded-lg pl-10 pr-4 py-3 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+                className="border border-gray-300 rounded-lg pl-10 pr-4 py-3 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                 placeholder="Search by name, RM code, or ID"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -324,7 +324,7 @@ loginAsUser(userId, navigate);
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-6 border-b border-gray-100 bg-[#12B99C] text-white rounded-t-2xl">
+            <div className="p-6 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl">
               <div className="flex items-start justify-between">
                 <h3 className="text-xl font-semibold">RM Details</h3>
                 <button
@@ -512,7 +512,7 @@ loginAsUser(userId, navigate);
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-5 border-b border-gray-100 bg-[#12B99C] text-white rounded-t-2xl">
+            <div className="p-5 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">Deactivate RM</h3>
@@ -565,7 +565,7 @@ loginAsUser(userId, navigate);
                     />
                     <input
                       type="text"
-                      className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                      className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand-primary"
                       placeholder="Search by name or RM code"
                       value={replacementSearch}
                       onChange={(e) => setReplacementSearch(e.target.value)}
@@ -594,7 +594,7 @@ loginAsUser(userId, navigate);
                           <input
                             type="radio"
                             name="replacementRm"
-                            className="text-[#12B99C]"
+                            className="text-brand-primary"
                             checked={selectedReplacement?._id === r._id}
                             onChange={() => setSelectedReplacement(r)}
                           />
@@ -608,7 +608,7 @@ loginAsUser(userId, navigate);
                             </p>
                           </div>
                         </div>
-                        <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-[#12B99C]/10 text-[#12B99C]">
+                        <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-brand-primary/10 text-brand-primary">
                           {r.status}
                         </span>
                       </label>
@@ -651,7 +651,7 @@ loginAsUser(userId, navigate);
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-[#12B99C] p-6 text-white relative">
+            <div className="bg-brand-primary p-6 text-white relative">
               <button
                 onClick={() => {
                   setShowDeactivateModal(false);
@@ -712,7 +712,7 @@ loginAsUser(userId, navigate);
                     value={searchReplacement}
                     onChange={(e) => setSearchReplacement(e.target.value)}
                     placeholder="Search ASM by name, phone, or code"
-                    className="w-60 sm:w-72 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                    className="w-60 sm:w-72 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   />
                 </div>
 
@@ -831,7 +831,7 @@ loginAsUser(userId, navigate);
                     disabled={!selectedReplacementId || confirmBusy}
                     className={`px-4 py-2 text-sm rounded-md text-white ${
                       selectedReplacementId && !confirmBusy
-                        ? "bg-[#12B99C] hover:opacity-90"
+                        ? "bg-brand-primary hover:opacity-90"
                         : "bg-gray-300 cursor-not-allowed"
                     }`}
                   >
@@ -851,7 +851,7 @@ loginAsUser(userId, navigate);
             className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-[#12B99C] p-6 text-white relative">
+            <div className="bg-brand-primary p-6 text-white relative">
               <button
                 onClick={() => {
                   setShowActivateModal(false);
@@ -901,7 +901,7 @@ loginAsUser(userId, navigate);
                   disabled={confirmBusy}
                   className={`px-4 py-2 text-sm rounded-md text-white ${
                     !confirmBusy
-                      ? "bg-[#12B99C] hover:opacity-90"
+                      ? "bg-brand-primary hover:opacity-90"
                       : "bg-gray-300 cursor-not-allowed"
                   }`}
                 >

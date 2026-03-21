@@ -264,7 +264,7 @@ const FollowUp = () => {
             <table className="w-full">
               <thead
                 className="text-white"
-                style={{ backgroundColor: "#12B99C" }}
+                style={{ backgroundColor: "var(--color-brand-primary)" }}
               >
                 <tr>
                   <th className="px-2 py-4 text-left font-semibold">
@@ -299,7 +299,7 @@ const FollowUp = () => {
                         <div className="flex items-center">
                           <div
                             className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold mr-3"
-                            style={{ backgroundColor: "#12B99C" }}
+                            style={{ backgroundColor: "var(--color-brand-primary)" }}
                           >
                             {followUp.partnerName.charAt(0)}
                           </div>
@@ -401,7 +401,7 @@ const FollowUp = () => {
                   <label className="flex items-center text-gray-800 font-semibold mb-3">
                     <User
                       className="w-5 h-5 mr-2"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     />
                     Partner Name
                   </label>
@@ -420,7 +420,7 @@ const FollowUp = () => {
                   <label className="flex items-center text-gray-800 font-semibold mb-3">
                     <Hash
                       className="w-5 h-5 mr-2"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     />
                     Partner ID
                   </label>
@@ -439,7 +439,7 @@ const FollowUp = () => {
                   <label className="flex items-center text-gray-800 font-semibold mb-3">
                     <Phone
                       className="w-5 h-5 mr-2"
-                      style={{ color: "#12B99C" }}
+                      style={{ color: "var(--color-brand-primary)" }}
                     />
                     Partner Contact
                   </label>
@@ -487,7 +487,7 @@ const FollowUp = () => {
                 <label className="flex items-center text-gray-800 font-semibold mb-3">
                   <MessageSquare
                     className="w-5 h-5 mr-2"
-                    style={{ color: "#12B99C" }}
+                    style={{ color: "var(--color-brand-primary)" }}
                   />
                   Remarks
                 </label>
@@ -504,7 +504,7 @@ const FollowUp = () => {
                 <label className="flex items-center text-gray-800 font-semibold mb-3">
                   <Calendar
                     className="w-5 h-5 mr-2"
-                    style={{ color: "#12B99C" }}
+                    style={{ color: "var(--color-brand-primary)" }}
                   />
                   Last Call
                 </label>
@@ -529,7 +529,7 @@ const FollowUp = () => {
                     !formData.status
                   }
                   className="flex-1 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center disabled:transform-none disabled:shadow-none"
-                  style={{ backgroundColor: "#12B99C" }}
+                  style={{ backgroundColor: "var(--color-brand-primary)" }}
                 >
                   <Save className="w-5 h-5 mr-2" />
                   {editingId ? "Update Follow Up" : "Save Follow Up"}

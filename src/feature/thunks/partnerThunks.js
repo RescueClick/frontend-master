@@ -38,7 +38,12 @@ export const updatePartnerProfile = createAsyncThunk(
           },
         }
       );
-      return res.data.partner || res.data.profile || res.data;
+      const p = res.data.partner || res.data.profile || res.data;
+      return {
+        ...p,
+        emailChangePending: !!res.data.emailChangePending,
+        emailChangeMessage: res.data.message,
+      };
     } catch (err) {
       const data = err.response?.data;
       const msg =

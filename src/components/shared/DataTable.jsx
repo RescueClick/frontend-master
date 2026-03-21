@@ -13,7 +13,7 @@ const DataTable = ({
     return (
       <div className={`${designSystem.table.container} ${className}`}>
         <div className="p-8 text-center">
-          <div className="w-12 h-12 border-4 border-[#12B99C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading data...</p>
         </div>
       </div>

@@ -44,7 +44,7 @@ const MyTarget = () => {
     return (
       <div className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#12B99C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading target information...</p>
         </div>
       </div>
@@ -109,7 +109,7 @@ const MyTarget = () => {
                 <select
                   value={month}
                   onChange={(e) => setMonth(Number(e.target.value))}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent appearance-none"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent appearance-none"
                 >
                   {months.map((m, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -125,7 +125,7 @@ const MyTarget = () => {
                 type="number"
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                 min="2020"
                 max="2100"
               />
@@ -232,8 +232,8 @@ const MyTarget = () => {
         {/* Overall Status */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-[#12B99C] bg-opacity-10 rounded-lg">
-              <Target className="w-6 h-6 text-[#12B99C]" />
+            <div className="p-3 bg-brand-primary bg-opacity-10 rounded-lg">
+              <Target className="w-6 h-6 text-brand-primary" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Overall Target Status</h3>

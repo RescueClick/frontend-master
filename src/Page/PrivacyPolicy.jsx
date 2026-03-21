@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Lock, Eye, FileText, Users, Mail } from 'lucide-react';
+import { COMPANY_NAME, PRIVACY_EMAIL } from "../config/branding";
 
 export default function PrivacyPolicy() {
   const [activeSection, setActiveSection] = useState(null);
@@ -66,7 +67,7 @@ export default function PrivacyPolicy() {
             <Shield className="w-10 h-10 text-blue-600" />
             <div>
               <h1 className="text-3xl font-bold text-slate-900">Privacy Policy</h1>
-              <p className="text-sm text-slate-600 mt-1">TrustLine Fintech</p>
+              <p className="text-sm text-slate-600 mt-1">{COMPANY_NAME}</p>
             </div>
           </div>
         </div>
@@ -85,7 +86,7 @@ export default function PrivacyPolicy() {
                 Your Privacy Matters to Us
               </h2>
               <p className="text-slate-700 leading-relaxed mb-4">
-                At TrustLine Fintech, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our financial services and website.
+                At {COMPANY_NAME}, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our financial services and website.
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Last Updated:</strong> December 2, 2025
@@ -208,7 +209,7 @@ export default function PrivacyPolicy() {
               </p>
             </div>
             <a
-              href="mailto:privacy@Trustlinefintech"
+              href={`mailto:${PRIVACY_EMAIL}`}
               className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 shadow-lg whitespace-nowrap"
             >
               Contact Us

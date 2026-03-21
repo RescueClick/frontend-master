@@ -19,7 +19,10 @@ export const SocketProvider = ({ children }) => {
         console.log("🔌 SocketProvider: Attempting to connect socket...");
         const socket = socketManager.connect();
         if (socket) {
-          console.log("✅ SocketProvider: Socket connection initiated, socket ID:", socket.id);
+          console.log(
+            "✅ SocketProvider: Socket connection initiated, socket ID:",
+            socket.id ?? "(pending — assigned after connect)",
+          );
           
           // Verify connection after a short delay
           setTimeout(() => {

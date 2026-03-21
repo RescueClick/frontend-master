@@ -751,7 +751,7 @@ export default function PersonalLoan() {
             {/* Header */}
             <div
               className="px-8 py-6 text-white"
-              style={{ backgroundColor: "#12B99C" }}
+              style={{ backgroundColor: "var(--color-brand-primary)" }}
             >
               <h1 className="text-3xl font-bold text-center">
                 Personal Loan Application
@@ -768,7 +768,7 @@ export default function PersonalLoan() {
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <User className="w-6 h-6" style={{ color: "#12B99C" }} />
+                  <User className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                   Personal Information
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -787,7 +787,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your first name"
@@ -809,7 +809,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your middle name"
@@ -831,7 +831,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your last name"
@@ -850,7 +850,7 @@ export default function PersonalLoan() {
                     <div className="relative">
                       <Phone
                         className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                        style={{ color: "#12B99C" }}
+                        style={{ color: "var(--color-brand-primary)" }}
                       />
                       <input
                         type="tel"
@@ -859,7 +859,7 @@ export default function PersonalLoan() {
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         placeholder="Enter your contact number"
@@ -878,7 +878,7 @@ export default function PersonalLoan() {
                     <div className="relative">
                       <Mail
                         className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                        style={{ color: "#12B99C" }}
+                        style={{ color: "var(--color-brand-primary)" }}
                       />
                       <input
                         type="email"
@@ -887,7 +887,7 @@ export default function PersonalLoan() {
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         placeholder="Enter your email address"
@@ -911,7 +911,7 @@ export default function PersonalLoan() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         placeholder="Enter pan number"
@@ -930,7 +930,7 @@ export default function PersonalLoan() {
                     <div className="relative">
                       <Calendar
                         className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                        style={{ color: "#12B99C" }}
+                        style={{ color: "var(--color-brand-primary)" }}
                       />
                       <input
                         type="date"
@@ -939,7 +939,7 @@ export default function PersonalLoan() {
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         required
@@ -960,7 +960,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       required
@@ -986,7 +986,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your official email"
@@ -1007,7 +1007,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       required
@@ -1033,7 +1033,7 @@ export default function PersonalLoan() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         placeholder="Enter spouse name"
@@ -1055,7 +1055,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter mother name"
@@ -1072,7 +1072,7 @@ export default function PersonalLoan() {
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <MapPin className="w-6 h-6" style={{ color: "#12B99C" }} />
+                  <MapPin className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                   Address Information
                 </h2>
                 <div className="space-y-6">
@@ -1089,7 +1089,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       rows="3"
@@ -1116,7 +1116,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
                           placeholder="Enter stability of residency"
@@ -1138,7 +1138,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
                           required
@@ -1168,7 +1168,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
                           placeholder="Enter landmark for current address"
@@ -1191,7 +1191,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
                           placeholder="Enter pin code"
@@ -1209,7 +1209,7 @@ export default function PersonalLoan() {
                       checked={sameAddress}
                       onChange={handleSameAddressChange}
                       className="w-5 h-5 rounded"
-                      style={{ accentColor: "#12B99C" }}
+                      style={{ accentColor: "var(--color-brand-primary)" }}
                     />
                     <label
                       htmlFor="sameAddress"
@@ -1232,7 +1232,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       rows="3"
@@ -1259,7 +1259,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
                           required
@@ -1286,7 +1286,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
                           placeholder="Enter landmark for permanent address"
@@ -1312,7 +1312,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
                           placeholder="Enter stability for permanent address"
@@ -1335,7 +1335,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
                           placeholder="Enter pin code"
@@ -1353,7 +1353,7 @@ export default function PersonalLoan() {
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <FileText className="w-6 h-6" style={{ color: "#12B99C" }} />
+                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                   Loan Amount Details
                 </h2>
                 <div className="space-y-6">
@@ -1377,7 +1377,7 @@ export default function PersonalLoan() {
                       }}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter loan amount"
@@ -1397,7 +1397,7 @@ export default function PersonalLoan() {
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <FileText className="w-6 h-6" style={{ color: "#12B99C" }} />
+                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                   Document Upload
                 </h2>
 
@@ -1441,7 +1441,7 @@ export default function PersonalLoan() {
                           onChange={handleFileChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
                           accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
@@ -1520,7 +1520,7 @@ export default function PersonalLoan() {
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <Building className="w-6 h-6" style={{ color: "#12B99C" }} />
+                  <Building className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                   Employment Information
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1538,7 +1538,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your company name"
@@ -1560,7 +1560,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your designation"
@@ -1581,7 +1581,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       rows="2"
@@ -1604,7 +1604,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your monthly salary"
@@ -1623,7 +1623,7 @@ export default function PersonalLoan() {
                     <div className="relative">
                       <Briefcase
                         className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                        style={{ color: "#12B99C" }}
+                        style={{ color: "var(--color-brand-primary)" }}
                       />
                       <input
                         type="number"
@@ -1632,7 +1632,7 @@ export default function PersonalLoan() {
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         placeholder="0"
@@ -1656,7 +1656,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="0"
@@ -1679,7 +1679,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your salary in hand"
@@ -1704,7 +1704,7 @@ export default function PersonalLoan() {
                         onChange={handleFileChange}
                         className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -1790,7 +1790,7 @@ export default function PersonalLoan() {
                         onChange={handleFileChange}
                         className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -1876,7 +1876,7 @@ export default function PersonalLoan() {
                         onChange={handleFileChange}
                         className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -1961,7 +1961,7 @@ export default function PersonalLoan() {
                         onChange={handleFileChange}
                         className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -2047,7 +2047,7 @@ export default function PersonalLoan() {
                         onChange={handleFileChange}
                         className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -2124,7 +2124,7 @@ export default function PersonalLoan() {
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <FileText className="w-6 h-6" style={{ color: "#12B99C" }} />
+                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                   Bank Details
                 </h2>
 
@@ -2144,7 +2144,7 @@ export default function PersonalLoan() {
                         onChange={handleFileChange}
                         className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -2229,7 +2229,7 @@ export default function PersonalLoan() {
                         onChange={handleFileChange}
                         className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -2340,14 +2340,14 @@ export default function PersonalLoan() {
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <Users className="w-6 h-6" style={{ color: "#12B99C" }} />
+                  <Users className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                   References
                 </h2>
                 <div className="space-y-6">
                   <div
                     className="p-6 rounded-lg border-2"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                   >
@@ -2372,7 +2372,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "white",
                           }}
                           placeholder="Enter reference name"
@@ -2394,7 +2394,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "white",
                           }}
                           placeholder="Enter contact number"
@@ -2407,7 +2407,7 @@ export default function PersonalLoan() {
                   <div
                     className="p-6 rounded-lg border-2"
                     style={{
-                      borderColor: "#12B99C",
+                      borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
                   >
@@ -2432,7 +2432,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "white",
                           }}
                           placeholder="Enter reference name"
@@ -2454,7 +2454,7 @@ export default function PersonalLoan() {
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                           style={{
-                            borderColor: "#12B99C",
+                            borderColor: "var(--color-brand-primary)",
                             backgroundColor: "white",
                           }}
                           placeholder="Enter contact number"
@@ -2491,7 +2491,7 @@ export default function PersonalLoan() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="Enter password"
@@ -2531,7 +2531,7 @@ export default function PersonalLoan() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                         style={{
-                          borderColor: "#12B99C",
+                          borderColor: "var(--color-brand-primary)",
                           backgroundColor: "white",
                         }}
                         placeholder="Re-enter password"
@@ -2565,7 +2565,7 @@ export default function PersonalLoan() {
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <FileText className="w-6 h-6" style={{ color: "#12B99C" }} />
+                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                   Partner Referral
                 </h2>
                 <div className="grid grid-cols-1 gap-6">
@@ -2583,7 +2583,7 @@ export default function PersonalLoan() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
-                        borderColor: "#12B99C",
+                        borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter partner code"
@@ -2623,7 +2623,7 @@ export default function PersonalLoan() {
                   type="button"
                   onClick={handleSubmit}
                   className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                  style={{ backgroundColor: "#12B99C" }}
+                  style={{ backgroundColor: "var(--color-brand-primary)" }}
                   disabled={loading}
                 >
                   {loading ? "Saving..." : "Submit Loan"}

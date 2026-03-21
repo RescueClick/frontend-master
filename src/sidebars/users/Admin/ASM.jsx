@@ -29,7 +29,7 @@ import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   accent: "#F59E0B",
@@ -282,7 +282,7 @@ const handleLoginAs = (userId) => {
                     name="month"
                     value={formData.month}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:outline-none transition-colors appearance-none pr-10"
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:outline-none transition-colors appearance-none pr-10"
                     required
                   >
                     <option value="" disabled>
@@ -308,7 +308,7 @@ const handleLoginAs = (userId) => {
                     name="year"
                     value={formData.year}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:outline-none transition-colors appearance-none pr-10"
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:outline-none transition-colors appearance-none pr-10"
                     required
                   >
                     {years.map((year) => (
@@ -336,7 +336,7 @@ const handleLoginAs = (userId) => {
                     placeholder="Enter target amount"
                     value={formData.target}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#12B99C] focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:outline-none transition-colors"
                     required
                     min="0"
                   />
@@ -346,7 +346,7 @@ const handleLoginAs = (userId) => {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-[#12B99C] text-white py-3 rounded-xl hover:bg-[#0d8a73] transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="w-full bg-brand-primary text-white py-3 rounded-xl hover:bg-brand-primary-hover transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 Save Target
               </button>
@@ -374,11 +374,11 @@ const handleLoginAs = (userId) => {
               value={regionQuery}
               onChange={(e) => setRegionQuery(e.target.value)}
               placeholder="Search by name "
-              className="w-48 sm:w-64 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+              className="w-48 sm:w-64 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
 
              {/* <button
-                className="bg-[#12B99C] text-white px-4 ml-2 py-2 rounded-lg hover:bg-[#0d8a73] transition"
+                className="bg-brand-primary text-white px-4 ml-2 py-2 rounded-lg hover:bg-brand-primary-hover transition"
                 onClick={() => setIsModalOpen(true)}
               >
                 Set Target
@@ -512,7 +512,7 @@ const handleLoginAs = (userId) => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with gradient */}
-            <div className="bg-[#12B99C] p-6 text-white relative">
+            <div className="bg-brand-primary p-6 text-white relative">
               <button
                 onClick={() => setSelectedUser(null)}
                 className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
@@ -551,7 +551,7 @@ const handleLoginAs = (userId) => {
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
                       selectedUser.status === "ACTIVE"
-                        ? "bg-[#12B99C]/10 text-[#12B99C]"
+                        ? "bg-brand-primary/10 text-brand-primary"
                         : "bg-gray-100 text-gray-600"
                     }`}
                   >
@@ -585,7 +585,7 @@ const handleLoginAs = (userId) => {
               {/* System Info */}
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <h5 className="font-semibold text-[#111827] mb-3 flex items-center">
-                  <div className="w-2 h-2 bg-[#12B99C] rounded-full mr-2"></div>
+                  <div className="w-2 h-2 bg-brand-primary rounded-full mr-2"></div>
                   System Information
                 </h5>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -628,7 +628,7 @@ const handleLoginAs = (userId) => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-[#12B99C] p-6 text-white relative">
+            <div className="bg-brand-primary p-6 text-white relative">
               <button
                 onClick={() => {
                   setShowDeactivateModal(false);
@@ -689,7 +689,7 @@ const handleLoginAs = (userId) => {
                     value={searchReplacement}
                     onChange={(e) => setSearchReplacement(e.target.value)}
                     placeholder="Search ASM by name, phone, or code"
-                    className="w-60 sm:w-72 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                    className="w-60 sm:w-72 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   />
                 </div>
 
@@ -808,7 +808,7 @@ const handleLoginAs = (userId) => {
                     disabled={!selectedReplacementId || confirmBusy}
                     className={`px-4 py-2 text-sm rounded-md text-white ${
                       selectedReplacementId && !confirmBusy
-                        ? "bg-[#12B99C] hover:opacity-90"
+                        ? "bg-brand-primary hover:opacity-90"
                         : "bg-gray-300 cursor-not-allowed"
                     }`}
                   >
@@ -828,7 +828,7 @@ const handleLoginAs = (userId) => {
             className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-[#12B99C] p-6 text-white relative">
+            <div className="bg-brand-primary p-6 text-white relative">
               <button
                 onClick={() => {
                   setShowActivateModal(false);
@@ -882,7 +882,7 @@ const handleLoginAs = (userId) => {
                   disabled={confirmBusy}
                   className={`px-4 py-2 text-sm rounded-md text-white ${
                     !confirmBusy
-                      ? "bg-[#12B99C] hover:opacity-90"
+                      ? "bg-brand-primary hover:opacity-90"
                       : "bg-gray-300 cursor-not-allowed"
                   }`}
                 >

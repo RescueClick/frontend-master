@@ -80,7 +80,7 @@ const IncentiveHistory = () => {
               placeholder="Search by amount or status..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:w-80 pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+              className="w-full md:w-80 pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-primary focus:border-transparent"
             />
           </div>
 
@@ -90,7 +90,7 @@ const IncentiveHistory = () => {
               type="number"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="w-24 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent text-sm"
+              className="w-24 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm"
               min="2020"
               max="2100"
             />
@@ -98,7 +98,7 @@ const IncentiveHistory = () => {
             <select
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
-              className="w-32 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent text-sm bg-white"
+              className="w-32 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm bg-white"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m}>

@@ -207,7 +207,7 @@ const Dashboard = () => {
             {/* New Application Button - Full width on mobile */}
             <button
               className="w-full lg:w-60 flex items-center justify-center gap-2 px-4 py-3 mb-4 rounded-lg text-white text-lg transition-colors hover:opacity-90"
-              style={{ backgroundColor: "#12B99C" }}
+              style={{ backgroundColor: "var(--color-brand-primary)" }}
               onClick={() => {
                 navigate("/partner/get-loan");
                 console.log("Navigate to new application");
@@ -586,7 +586,7 @@ const Dashboard = () => {
                 handleCallPartner(data?.rm?.contact);
               }}
               className="text-white font-lg py-5 px-8 w-48 h-14 rounded-lg flex items-center justify-center space-x-2 transition-colors text-base"
-              style={{ backgroundColor: "#12B99C" }}
+              style={{ backgroundColor: "var(--color-brand-primary)" }}
             >
               <FontAwesomeIcon icon={faPhone} className="w-5 h-5" />
               <span>Call RM</span>

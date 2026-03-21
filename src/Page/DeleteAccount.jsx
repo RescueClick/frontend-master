@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { backendurl } from "../feature/urldata";
+import { COMPANY_NAME, SUPPORT_EMAIL } from "../config/branding";
 
 const DeleteAccount = () => {
   const [formData, setFormData] = useState({
@@ -36,7 +37,7 @@ const DeleteAccount = () => {
           phone: formData.phone,
           subject: "Delete Account Request",
           message: [
-            "User has requested to permanently delete their Trustline account.",
+            `User has requested to permanently delete their ${COMPANY_NAME} account.`,
             "",
             `Partner / Employee ID: ${formData.partnerId || "-"}`,
             `Registered Email: ${formData.email}`,
@@ -89,7 +90,7 @@ const DeleteAccount = () => {
             Delete Partner Account
           </h1>
           <p className="text-sm text-teal-100 mt-1">
-            Send a request to permanently delete your Trustline partner
+            Send a request to permanently delete your {COMPANY_NAME} partner
             account.
           </p>
         </div>
@@ -224,10 +225,10 @@ const DeleteAccount = () => {
             <p className="text-xs text-slate-500 mt-3">
               You can also email us directly at{" "}
               <a
-                href="mailto:support@trustlinefintech.com?subject=Delete%20Account%20Request"
+                href={`mailto:${SUPPORT_EMAIL}?subject=Delete%20Account%20Request`}
                 className="font-semibold underline"
               >
-                support@trustlinefintech.com
+                {SUPPORT_EMAIL}
               </a>
               .
             </p>

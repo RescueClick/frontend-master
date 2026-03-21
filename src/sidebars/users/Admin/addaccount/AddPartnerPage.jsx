@@ -199,7 +199,7 @@ const AddPartnerPage = () => {
       hasError ? "border-red-500" : "border-gray-300 focus:border-transparent"
     }`;
 
-  const inputRingColor = { "--tw-ring-color": "#12B99C" };
+  const inputRingColor = { "--tw-ring-color": "var(--color-brand-primary)" };
 
 
   const resetFields=()=>{
@@ -262,9 +262,9 @@ const AddPartnerPage = () => {
             <div className="flex items-center space-x-3 mb-6">
               <div
                 className={iconWrapperStyle}
-                style={{ backgroundColor: "#12B99C20" }}
+                style={{ backgroundColor: "color-mix(in srgb, var(--color-brand-primary) 12.5%, transparent)" }}
               >
-                <User className={iconStyle} style={{ color: "#12B99C" }} />
+                <User className={iconStyle} style={{ color: "var(--color-brand-primary)" }} />
               </div>
               <h2
                 className="text-xl font-semibold"
@@ -486,9 +486,9 @@ const AddPartnerPage = () => {
             <div className="flex items-center space-x-3 mb-6">
               <div
                 className={iconWrapperStyle}
-                style={{ backgroundColor: "#12B99C20" }}
+                style={{ backgroundColor: "color-mix(in srgb, var(--color-brand-primary) 12.5%, transparent)" }}
               >
-                <MapPin className={iconStyle} style={{ color: "#12B99C" }} />
+                <MapPin className={iconStyle} style={{ color: "var(--color-brand-primary)" }} />
               </div>
               <h2
                 className="text-xl font-semibold"
@@ -615,11 +615,11 @@ const AddPartnerPage = () => {
             <div className="flex items-center space-x-3 mb-6">
               <div
                 className={iconWrapperStyle}
-                style={{ backgroundColor: "#12B99C20" }}
+                style={{ backgroundColor: "color-mix(in srgb, var(--color-brand-primary) 12.5%, transparent)" }}
               >
                 <CreditCard
                   className={iconStyle}
-                  style={{ color: "#12B99C" }}
+                  style={{ color: "var(--color-brand-primary)" }}
                 />
               </div>
               <h2
@@ -691,9 +691,9 @@ const AddPartnerPage = () => {
             <div className="flex items-center space-x-3 mb-6">
               <div
                 className={iconWrapperStyle}
-                style={{ backgroundColor: "#12B99C20" }}
+                style={{ backgroundColor: "color-mix(in srgb, var(--color-brand-primary) 12.5%, transparent)" }}
               >
-                <Upload className={iconStyle} style={{ color: "#12B99C" }} />
+                <Upload className={iconStyle} style={{ color: "var(--color-brand-primary)" }} />
               </div>
               <h2
                 className="text-xl font-semibold"
@@ -762,7 +762,7 @@ const AddPartnerPage = () => {
               type="submit"
               disabled={isSubmitting}
               className="px-8 py-3 rounded-lg text-white font-medium transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 hover:shadow-lg"
-              style={{ backgroundColor: "#12B99C" }}
+              style={{ backgroundColor: "var(--color-brand-primary)" }}
             >
               <Save className="w-4 h-4" />
               <span>{isSubmitting ? "Adding Partner..." : "Add Partner"}</span>
@@ -772,7 +772,7 @@ const AddPartnerPage = () => {
   type="submit"
   disabled={isSubmitting}
   className="px-8 py-3 rounded-lg text-white font-medium transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 hover:shadow-lg"
-  style={{ backgroundColor: "#12B99C" }}
+  style={{ backgroundColor: "var(--color-brand-primary)" }}
 >
   {isSubmitting ? (
     <>

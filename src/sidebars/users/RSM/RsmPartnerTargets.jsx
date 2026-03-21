@@ -61,7 +61,7 @@ const RsmPartnerTargets = () => {
                   placeholder="Search by name, ID, or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                 />
               </div>
             </div>
@@ -73,7 +73,7 @@ const RsmPartnerTargets = () => {
                 <select
                   value={month}
                   onChange={(e) => setMonth(Number(e.target.value))}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent appearance-none"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent appearance-none"
                 >
                   {months.map((m, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -90,7 +90,7 @@ const RsmPartnerTargets = () => {
                 type="number"
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#12B99C] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                 min="2020"
                 max="2100"
               />
@@ -102,7 +102,7 @@ const RsmPartnerTargets = () => {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[#12B99C] text-white">
+              <thead className="bg-brand-primary text-white">
                 <tr>
                   <th className="px-6 py-4 text-left font-semibold">Partner</th>
                   <th className="px-6 py-4 text-left font-semibold">File Target</th>
@@ -117,7 +117,7 @@ const RsmPartnerTargets = () => {
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center">
                       <div className="flex items-center justify-center">
-                        <div className="w-8 h-8 border-4 border-[#12B99C] border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
                         <span className="ml-3 text-gray-600">Loading...</span>
                       </div>
                     </td>

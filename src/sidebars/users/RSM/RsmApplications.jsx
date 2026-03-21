@@ -7,7 +7,7 @@ import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../.
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
 };
@@ -198,7 +198,7 @@ export default function RsmApplications() {
                 <tr>
                   <td colSpan="10" className="text-center py-12">
                     <div className="flex items-center justify-center gap-2 text-gray-500">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#12B99C]"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-primary"></div>
                       Loading applications...
                     </div>
                   </td>

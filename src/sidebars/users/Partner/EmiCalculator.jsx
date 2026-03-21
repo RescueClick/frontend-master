@@ -535,7 +535,7 @@ const EmiCalculator = () => {
                     onChange={(e) => handleAmountChange(e.target.value)}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500"
                     style={{
-                      background: `linear-gradient(to right, #12B99C 0%, #12B99C ${((loanAmount - 100000) / (10000000 - 100000)) * 100}%, #e5e7eb ${((loanAmount - 100000) / (10000000 - 100000)) * 100}%, #e5e7eb 100%)`
+                      background: `linear-gradient(to right, var(--color-brand-primary) 0%, var(--color-brand-primary) ${((loanAmount - 100000) / (10000000 - 100000)) * 100}%, #e5e7eb ${((loanAmount - 100000) / (10000000 - 100000)) * 100}%, #e5e7eb 100%)`
                     }}
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">

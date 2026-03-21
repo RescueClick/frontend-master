@@ -232,7 +232,7 @@ const KYCDetails = () => {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F8FAFC' }}>
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#12B99C' }}></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-brand-primary)' }}></div>
           <p className="mt-4 text-gray-600">Loading KYC details...</p>
         </div>
       </div>
@@ -244,9 +244,9 @@ const KYCDetails = () => {
       <div className="min-h-screen" style={{ backgroundColor: '#F8FAFC' }}>
         <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 border-2" style={{ borderColor: '#12B99C' }}>
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 border-2" style={{ borderColor: 'var(--color-brand-primary)' }}>
               <div className="text-center">
-                <CheckCircle className="mx-auto h-12 w-12 sm:h-16 sm:w-16 mb-3 sm:mb-4" style={{ color: '#12B99C' }} />
+                <CheckCircle className="mx-auto h-12 w-12 sm:h-16 sm:w-16 mb-3 sm:mb-4" style={{ color: 'var(--color-brand-primary)' }} />
                 <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 px-2" style={{ color: '#111827' }}>
                   KYC Details Submitted Successfully!
                 </h2>
@@ -263,9 +263,9 @@ const KYCDetails = () => {
                 <button
                   onClick={resetForm}
                   className="w-full sm:w-auto px-4 sm:px-6 py-3 rounded-lg font-medium text-white transition-colors duration-200 text-sm sm:text-base"
-                  style={{ backgroundColor: '#12B99C' }}
+                  style={{ backgroundColor: 'var(--color-brand-primary)' }}
                   onMouseEnter={(e) => e.target.style.backgroundColor = '#0EA589'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#12B99C'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-brand-primary)'}
                 >
                   Submit Another Form
                 </button>
@@ -306,14 +306,14 @@ const KYCDetails = () => {
                 <button
                   onClick={() => setIsEditing(true)}
                   className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors"
-                  style={{ backgroundColor: '#E0F7F6', color: '#12B99C' }}
+                  style={{ backgroundColor: 'var(--color-brand-primary-muted)', color: 'var(--color-brand-primary)' }}
                   onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#12B99C';
+                    e.target.style.backgroundColor = 'var(--color-brand-primary)';
                     e.target.style.color = '#fff';
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = '#E0F7F6';
-                    e.target.style.color = '#12B99C';
+                    e.target.style.backgroundColor = 'var(--color-brand-primary-muted)';
+                    e.target.style.color = 'var(--color-brand-primary)';
                   }}
                 >
                   <Edit className="h-4 w-4" />
@@ -407,7 +407,7 @@ const KYCDetails = () => {
               {/* Bank Name */}
               <div>
                 <label className="flex items-center text-sm font-medium mb-2" style={{ color: '#111827' }}>
-                  <Building2 className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: '#12B99C' }} />
+                  <Building2 className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: 'var(--color-brand-primary)' }} />
                   <span className="text-xs sm:text-sm">Bank Name</span>
                 </label>
                 <input
@@ -418,7 +418,7 @@ const KYCDetails = () => {
                     errors.bankName ? 'border-red-500' : 'border-gray-300'
                   }`}
                   style={{ 
-                    focusRingColor: errors.bankName ? '#EF4444' : '#12B99C'
+                    focusRingColor: errors.bankName ? '#EF4444' : 'var(--color-brand-primary)'
                   }}
                   placeholder="Enter your bank name"
                 />
@@ -433,7 +433,7 @@ const KYCDetails = () => {
               {/* Account Holder Name */}
               <div>
                 <label className="flex items-center text-sm font-medium mb-2" style={{ color: '#111827' }}>
-                  <User className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: '#12B99C' }} />
+                  <User className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: 'var(--color-brand-primary)' }} />
                   <span className="text-xs sm:text-sm">Account Holder Name</span>
                 </label>
                 <input
@@ -456,7 +456,7 @@ const KYCDetails = () => {
               {/* Mobile Number */}
               <div>
                 <label className="flex items-center text-sm font-medium mb-2" style={{ color: '#111827' }}>
-                  <Phone className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: '#12B99C' }} />
+                  <Phone className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: 'var(--color-brand-primary)' }} />
                   <span className="text-xs sm:text-sm">Registered Mobile Number</span>
                 </label>
                 <input
@@ -480,7 +480,7 @@ const KYCDetails = () => {
               {/* Account Number */}
               <div>
                 <label className="flex items-center text-sm font-medium mb-2" style={{ color: '#111827' }}>
-                  <CreditCard className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: '#12B99C' }} />
+                  <CreditCard className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: 'var(--color-brand-primary)' }} />
                   <span className="text-xs sm:text-sm">Account Number</span>
                 </label>
                 <input
@@ -522,7 +522,7 @@ const KYCDetails = () => {
                   </p>
                 )}
                 {!errors.confirmAccountNumber && formData.confirmAccountNumber && formData.accountNumber === formData.confirmAccountNumber && (
-                  <p className="mt-1 text-xs sm:text-sm flex items-center" style={{ color: '#12B99C' }}>
+                  <p className="mt-1 text-xs sm:text-sm flex items-center" style={{ color: 'var(--color-brand-primary)' }}>
                     <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
                     <span>Account numbers match</span>
                   </p>
@@ -532,7 +532,7 @@ const KYCDetails = () => {
               {/* IFSC Code */}
               <div>
                 <label className="flex items-center text-sm font-medium mb-2" style={{ color: '#111827' }}>
-                  <Hash className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: '#12B99C' }} />
+                  <Hash className="h-4 w-4 mr-2 flex-shrink-0" style={{ color: 'var(--color-brand-primary)' }} />
                   <span className="text-xs sm:text-sm">IFSC Code</span>
                 </label>
                 <input
@@ -561,12 +561,12 @@ const KYCDetails = () => {
                   className={`w-full py-3 px-4 sm:px-6 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02] text-sm sm:text-base ${
                     loading ? 'opacity-60 cursor-not-allowed' : ''
                   }`}
-                  style={{ backgroundColor: '#12B99C' }}
+                  style={{ backgroundColor: 'var(--color-brand-primary)' }}
                   onMouseEnter={(e) => {
                     if (!loading) e.target.style.backgroundColor = '#0EA589';
                   }}
                   onMouseLeave={(e) => {
-                    if (!loading) e.target.style.backgroundColor = '#12B99C';
+                    if (!loading) e.target.style.backgroundColor = 'var(--color-brand-primary)';
                   }}
                 >
                   {loading ? (

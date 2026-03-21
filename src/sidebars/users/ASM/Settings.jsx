@@ -21,7 +21,7 @@ const Setting = () => {
             <img
               src="https://via.placeholder.com/80"
               alt="Profile"
-              className="w-20 h-20 rounded-full border-2 border-[#12B99C]"
+              className="w-20 h-20 rounded-full border-2 border-brand-primary"
             />
             <div>
               <p className="font-medium">John Doe</p>
@@ -42,9 +42,9 @@ const Setting = () => {
             <input type="password" placeholder="New Password" className="w-full p-2 border rounded-lg" />
             <div className="flex items-center justify-between">
               <label className="font-medium">Two-factor Authentication</label>
-              <input type="checkbox" className="toggle accent-[#12B99C]" />
+              <input type="checkbox" className="toggle accent-brand-primary" />
             </div>
-            <button className="w-full py-2 rounded-lg bg-[#12B99C] text-white font-medium">View Login Activity</button>
+            <button className="w-full py-2 rounded-lg bg-brand-primary text-white font-medium">View Login Activity</button>
           </form>
         </section>
 
@@ -84,19 +84,19 @@ const Setting = () => {
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <label>Email Notifications</label>
-              <input type="checkbox" className="toggle accent-[#12B99C]" />
+              <input type="checkbox" className="toggle accent-brand-primary" />
             </div>
             <div className="flex justify-between items-center">
               <label>SMS Notifications</label>
-              <input type="checkbox" className="toggle accent-[#12B99C]" />
+              <input type="checkbox" className="toggle accent-brand-primary" />
             </div>
             <div className="flex justify-between items-center">
               <label>Transaction Alerts</label>
-              <input type="checkbox" className="toggle accent-[#12B99C]" />
+              <input type="checkbox" className="toggle accent-brand-primary" />
             </div>
             <div className="flex justify-between items-center">
               <label>Performance Alerts</label>
-              <input type="checkbox" className="toggle accent-[#12B99C]" />
+              <input type="checkbox" className="toggle accent-brand-primary" />
             </div>
           </div>
         </section>
@@ -128,7 +128,7 @@ const Setting = () => {
       {/* Action Buttons */}
       <div className="flex justify-end gap-4 mt-8">
         <button className="px-6 py-2 rounded-lg bg-gray-300 text-[#111827]">Cancel</button>
-        <button className="px-6 py-2 rounded-lg bg-[#12B99C] text-white">Save Changes</button>
+        <button className="px-6 py-2 rounded-lg bg-brand-primary text-white">Save Changes</button>
       </div>
     </div>
   );

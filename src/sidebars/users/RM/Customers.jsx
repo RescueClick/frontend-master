@@ -34,7 +34,7 @@ import { backendurl } from "../../../feature/urldata";
 
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   accent: "#F59E0B",

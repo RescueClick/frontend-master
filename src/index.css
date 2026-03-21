@@ -1,1 +1,51 @@
 @import "tailwindcss";
+
+/* Logo-aligned theme: teal (Source) + gold (धन) — consumed by Tailwind + inline styles */
+@theme {
+  --color-brand-primary: #0d9488;
+  --color-brand-primary-hover: #0f766e;
+  --color-brand-primary-light: #5eead4;
+  --color-brand-primary-muted: #ccfbf1;
+  --color-brand-gold: #ca8a04;
+  --color-brand-gold-light: #fbbf24;
+  --color-brand-gold-muted: #fffbeb;
+}
+
+:root {
+  /* Same values for style={{ color: … }} and legacy inline hex replacements */
+  --color-brand-primary: #0d9488;
+  --color-brand-primary-hover: #0f766e;
+  --color-brand-primary-light: #5eead4;
+  --color-brand-primary-muted: #ccfbf1;
+  --color-brand-gold: #ca8a04;
+  --color-brand-gold-light: #fbbf24;
+  --color-brand-gold-muted: #fffbeb;
+}
+
+/* DhanSource universal loader — logo pulse */
+@keyframes dhan-brand-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.07);
+    opacity: 0.88;
+  }
+}
+
+/* Home hero — subtle float for accent elements */
+@keyframes hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.hero-float {
+  animation: hero-float 5s ease-in-out infinite;
+}

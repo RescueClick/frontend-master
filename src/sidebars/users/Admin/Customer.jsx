@@ -11,7 +11,7 @@ import { backendurl } from "../../../feature/urldata";
  
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   text: "#111827",
@@ -216,7 +216,7 @@ export default function CustomerTable() {
       </button>
 
       {/* Header */}
-      <h2 className="text-xl font-bold mb-6 text-center text-[#12B99C]">
+      <h2 className="text-xl font-bold mb-6 text-center text-brand-primary">
         Customer Details
       </h2>
 

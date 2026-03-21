@@ -3,8 +3,8 @@
 export const designSystem = {
   // Primary Colors (Linear Gradient)
   colors: {
-    primary: "#12B99C",      // Teal - Main brand color
-    primaryDark: "#0EA688",  // Darker teal
+    primary: "var(--color-brand-primary)",      // Teal - Main brand color
+    primaryDark: "var(--color-brand-primary-hover)",  // Darker teal
     secondary: "#1E3A8A",    // Blue
     accent: "#F59E0B",       // Amber/Orange
     success: "#10B981",      // Green
@@ -33,7 +33,7 @@ export const designSystem = {
   // Metric Card Colors (Linear progression)
   metricColors: [
     { bg: "bg-gradient-to-br from-blue-500 to-blue-600", icon: "text-white", text: "text-blue-600" },
-    { bg: "bg-gradient-to-br from-teal-500 to-teal-600", icon: "text-white", text: "text-teal-600" },
+    { bg: "bg-gradient-to-br from-brand-primary to-brand-primary-hover", icon: "text-white", text: "text-brand-primary" },
     { bg: "bg-gradient-to-br from-purple-500 to-purple-600", icon: "text-white", text: "text-purple-600" },
     { bg: "bg-gradient-to-br from-amber-500 to-amber-600", icon: "text-white", text: "text-amber-600" },
     { bg: "bg-gradient-to-br from-emerald-500 to-emerald-600", icon: "text-white", text: "text-emerald-600" },
@@ -52,7 +52,7 @@ export const designSystem = {
 
   // Button Styles
   button: {
-    primary: "bg-gradient-to-r from-[#12B99C] to-[#0EA688] hover:from-[#0EA688] hover:to-[#12B99C] text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg",
+    primary: "bg-gradient-to-r from-brand-primary to-brand-primary-hover hover:from-brand-primary-hover hover:to-brand-primary text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg",
     secondary: "bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-all duration-200",
     danger: "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg",
   },

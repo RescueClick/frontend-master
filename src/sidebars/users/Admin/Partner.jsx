@@ -17,7 +17,7 @@ import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
 
 const colors = {
-  primary: "#12B99C",
+  primary: "var(--color-brand-primary)",
   secondary: "#1E3A8A",
   background: "#F8FAFC",
   accent: "#F59E0B",
@@ -431,7 +431,7 @@ loginAsUser(userId, navigate);
                   onClick={() => {
                     handlePartneractive(PartneractiveModel);
                   }}
-                  className="px-4 py-2 rounded-lg bg-[#12B99C] text-white "
+                  className="px-4 py-2 rounded-lg bg-brand-primary text-white "
                 >
                   Yes
                 </button>
@@ -459,7 +459,7 @@ loginAsUser(userId, navigate);
                 />
                 <input
                   type="text"
-                  className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-100 focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                  className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-100 focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   placeholder="Search by name, RM code, or ID"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}

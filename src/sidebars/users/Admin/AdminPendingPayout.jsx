@@ -188,7 +188,7 @@ const AdminPendingPayout = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black/25 bg-opacity-40 z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl relative transform transition-all duration-300 ease-out scale-100 max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#12B99C] to-[#0EA688] p-6 rounded-t-2xl text-white relative overflow-hidden flex-shrink-0">
+            <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover p-6 rounded-t-2xl text-white relative overflow-hidden flex-shrink-0">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16"></div>
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full translate-y-12 -translate-x-12"></div>
               <div className="flex items-center justify-between relative z-10">
@@ -222,8 +222,8 @@ const AdminPendingPayout = () => {
                     {/* Left Side - Partner Information */}
                     <div className="space-y-4">
                       {/* Bank Name */}
-                      <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-xl border-l-4 border-[#12B99C]">
-                        <Building className="w-5 h-5 text-[#12B99C]" />
+                      <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-xl border-l-4 border-brand-primary">
+                        <Building className="w-5 h-5 text-brand-primary" />
                         <div className="flex-1 flex items-center justify-between">
                           <span className="text-sm text-gray-500 font-medium">
                             Bank Name:
@@ -235,8 +235,8 @@ const AdminPendingPayout = () => {
                       </div>
 
                       {/* IFSC Code */}
-                      <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-xl border-l-4 border-[#12B99C]">
-                        <Hash className="w-5 h-5 text-[#12B99C]" />
+                      <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-xl border-l-4 border-brand-primary">
+                        <Hash className="w-5 h-5 text-brand-primary" />
                         <div className="flex-1 flex items-center justify-between">
                           <span className="text-sm text-gray-500 font-medium">
                             IFSC Code:
@@ -248,8 +248,8 @@ const AdminPendingPayout = () => {
                       </div>
 
                       {/* Account Number */}
-                      <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-xl border-l-4 border-[#12B99C]">
-                        <CreditCard className="w-5 h-5 text-[#12B99C]" />
+                      <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-xl border-l-4 border-brand-primary">
+                        <CreditCard className="w-5 h-5 text-brand-primary" />
                         <div className="flex-1 flex items-center justify-between">
                           <span className="text-sm text-gray-500 font-medium">
                             Account Number:
@@ -261,8 +261,8 @@ const AdminPendingPayout = () => {
                       </div>
 
                       {/* Account Holder */}
-                      <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-xl border-l-4 border-[#12B99C]">
-                        <User className="w-5 h-5 text-[#12B99C]" />
+                      <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-xl border-l-4 border-brand-primary">
+                        <User className="w-5 h-5 text-brand-primary" />
                         <div className="flex-1 flex items-center justify-between">
                           <span className="text-sm text-gray-500 font-medium">
                             Account Holder:
@@ -291,7 +291,7 @@ const AdminPendingPayout = () => {
                     <div className="bg-gradient-to-br from-[#F8FAFC] to-[#F1F5F9] p-5 rounded-xl border border-gray-200 flex flex-col justify-between">
                       <div>
                         <h3 className="text-lg font-bold text-[#111827] mb-4 flex items-center gap-2">
-                          <Calculator className="w-5 h-5 text-[#12B99C]" />
+                          <Calculator className="w-5 h-5 text-brand-primary" />
                           Financial Calculation
                         </h3>
 
@@ -302,7 +302,7 @@ const AdminPendingPayout = () => {
                               Approval Amount
                             </label>
                             <div className="relative">
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#12B99C] font-bold">
+                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brand-primary font-bold">
                                 ₹
                               </span>
                               <input
@@ -332,10 +332,10 @@ const AdminPendingPayout = () => {
                                     payoutPercentage: e.target.value,
                                   }))
                                 }
-                                className="w-full pr-8 pl-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                                className="w-full pr-8 pl-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
                                 placeholder="Enter %"
                               />
-                              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#12B99C] font-bold">
+                              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brand-primary font-bold">
                                 %
                               </span>
                             </div>
@@ -381,7 +381,7 @@ const AdminPendingPayout = () => {
                                   payOutStatus: e.target.value,
                                 }))
                               }
-                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
                             >
                               <option value="PENDING">PENDING</option>
                               <option value="DONE">DONE</option>
@@ -397,7 +397,7 @@ const AdminPendingPayout = () => {
                             className={`mt-4 w-full text-white font-semibold py-3 rounded-xl transition-all duration-200 ${
                               isApplying
                                 ? "bg-[#0f9b82]/70 cursor-not-allowed"
-                                : "bg-[#12B99C] hover:bg-[#0f9b82]"
+                                : "bg-brand-primary hover:bg-[#0f9b82]"
                             }`}
                           >
                             {isApplying ? "Applying..." : "Apply Payout"}
@@ -435,12 +435,12 @@ const AdminPendingPayout = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name, ID, phone, loan type..."
-              className="w-full md:flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+              className="w-full md:flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
             <select
               value={selectedFilter}
               onChange={(e) => setSelectedFilter(e.target.value)}
-              className="w-full md:w-56 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+              className="w-full md:w-56 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
             >
               <option value="all">All Status</option>
               <option value="PENDING">PENDING</option>
@@ -451,7 +451,7 @@ const AdminPendingPayout = () => {
             <select
               value={year}
               onChange={(e) => setYear(parseInt(e.target.value))}
-              className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+              className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
             >
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
                 <option key={y} value={y}>
@@ -463,7 +463,7 @@ const AdminPendingPayout = () => {
             <select
               value={month}
               onChange={(e) => setMonth(parseInt(e.target.value))}
-              className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#12B99C]"
+              className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m}>
@@ -476,7 +476,7 @@ const AdminPendingPayout = () => {
 
         <div className="overflow-x-auto rounded-lg shadow-sm">
           <table className="w-full border-collapse bg-white text-sm">
-            <thead style={{ background: "#12B99C", color: "white" }}>
+            <thead style={{ background: "var(--color-brand-primary)", color: "white" }}>
               <tr>
                 <th className="px-2 py-4 text-left">User Name</th>
                 <th className="px-2 py-4 text-left">User Id</th>
@@ -572,7 +572,7 @@ const AdminPendingPayout = () => {
                           }));
                           setCustomerID(customer.customerId);
                         }}
-                        className="px-4 py-2 bg-[#12B99C] hover:bg-[#0f9b82] text-white text-xs font-semibold rounded-lg transition-all duration-200"
+                        className="px-4 py-2 bg-brand-primary hover:bg-[#0f9b82] text-white text-xs font-semibold rounded-lg transition-all duration-200"
                       >
                         Pay Payout
                       </button>

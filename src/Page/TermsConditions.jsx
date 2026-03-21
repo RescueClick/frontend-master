@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Scale, AlertCircle, CheckCircle, XCircle, DollarSign, Shield, Users } from 'lucide-react';
+import { COMPANY_NAME, LEGAL_EMAIL } from "../config/branding";
 
 export default function TermsConditions() {
   const [expandedSection, setExpandedSection] = useState(null);
@@ -13,7 +14,7 @@ export default function TermsConditions() {
       id: 1,
       icon: <CheckCircle className="w-6 h-6" />,
       title: "Acceptance of Terms",
-      content: "By accessing and using TrustLine Fintech's services, you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, you must not use our services. Your continued use of our platform constitutes acceptance of any updates or modifications to these terms."
+      content: `By accessing and using ${COMPANY_NAME}'s services, you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, you must not use our services. Your continued use of our platform constitutes acceptance of any updates or modifications to these terms.`
     },
     {
       id: 2,
@@ -25,7 +26,7 @@ export default function TermsConditions() {
       id: 3,
       icon: "",
       title: "Services Description",
-      content: "TrustLine Fintech provides financial technology services including but not limited to payment processing, financial transactions, account management, and related financial services. We reserve the right to modify, suspend, or discontinue any aspect of our services at any time with or without notice."
+      content: `${COMPANY_NAME} provides financial technology services including but not limited to payment processing, financial transactions, account management, and related financial services. We reserve the right to modify, suspend, or discontinue any aspect of our services at any time with or without notice.`
     },
     {
       id: 4,
@@ -44,7 +45,7 @@ export default function TermsConditions() {
             <Scale className="w-10 h-10 text-blue-600" />
             <div>
               <h1 className="text-3xl font-bold text-slate-900">Terms & Conditions</h1>
-              <p className="text-sm text-slate-600 mt-1">TrustLine Fintech</p>
+              <p className="text-sm text-slate-600 mt-1">{COMPANY_NAME}</p>
             </div>
           </div>
         </div>
@@ -60,10 +61,10 @@ export default function TermsConditions() {
             </div>
             <div>
               <h2 className="text-2xl font-semibold text-slate-900 mb-3">
-                Welcome to TrustLine Fintech
+                Welcome to {COMPANY_NAME}
               </h2>
               <p className="text-slate-700 leading-relaxed mb-4">
-                These Terms and Conditions govern your use of TrustLine Fintech's services and website. Please read these terms carefully before using our platform. By accessing or using our services, you agree to be bound by these terms and all applicable laws and regulations.
+                These Terms and Conditions govern your use of {COMPANY_NAME}&apos;s services and website. Please read these terms carefully before using our platform. By accessing or using our services, you agree to be bound by these terms and all applicable laws and regulations.
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Effective Date:</strong> December 2, 2025
@@ -92,7 +93,7 @@ export default function TermsConditions() {
               key={section.id}
               className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-slate-200 overflow-hidden"
             >
-              <div className="bg-gradient-to-r bg-[#12B99C] text-white p-6">
+              <div className="bg-gradient-to-r bg-brand-primary text-white p-6">
                 <div className="flex items-center gap-3">
                   {section.icon}
                   <h3 className="text-xl font-semibold">{section.title}</h3>
@@ -216,7 +217,7 @@ export default function TermsConditions() {
           <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
             <h3 className="text-2xl font-semibold text-slate-900 mb-4">Intellectual Property</h3>
             <p className="text-slate-700 mb-4">
-              All content, features, and functionality of our services, including but not limited to text, graphics, logos, icons, images, software, and trademarks, are the exclusive property of TrustLine Fintech and are protected by international copyright, trademark, and other intellectual property laws.
+              All content, features, and functionality of our services, including but not limited to text, graphics, logos, icons, images, software, and trademarks, are the exclusive property of {COMPANY_NAME} and are protected by international copyright, trademark, and other intellectual property laws.
             </p>
             <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
               <p className="text-sm text-slate-700">
@@ -229,7 +230,7 @@ export default function TermsConditions() {
           <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
             <h3 className="text-2xl font-semibold text-slate-900 mb-4">Limitation of Liability</h3>
             <p className="text-slate-700 mb-4">
-              To the maximum extent permitted by law, TrustLine Fintech shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses resulting from:
+              To the maximum extent permitted by law, {COMPANY_NAME} shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses resulting from:
             </p>
             <div className="space-y-3">
               <div className="flex items-start gap-3 text-slate-700">
@@ -255,7 +256,7 @@ export default function TermsConditions() {
           <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
             <h3 className="text-2xl font-semibold text-slate-900 mb-4">Indemnification</h3>
             <p className="text-slate-700">
-              You agree to indemnify, defend, and hold harmless TrustLine Fintech, its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, and expenses, including reasonable attorney's fees, arising out of or in any way connected with your access to or use of our services, your violation of these Terms, or your violation of any rights of another party.
+              You agree to indemnify, defend, and hold harmless {COMPANY_NAME}, its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, and expenses, including reasonable attorney's fees, arising out of or in any way connected with your access to or use of our services, your violation of these Terms, or your violation of any rights of another party.
             </p>
           </div>
 
@@ -306,8 +307,8 @@ export default function TermsConditions() {
             </p>
             <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
               <div className="space-y-2 text-slate-700">
-                <p><strong>Email:</strong> legal@Trustlinefintech</p>
-                <p><strong>Address:</strong> TrustLine Fintech Legal Department</p>
+                <p><strong>Email:</strong> {LEGAL_EMAIL}</p>
+                <p><strong>Address:</strong> {COMPANY_NAME} Legal Department</p>
                 <p><strong>Phone:</strong> Available through customer support</p>
               </div>
             </div>
@@ -315,7 +316,7 @@ export default function TermsConditions() {
         </div>
 
         {/* Acknowledgment CTA */}
-        <div className="mt-8 bg-gradient-to-r bg-[#12B99C] rounded-2xl shadow-xl p-8 text-white">
+        <div className="mt-8 bg-gradient-to-r bg-brand-primary rounded-2xl shadow-xl p-8 text-white">
           <div className="text-center">
             <Scale className="w-12 h-12 mx-auto mb-4" />
             <h3 className="text-2xl font-semibold mb-3">
@@ -325,7 +326,7 @@ export default function TermsConditions() {
               Our legal team is available to answer any questions you may have about these Terms and Conditions.
             </p>
             <a
-              href="mailto:legal@Trustlinefintech"
+              href={`mailto:${LEGAL_EMAIL}`}
               className="inline-block bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 shadow-lg"
             >
               Contact Legal Team

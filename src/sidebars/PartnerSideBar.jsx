@@ -21,7 +21,7 @@ import { getAuthData } from "../utils/localStorage";
 import { getOriginalRole, backToAdmin } from "../utils/impersonation";
 import { fetchPartnerProfile } from "../feature/thunks/partnerThunks";
 import PartnerProfile from "../components/PartnerProfile";
-import logo from "../assets/logo.png";
+import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
 
 // Admin sidebar component
@@ -70,21 +70,16 @@ const PartnerSideBar = () => {
       <div
         className={`${
           sidebarOpen ? "w-60" : "w-20"
-        } bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200`}
+        } shrink-0 bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200 overflow-x-hidden`}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-center py-6 border-b border-gray-100">
-          <div className="flex items-center space-x-3">
-          <div className="w-10 h-10  rounded-lg flex items-center justify-center ">
-              <span className="text-white font-bold text-lg">
-                <img src={logo} alt="logo" />
-              </span>
-            </div>
-            {sidebarOpen && (
-              <span className="text-xl font-bold text-gray-800 tracking-wide">
-                TRUSTLINE
-              </span>
-            )}
+        {/* Logo — match Admin */}
+        <div
+          className={`flex w-full min-w-0 items-center border-b border-gray-800 py-5 min-h-[72px] ${
+            sidebarOpen ? "justify-start px-4 gap-3" : "justify-center px-2"
+          }`}
+        >
+          <div className="w-full min-w-0 h-[55px] rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+            <img src={brandLogo} alt={COMPANY_NAME} className="h-full w-full object-cover" />
           </div>
         </div>
 

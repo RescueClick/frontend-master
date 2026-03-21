@@ -9,7 +9,16 @@ export default defineConfig({
     outDir: "dist"
   },
   server: {
-    historyApiFallback: true
-  }
+    historyApiFallback: true,
+    // Socket.IO: browser requests same-origin /socket.io → proxied to API (avoids CORS on localhost)
+    proxy: {
+      "/socket.io": {
+        target: "https://trustlinefintech.com",
+        changeOrigin: true,
+        secure: true,
+        ws: true,
+      },
+    },
+  },
 
 })

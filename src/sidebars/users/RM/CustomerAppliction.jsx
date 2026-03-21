@@ -1051,7 +1051,7 @@ const CustomerApplication = () => {
             success: {
               duration: 3000,
               iconTheme: {
-                primary: '#12B99C',
+                primary: 'var(--color-brand-primary)',
                 secondary: '#fff',
               },
             },
@@ -1067,7 +1067,7 @@ const CustomerApplication = () => {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
           <div className="bg-white rounded-xl p-8 shadow-lg">
             <div className="flex items-center gap-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#12B99C]"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
               <span className="text-gray-700 text-lg">
                 Loading application data...
               </span>
@@ -1093,7 +1093,7 @@ const CustomerApplication = () => {
             success: {
               duration: 3000,
               iconTheme: {
-                primary: '#12B99C',
+                primary: 'var(--color-brand-primary)',
                 secondary: '#fff',
               },
             },
@@ -1115,7 +1115,7 @@ const CustomerApplication = () => {
             <p className="text-gray-600 mb-4">{error}</p>
             <button
             onClick={fetchApplicationData}
-            className="px-6 py-2 bg-[#12B99C] text-white rounded-lg hover:bg-[#0FA485] transition"
+            className="px-6 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition"
           >
             Retry
           </button>
@@ -1140,7 +1140,7 @@ const CustomerApplication = () => {
             success: {
               duration: 3000,
               iconTheme: {
-                primary: '#12B99C',
+                primary: 'var(--color-brand-primary)',
                 secondary: '#fff',
               },
             },
@@ -1205,7 +1205,7 @@ const CustomerApplication = () => {
           success: {
             duration: 3000,
             iconTheme: {
-              primary: '#12B99C',
+              primary: 'var(--color-brand-primary)',
               secondary: '#fff',
             },
           },
@@ -1303,7 +1303,7 @@ const CustomerApplication = () => {
                   Document Status
                 </label>
                 <select
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent transition-all duration-300"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
                   value={docNewStatus}
                   onChange={(e) => setDocNewStatus(e.target.value)}
                 >
@@ -1336,7 +1336,7 @@ const CustomerApplication = () => {
                       ? "Please specify why this document is being rejected..."
                       : "Add any remarks about this document..."
                   }
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent transition-all duration-300 resize-none h-24"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 resize-none h-24"
                   value={docStatusRemark}
                   onChange={(e) => setDocStatusRemark(e.target.value)}
                   required={docNewStatus === "REJECTED"}
@@ -1363,7 +1363,7 @@ const CustomerApplication = () => {
                 <button
                   onClick={handleUpdateDocStatus}
                   disabled={updateStatusLoading || (docNewStatus === "REJECTED" && !docStatusRemark.trim())}
-                  className="flex-1 bg-gradient-to-r from-[#12B99C] to-[#0FA485] text-white py-3 px-6 rounded-lg hover:from-[#0ea889] hover:to-[#0d8a73] transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white py-3 px-6 rounded-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {updateStatusLoading ? (
                     <>
@@ -1424,7 +1424,7 @@ const CustomerApplication = () => {
                   {previewLoading && (
                     <div className="w-full h-96 flex items-center justify-center bg-gray-100">
                       <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#12B99C] mx-auto mb-4"></div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
                         <p className="text-gray-600">Loading preview...</p>
                       </div>
                     </div>
@@ -1485,7 +1485,7 @@ const CustomerApplication = () => {
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => handleDownload(selectedDoc)}
-                    className="px-4 py-2 bg-[#12B99C] text-white rounded-lg hover:bg-[#0FA485] transition flex items-center gap-2"
+                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition flex items-center gap-2"
                   >
                     <Download className="w-4 h-4" />
                     Download
@@ -1510,7 +1510,7 @@ const CustomerApplication = () => {
                 <p className="text-gray-600">{modalMessage}</p>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="mt-4 px-4 py-2 bg-[#12B99C] text-white rounded-lg hover:bg-[#0FA485] transition"
+                  className="mt-4 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition"
                 >
                   Close
                 </button>
@@ -1525,7 +1525,7 @@ const CustomerApplication = () => {
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
             {/* Enhanced Header with Gradient */}
 
-            <div className="bg-gradient-to-r from-[#12B99C] to-[#0FA485] px-6 sm:px-8 py-6 sm:py-8">
+            <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover px-6 sm:px-8 py-6 sm:py-8">
               <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                 <div className="text-white">
                   <h1 className="text-2xl sm:text-3xl font-bold mb-2">
@@ -1565,8 +1565,8 @@ const CustomerApplication = () => {
 
                 <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
                   <div className="flex items-center mb-6">
-                    <div className="p-2 rounded-lg bg-[#12B99C]/10">
-                      <User className="w-6 h-6 text-[#12B99C]" />
+                    <div className="p-2 rounded-lg bg-brand-primary/10">
+                      <User className="w-6 h-6 text-brand-primary" />
                     </div>
 
                     <h2 className="text-xl font-bold text-gray-900 ml-3">
@@ -1595,7 +1595,7 @@ const CustomerApplication = () => {
                       </p>
 
                       <p className="font-medium text-gray-700 flex items-center">
-                        <Mail className="w-4 h-4 mr-2 text-[#12B99C]" />
+                        <Mail className="w-4 h-4 mr-2 text-brand-primary" />
 
                         {applicationData.customer?.email || "N/A"}
                       </p>
@@ -1607,7 +1607,7 @@ const CustomerApplication = () => {
                       </p>
 
                       <p className="font-medium text-gray-700 flex items-center">
-                        <Phone className="w-4 h-4 mr-2 text-[#12B99C]" />
+                        <Phone className="w-4 h-4 mr-2 text-brand-primary" />
 
                         {applicationData.customer?.phone || "N/A"}
                       </p>
@@ -1702,7 +1702,7 @@ const CustomerApplication = () => {
                         Loan Amount
                       </p>
 
-                      <p className="font-bold text-3xl text-[#12B99C]">
+                      <p className="font-bold text-3xl text-brand-primary">
                         {formatCurrency(
                           applicationData.customer?.loanAmount ||
                             applicationData.loan?.amount ||
@@ -1972,7 +1972,7 @@ const CustomerApplication = () => {
                             <button
                               onClick={() => handleDownload(doc)}
                               disabled={downloading}
-                              className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-[#12B99C] to-[#0FA485] rounded-lg hover:from-[#0ea889] hover:to-[#0d8a73] transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {downloading ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -2021,7 +2021,7 @@ const CustomerApplication = () => {
                   <button
                     onClick={handleDownloadAll}
                     disabled={downloading}
-                    className="flex items-center px-6 py-3 text-sm font-semibold text-white rounded-xl hover:shadow-xl bg-gradient-to-r from-[#12B99C] to-[#0FA485] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center px-6 py-3 text-sm font-semibold text-white rounded-xl hover:shadow-xl bg-gradient-to-r from-brand-primary to-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {downloading ? (
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
@@ -2063,7 +2063,7 @@ const CustomerApplication = () => {
                       </label>
 
                       <select
-                        className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent transition-all duration-300"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
                         disabled={applicationData?.rsmId && !["DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status)}
@@ -2226,7 +2226,7 @@ const CustomerApplication = () => {
 
                         <textarea
                           placeholder="Enter your remarks here..."
-                          className="w-full border border-gray-300 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent transition-all duration-300 resize-none h-20"
+                          className="w-full border border-gray-300 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 resize-none h-20"
                           value={remark}
                           onChange={(e) => setRemark(e.target.value)}
                         />
@@ -2242,7 +2242,7 @@ const CustomerApplication = () => {
                         <input
                           type="number"
                           placeholder="Enter approved loan amount"
-                          className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#12B99C] focus:border-transparent transition-all duration-300"
+                          className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
                           value={approvalAmount}
                           onChange={(e) => setApprovalAmount(e.target.value)}
                           min="0"
@@ -2254,7 +2254,7 @@ const CustomerApplication = () => {
                     <button
                       onClick={handleSubmit}
                       disabled={submitLoading}
-                      className="w-full flex items-center justify-center bg-gradient-to-r from-[#12B99C] to-[#0FA485] text-white py-3 px-6 rounded-xl shadow-lg hover:from-[#0ea889] hover:to-[#0d8a73] transition-all duration-300 hover:shadow-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white py-3 px-6 rounded-xl shadow-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 hover:shadow-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {submitLoading ? (
                         <>

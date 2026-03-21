@@ -1,9 +1,18 @@
 import "./App.css";
-import AppRoutes from "./AppRoutes";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthData } from "./utils/localStorage";
-import { SocketProvider } from "./components/SocketProvider";
+import DhanSourceLoader from "./components/DhanSourceLoader";
+
+/** Keep Suspense fallback visible at least this long so the loader does not flash off. */
+const MIN_APP_SPLASH_MS = 1000;
+
+const AppRoutes = lazy(() =>
+  Promise.all([
+    import("./AppRoutes"),
+    new Promise((resolve) => setTimeout(resolve, MIN_APP_SPLASH_MS)),
+  ]).then(([mod]) => mod)
+);
 
 function App() {
   const navigate = useNavigate();
@@ -13,7 +22,6 @@ function App() {
       const { impersonationStack = [], adminToken } = getAuthData();
 
       if (impersonationStack.length > 0) {
-        // Pop current impersonation
         const stack = [...impersonationStack];
         stack.pop();
         localStorage.setItem("impersonation_stack", JSON.stringify(stack));
@@ -42,13 +50,11 @@ function App() {
     };
   }, [navigate]);
 
-  // Wrap the whole app with SocketProvider so all routes share one socket connection
   return (
-    <SocketProvider>
+    <Suspense fallback={<DhanSourceLoader fullScreen label="Loading app…" />}>
       <AppRoutes />
-    </SocketProvider>
+    </Suspense>
   );
 }
 
 export default App;
-
