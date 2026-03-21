@@ -81,6 +81,34 @@ export const fetchRmProfile = createAsyncThunk(
   }
 );
 
+export const updateRmProfile = createAsyncThunk(
+  "rm/updateProfile",
+  async (profileData, { rejectWithValue }) => {
+    try {
+      const { rmToken } = getAuthData();
+      const res = await axios.patch(
+        `${backendurl}/rm/profile/update`,
+        profileData,
+        {
+          headers: {
+            Authorization: `Bearer ${rmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return res.data.profile || res.data;
+    } catch (err) {
+      const data = err.response?.data;
+      const msg =
+        (typeof data === "string" && data) ||
+        data?.message ||
+        err.message ||
+        "Failed to update profile";
+      return rejectWithValue(msg);
+    }
+  }
+);
+
 
 // Fetch Dashboard
 export const fetchDashboard = createAsyncThunk(

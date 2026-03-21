@@ -1,7 +1,7 @@
 
 
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Menu,
   LayoutGrid,
@@ -11,64 +11,27 @@ import {
   FileText,
   Calculator,
   IdCard,
-  X,
   Target,
   Award,
   IndianRupee,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import PartnerProfile from "../components/PartnerProfile"; // ✅ Correct import
 import { getAuthData } from "../utils/localStorage";
-import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchPartnerProfile } from "../feature/thunks/partnerThunks";
+import { getOriginalRole, backToAdmin } from "../utils/impersonation";
 import logo from "../assets/logo.png";
 import NotificationBell from "../components/NotificationBell";
 
 // Admin sidebar component
 const PartnerSideBar = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [profileOpen, setProfileOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
   // Check if impersonating
   const { parentUser } = getAuthData();
   const isImpersonating = !!parentUser;
   const originalRole = getOriginalRole();
-
-  // Get user data from localStorage reactively (inside component)
-  const getCurrentUser = () => {
-    const {
-      adminUser,
-      asmUser,
-      rmUser,
-      partnerUser,
-      customerUser,
-    } = getAuthData();
-    return adminUser || asmUser || rmUser || partnerUser || customerUser;
-  };
-
-  // Get current user reactively
-  const currentUser = getCurrentUser();
-
-  // Extract initials from name
-  const initials = currentUser?.firstName
-    ? currentUser?.firstName.charAt(0).toUpperCase()
-    : "U"; // fallback "U" for unknown
-
-  // Fetch partner profile from Redux
-  const { loading, error, data } = useSelector((state) => state.partner?.profile);
-
-  // Fetch profile when component mounts or token changes
-  useEffect(() => {
-    const { partnerToken } = getAuthData();
-    if (partnerToken) {
-      dispatch(fetchPartnerProfile());
-    }
-  }, [dispatch]);
 
   // Sidebar navigation items with icons and routes
   const sidebarItems = [
@@ -172,30 +135,6 @@ const PartnerSideBar = () => {
               )}
               {/* Notifications */}
               <NotificationBell />
-
-              {/* Profile */}
-              <div className="relative">
-                <button
-                  onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-r from-teal-500 to-teal-600 flex items-center justify-center text-white font-semibold shadow-lg">
-                   {(data?.firstName?.charAt(0) || currentUser?.firstName?.charAt(0) || "U").toUpperCase()}
-                  </div>
-                  <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-gray-800">
-                    {data?.firstName && data?.lastName 
-                      ? `${data.firstName} ${data.lastName}`
-                      : currentUser?.firstName && currentUser?.lastName
-                      ? `${currentUser.firstName} ${currentUser.lastName}`
-                      : "Partner"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                    {data?.email || currentUser?.email || "guest@example.com"}
-                    </p>
-                  </div>
-                </button>
-              </div>
             </div>
           </div>
         </header>
@@ -205,29 +144,6 @@ const PartnerSideBar = () => {
           <Outlet />
         </main>
       </div>
-
-      {/* Profile Side Panel */}
-      {profileOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/50 bg-opacity-50 z-40"
-            onClick={() => setProfileOpen(false)}
-          />
-          <div className="fixed right-0 top-0 h-full w-[700px] bg-white shadow-2xl z-50 transform transition-transform duration-300 overflow-y-auto">
-            <div className="flex items-center justify-between p-1 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">Profile</h3>
-              <button
-                onClick={() => setProfileOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={20} className="text-gray-600" />
-              </button>
-            </div>
-            {/* ✅ Full PartnerProfile inside side panel */}
-            <PartnerProfile />
-          </div>
-        </>
-      )}
 
     </div>
   );

@@ -38,9 +38,15 @@ export const updatePartnerProfile = createAsyncThunk(
           },
         }
       );
-      return res.data.profile;
+      return res.data.partner || res.data.profile || res.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
+      const data = err.response?.data;
+      const msg =
+        (typeof data === "string" && data) ||
+        data?.message ||
+        err.message ||
+        "Failed to update profile";
+      return rejectWithValue(msg);
     }
   }
 );

@@ -4,6 +4,7 @@ import {
   fetchAsmDashboard,
   fetchAsmPartners,
   fetchAsmProfile,
+  updateAsmProfile,
   fetchRsmList,
   fetchRmList,
   fetchAsmApplications,
@@ -221,6 +222,27 @@ const asmSlice = createSlice({
           success: false,
           data: null,
         };
+      })
+      .addCase(updateAsmProfile.pending, (state) => {
+        state.profile.loading = true;
+        state.profile.error = null;
+      })
+      .addCase(updateAsmProfile.fulfilled, (state, action) => {
+        state.profile.loading = false;
+        state.profile.success = true;
+        const p = action.payload;
+        if (p && typeof p === "object") {
+          state.profile.data = {
+            ...(state.profile.data || {}),
+            ...p,
+            fullName:
+              p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+          };
+        }
+      })
+      .addCase(updateAsmProfile.rejected, (state, action) => {
+        state.profile.loading = false;
+        state.profile.error = action.payload;
       })
 
       // RSM fetch list (ASM manages RSMs)

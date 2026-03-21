@@ -46,17 +46,13 @@ export const updateAsmProfile = createAsyncThunk(
      
       return res.data.profile;
     } catch (err) {
-      
-
-      // If CORS, often `err.response` is undefined
-      if (err.response) {
-        console.error("❌ Error Response Data:", err.response.data);
-        console.error("❌ Error Status:", err.response.status);
-      } else {
-        console.error("❌ Network/Other Error:", err.message);
-      }
-
-      return rejectWithValue(err.response?.data || err.message);
+      const data = err.response?.data;
+      const msg =
+        (typeof data === "string" && data) ||
+        data?.message ||
+        err.message ||
+        "Failed to update profile";
+      return rejectWithValue(msg);
     }
   }
 );

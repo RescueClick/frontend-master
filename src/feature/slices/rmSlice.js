@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
   fetchPartners,
   fetchRmProfile,
+  updateRmProfile,
   fetchDashboard,
   fetchRmCustomers,
   assignPartnerBulkTarget,
@@ -173,6 +174,22 @@ const rmSlice = createSlice({
         state.profile.error = action.payload;
         state.profile.success = false;
         state.profile.data = null;
+      })
+      .addCase(updateRmProfile.pending, (state) => {
+        state.profile.loading = true;
+        state.profile.error = null;
+        state.profile.success = false;
+      })
+      .addCase(updateRmProfile.fulfilled, (state, action) => {
+        state.profile.loading = false;
+        state.profile.error = null;
+        state.profile.success = true;
+        state.profile.data = { ...(state.profile.data || {}), ...action.payload };
+      })
+      .addCase(updateRmProfile.rejected, (state, action) => {
+        state.profile.loading = false;
+        state.profile.error = action.payload;
+        state.profile.success = false;
       });
 
     // ✅ Dashboard

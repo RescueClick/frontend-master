@@ -6,6 +6,7 @@ import {
   transitionRsmApplication,
   createRmByRsm,
   fetchRsmProfile,
+  updateRsmProfile,
   fetchRsmPartnerTargets,
   fetchRmAnalytics,
   fetchRmFollowUps,
@@ -108,6 +109,18 @@ const rsmSlice = createSlice({
         state.profile.data = action.payload;
       })
       .addCase(fetchRsmProfile.rejected, (state, action) => {
+        state.profile.loading = false;
+        state.profile.error = action.payload;
+      })
+      .addCase(updateRsmProfile.pending, (state) => {
+        state.profile.loading = true;
+        state.profile.error = null;
+      })
+      .addCase(updateRsmProfile.fulfilled, (state, action) => {
+        state.profile.loading = false;
+        state.profile.data = { ...(state.profile.data || {}), ...action.payload };
+      })
+      .addCase(updateRsmProfile.rejected, (state, action) => {
         state.profile.loading = false;
         state.profile.error = action.payload;
       });

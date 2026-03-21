@@ -21,6 +21,7 @@ import PartnerRegistrationForm from "./Page/PartnerRegistrationForm";
 
 import { RequestResetForm } from "./Page/RequestResetForm.jsx";
 import { ConfirmResetForm } from "./Page/ConfirmResetForm.jsx";
+import ConfirmEmailChange from "./Page/ConfirmEmailChange.jsx";
 
 
 // Import main pages
@@ -122,6 +123,8 @@ import MyTarget from "./sidebars/users/Partner/MyTarget";
 import IncentiveHistory from "./sidebars/users/Partner/IncentiveHistory";
 import PayoutHistory from "./sidebars/users/Partner/PayoutHistory";
 import PartnerAnalytics from "./sidebars/users/Partner/PartnerAnalytics";
+import PartnerProfile from "./components/PartnerProfile";
+import PartnerEditProfile from "./components/PartnerEditProfile";
 // Partner settings uses shared PasswordSettings (same as ASM/RSM/RM)
 
 // import Costomer
@@ -176,6 +179,11 @@ const AppRoutes = () => {
 
       <Route path="/reset-password/request" element={<RequestResetForm />} />
       <Route path="/reset-password/confirm" element={<ConfirmResetForm />} />
+
+      <Route
+        path="/email-change/confirm"
+        element={<ConfirmEmailChange />}
+      />
 
 
       <Route path="/Agreement" element={<Agreement />} />
@@ -273,6 +281,7 @@ const AppRoutes = () => {
         <Route path="follow-ups" element={<RsmFollowUps />} />
         <Route path="banks" element={<Banks />} />
         <Route path="settings" element={<PasswordSettings />} />
+        <Route path="EditProfile" element={<EditProfile />} />
       </Route>
       </Route>
 
@@ -294,6 +303,7 @@ const AppRoutes = () => {
         <Route path="Rm-Application" element={<RmApplication/>}/>
         <Route path="partner-targets" element={<RmPartnerTargets />} />
         <Route path="settings" element={<PasswordSettings />} />
+        <Route path="EditProfile" element={<EditProfile />} />
         {/* Payout routes moved to ASM and Admin */}
 
 
@@ -316,6 +326,8 @@ const AppRoutes = () => {
         <Route path="/partner" element={<PartnerSideBar />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<PartnerDashboard />} />
+          <Route path="profile" element={<PartnerProfile />} />
+          <Route path="edit-profile" element={<PartnerEditProfile />} />
           <Route path="customers" element={<PartnerCustomers />} />
           <Route path="applications" element={<PartnerApplications />} />
           <Route path="analytics" element={<PartnerAnalytics />} />

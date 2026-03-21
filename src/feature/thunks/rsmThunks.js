@@ -22,6 +22,34 @@ export const fetchRsmProfile = createAsyncThunk(
   }
 );
 
+export const updateRsmProfile = createAsyncThunk(
+  "rsm/updateProfile",
+  async (profileData, { rejectWithValue }) => {
+    try {
+      const { rsmToken } = getAuthData();
+      const res = await axios.patch(
+        `${backendurl}/rsm/profile/update`,
+        profileData,
+        {
+          headers: {
+            Authorization: `Bearer ${rsmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return res.data.profile || res.data;
+    } catch (err) {
+      const data = err.response?.data;
+      const msg =
+        (typeof data === "string" && data) ||
+        data?.message ||
+        err.message ||
+        "Failed to update profile";
+      return rejectWithValue(msg);
+    }
+  }
+);
+
 // Fetch RSM Dashboard
 export const fetchRsmDashboard = createAsyncThunk(
   "rsm/fetchDashboard",

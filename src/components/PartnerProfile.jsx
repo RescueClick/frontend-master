@@ -13,7 +13,7 @@ import {
   Save,
   X,
   Link2 as LinkIcon,
-  Trash2,
+  GitBranch,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchPartnerProfile } from "../feature/thunks/partnerThunks";
@@ -124,15 +124,7 @@ const PartnerProfile = () => {
                 Profile Picture
               </h3>
 
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors flex items-center space-x-2 text-sm"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span>Setting</span>
-                </button>
-
+              <div className="flex items-center flex-wrap gap-2 justify-end">
                 <button
                   onClick={handleLogout}
                   className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center space-x-2 text-sm"
@@ -336,6 +328,182 @@ const PartnerProfile = () => {
                 </div>
               </div>
             </div>
+
+            {/* Reporting hierarchy: ASM → RSM → RM → Partner (top = senior) */}
+            <div className="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2 mb-2">
+                <GitBranch className="w-5 h-5 text-slate-600" />
+                <h4 className="text-md font-semibold text-gray-800">
+                  Reporting hierarchy
+                </h4>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                Order from top to bottom: ASM (Area Sales Manager) oversees RSM,
+                RSM oversees RM, RM oversees you. IDs are employee codes where
+                shown.
+              </p>
+              <ol className="space-y-4 text-sm">
+                {data?.asmName || data?.asmEmployeeId ? (
+                  <li className="border-l-2 border-teal-400 pl-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      ASM (top)
+                    </p>
+                    <p className="font-medium text-gray-900">{data.asmName || "—"}</p>
+                    <p className="text-gray-600">
+                      ASM ID:{" "}
+                      <span className="font-mono text-xs">{data.asmEmployeeId || "—"}</span>
+                    </p>
+                    {(data.asmEmail || data.asmPhone) && (
+                      <p className="text-gray-600 text-xs mt-1">
+                        {[data.asmEmail, data.asmPhone].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
+                  </li>
+                ) : null}
+
+                {(() => {
+                  const pId = data?.personalRsmId;
+                  const bId = data?.businessHomeRsmId;
+                  const sameRsm =
+                    pId &&
+                    bId &&
+                    String(pId) === String(bId);
+                  if (sameRsm && (data?.personalRsmName || data?.businessHomeRsmName)) {
+                    return (
+                      <li className="border-l-2 border-teal-400 pl-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          RSM (Regional Sales Manager)
+                        </p>
+                        <p className="font-medium text-gray-900">
+                          {data.personalRsmName || data.businessHomeRsmName}
+                        </p>
+                        <p className="text-gray-600">
+                          RSM ID:{" "}
+                          <span className="font-mono text-xs">
+                            {data.personalRsmEmployeeId || "—"}
+                          </span>
+                        </p>
+                        {(data.personalRsmEmail || data.personalRsmPhone) && (
+                          <p className="text-gray-600 text-xs mt-1">
+                            {[data.personalRsmEmail, data.personalRsmPhone]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        )}
+                        {data.personalRsmAsmName && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Reports to ASM: {data.personalRsmAsmName}{" "}
+                            <span className="font-mono">
+                              ({data.personalRsmAsmEmployeeId || "—"})
+                            </span>
+                          </p>
+                        )}
+                      </li>
+                    );
+                  }
+                  return (
+                    <>
+                      {data?.personalRsmName || data?.personalRsmEmployeeId ? (
+                        <li className="border-l-2 border-teal-400 pl-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            RSM — Personal loans
+                          </p>
+                          <p className="font-medium text-gray-900">
+                            {data.personalRsmName || "—"}
+                          </p>
+                          <p className="text-gray-600">
+                            RSM ID:{" "}
+                            <span className="font-mono text-xs">
+                              {data.personalRsmEmployeeId || "—"}
+                            </span>
+                          </p>
+                          {(data.personalRsmEmail || data.personalRsmPhone) && (
+                            <p className="text-gray-600 text-xs mt-1">
+                              {[data.personalRsmEmail, data.personalRsmPhone]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
+                          {data.personalRsmAsmName && (
+                            <p className="text-xs text-gray-500 mt-2">
+                              ASM: {data.personalRsmAsmName}{" "}
+                              <span className="font-mono">
+                                ({data.personalRsmAsmEmployeeId || "—"})
+                              </span>
+                            </p>
+                          )}
+                        </li>
+                      ) : null}
+                      {data?.businessHomeRsmName || data?.businessHomeRsmEmployeeId ? (
+                        <li className="border-l-2 border-teal-400 pl-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            RSM — Business &amp; home loans
+                          </p>
+                          <p className="font-medium text-gray-900">
+                            {data.businessHomeRsmName || "—"}
+                          </p>
+                          <p className="text-gray-600">
+                            RSM ID:{" "}
+                            <span className="font-mono text-xs">
+                              {data.businessHomeRsmEmployeeId || "—"}
+                            </span>
+                          </p>
+                          {(data.businessHomeRsmEmail || data.businessHomeRsmPhone) && (
+                            <p className="text-gray-600 text-xs mt-1">
+                              {[data.businessHomeRsmEmail, data.businessHomeRsmPhone]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
+                          {data.businessHomeRsmAsmName && (
+                            <p className="text-xs text-gray-500 mt-2">
+                              ASM: {data.businessHomeRsmAsmName}{" "}
+                              <span className="font-mono">
+                                ({data.businessHomeRsmAsmEmployeeId || "—"})
+                              </span>
+                            </p>
+                          )}
+                        </li>
+                      ) : null}
+                    </>
+                  );
+                })()}
+
+                {data?.rmName || data?.rmEmployeeId ? (
+                  <li className="border-l-2 border-teal-400 pl-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      RM (Relationship Manager)
+                    </p>
+                    <p className="font-medium text-gray-900">{data.rmName || "—"}</p>
+                    <p className="text-gray-600">
+                      RM ID:{" "}
+                      <span className="font-mono text-xs">{data.rmEmployeeId || "—"}</span>
+                    </p>
+                  </li>
+                ) : null}
+
+                <li className="border-l-2 border-slate-300 pl-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    You (Partner)
+                  </p>
+                  <p className="font-medium text-gray-900">
+                    {data?.firstName} {data?.lastName}
+                  </p>
+                  <p className="text-gray-600">
+                    Partner ID:{" "}
+                    <span className="font-mono text-xs">{data?.employeeId || "—"}</span>
+                  </p>
+                </li>
+              </ol>
+              {!data?.rmName &&
+                !data?.asmName &&
+                !data?.personalRsmName &&
+                !data?.businessHomeRsmName && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    No reporting chain is linked to your account yet.
+                  </p>
+                )}
+            </div>
           </div>
 
           {/* Documents Section (kept original) */}
@@ -407,26 +575,6 @@ const PartnerProfile = () => {
                 <span>Agreement</span>
               </button>
             </div>
-          </div>
-
-          {/* Delete Account Section */}
-          <div className="p-5 border-t border-gray-200 bg-red-50/60">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              <Trash2 className="w-4 h-4 text-red-500" />
-              Delete Account
-            </h3>
-            <p className="text-xs text-gray-600 mb-3">
-              This will start a request to permanently delete your partner
-              account. You will lose access to the Partner Dashboard and
-              mobile app after deletion.
-            </p>
-            <button
-              onClick={() => navigate("/delete-account")}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Request Account Deletion</span>
-            </button>
           </div>
         </div>
 

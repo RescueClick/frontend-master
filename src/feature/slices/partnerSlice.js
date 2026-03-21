@@ -64,7 +64,7 @@ const partnerSlice = createSlice({
       .addCase(updatePartnerProfile.fulfilled, (state, action) => {
         state.profile.loading = false;
         state.profile.success = true;
-        state.profile.data = action.payload;
+        state.profile.data = { ...(state.profile.data || {}), ...action.payload };
       })
       .addCase(updatePartnerProfile.rejected, (state, action) => {
         state.profile.loading = false;
