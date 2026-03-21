@@ -105,7 +105,7 @@ const MainLayout = () => {
                 <img
                   src={brandLogo}
                   alt={COMPANY_NAME}
-                  style={{ width: "260px", height: "65px" }}
+                  style={{ width: "180px", height: "65px" }}
                   className="object-cover"
                 />
               </Link>
@@ -191,16 +191,19 @@ const MainLayout = () => {
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white px-4 py-4 sm:px-5">
-              <img
-                src={brandLogo}
-                alt={COMPANY_NAME}
-                className="h-7 w-auto max-w-[10rem] object-contain object-left sm:h-8 sm:max-w-[11rem]"
-              />
+            <div className="relative flex shrink-0 items-center justify-center border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white px-4 py-5 sm:px-5">
+              <Link
+                to="/Home"
+                onClick={toggleMenu}
+                className="flex w-full max-w-[min(100%,17.5rem)] flex-col items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-offset-2 sm:max-w-[min(100%,19rem)]"
+                aria-label={`${COMPANY_NAME} — home`}
+              >
+               
+              </Link>
               <button
                 type="button"
                 onClick={toggleMenu}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-600 transition hover:border-brand-primary/30 hover:bg-slate-50 hover:text-brand-primary"
+                className="absolute right-3 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-600 transition hover:border-brand-primary/30 hover:bg-slate-50 hover:text-brand-primary"
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" strokeWidth={2.25} />
