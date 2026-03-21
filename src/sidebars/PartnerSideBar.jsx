@@ -1,12 +1,11 @@
 
 
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Menu,
   LayoutGrid,
   Settings,
-  LogOut,
   ArrowLeft,
   FileText,
   Calculator,
@@ -14,19 +13,38 @@ import {
   Target,
   Award,
   IndianRupee,
+  X,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { getAuthData } from "../utils/localStorage";
 import { getOriginalRole, backToAdmin } from "../utils/impersonation";
+import { fetchPartnerProfile } from "../feature/thunks/partnerThunks";
+import PartnerProfile from "../components/PartnerProfile";
 import logo from "../assets/logo.png";
 import NotificationBell from "../components/NotificationBell";
 
 // Admin sidebar component
 const PartnerSideBar = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const { data: profileData } = useSelector((state) => state.partner?.profile || { data: null });
+
+  const getCurrentUser = () => {
+    const { adminUser, asmUser, rmUser, partnerUser, customerUser } = getAuthData();
+    return adminUser || asmUser || rmUser || partnerUser || customerUser;
+  };
+  const currentUser = getCurrentUser();
+
+  useEffect(() => {
+    const { partnerToken } = getAuthData();
+    if (partnerToken) dispatch(fetchPartnerProfile());
+  }, [dispatch]);
 
   // Check if impersonating
   const { parentUser } = getAuthData();
@@ -135,6 +153,33 @@ const PartnerSideBar = () => {
               )}
               {/* Notifications */}
               <NotificationBell />
+
+              {/* Profile — opens slide-out panel on the right */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen((o) => !o)}
+                  className="flex items-center space-x-3 rounded-lg p-2 transition-colors hover:bg-gray-100"
+                  aria-expanded={profileOpen}
+                  aria-label="Open profile"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-teal-500 to-teal-600 text-sm font-semibold text-white shadow-lg">
+                    {(profileData?.firstName?.charAt(0) || currentUser?.firstName?.charAt(0) || "P").toUpperCase()}
+                  </div>
+                  <div className="hidden text-left md:block">
+                    <p className="text-sm font-medium text-gray-800">
+                      {profileData?.firstName && profileData?.lastName
+                        ? `${profileData.firstName} ${profileData.lastName}`
+                        : currentUser?.firstName && currentUser?.lastName
+                          ? `${currentUser.firstName} ${currentUser.lastName}`
+                          : "Partner"}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {profileData?.email || currentUser?.email || ""}
+                    </p>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         </header>
@@ -145,6 +190,31 @@ const PartnerSideBar = () => {
         </main>
       </div>
 
+      {/* Profile slide-out panel (right) */}
+      {profileOpen && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-black/50"
+            aria-label="Close profile"
+            onClick={() => setProfileOpen(false)}
+          />
+          <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[min(100vw,700px)] flex-col overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
+              <h3 className="text-lg font-semibold text-gray-800">Profile</h3>
+              <button
+                type="button"
+                onClick={() => setProfileOpen(false)}
+                className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+                aria-label="Close"
+              >
+                <X size={20} className="text-gray-600" />
+              </button>
+            </div>
+            <PartnerProfile />
+          </div>
+        </>
+      )}
     </div>
   );
 };

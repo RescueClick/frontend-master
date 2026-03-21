@@ -1,5 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Bell, X, Trash2, Check } from "lucide-react";
+import {
+  Bell,
+  X,
+  Trash2,
+  Check,
+  RefreshCw,
+  ClipboardList,
+  FileText,
+  UserCircle,
+  Banknote,
+  Sparkles,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import { useSocket } from "../hooks/useSocket";
 import socketManager from "../utils/socket";
 import { getAuthData } from "../utils/localStorage";
@@ -9,12 +25,58 @@ import axios from "axios";
 // API helper functions for MongoDB notifications
 const getAuthToken = () => {
   const authData = getAuthData();
-  const token = authData?.adminToken || authData?.asmToken || authData?.rmToken || authData?.partnerToken || authData?.customerToken;
-  
-  // Debug logging removed for production
-  
-  return token;
+  return (
+    authData?.adminToken ||
+    authData?.asmToken ||
+    authData?.rsmToken ||
+    authData?.rmToken ||
+    authData?.partnerToken ||
+    authData?.customerToken ||
+    null
+  );
 };
+
+function formatRelativeTime(ts) {
+  if (ts == null) return "";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = Date.now();
+  const diffSec = Math.floor((now - d.getTime()) / 1000);
+  if (diffSec < 45) return "Just now";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} min ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} hr ago`;
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)} days ago`;
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: d.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+  });
+}
+
+function getTypeVisuals(type) {
+  const base =
+    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset";
+  switch (type) {
+    case "application":
+      return { Icon: ClipboardList, wrap: `${base} bg-emerald-500/10 text-emerald-700 ring-emerald-500/20` };
+    case "document":
+      return { Icon: FileText, wrap: `${base} bg-sky-500/10 text-sky-700 ring-sky-500/20` };
+    case "partner":
+      return { Icon: UserCircle, wrap: `${base} bg-violet-500/10 text-violet-700 ring-violet-500/20` };
+    case "payout":
+      return { Icon: Banknote, wrap: `${base} bg-amber-500/10 text-amber-800 ring-amber-500/25` };
+    case "registration":
+      return { Icon: Sparkles, wrap: `${base} bg-fuchsia-500/10 text-fuchsia-700 ring-fuchsia-500/20` };
+    case "success":
+      return { Icon: CheckCircle2, wrap: `${base} bg-green-500/10 text-green-700 ring-green-500/20` };
+    case "error":
+      return { Icon: XCircle, wrap: `${base} bg-red-500/10 text-red-700 ring-red-500/20` };
+    case "warning":
+      return { Icon: AlertTriangle, wrap: `${base} bg-amber-500/10 text-amber-800 ring-amber-500/25` };
+    default:
+      return { Icon: Bell, wrap: `${base} bg-slate-500/10 text-slate-700 ring-slate-500/20` };
+  }
+}
 
 const loadNotificationsFromAPI = async () => {
   try {
@@ -152,20 +214,6 @@ const deleteAllNotificationsAPI = async () => {
       },
     });
   } catch (error) {}
-};
-
-// Generate unique notification ID based on content to prevent duplicates
-const generateNotificationId = (data) => {
-  // Use applicationId + docType + status + timestamp for documents
-  if (data.applicationId && data.docType) {
-    return `${data.applicationId}_${data.docType}_${data.status}_${data.timestamp || Date.now()}`;
-  }
-  // Use applicationId + status + timestamp for applications
-  if (data.applicationId && data.status) {
-    return `${data.applicationId}_${data.status}_${data.timestamp || Date.now()}`;
-  }
-  // Fallback to timestamp + random
-  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
 const NotificationBell = () => {
@@ -386,6 +434,7 @@ const NotificationBell = () => {
 
   // Format notification for display (handle both MongoDB format and local format)
   const formatNotification = (notification) => {
+    const ts = notification.timestamp || notification.createdAt || Date.now();
     return {
       id: notification._id || notification.id,
       _id: notification._id || notification.id,
@@ -395,35 +444,22 @@ const NotificationBell = () => {
       message: notification.message || "You have a new notification",
       read: notification.read || false,
       time: notification.time || (notification.timestamp ? new Date(notification.timestamp).toLocaleString() : new Date().toLocaleString()),
-      timestamp: notification.timestamp || notification.createdAt || Date.now(),
+      relativeTime: formatRelativeTime(ts),
+      timestamp: ts,
       data: notification.data || {},
       actionBy: notification.actionBy || null,
       loanInfo: notification.loanInfo || null,
     };
   };
 
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case "application":
-        return "📋";
-      case "document":
-        return "📄";
-      case "partner":
-        return "👤";
-      case "payout":
-        return "💰";
-      case "registration":
-        return "✨";
-      case "success":
-        return "✅";
-      case "error":
-        return "❌";
-      case "warning":
-        return "⚠️";
-      default:
-        return "🔔";
-    }
-  };
+  useEffect(() => {
+    if (!notificationOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setNotificationOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [notificationOpen]);
 
   const markAsRead = async (id) => {
     // Find notification ID (could be _id from MongoDB or id from state)
@@ -458,245 +494,296 @@ const NotificationBell = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
+  const handleRefreshList = async () => {
+    setLoading(true);
+    try {
+      const loadedNotifications = await loadNotificationsFromAPI();
+      setNotifications(loadedNotifications);
+      loadedNotifications.forEach((n) => {
+        if (n.notificationId || n._id) {
+          processedIdsRef.current.add(n.notificationId || n._id);
+        }
+      });
+    } catch {
+      /* keep existing list */
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
-      {/* Notification Bell Button */}
       <div className="relative">
         <button
-          onClick={() => setNotificationOpen(!notificationOpen)}
-          className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          type="button"
+          onClick={() => setNotificationOpen((o) => !o)}
+          className={`relative flex h-10 w-10 items-center justify-center rounded-xl border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/50 focus-visible:ring-offset-2 ${
+            notificationOpen
+              ? "border-teal-200 bg-teal-50 text-teal-700 shadow-sm"
+              : "border-transparent bg-white/80 text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+          }`}
           title="Notifications"
+          aria-expanded={notificationOpen}
+          aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
         >
-          <Bell size={20} className="text-gray-600" />
+          <Bell size={20} strokeWidth={2} className="shrink-0" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-3 h-3 border-2 border-white"></span>
+            <span className="absolute -right-0.5 -top-0.5 flex min-h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white shadow ring-2 ring-white">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
           )}
-          {/* ✅ Removed yellow dot - keeping only red dot for notifications */}
         </button>
       </div>
 
-      {/* Notifications Side Panel */}
       {notificationOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          {/* Overlay */}
-          <div
-            className="fixed inset-0 bg-black/50"
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] transition-opacity"
+            aria-label="Close notifications"
             onClick={() => setNotificationOpen(false)}
-          ></div>
-
-          {/* Side Panel */}
-          <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl flex flex-col z-50">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-              <div className="flex items-center gap-2">
-                <Bell size={20} className="text-gray-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Notifications ({notifications.length})
-                </h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={async () => {
-                    setLoading(true);
-                    try {
-                      const loadedNotifications = await loadNotificationsFromAPI();
-                      setNotifications(loadedNotifications);
-                      loadedNotifications.forEach(n => {
-                        if (n.notificationId || n._id) {
-                          processedIdsRef.current.add(n.notificationId || n._id);
-                        }
-                      });
-                    } catch (error) {
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  className="text-sm text-blue-500 hover:underline"
-                  title="Refresh notifications"
-                  disabled={loading}
-                >
-                  {loading ? "Loading..." : "Refresh"}
-                </button>
-                {notifications.length > 0 && (
-                  <>
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={markAllAsRead}
-                        className="text-sm text-[#12B99C] hover:underline"
-                        title="Mark all as read"
-                      >
-                        Mark all read
-                      </button>
-                    )}
-                    <button
-                      onClick={clearAllNotifications}
-                      className="text-sm text-red-500 hover:underline"
-                      title="Clear all"
-                    >
-                      Clear all
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => setNotificationOpen(false)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <X size={20} className="text-gray-600" />
-                </button>
-              </div>
-            </div>
-
-            {/* Notifications List */}
-            <div className="flex-1 overflow-y-auto">
-              {loading && notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full p-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#12B99C] mb-4"></div>
-                  <p className="text-gray-500">Loading notifications...</p>
-                </div>
-              ) : notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full p-8">
-                  <Bell size={48} className="text-gray-300 mb-4" />
-                  <p className="text-gray-500">No notifications</p>
-                  {!isConnected && (
-                    <p className="text-xs text-yellow-600 mt-2">
-                      Socket disconnected
-                    </p>
-                  )}
-                  <button
-                    onClick={async () => {
-                      setLoading(true);
-                      try {
-                        const loadedNotifications = await loadNotificationsFromAPI();
-                        setNotifications(loadedNotifications);
-                        loadedNotifications.forEach(n => {
-                          if (n.notificationId || n._id) {
-                            processedIdsRef.current.add(n.notificationId || n._id);
-                          }
-                        });
-                      } catch (error) {
-                        console.error("Failed to load:", error);
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    className="mt-4 px-4 py-2 bg-[#12B99C] text-white rounded hover:bg-[#0fa588] transition-colors"
+          />
+          <aside
+            className="relative flex h-full w-full max-w-md flex-col border-l border-slate-200/90 bg-white shadow-2xl shadow-slate-900/10"
+            role="dialog"
+            aria-labelledby="notifications-panel-title"
+          >
+            <div className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 px-5 pb-5 pt-5 text-white">
+              <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-teal-400/20 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-8 left-1/4 h-24 w-48 rounded-full bg-emerald-500/10 blur-2xl" />
+              <div className="relative flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal-200/90">
+                    Inbox
+                  </p>
+                  <h2
+                    id="notifications-panel-title"
+                    className="mt-1 truncate text-lg font-semibold tracking-tight"
                   >
-                    Reload Notifications
+                    Notifications
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-300/95">
+                    {notifications.length === 0
+                      ? "You’re all caught up."
+                      : unreadCount > 0
+                        ? `${unreadCount} unread · ${notifications.length} total`
+                        : `${notifications.length} notification${notifications.length === 1 ? "" : "s"}`}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={handleRefreshList}
+                    disabled={loading}
+                    className="rounded-lg p-2 text-white/90 transition hover:bg-white/10 disabled:opacity-50"
+                    title="Refresh"
+                    aria-label="Refresh notifications"
+                  >
+                    <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationOpen(false)}
+                    className="rounded-lg p-2 text-white/90 transition hover:bg-white/10"
+                    title="Close"
+                    aria-label="Close"
+                  >
+                    <X size={20} />
                   </button>
                 </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {notifications.map((notification) => {
-                    const formatted = formatNotification(notification);
-                    return (
-                      <div
-                        key={formatted._id || formatted.id}
-                        className={`p-4 hover:bg-gray-50 transition-colors ${
-                          !formatted.read ? "bg-blue-50/50" : ""
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="text-2xl">
-                            {getNotificationIcon(formatted.type)}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1">
-                                <p
-                                  className={`text-sm font-medium ${
-                                    !formatted.read
-                                      ? "text-gray-900"
-                                      : "text-gray-600"
-                                  }`}
-                                >
-                                  {formatted.title}
-                                </p>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  {formatted.message}
-                                </p>
-                                {typeof formatted?.data?.amount === "number" &&
-                                  (formatted.type === "payout" || formatted.type === "incentive") && (
-                                    <p className="text-xs text-gray-700 mt-1">
-                                      <span className="font-semibold">Amount:</span>{" "}
-                                      ₹{formatted.data.amount.toLocaleString("en-IN")}
-                                    </p>
-                                  )}
-                                {formatted.loanInfo && (
-                                  <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
-                                    {formatted.loanInfo.appNo && (
-                                      <p className="text-gray-700">
-                                        <span className="font-semibold">Loan #:</span> {formatted.loanInfo.appNo}
-                                      </p>
-                                    )}
-                                    {formatted.loanInfo.loanType && (
-                                      <p className="text-gray-700">
-                                        <span className="font-semibold">Type:</span> {formatted.loanInfo.loanType}
-                                      </p>
-                                    )}
-                                    {formatted.loanInfo.customerName && (
-                                      <p className="text-gray-700">
-                                        <span className="font-semibold">Customer:</span> {formatted.loanInfo.customerName}
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                                {formatted.actionBy && (
-                                  <p className="text-xs text-[#12B99C] mt-1 font-semibold">
-                                    By: {formatted.actionBy.name} ({formatted.actionBy.role})
-                                  </p>
-                                )}
-                                <p className="text-xs text-gray-400 mt-1">
-                                  {formatted.time}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => deleteNotification(formatted._id || formatted.id)}
-                                className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-red-500"
-                                title="Delete"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                            {!formatted.read && (
-                              <button
-                                onClick={() => markAsRead(formatted._id || formatted.id)}
-                                className="mt-2 text-xs text-[#12B99C] hover:underline flex items-center gap-1"
-                              >
-                                <Check size={12} />
-                                Mark as read
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+              </div>
+              {notifications.length > 0 && (
+                <div className="relative mt-4 flex flex-wrap gap-2">
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllAsRead}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white ring-1 ring-white/20 backdrop-blur-sm transition hover:bg-white/15"
+                    >
+                      <Check size={14} />
+                      Mark all read
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={clearAllNotifications}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-rose-100 ring-1 ring-rose-400/30 backdrop-blur-sm transition hover:bg-rose-500/20"
+                  >
+                    <Trash2 size={14} />
+                    Clear all
+                  </button>
                 </div>
               )}
             </div>
 
-            {/* Footer - Connection Status */}
-            <div className="p-3 border-t border-gray-200 bg-gray-50">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">
+            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/80">
+              {loading && notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center px-6 py-20">
+                  <div
+                    className="h-9 w-9 animate-spin rounded-full border-2 border-teal-500/30 border-t-teal-600"
+                    aria-hidden
+                  />
+                  <p className="mt-4 text-sm font-medium text-slate-600">Loading notifications…</p>
+                  <p className="mt-1 text-center text-xs text-slate-500">This usually takes a moment.</p>
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200/80 text-slate-500">
+                    <Bell size={32} strokeWidth={1.5} />
+                  </div>
+                  <p className="mt-5 text-base font-semibold text-slate-800">No notifications yet</p>
+                  <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">
+                    When something needs your attention—applications, documents, or payouts—we’ll show it here.
+                  </p>
+                  {!isConnected && (
+                    <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-200/80">
+                      <WifiOff size={14} />
+                      Live updates paused (reconnecting…)
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleRefreshList}
+                    className="mt-6 inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-900/15 transition hover:bg-teal-700"
+                  >
+                    <RefreshCw size={16} />
+                    Try again
+                  </button>
+                </div>
+              ) : (
+                <ul className="space-y-2 p-3 sm:p-4">
+                  {notifications.map((notification) => {
+                    const formatted = formatNotification(notification);
+                    const { Icon, wrap } = getTypeVisuals(formatted.type);
+                    return (
+                      <li key={formatted._id || formatted.id}>
+                        <article
+                          className={`group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md ${
+                            !formatted.read
+                              ? "border-l-[3px] border-l-teal-500 bg-gradient-to-r from-teal-50/40 to-white"
+                              : "border-l-[3px] border-l-transparent"
+                          }`}
+                        >
+                          <div className="flex gap-3">
+                            <div className={wrap}>
+                              <Icon size={18} strokeWidth={2} aria-hidden />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h3
+                                      className={`text-sm font-semibold leading-snug ${
+                                        !formatted.read ? "text-slate-900" : "text-slate-600"
+                                      }`}
+                                    >
+                                      {formatted.title}
+                                    </h3>
+                                    {!formatted.read && (
+                                      <span className="inline-flex shrink-0 rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-800">
+                                        New
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                                    {formatted.message}
+                                  </p>
+                                  {typeof formatted?.data?.amount === "number" &&
+                                    (formatted.type === "payout" || formatted.type === "incentive") && (
+                                      <p className="mt-2 inline-flex rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-800">
+                                        Amount: ₹{formatted.data.amount.toLocaleString("en-IN")}
+                                      </p>
+                                    )}
+                                  {formatted.loanInfo && (
+                                    <div className="mt-3 space-y-1 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-100">
+                                      {formatted.loanInfo.appNo && (
+                                        <p>
+                                          <span className="font-semibold text-slate-900">Loan #</span>{" "}
+                                          {formatted.loanInfo.appNo}
+                                        </p>
+                                      )}
+                                      {formatted.loanInfo.loanType && (
+                                        <p>
+                                          <span className="font-semibold text-slate-900">Type</span>{" "}
+                                          {formatted.loanInfo.loanType}
+                                        </p>
+                                      )}
+                                      {formatted.loanInfo.customerName && (
+                                        <p>
+                                          <span className="font-semibold text-slate-900">Customer</span>{" "}
+                                          {formatted.loanInfo.customerName}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {formatted.actionBy && (
+                                    <p className="mt-2 text-xs font-medium text-teal-700">
+                                      {formatted.actionBy.name}
+                                      {formatted.actionBy.role ? (
+                                        <span className="font-normal text-slate-500">
+                                          {" "}
+                                          · {formatted.actionBy.role}
+                                        </span>
+                                      ) : null}
+                                    </p>
+                                  )}
+                                  <p className="mt-2 text-xs text-slate-400">
+                                    {formatted.relativeTime || formatted.time}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteNotification(formatted._id || formatted.id)}
+                                  className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 md:opacity-0 md:group-hover:opacity-100"
+                                  title="Remove"
+                                  aria-label="Remove notification"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                              {!formatted.read && (
+                                <button
+                                  type="button"
+                                  onClick={() => markAsRead(formatted._id || formatted.id)}
+                                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 transition hover:text-teal-800"
+                                >
+                                  <Check size={14} />
+                                  Mark as read
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            <div className="border-t border-slate-200/90 bg-white px-4 py-3">
+              <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-2">
                   {isConnected ? (
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Connected
-                    </span>
+                    <>
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                      </span>
+                      <Wifi size={14} className="text-slate-400" aria-hidden />
+                      <span className="font-medium text-slate-600">Live updates on</span>
+                    </>
                   ) : (
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                      Connecting...
-                    </span>
+                    <>
+                      <WifiOff size={14} className="text-amber-500" aria-hidden />
+                      <span className="font-medium text-amber-800">Reconnecting…</span>
+                    </>
                   )}
                 </span>
-                <span className="text-gray-400">
-                  {notifications.length} total
-                </span>
+                <span className="tabular-nums text-slate-400">{notifications.length} total</span>
               </div>
             </div>
-          </div>
+          </aside>
         </div>
       )}
     </>
