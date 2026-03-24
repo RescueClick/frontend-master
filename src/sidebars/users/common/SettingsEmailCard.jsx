@@ -13,11 +13,11 @@ const ROLE_CONFIG = {
       });
       return res.data?.partner || res.data;
     },
-    patchEmail: async ({ currentEmail, newEmail }) => {
+    patchEmail: async ({ currentEmail, newEmail, currentPassword }) => {
       const { partnerToken } = getAuthData() || {};
       const res = await axios.patch(
         `${backendurl}/partner/profile/update`,
-        { currentEmail, email: newEmail },
+        { currentEmail, currentPassword, email: newEmail },
         { headers: { Authorization: `Bearer ${partnerToken}`, "Content-Type": "application/json" } }
       );
       return res.data;
@@ -31,11 +31,11 @@ const ROLE_CONFIG = {
       });
       return res.data?.profile || res.data;
     },
-    patchEmail: async ({ currentEmail, newEmail }) => {
+    patchEmail: async ({ currentEmail, newEmail, currentPassword }) => {
       const { adminToken } = getAuthData() || {};
       const res = await axios.patch(
         `${backendurl}/admin/profile/update`,
-        { currentEmail, email: newEmail },
+        { currentEmail, currentPassword, email: newEmail },
         { headers: { Authorization: `Bearer ${adminToken}`, "Content-Type": "application/json" } }
       );
       return res.data;
@@ -50,11 +50,11 @@ const ROLE_CONFIG = {
       const p = res.data?.profile || res.data;
       return p;
     },
-    patchEmail: async ({ currentEmail, newEmail }) => {
+    patchEmail: async ({ currentEmail, newEmail, currentPassword }) => {
       const { asmToken } = getAuthData() || {};
       const res = await axios.patch(
         `${backendurl}/asm/profile/update`,
-        { currentEmail, email: newEmail },
+        { currentEmail, currentPassword, email: newEmail },
         { headers: { Authorization: `Bearer ${asmToken}`, "Content-Type": "application/json" } }
       );
       return res.data;
@@ -68,11 +68,11 @@ const ROLE_CONFIG = {
       });
       return res.data?.profile || res.data;
     },
-    patchEmail: async ({ currentEmail, newEmail }) => {
+    patchEmail: async ({ currentEmail, newEmail, currentPassword }) => {
       const { rmToken } = getAuthData() || {};
       const res = await axios.patch(
         `${backendurl}/rm/profile/update`,
-        { currentEmail, email: newEmail },
+        { currentEmail, currentPassword, email: newEmail },
         { headers: { Authorization: `Bearer ${rmToken}`, "Content-Type": "application/json" } }
       );
       return res.data;
@@ -86,11 +86,11 @@ const ROLE_CONFIG = {
       });
       return res.data;
     },
-    patchEmail: async ({ currentEmail, newEmail }) => {
+    patchEmail: async ({ currentEmail, newEmail, currentPassword }) => {
       const { rsmToken } = getAuthData() || {};
       const res = await axios.patch(
         `${backendurl}/rsm/profile/update`,
-        { currentEmail, email: newEmail },
+        { currentEmail, currentPassword, email: newEmail },
         { headers: { Authorization: `Bearer ${rsmToken}`, "Content-Type": "application/json" } }
       );
       return res.data;
@@ -104,8 +104,10 @@ const ROLE_CONFIG = {
 const SettingsEmailCard = ({ roleKey }) => {
   const cfg = ROLE_CONFIG[roleKey];
   if (!cfg) return null;
+  const [activeEmail, setActiveEmail] = useState("");
   const [currentEmail, setCurrentEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState({ text: "", ok: null });
@@ -120,13 +122,17 @@ const SettingsEmailCard = ({ roleKey }) => {
         const data = await config.getProfile();
         if (!cancelled) {
           const active = data?.email || "";
+          setActiveEmail(active);
           setCurrentEmail(active);
           setNewEmail("");
+          setCurrentPassword("");
         }
       } catch {
         if (!cancelled) {
+          setActiveEmail("");
           setCurrentEmail("");
           setNewEmail("");
+          setCurrentPassword("");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -154,8 +160,12 @@ const SettingsEmailCard = ({ roleKey }) => {
       setMsg({ text: "Please enter a valid new email address.", ok: false });
       return;
     }
-    if (current !== String(currentEmail).toLowerCase()) {
+    if (current !== String(activeEmail || "").toLowerCase()) {
       setMsg({ text: "Current email must match your active email.", ok: false });
+      return;
+    }
+    if (!currentPassword || String(currentPassword).length < 6) {
+      setMsg({ text: "Please enter your current password to continue.", ok: false });
       return;
     }
     if (current === next) {
@@ -164,7 +174,11 @@ const SettingsEmailCard = ({ roleKey }) => {
     }
     try {
       setSaving(true);
-      const response = await cfg.patchEmail({ currentEmail: current, newEmail: next });
+      const response = await cfg.patchEmail({
+        currentEmail: current,
+        newEmail: next,
+        currentPassword,
+      });
       const changePending = !!response?.emailChangePending;
       setMsg({
         text: changePending
@@ -221,8 +235,7 @@ const SettingsEmailCard = ({ roleKey }) => {
               type="email"
               value={currentEmail}
               onChange={(e) => setCurrentEmail(e.target.value)}
-              readOnly
-              className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-900 outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-500/20"
               placeholder="current@email.com"
               autoComplete="email"
             />
@@ -242,6 +255,23 @@ const SettingsEmailCard = ({ roleKey }) => {
               }`}
               placeholder="new-email@company.com"
               autoComplete="email"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+              Current password
+            </label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              readOnly={!cfg.patchEmail}
+              className={`w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-500/20 ${
+                !cfg.patchEmail ? "cursor-not-allowed opacity-90" : ""
+              }`}
+              placeholder="Enter your current password"
+              autoComplete="current-password"
             />
           </div>
 
