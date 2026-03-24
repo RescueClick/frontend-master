@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { backendurl } from "../feature/urldata";
 import { COMPANY_NAME, SUPPORT_EMAIL } from "../config/branding";
+import { getAuthData } from "../utils/localStorage";
 
 const DeleteAccount = () => {
   const [formData, setFormData] = useState({
@@ -26,32 +27,61 @@ const DeleteAccount = () => {
     setIsSuccess(null);
 
     try {
-      const response = await fetch(`${backendurl}/contact`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          subject: "Delete Account Request",
-          message: [
-            `User has requested to permanently delete their ${COMPANY_NAME} account.`,
-            "",
-            `Partner / Employee ID: ${formData.partnerId || "-"}`,
-            `Registered Email: ${formData.email}`,
-            `Registered Mobile: ${formData.phone}`,
-            "",
-            "Reason for deletion:",
-            formData.reason || "-",
-          ].join("\n"),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
+      const { partnerToken } = getAuthData() || {};
+      if (partnerToken) {
+        const response = await fetch(`${backendurl}/partner/delete-account-request`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${partnerToken}`,
+          },
+          body: JSON.stringify({ reason: formData.reason || "" }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.message || "Failed to send delete account request.");
+        }
+        setIsSuccess(true);
+        setMessage(
+          data?.message ||
+            "Your delete account request has been sent. Our team will contact you and process the deletion."
+        );
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          partnerId: "",
+          reason: "",
+        });
+      } else {
+        const response = await fetch(`${backendurl}/contact`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            subject: "Delete Account Request",
+            message: [
+              `User has requested to permanently delete their ${COMPANY_NAME} account.`,
+              "",
+              `Partner / Employee ID: ${formData.partnerId || "-"}`,
+              `Registered Email: ${formData.email}`,
+              `Registered Mobile: ${formData.phone}`,
+              "",
+              "Reason for deletion:",
+              formData.reason || "-",
+            ].join("\n"),
+          }),
+        });
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(
+            data?.message || "Failed to send delete account request. Please try again later."
+          );
+        }
         setIsSuccess(true);
         setMessage(
           "Your delete account request has been sent. Our team will contact you and process the deletion."
@@ -63,12 +93,6 @@ const DeleteAccount = () => {
           partnerId: "",
           reason: "",
         });
-      } else {
-        setIsSuccess(false);
-        setMessage(
-          data.message ||
-            "Failed to send delete account request. Please try again later."
-        );
       }
     } catch (err) {
       console.error("Delete account contact error:", err);

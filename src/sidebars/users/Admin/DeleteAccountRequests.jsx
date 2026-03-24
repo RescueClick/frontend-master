@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Calendar, Mail, Phone, User, CheckCircle2, XCircle } from "lucide-react";
 import {
@@ -12,6 +12,13 @@ const DeleteAccountRequests = () => {
   const { loading, error, data } = useSelector(
     (state) => state.admin.deleteAccountRequests || { data: [] }
   );
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    id: null,
+    status: null,
+    name: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     dispatch(fetchDeleteAccountRequests());
@@ -21,15 +28,38 @@ const DeleteAccountRequests = () => {
     dateKeys: ["createdAt"],
   });
 
-  const handleUpdateStatus = (id, status) => {
-    if (
-      !window.confirm(
-        `Mark this delete-account request as ${status}? Make sure you have already handled the account in the Partner/Customer list.`
-      )
-    ) {
-      return;
+  const statusIntentText = useMemo(
+    () => ({
+      COMPLETED:
+        "System will first suspend access, then evaluate active loans, pending payouts/incentives, and retention before hard delete.",
+      REJECTED: "Request will be marked rejected and account will remain active.",
+    }),
+    []
+  );
+
+  const openConfirmModal = (id, status, name) => {
+    setConfirmModal({ open: true, id, status, name: name || "this user" });
+  };
+
+  const closeConfirmModal = () => {
+    if (submitting) return;
+    setConfirmModal({ open: false, id: null, status: null, name: "" });
+  };
+
+  const handleConfirmStatusUpdate = async () => {
+    if (!confirmModal.id || !confirmModal.status) return;
+    try {
+      setSubmitting(true);
+      await dispatch(
+        updateDeleteAccountRequestStatus({
+          id: confirmModal.id,
+          status: confirmModal.status,
+        })
+      );
+      closeConfirmModal();
+    } finally {
+      setSubmitting(false);
     }
-    dispatch(updateDeleteAccountRequestStatus({ id, status }));
   };
 
   const getStatusBadge = (status) => {
@@ -218,9 +248,15 @@ const DeleteAccountRequests = () => {
                       <div className="flex flex-col gap-2 text-xs">
                         <button
                           type="button"
-                          onClick={() =>
-                            handleUpdateStatus(req._id, "COMPLETED")
-                          }
+                          onClick={() => {
+                            const name =
+                              req.user
+                                ? `${req.user.firstName || ""} ${
+                                    req.user.lastName || ""
+                                  }`.trim()
+                                : "Unknown User";
+                            openConfirmModal(req._id, "COMPLETED", name);
+                          }}
                           disabled={req.status === "COMPLETED"}
                           className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -229,9 +265,15 @@ const DeleteAccountRequests = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() =>
-                            handleUpdateStatus(req._id, "REJECTED")
-                          }
+                          onClick={() => {
+                            const name =
+                              req.user
+                                ? `${req.user.firstName || ""} ${
+                                    req.user.lastName || ""
+                                  }`.trim()
+                                : "Unknown User";
+                            openConfirmModal(req._id, "REJECTED", name);
+                          }}
                           disabled={req.status === "REJECTED"}
                           className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -247,6 +289,63 @@ const DeleteAccountRequests = () => {
           </table>
         </div>
       </div>
+
+      {confirmModal.open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl border border-slate-200">
+            <div className="px-5 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Confirm Delete Request Action
+              </h3>
+              <p className="text-sm text-slate-600 mt-1">
+                You are updating request for{" "}
+                <span className="font-semibold">{confirmModal.name}</span>.
+              </p>
+            </div>
+
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-sm text-slate-700">
+                <span className="font-semibold">Action:</span>{" "}
+                {confirmModal.status === "COMPLETED"
+                  ? "Mark as Completed"
+                  : "Mark as Rejected"}
+              </p>
+              <p className="text-sm text-slate-700">
+                {statusIntentText[confirmModal.status] || ""}
+              </p>
+              {confirmModal.status === "COMPLETED" ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Hard deletion happens only when no active application, no pending payout/incentive,
+                  and retention period is complete. Otherwise only soft-deactivate is applied.
+                </div>
+              ) : null}
+            </div>
+
+            <div className="px-5 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeConfirmModal}
+                disabled={submitting}
+                className="px-4 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStatusUpdate}
+                disabled={submitting}
+                className={`px-4 py-2 rounded-md text-white disabled:opacity-50 ${
+                  confirmModal.status === "COMPLETED"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-rose-600 hover:bg-rose-700"
+                }`}
+              >
+                {submitting ? "Processing..." : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

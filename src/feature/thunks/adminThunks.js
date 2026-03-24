@@ -388,7 +388,7 @@ export const getUnassignedPartners = createAsyncThunk(
     try {
       const { adminToken } = getAuthData();
       const response = await axios.get(
-        `${backendurl}/admin/unassigned-partners`,
+        `${backendurl}/admin/get-unassigned-partners`,
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,
@@ -539,11 +539,15 @@ export const fetchDeleteAccountRequests = createAsyncThunk(
 // Update Delete Account Request Status
 export const updateDeleteAccountRequestStatus = createAsyncThunk(
   "admin/updateDeleteAccountRequestStatus",
-  async ({ requestId, status }, { rejectWithValue }) => {
+  async ({ requestId, id, status }, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
+      const resolvedRequestId = requestId || id;
+      if (!resolvedRequestId) {
+        return rejectWithValue("Request id is required");
+      }
       const response = await axios.patch(
-        `${backendurl}/admin/delete-account-requests/${requestId}`,
+        `${backendurl}/admin/delete-account-requests/${resolvedRequestId}`,
         { status },
         {
           headers: {
@@ -552,7 +556,7 @@ export const updateDeleteAccountRequestStatus = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      return response.data?.request || response.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to update delete account request"
