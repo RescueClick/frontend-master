@@ -61,6 +61,13 @@ const CompleteApplication = () => {
       );
 
       setApplicationData(response.data);
+      const appStatus = String(response.data?.status || "").toUpperCase();
+
+      // Disbursed applications should never show pending docs.
+      if (appStatus === "DISBURSED") {
+        setPendingDocuments([]);
+        return;
+      }
 
       // Get pending/rejected/updated documents (documents that need to be uploaded/re-uploaded)
       const allDocs = response.data.docs || [];
