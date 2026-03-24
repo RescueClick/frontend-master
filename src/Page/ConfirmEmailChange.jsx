@@ -4,8 +4,8 @@ import { backendurl } from "../feature/urldata";
 import { brandLogo, COMPANY_NAME } from "../config/branding";
 
 /**
- * Public page: user opens link from email ?token=...
- * Confirms new email via POST /api/auth/email-change/confirm
+ * Public page: user opens verification link ?token=...
+ * Dual email verification endpoint handles both current-email and new-email links.
  */
 export default function ConfirmEmailChange() {
   const location = useLocation();

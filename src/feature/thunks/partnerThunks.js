@@ -56,6 +56,32 @@ export const updatePartnerProfile = createAsyncThunk(
   }
 );
 
+export const uploadPartnerAvatar = createAsyncThunk(
+  "partner/uploadAvatar",
+  async (file, { rejectWithValue }) => {
+    try {
+      const { partnerToken } = getAuthData();
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const res = await axios.patch(`${backendurl}/partner/profile/avatar`, formData, {
+        headers: {
+          Authorization: `Bearer ${partnerToken}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return res.data?.partner || res.data;
+    } catch (err) {
+      const data = err.response?.data;
+      const msg =
+        (typeof data === "string" && data) ||
+        data?.message ||
+        err.message ||
+        "Failed to upload avatar";
+      return rejectWithValue(msg);
+    }
+  }
+);
+
 // Fetch Partner Dashboard
 export const fetchPartnerDashboard = createAsyncThunk(
   "partner/fetchDashboard",

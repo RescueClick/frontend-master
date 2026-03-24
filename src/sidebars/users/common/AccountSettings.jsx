@@ -22,6 +22,7 @@ const AccountSettings = ({
   getAuthToken,
   profileLinks = [],
   children = null,
+  afterSections = null,
 }) => {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -284,6 +285,8 @@ const AccountSettings = ({
             </ul>
           </div>
         </div>
+
+        {afterSections ? <div className="mt-8 space-y-6">{afterSections}</div> : null}
       </div>
     </div>
   );

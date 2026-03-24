@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   User,
-  Mail,
   Phone,
   Calendar,
   Home,
@@ -13,7 +12,6 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData } from "../../../utils/localStorage";
-import { backendurl } from "../../../feature/urldata";
 import { fetchAsmProfile, updateAsmProfile } from "../../../feature/thunks/asmThunks";
 import { fetchRsmProfile, updateRsmProfile } from "../../../feature/thunks/rsmThunks";
 import { fetchRmProfile, updateRmProfile } from "../../../feature/thunks/rmThunks";
@@ -48,7 +46,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
 
   const [formData, setFormData] = useState({
     fullName: "",
-    email: "",
     phone: "",
     dob: "",
     address: "",
@@ -58,8 +55,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
 
   const [errors, setErrors] = useState({});
   const [saveMsg, setSaveMsg] = useState(null);
-  const [emailChangePending, setEmailChangePending] = useState(false);
-  const [resendingEmail, setResendingEmail] = useState(false);
 
   useEffect(() => {
     const { asmToken, rsmToken, rmToken } = getAuthData();
@@ -76,7 +71,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
         : `${data.firstName || ""} ${data.lastName || ""}`.trim();
     setFormData({
       fullName,
-      email: data.email || "",
       phone: data.phone || "",
       dob: data.dob ? String(data.dob).slice(0, 10) : "",
       address: data.address || "",
@@ -99,12 +93,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
       newErrors.fullName = "Full name must be at least 2 characters";
     } else if (!/^[a-zA-Z\s]+$/.test(formData.fullName.trim())) {
       newErrors.fullName = "Full name should only contain letters and spaces";
-    }
-
-    if (!formData.email?.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      newErrors.email = "Please enter a valid email address";
     }
 
     if (!formData.phone?.trim()) {
@@ -169,7 +157,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
     const payload = {
       firstName,
       lastName,
-      email: formData.email?.trim() || "",
       phone: formData.phone?.trim() || "",
       dob: formData.dob || "",
       address: formData.address?.trim() || "",
@@ -183,66 +170,10 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
       else if (role === "rsm") result = await dispatch(updateRsmProfile(payload)).unwrap();
       else result = await dispatch(updateRmProfile(payload)).unwrap();
 
-      if (result?.emailChangePending) {
-        setEmailChangePending(true);
-        setSaveMsg({
-          type: "ok",
-          text:
-            result.emailChangeMessage ||
-            "Email change requested. Please confirm via the link sent to your inbox.",
-        });
-        return;
-      }
-
-      setEmailChangePending(false);
       setSaveMsg({ type: "ok", text: "Profile saved successfully." });
       setTimeout(() => navigate(dashboardPath), 800);
     } catch (e) {
       setSaveMsg({ type: "err", text: messageFromThunkError(e) });
-    }
-  };
-
-  const handleResendEmailChange = async () => {
-    setResendingEmail(true);
-    setSaveMsg(null);
-
-    try {
-      const { asmToken, rsmToken, rmToken } = getAuthData();
-      const token = role === "asm" ? asmToken : role === "rsm" ? rsmToken : rmToken;
-
-      if (!token) {
-        setSaveMsg({
-          type: "err",
-          text: "Session expired. Please login again to resend the email.",
-        });
-        return;
-      }
-
-      const res = await fetch(`${backendurl}/auth/email-change/resend`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setSaveMsg({ type: "err", text: data?.message || "Resend failed." });
-        return;
-      }
-
-      setSaveMsg({
-        type: "ok",
-        text:
-          data?.message ||
-          "Email change link resent. Please confirm via the link in your inbox.",
-      });
-    } catch (err) {
-      setSaveMsg({ type: "err", text: "Something went wrong. Try again." });
-    } finally {
-      setResendingEmail(false);
     }
   };
 
@@ -301,21 +232,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
             </div>
           )}
 
-          {emailChangePending && (
-            <div className="mx-6 mt-3">
-              <button
-                type="button"
-                onClick={handleResendEmailChange}
-                disabled={resendingEmail}
-                className="w-full py-2.5 rounded-xl font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {resendingEmail
-                  ? "Resending verification..."
-                  : "Resend verification email"}
-              </button>
-            </div>
-          )}
-
           {error && !loading && (
             <div className="mx-6 mt-4 px-4 py-3 rounded-lg text-sm bg-amber-50 text-amber-900 border border-amber-200">
               {typeof error === "string" ? error : error?.message || "Could not load profile."}
@@ -326,8 +242,8 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
             <div className="p-6 space-y-8">
               <section>
                 <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <User className="w-5 h-5 text-brand-primary" />
-                  Personal information
+                  <Phone className="w-5 h-5 text-brand-primary" />
+                  Contact
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
@@ -345,24 +261,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                     />
                     {errors.fullName && (
                       <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
-                      <Mail className="w-4 h-4 text-brand-primary" />
-                      Email *
-                    </label>
-                    <input
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 ${
-                        errors.email ? "border-red-400" : "border-slate-200"
-                      }`}
-                    />
-                    {errors.email && (
-                      <p className="text-red-500 text-xs mt-1">{errors.email}</p>
                     )}
                   </div>
                   <div>

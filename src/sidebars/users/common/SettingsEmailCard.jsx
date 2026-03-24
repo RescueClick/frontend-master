@@ -13,13 +13,14 @@ const ROLE_CONFIG = {
       });
       return res.data?.partner || res.data;
     },
-    patchEmail: async (email) => {
+    patchEmail: async ({ currentEmail, newEmail }) => {
       const { partnerToken } = getAuthData() || {};
-      await axios.patch(
+      const res = await axios.patch(
         `${backendurl}/partner/profile/update`,
-        { email },
+        { currentEmail, email: newEmail },
         { headers: { Authorization: `Bearer ${partnerToken}`, "Content-Type": "application/json" } }
       );
+      return res.data;
     },
   },
   admin: {
@@ -30,13 +31,14 @@ const ROLE_CONFIG = {
       });
       return res.data?.profile || res.data;
     },
-    patchEmail: async (email) => {
+    patchEmail: async ({ currentEmail, newEmail }) => {
       const { adminToken } = getAuthData() || {};
-      await axios.patch(
+      const res = await axios.patch(
         `${backendurl}/admin/profile/update`,
-        { email },
+        { currentEmail, email: newEmail },
         { headers: { Authorization: `Bearer ${adminToken}`, "Content-Type": "application/json" } }
       );
+      return res.data;
     },
   },
   asm: {
@@ -48,13 +50,14 @@ const ROLE_CONFIG = {
       const p = res.data?.profile || res.data;
       return p;
     },
-    patchEmail: async (email) => {
+    patchEmail: async ({ currentEmail, newEmail }) => {
       const { asmToken } = getAuthData() || {};
-      await axios.patch(
+      const res = await axios.patch(
         `${backendurl}/asm/profile/update`,
-        { email },
+        { currentEmail, email: newEmail },
         { headers: { Authorization: `Bearer ${asmToken}`, "Content-Type": "application/json" } }
       );
+      return res.data;
     },
   },
   rm: {
@@ -65,13 +68,14 @@ const ROLE_CONFIG = {
       });
       return res.data?.profile || res.data;
     },
-    patchEmail: async (email) => {
+    patchEmail: async ({ currentEmail, newEmail }) => {
       const { rmToken } = getAuthData() || {};
-      await axios.patch(
+      const res = await axios.patch(
         `${backendurl}/rm/profile/update`,
-        { email },
+        { currentEmail, email: newEmail },
         { headers: { Authorization: `Bearer ${rmToken}`, "Content-Type": "application/json" } }
       );
+      return res.data;
     },
   },
   rsm: {
@@ -82,7 +86,15 @@ const ROLE_CONFIG = {
       });
       return res.data;
     },
-    patchEmail: null,
+    patchEmail: async ({ currentEmail, newEmail }) => {
+      const { rsmToken } = getAuthData() || {};
+      const res = await axios.patch(
+        `${backendurl}/rsm/profile/update`,
+        { currentEmail, email: newEmail },
+        { headers: { Authorization: `Bearer ${rsmToken}`, "Content-Type": "application/json" } }
+      );
+      return res.data;
+    },
   },
 };
 
@@ -92,7 +104,8 @@ const ROLE_CONFIG = {
 const SettingsEmailCard = ({ roleKey }) => {
   const cfg = ROLE_CONFIG[roleKey];
   if (!cfg) return null;
-  const [email, setEmail] = useState("");
+  const [currentEmail, setCurrentEmail] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState({ text: "", ok: null });
@@ -105,9 +118,16 @@ const SettingsEmailCard = ({ roleKey }) => {
       try {
         setLoading(true);
         const data = await config.getProfile();
-        if (!cancelled) setEmail(data?.email || "");
+        if (!cancelled) {
+          const active = data?.email || "";
+          setCurrentEmail(active);
+          setNewEmail("");
+        }
       } catch {
-        if (!cancelled) setEmail("");
+        if (!cancelled) {
+          setCurrentEmail("");
+          setNewEmail("");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -124,15 +144,35 @@ const SettingsEmailCard = ({ roleKey }) => {
       setMsg({ text: "Email changes for this role are handled by your administrator.", ok: false });
       return;
     }
-    const trimmed = String(email || "").trim().toLowerCase();
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setMsg({ text: "Please enter a valid email address.", ok: false });
+    const current = String(currentEmail || "").trim().toLowerCase();
+    const next = String(newEmail || "").trim().toLowerCase();
+    if (!current || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(current)) {
+      setMsg({ text: "Current email is invalid.", ok: false });
+      return;
+    }
+    if (!next || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) {
+      setMsg({ text: "Please enter a valid new email address.", ok: false });
+      return;
+    }
+    if (current !== String(currentEmail).toLowerCase()) {
+      setMsg({ text: "Current email must match your active email.", ok: false });
+      return;
+    }
+    if (current === next) {
+      setMsg({ text: "New email must be different from current email.", ok: false });
       return;
     }
     try {
       setSaving(true);
-      await cfg.patchEmail(trimmed);
-      setMsg({ text: "Email updated. Use the new email next time you sign in.", ok: true });
+      const response = await cfg.patchEmail({ currentEmail: current, newEmail: next });
+      const changePending = !!response?.emailChangePending;
+      setMsg({
+        text: changePending
+          ? response?.message ||
+            "Verification links sent to your current and new email. Approve both to complete change."
+          : response?.message || "Email updated successfully.",
+        ok: true,
+      });
     } catch (err) {
       const m =
         err?.response?.data?.message ||
@@ -154,9 +194,15 @@ const SettingsEmailCard = ({ roleKey }) => {
           <h2 className="text-lg font-bold tracking-tight text-slate-900">Login email</h2>
           <p className="mt-0.5 text-sm text-slate-500">
             {cfg.patchEmail
-              ? "Used for sign-in and system notifications."
+              ? "Used for sign-in and system notifications. Changes require verification."
               : "Your registered email on file."}
           </p>
+          {cfg.patchEmail ? (
+            <div className="rounded-xl border border-sky-100 bg-sky-50/70 px-3 py-2 text-xs text-sky-900">
+              Industry-grade flow: enter current + new email. Verification is required on both emails.
+            </div>
+          ) : null}
+
         </div>
       </div>
 
@@ -169,17 +215,32 @@ const SettingsEmailCard = ({ roleKey }) => {
         <form onSubmit={handleSave} className="max-w-lg space-y-4">
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Email address
+              Current email (active)
             </label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={currentEmail}
+              onChange={(e) => setCurrentEmail(e.target.value)}
+              readOnly
+              className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-900 outline-none"
+              placeholder="current@email.com"
+              autoComplete="email"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+              New email
+            </label>
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
               readOnly={!cfg.patchEmail}
               className={`w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-500/20 ${
                 !cfg.patchEmail ? "cursor-not-allowed opacity-90" : ""
               }`}
-              placeholder="you@company.com"
+              placeholder="new-email@company.com"
               autoComplete="email"
             />
           </div>
@@ -213,7 +274,7 @@ const SettingsEmailCard = ({ roleKey }) => {
                   Saving…
                 </>
               ) : (
-                "Save email"
+                "Request email change"
               )}
             </button>
           ) : (

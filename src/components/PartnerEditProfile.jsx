@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   User,
-  Mail,
   Phone,
   Calendar,
   Home,
@@ -12,9 +11,11 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchPartnerProfile, updatePartnerProfile } from "../feature/thunks/partnerThunks";
-import { backendurl } from "../feature/urldata";
-import { getAuthData } from "../utils/localStorage";
+import {
+  fetchPartnerProfile,
+  updatePartnerProfile,
+  uploadPartnerAvatar,
+} from "../feature/thunks/partnerThunks";
 
 export default function PartnerEditProfile() {
   const navigate = useNavigate();
@@ -26,7 +27,6 @@ export default function PartnerEditProfile() {
     firstName: "",
     middleName: "",
     lastName: "",
-    email: "",
     phone: "",
     dob: "",
     address: "",
@@ -35,8 +35,7 @@ export default function PartnerEditProfile() {
   });
   const [errors, setErrors] = useState({});
   const [saveMsg, setSaveMsg] = useState(null);
-  const [emailChangePending, setEmailChangePending] = useState(false);
-  const [resendingEmail, setResendingEmail] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     dispatch(fetchPartnerProfile());
@@ -48,7 +47,6 @@ export default function PartnerEditProfile() {
       firstName: data.firstName || "",
       middleName: data.middleName || "",
       lastName: data.lastName || "",
-      email: data.email || "",
       phone: data.phone || "",
       dob: data.dob ? String(data.dob).slice(0, 10) : "",
       address: data.address || "",
@@ -66,8 +64,6 @@ export default function PartnerEditProfile() {
     const e = {};
     if (!form.firstName?.trim()) e.firstName = "First name is required";
     if (!form.lastName?.trim()) e.lastName = "Last name is required";
-    if (!form.email?.trim()) e.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Invalid email";
     if (!form.phone?.trim()) e.phone = "Phone is required";
     else if (form.phone.replace(/\D/g, "").length !== 10) e.phone = "Enter 10-digit mobile";
     if (!form.dob) e.dob = "Date of birth is required";
@@ -93,7 +89,6 @@ export default function PartnerEditProfile() {
       firstName: form.firstName.trim(),
       middleName: form.middleName?.trim() || "",
       lastName: form.lastName.trim(),
-      email: form.email.trim(),
       phone: form.phone.trim(),
       dob: form.dob,
       address: form.address.trim(),
@@ -102,22 +97,7 @@ export default function PartnerEditProfile() {
     };
 
     try {
-      const result = await dispatch(updatePartnerProfile(payload)).unwrap();
-
-      if (result?.emailChangePending) {
-        setEmailChangePending(true);
-        setResendingEmail(false);
-        setSaveMsg({
-          type: "ok",
-          text:
-            result.emailChangeMessage ||
-            "Email change requested. Please confirm via the link sent to your inbox.",
-        });
-        await dispatch(fetchPartnerProfile());
-        return;
-      }
-
-      setEmailChangePending(false);
+      await dispatch(updatePartnerProfile(payload)).unwrap();
       setSaveMsg({ type: "ok", text: "Profile updated successfully." });
       await dispatch(fetchPartnerProfile());
       setTimeout(() => {
@@ -138,54 +118,40 @@ export default function PartnerEditProfile() {
     }
   };
 
-  const handleResendEmailChange = async () => {
-    setResendingEmail(true);
-    setSaveMsg(null);
-
-    try {
-      const { partnerToken } = getAuthData();
-      if (!partnerToken) {
-        setSaveMsg({
-          type: "err",
-          text: "Session expired. Please login again to resend the email.",
-        });
-        return;
-      }
-
-      const res = await fetch(`${backendurl}/auth/email-change/resend`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${partnerToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setSaveMsg({ type: "err", text: data?.message || "Resend failed." });
-        return;
-      }
-
-      setSaveMsg({
-        type: "ok",
-        text:
-          data?.message ||
-          "Email change link resent. Please confirm via the link in your inbox.",
-      });
-    } catch (err) {
-      setSaveMsg({ type: "err", text: "Something went wrong. Try again." });
-    } finally {
-      setResendingEmail(false);
-    }
-  };
-
   const handleBack = () => {
     if (location.state?.from) {
       navigate(location.state.from);
       return;
     }
     navigate(-1);
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!String(file.type || "").startsWith("image/")) {
+      setSaveMsg({ type: "err", text: "Please select a valid image file." });
+      return;
+    }
+
+    setSaveMsg(null);
+    setAvatarUploading(true);
+    try {
+      await dispatch(uploadPartnerAvatar(file)).unwrap();
+      setSaveMsg({ type: "ok", text: "Profile photo updated successfully." });
+      await dispatch(fetchPartnerProfile());
+    } catch (err) {
+      const msg =
+        typeof err === "string"
+          ? err
+          : err && typeof err === "object" && typeof err.message === "string"
+            ? err.message
+            : "Could not upload profile photo.";
+      setSaveMsg({ type: "err", text: msg });
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = "";
+    }
   };
 
   return (
@@ -210,6 +176,34 @@ export default function PartnerEditProfile() {
             </div>
           </div>
 
+          <div className="px-6 pt-6">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <img
+                  src={data?.profilePic || "https://ui-avatars.com/api/?name=Partner&background=0ea5a5&color=fff"}
+                  alt="Profile avatar"
+                  className="h-16 w-16 rounded-full object-cover border border-slate-200 bg-white"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Profile photo</p>
+                  <p className="text-xs text-slate-500">
+                    Upload a clear square image (JPG, PNG). Used across profile and ID views.
+                  </p>
+                </div>
+                <label className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+                  {avatarUploading ? "Uploading..." : "Upload avatar"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                    disabled={avatarUploading}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
           {saveMsg && (
             <div
               className={`mx-6 mt-4 px-4 py-3 rounded-lg text-sm ${
@@ -219,19 +213,6 @@ export default function PartnerEditProfile() {
               }`}
             >
               {saveMsg.text}
-            </div>
-          )}
-
-          {emailChangePending && (
-            <div className="mx-6 mt-3">
-              <button
-                type="button"
-                onClick={handleResendEmailChange}
-                disabled={resendingEmail}
-                className="w-full py-2.5 rounded-xl font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {resendingEmail ? "Resending verification..." : "Resend verification email"}
-              </button>
             </div>
           )}
 
@@ -291,26 +272,10 @@ export default function PartnerEditProfile() {
 
               <section>
                 <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <Mail className="w-5 h-5 text-brand-primary" />
+                  <Phone className="w-5 h-5 text-brand-primary" />
                   Contact
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
-                      <Mail className="w-4 h-4 text-brand-primary" />
-                      Email *
-                    </label>
-                    <input
-                      name="email"
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => handleChange("email", e.target.value)}
-                      className={`w-full px-3 py-2.5 border rounded-xl ${
-                        errors.email ? "border-red-400" : "border-slate-200"
-                      }`}
-                    />
-                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-                  </div>
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
                       <Phone className="w-4 h-4 text-brand-primary" />
@@ -421,7 +386,7 @@ export default function PartnerEditProfile() {
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/80">
               <button
                 type="button"
-                onClick={() => navigate("/partner/profile")}
+                onClick={handleBack}
                 className="px-5 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-xl font-medium"
               >
                 Cancel

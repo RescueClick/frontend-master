@@ -1,5 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { fetchPartnerProfile, updatePartnerProfile ,fetchPartnerDashboard, fetchMyTarget } from "../thunks/partnerThunks";
+import {
+  fetchPartnerProfile,
+  updatePartnerProfile,
+  fetchPartnerDashboard,
+  fetchMyTarget,
+  uploadPartnerAvatar,
+} from "../thunks/partnerThunks";
 
 
 const initialState = {
@@ -67,6 +73,20 @@ const partnerSlice = createSlice({
         state.profile.data = { ...(state.profile.data || {}), ...action.payload };
       })
       .addCase(updatePartnerProfile.rejected, (state, action) => {
+        state.profile.loading = false;
+        state.profile.error = action.payload;
+        state.profile.success = false;
+      })
+      .addCase(uploadPartnerAvatar.pending, (state) => {
+        state.profile.loading = true;
+        state.profile.error = null;
+      })
+      .addCase(uploadPartnerAvatar.fulfilled, (state, action) => {
+        state.profile.loading = false;
+        state.profile.success = true;
+        state.profile.data = { ...(state.profile.data || {}), ...action.payload };
+      })
+      .addCase(uploadPartnerAvatar.rejected, (state, action) => {
         state.profile.loading = false;
         state.profile.error = action.payload;
         state.profile.success = false;
