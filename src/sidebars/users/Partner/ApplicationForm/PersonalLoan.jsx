@@ -57,6 +57,7 @@ export default function PersonalLoan() {
     addressProof: "",
     utilityBill: "",
     rentAgreement: "",
+    otherDocument: "",
     aadhar: "",
     companyName: "",
     designation: "",
@@ -74,14 +75,6 @@ export default function PersonalLoan() {
     reference2Contact: "",
     loanAmount: "",
 
-    // New property documents
-    allotmentLetter: "",
-    newPropertyPaymentReceipts: "",
-
-    // Resale property documents
-    titleDeeds: "",
-    resalePaymentReceipts: "",
-    agreementCopy: "",
     aadharFront: "",
     aadharBack: "",
     panCard: "",
@@ -280,9 +273,11 @@ export default function PersonalLoan() {
     if (!formData.salarySlip1) errors.salarySlip1 = "salarySlip1 is required.";
     if (!formData.salarySlip2) errors.salarySlip2 = "salarySlip2 is required.";
     if (!formData.salarySlip3) errors.salarySlip3 = "salarySlip3 is required.";
+    if (!formData.form16_26as) errors.form16_26as = "Form 16 / 26AS is required.";
 
     // Bank Statement
     if (!formData.bankStatement1) errors.bankStatement1 = "Bank Statement 1 is required.";
+    if (!formData.bankStatement2) errors.bankStatement2 = "Bank Statement 2 is required.";
 
     // References
     if (!formData.reference1Name) errors.reference1Name = "Reference 1 name is required.";
@@ -311,7 +306,9 @@ export default function PersonalLoan() {
     if (!formData.aadharFront) errors.aadharFront = "Aadhar front is required.";
     if (!formData.aadharBack) errors.aadharBack = "Aadhar back is required.";
     if (!formData.panCard) errors.panCard = "PAN card is required.";
-    if (!formData.passportPhoto) errors.passportPhoto = "Passport-size photo is required.";
+    if (!formData.passportPhoto && !formData.selfie) {
+      errors.passportPhoto = "Applicant photo is required.";
+    }
 
     return errors;
   }
@@ -389,21 +386,24 @@ export default function PersonalLoan() {
       formDataToSend.append("data", JSON.stringify(applicationData));
 
       // Append files
+      const applicantPhoto = formData.passportPhoto || formData.selfie;
       const docsQueue = [
         { file: formData.aadharFront, type: "AADHAR_FRONT" },
         { file: formData.aadharBack, type: "AADHAR_BACK" },
         { file: formData.panCard, type: "PAN" },
-        { file: formData.passportPhoto, type: "PHOTO" },
-        { file: formData.selfie, type: "SELFIE" },
+        { file: applicantPhoto, type: "PHOTO" },
         { file: formData.addressProof, type: "ADDRESS_PROOF" },
         {
-          file: formData.utilityBill || formData.rentAgreement,
+          file: formData.otherDocument || formData.utilityBill || formData.rentAgreement,
           type: "OTHER_DOCS",
         },
+        { file: formData.companyIdCard, type: "COMPANY_ID_CARD" },
         { file: formData.salarySlip1, type: "SALARY_SLIP_1" },
         { file: formData.salarySlip2, type: "SALARY_SLIP_2" },
         { file: formData.salarySlip3, type: "SALARY_SLIP_3" },
-        { file: formData.bankStatement1, type: "BANK_STATEMENT" },
+        { file: formData.form16_26as, type: "FORM_16_26AS" },
+        { file: formData.bankStatement1, type: "BANK_STATEMENT_1" },
+        { file: formData.bankStatement2, type: "BANK_STATEMENT_2" },
         { file: formData.allotmentLetter, type: "ALLOTMENT_LETTER" },
         {
           file: formData.newPropertyPaymentReceipts,
@@ -616,6 +616,7 @@ export default function PersonalLoan() {
       addressProof: "",
       utilityBill: "",
       rentAgreement: "",
+      otherDocument: "",
       aadhar: "",
       companyName: "",
       designation: "",
@@ -760,6 +761,22 @@ export default function PersonalLoan() {
               </h1>
               <p className="text-center mt-2 opacity-90">
                 Complete all fields to process your loan application
+              </p>
+              <p className="text-center mt-3 text-sm font-medium opacity-95">
+                Flow: 1) Personal, 2) Address, 3) Loan & Employment, 4) Documents, 5) References, 6) Review & Submit
+              </p>
+            </div>
+
+            <div className="px-8 pt-5 pb-2 bg-slate-50 border-b border-slate-200">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+                {["Personal", "Address", "Loan & Employment", "Documents", "References", "Review"].map((step, idx) => (
+                  <div key={step} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center font-medium text-slate-700">
+                    {idx + 1}. {step}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-slate-600">
+                Upload clear JPG/PNG/PDF files and verify preview before submit.
               </p>
             </div>
 
@@ -1400,8 +1417,11 @@ export default function PersonalLoan() {
                   style={{ color: "#111827" }}
                 >
                   <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Document Upload
+                  4.1 Identity & Core Documents
                 </h2>
+                <p className="text-sm text-slate-600 mb-4">
+                  Accepted files: PDF, JPG, JPEG, PNG. Preview appears after upload.
+                </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {[
@@ -2127,8 +2147,11 @@ export default function PersonalLoan() {
                   style={{ color: "#111827" }}
                 >
                   <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Bank Details
+                  4.2 Bank Statements
                 </h2>
+                <p className="text-sm text-slate-600 mb-4">
+                  Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
+                </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -2305,7 +2328,7 @@ export default function PersonalLoan() {
               <section>
                 <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-gray-900">
                   <FileText className="w-6 h-6 text-teal-500" />
-                  New Address Proof
+                  4.3 Address Proof Document
                 </h2>
 
                 <label className="block text-sm font-medium mb-2 text-gray-900">

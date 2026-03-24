@@ -23,10 +23,15 @@ const CompleteApplication = () => {
   // Treat PHOTO and SELFIE (and co-applicant selfie) as the same logical document
   const normalizeDocType = (docType) => {
     const upper = (docType || "").toUpperCase();
-    if (upper === "SELFIE" || upper === "CO_APPLICANT_SELFIE") {
-      return "PHOTO";
-    }
-    return upper;
+    const aliases = {
+      SELFIE: "PHOTO",
+      CO_APPLICANT_SELFIE: "PHOTO",
+      GST: "GST_DOCUMENT",
+      GST_DOC: "GST_DOCUMENT",
+      GST_CERTIFICATE: "GST_DOCUMENT",
+      BANK_STATEMENT: "BANK_STATEMENT_1",
+    };
+    return aliases[upper] || upper;
   };
 
   useEffect(() => {
@@ -107,31 +112,50 @@ const CompleteApplication = () => {
   };
 
   const getRequiredDocTypes = (loanType) => {
-    const baseDocs = ["PAN", "AADHAR_FRONT", "AADHAR_BACK"];
+    const baseDocs = ["PAN", "AADHAR_FRONT", "AADHAR_BACK", "PHOTO", "ADDRESS_PROOF"];
+    const key = (loanType || "").toUpperCase();
 
-    // Treat PHOTO/SELFIE as a single requirement: PHOTO
-    if (loanType === "PERSONAL_LOAN" || loanType === "HOME_LOAN_SALARIED") {
+    if (key === "PERSONAL" || key === "PERSONAL_LOAN") {
       return [
         ...baseDocs,
+        "OTHER_DOCS",
+        "COMPANY_ID_CARD",
         "SALARY_SLIP_1",
-        "BANK_STATEMENT",
-        "PHOTO",
-        "ADDRESS_PROOF",
+        "SALARY_SLIP_2",
+        "SALARY_SLIP_3",
+        "FORM_16_26AS",
+        "BANK_STATEMENT_1",
+        "BANK_STATEMENT_2",
       ];
-    } else if (
-      loanType === "BUSINESS_LOAN" ||
-      loanType === "HOME_LOAN_SELF_EMPLOYED"
-    ) {
+    }
+    if (key === "HOME_LOAN_SALARIED") {
       return [
         ...baseDocs,
-        "BANK_STATEMENT",
-        "GST_CERTIFICATE",
-        "PHOTO",
-        "ADDRESS_PROOF",
+        "OTHER_DOCS",
+        "COMPANY_ID_CARD",
+        "SALARY_SLIP_1",
+        "SALARY_SLIP_2",
+        "SALARY_SLIP_3",
+        "FORM_16_26AS",
+        "BANK_STATEMENT_1",
+        "BANK_STATEMENT_2",
+      ];
+    }
+    if (key === "BUSINESS" || key === "BUSINESS_LOAN" || key === "HOME_LOAN_SELF_EMPLOYED") {
+      return [
+        ...baseDocs,
+        "BUSINESS_OTHER_DOCS",
+        "SHOP_ACT",
+        "UDHYAM_AADHAR",
+        "ITR",
+        "GST_DOCUMENT",
+        "SHOP_PHOTO",
+        "BANK_STATEMENT_1",
+        "BANK_STATEMENT_2",
       ];
     }
 
-    return [...baseDocs, "PHOTO", "ADDRESS_PROOF"];
+    return baseDocs;
   };
 
   const calculateProgress = () => {
@@ -163,12 +187,20 @@ const CompleteApplication = () => {
       SALARY_SLIP_1: "Salary Slip 1",
       SALARY_SLIP_2: "Salary Slip 2",
       SALARY_SLIP_3: "Salary Slip 3",
-      BANK_STATEMENT: "Bank Statement",
-      GST_CERTIFICATE: "GST Certificate",
+      BANK_STATEMENT_1: "Bank Statement 1",
+      BANK_STATEMENT_2: "Bank Statement 2",
+      GST_DOCUMENT: "GST Document",
       PHOTO: "Photo",
       SELFIE: "Selfie",
       ADDRESS_PROOF: "Address Proof",
       OTHER_DOCS: "Other Documents",
+      BUSINESS_OTHER_DOCS: "Business Other Documents",
+      COMPANY_ID_CARD: "Company ID Card",
+      FORM_16_26AS: "Form 16 / 26AS",
+      SHOP_ACT: "Shop Act / Gumasta",
+      UDHYAM_AADHAR: "Udyam Aadhaar",
+      ITR: "ITR",
+      SHOP_PHOTO: "Shop Photo",
       ALLOTMENT_LETTER: "Allotment Letter",
       NEW_PROPERTY_PAYMENT_RECEIPTS: "New Property Payment Receipts",
       TITLE_DEEDS: "Title Deeds",

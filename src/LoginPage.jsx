@@ -228,11 +228,11 @@ const LoginPage = () => {
             <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top,_#ffffff,_transparent_55%),radial-gradient(circle_at_bottom,_#0f172a,_transparent_55%)]" />
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/40 flex items-center justify-center shadow-lg">
+                <div className="w-36 h-12 rounded-xl bg-white/10 border border-white/40 flex items-center justify-center shadow-lg px-2">
                   <img
                     src={brandLogo}
                     alt={COMPANY_NAME}
-                    className="w-9 h-9 object-contain"
+                    className="w-full h-full object-cover object-center"
                   />
                 </div>
                 <div>
@@ -275,11 +275,11 @@ const LoginPage = () => {
               {/* Header */}
               <div className="text-center">
                 <div className="flex justify-center mb-4">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-white border border-gray-100">
+                  <div className="w-44 h-14 rounded-xl flex items-center justify-center shadow-lg bg-white border border-gray-100 px-2">
                     <img
                       src={brandLogo}
                       alt={COMPANY_NAME}
-                      className="w-12 h-12 object-contain"
+                      className="w-full h-full object-cover object-center"
                     />
                   </div>
                 </div>

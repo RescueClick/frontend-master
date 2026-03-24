@@ -1,4 +1,4 @@
-import  brandLogo  from "../assets/logo_list/loader_animated.gif";
+import brandLogo from "../assets/logo_list/logo-horizontal-1200x400.png";
 
 /** Breathe pulse duration (seconds) */
 const BREATHE_DURATION_SEC = 10;

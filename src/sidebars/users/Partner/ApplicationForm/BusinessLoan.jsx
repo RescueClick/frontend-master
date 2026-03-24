@@ -279,7 +279,9 @@ function validateForm(formData) {
   
   if (!formData.panCard) errors.panCard = "PAN Card is required.";
 
-  if (!formData.selfie) errors.selfie = "Selfie  is required.";
+  if (!formData.selfie && !formData.passportPhoto) {
+    errors.selfie = "Applicant photo is required.";
+  }
 
   // Co-applicant Information (only for female applicants)
   if (formData.gender === "female") {
@@ -403,11 +405,12 @@ const handleSubmit = async () => {
     const formDataToSend = new FormData();
     formDataToSend.append("data", JSON.stringify(applicationData));
 
+    const applicantPhoto = formData.passportPhoto || formData.selfie;
     const docsQueue = [
       { file: formData.aadharFront, type: "AADHAR_FRONT" },
       { file: formData.aadharBack, type: "AADHAR_BACK" },
       { file: formData.panCard, type: "PAN" },
-      { file: formData.selfie, type: "SELFIE" },
+      { file: applicantPhoto, type: "PHOTO" },
       { file: formData.addressProof, type: "ADDRESS_PROOF" },
       { file: formData.lightBill, type: "LIGHT_BILL" },
       { file: formData.utilityBill, type: "UTILITY_BILL" },
@@ -1359,8 +1362,11 @@ const handleSubmit = async () => {
                 style={{ color: "#111827" }}
               >
                 <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Address Proof Documents
+                4.1 Address Proof Documents
               </h2>
+              <p className="text-sm text-slate-600 mb-4">
+                Accepted files: PDF, JPG, JPEG, PNG. Preview appears after upload.
+              </p>
               <div className="space-y-6">
                 <div>
                   <label className="flex items-center gap-3 mb-2">
@@ -1480,8 +1486,11 @@ const handleSubmit = async () => {
                 style={{ color: "#111827" }}
               >
                 <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Personal Documents
+                4.2 Personal Identity Documents
               </h2>
+              <p className="text-sm text-slate-600 mb-4">
+                Upload in order: Aadhaar Front, Aadhaar Back, PAN, Applicant Photo.
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Aadhar Front */}
                 <div>
@@ -1970,8 +1979,11 @@ const handleSubmit = async () => {
                 style={{ color: "#111827" }}
               >
                 <Shield className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Business Documents
+                4.3 Business Documents
               </h2>
+              <p className="text-sm text-slate-600 mb-4">
+                Keep business registrations and tax files clear and readable.
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label
@@ -2111,8 +2123,11 @@ const handleSubmit = async () => {
                 style={{ color: "#111827" }}
               >
                 <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Financial Documents
+                4.4 Bank Documents
               </h2>
+              <p className="text-sm text-slate-600 mb-4">
+                Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label

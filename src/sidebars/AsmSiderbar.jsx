@@ -98,8 +98,8 @@ const AsmSiderbar = () => {
             sidebarOpen ? "justify-start px-4 gap-3" : "justify-center px-2"
           }`}
         >
-          <div className="w-full min-w-0 h-[55px] rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-            <img src={brandLogo} alt={COMPANY_NAME} className="h-full w-full object-cover" />
+          <div className="w-full min-w-0 h-[72px] rounded-lg flex items-center justify-center shrink-0 overflow-hidden px-2">
+            <img src={brandLogo} alt={COMPANY_NAME} className="h-full w-full object-cover object-center" />
           </div>
         </div>
 
