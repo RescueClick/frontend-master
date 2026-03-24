@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 
 import {
   Users,
@@ -9,18 +9,12 @@ import {
   LayoutGrid,
   User,
   Settings,
-  LogOut,
   ArrowLeft,
   FileText,
   LineChart,
   BarChart2,
   ClipboardList,
-  Phone,
-  Mail,
-  Calendar,
-  Briefcase,
   CalendarCheck,
-  MapPin,
   Edit,
   X,
   IndianRupee,
@@ -37,6 +31,7 @@ import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from
 import Profile from "./users/userProfile/Profile";
 import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
+import DhanSourceLoader from "../components/DhanSourceLoader";
 
 // Admin sidebar component
 const AsmSiderbar = () => {
@@ -202,7 +197,13 @@ const AsmSiderbar = () => {
 
         {/* Content Area */}
         <main className="flex-1 p-6 bg-gray-50 overflow-y-auto">
-          <Outlet />
+          <Suspense
+            fallback={
+              <DhanSourceLoader label="Loading page…" className="min-h-[50vh]" />
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 
@@ -225,126 +226,14 @@ const AsmSiderbar = () => {
               </button>
             </div>
 
-            <div className="">
-              {/*  
-              <Profile setProfileOpen={setProfileOpen} data={data} >
-               
-             </Profile> */}
-              <div className="h-full w-full bg-white shadow-lg z-50 flex flex-col max-h-[90vh]">
-                {/* Scrollable Content Area */}
-                <div className="flex-1 overflow-y-auto">
-                  <div className="p-6">
-                    {/* Avatar & Name */}
-                    <div className="flex flex-col items-center text-center mb-8">
-                      <div className="w-20 h-20 rounded-full bg-brand-primary flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
-                        {(data?.fullName?.charAt(0) || data?.firstName?.charAt(0) || fallbackUser?.firstName?.charAt(0) || "U").toUpperCase()}
-                      </div>
-                      <h2 className="text-2xl font-semibold text-[#111827] mb-2">
-                        {data?.fullName || (data?.firstName && data?.lastName ? `${data.firstName} ${data.lastName}` : null) || (fallbackUser?.firstName && fallbackUser?.lastName ? `${fallbackUser.firstName} ${fallbackUser.lastName}` : null) || "Update your Name"}
-                      </h2>
-                    </div>
-
-                    {/* Profile Information */}
-                    <div className="space-y-6">
-                      {/* Mobile No */}
-                      <div className="flex items-start gap-4">
-                        <Phone className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">
-                            Mobile No
-                          </p>
-                          <p className="text-[#111827]">
-                            {data?.phone || "Update your Mobile No"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Email */}
-                      <div className="flex items-start gap-4">
-                        <Mail className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">
-                            Email
-                          </p>
-                          <p className="text-[#111827]">
-                            {data?.email || "Update your Email"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* DOB */}
-                      <div className="flex items-start gap-4">
-                        <Calendar className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">
-                            Date of Birth
-                          </p>
-                          <p className="text-[#111827]">
-                            {data?.dob
-                              ? new Date(data?.dob).toLocaleDateString(
-                                  "en-GB",
-                                  {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                  }
-                                )
-                              : "Update your DOB"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* DOJ */}
-                      <div className="flex items-start gap-4">
-                        <Briefcase className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">
-                            Date of Joining
-                          </p>
-                          <p className="text-[#111827]">
-                            {data?.JoiningDate
-                              ? new Date(data?.JoiningDate).toLocaleDateString(
-                                  "en-GB",
-                                  {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                  }
-                                )
-                              : "Update your DOJ"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Region */}
-                      <div className="flex items-start gap-4">
-                        <MapPin className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">
-                            Region
-                          </p>
-                          <p className="text-[#111827]">
-                            {data?.region || "Update your Region"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* ASM Details */}
-                    </div>
-
-                    {/* Logout */}
-                    <div className="mt-4">
-                      <div
-                        className="flex items-center gap-3 cursor-pointer hover:text-red-500"
-                        onClick={() => handleLogout()}
-                      >
-                        <LogOut className="w-5 h-5" />
-                        <p className="text-[#111827]">Log Out</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="flex-1 overflow-y-auto max-h-[calc(100vh-4rem)]">
+              <Profile
+                setProfileOpen={setProfileOpen}
+                data={{ ...(fallbackUser || {}), ...(data || {}) }}
+                roleLabel="Area Sales Manager"
+                editPath="/asm/EditProfile"
+                onLogout={handleLogout}
+              />
             </div>
           </div>
         </>

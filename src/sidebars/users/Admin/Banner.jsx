@@ -63,14 +63,14 @@ export default function Banner() {
       return;
     }
 
-    const maxSize = 2 * 1024 * 1024; // 2 MB
+    const maxSize = 10 * 1024 * 1024; // 10 MB
     const formData = new FormData();
 
     for (let banner of banners) {
       if (banner?.file) {
         if (banner.file.size > maxSize) {
           alert(
-            `${banner.file.name} is too large. Maximum allowed size is 2MB.`
+            `${banner.file.name} is too large. Maximum allowed size is 10MB.`
           );
           return; // Stop upload if any file is too big
         }

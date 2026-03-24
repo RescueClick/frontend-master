@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import {
   Users,
   UserCheck,
@@ -8,18 +8,12 @@ import {
   LayoutGrid,
   User,
   Settings,
-  LogOut,
   ArrowLeft,
   FileText,
   LineChart,
   BarChart2,
   ClipboardList,
-  Phone,
-  Mail,
-  Calendar,
   CalendarCheck,
-  Briefcase,
-  MapPin,
   Edit,
   X,
   TrendingUp,
@@ -32,6 +26,7 @@ import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from
 import { useDispatch, useSelector } from "react-redux";
 import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
+import DhanSourceLoader from "../components/DhanSourceLoader";
 
 // Admin sidebar component
 export default function RmSidebar() {
@@ -200,7 +195,13 @@ export default function RmSidebar() {
 
         {/* Content Area */}
         <main className="flex-1 p-3 bg-gray-50 overflow-y-auto">
-          <Outlet />
+          <Suspense
+            fallback={
+              <DhanSourceLoader label="Loading page…" className="min-h-[50vh]" />
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 
@@ -225,196 +226,14 @@ export default function RmSidebar() {
             </div>
 
 
-            {/* Profile Actions */}
-            <div className="">
-              {/* <Profile setProfileOpen={setProfileOpen} data={data} userRole={"RM"} ></Profile> */}
-
-              <div className="h-full w-full bg-white shadow-lg z-50 flex flex-col max-h-[90vh]">
-                {/* Scrollable Content Area */}
-                <div className="flex-1 overflow-y-auto">
-                  <div className="p-6">
-                    {/* Avatar & Name */}
-                    <div className="flex flex-col items-center text-center mb-8">
-                      <div className="w-20 h-20 rounded-full bg-brand-primary flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
-                        {data?.fullName?.charAt(0) || "U"}
-                      </div>
-                      <h2 className="text-2xl font-semibold text-[#111827] mb-2">
-                        {data?.firstName + " " + data?.lastName || "Update your Name"}
-                      </h2>
-                    </div>
-
-                    {/* Profile Information */}
-                    <div className="space-y-6">
-                      {/* Mobile No */}
-                      <div className="flex items-start gap-4">
-                        <Phone className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">Mobile No</p>
-                          <p className="text-[#111827]">
-                            {data?.phone || "Update your Mobile No"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Email */}
-                      <div className="flex items-start gap-4">
-                        <Mail className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">Email</p>
-                          <p className="text-[#111827]">
-                            {data?.email || "Update your Email"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* DOB */}
-                      <div className="flex items-start gap-4">
-                        <Calendar className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">Date of Birth</p>
-                          <p className="text-[#111827]">
-                            {data?.dob
-                              ? new Date(data.dob).toLocaleDateString("en-GB", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })
-                              : "Update your DOB"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* DOJ */}
-                      <div className="flex items-start gap-4">
-                        <Briefcase className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">Date of Joining</p>
-                          <p className="text-[#111827]">
-                            {data?.JoiningDate
-                              ? new Date(data?.JoiningDate).toLocaleDateString("en-GB", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })
-                              : "Update your DOJ"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Region */}
-                      <div className="flex items-start gap-4">
-                        <MapPin className="w-5 h-5 text-brand-primary" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-500">Region</p>
-                          <p className="text-[#111827]">
-                            {data?.region || "Update your Region"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Personal Loan RSM */}
-                      {data?.personalRsmName && (
-                        <div className="flex items-start gap-4 border-t pt-4">
-                          <Users className="w-5 h-5 text-brand-primary" />
-                          <div>
-                            <p className="text-sm font-semibold text-gray-500">Personal Loan RSM</p>
-                            <p className="text-[#111827] font-medium">
-                              {data?.personalRsmName || "N/A"}
-                            </p>
-                            {data?.personalRsmEmployeeId && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                ID: {data.personalRsmEmployeeId}
-                              </p>
-                            )}
-                            {data?.personalRsmPhone && (
-                              <p className="text-xs text-gray-500">
-                                Phone: {data.personalRsmPhone}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Business & Home Loan RSM */}
-                      {data?.businessHomeRsmName && (
-                        <div className="flex items-start gap-4 border-t pt-4">
-                          <Users className="w-5 h-5 text-brand-primary" />
-                          <div>
-                            <p className="text-sm font-semibold text-gray-500">Business & Home Loan RSM</p>
-                            <p className="text-[#111827] font-medium">
-                              {data?.businessHomeRsmName || "N/A"}
-                            </p>
-                            {data?.businessHomeRsmEmployeeId && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                ID: {data.businessHomeRsmEmployeeId}
-                              </p>
-                            )}
-                            {data?.businessHomeRsmPhone && (
-                              <p className="text-xs text-gray-500">
-                                Phone: {data.businessHomeRsmPhone}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ASM Details */}
-                      {/* <div className="flex items-start gap-4">
-                          <User className="w-5 h-5 text-brand-primary" />
-                          <div>
-                            <p className="text-sm font-semibold text-gray-500">ASM Details</p>
-                            <div className="space-y-1 text-[#111827]">
-                              <p><span className="font-medium">Name:</span> {data?.asmDetails?.name || "N/A"}</p>
-                              <p><span className="font-medium">Phone:</span> {data?.asmDetails?.phone || "N/A"}</p>
-                              <p><span className="font-medium">ASM ID:</span> {data?.asmDetails?.asmId || "N/A"}</p>
-                            </div>
-                          </div>
-                        </div> */}
-
-                      {/* ASM Details */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Briefcase className="w-4 h-4 text-brand-primary" />
-                          <p className="text-sm font-semibold text-gray-500">ASM Details</p>
-                        </div>
-                        <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
-                          <div className="flex items-start gap-4">
-
-                            <div className="flex-1 space-y-3">
-                              <div className="grid grid-cols-1 gap-3">
-                                <div>
-                                  <span className="text-sm font-semibold text-gray-600">Name</span>
-                                  <p className="text-gray-800 font-medium">{data?.asmName || "Update Name"}</p>
-                                </div>
-                                <div>
-                                  <span className="text-sm font-semibold text-gray-600">Phone</span>
-                                  <p className="text-gray-800 font-medium">{data?.asmPhone || "Update Phone"}</p>
-                                </div>
-                                <div>
-                                  <span className="text-sm font-semibold text-gray-600">ASM ID</span>
-                                  <p className="text-gray-800 font-medium">{data?.asmEmployeeId || "Update ASM ID"}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                    </div>
-
-                    {/* Logout */}
-                    <div className="mt-4">
-                      <div className="flex items-center gap-3 cursor-pointer hover:text-red-500"
-                        onClick={() => { handleLogout() }}
-                      >
-                        <LogOut className="w-5 h-5" />
-                        <p className="text-[#111827]">Log Out</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+            <div className="flex-1 overflow-y-auto max-h-[calc(100vh-4rem)]">
+              <Profile
+                setProfileOpen={setProfileOpen}
+                data={data}
+                roleLabel="Relationship Manager"
+                editPath="/rm/EditProfile"
+                onLogout={handleLogout}
+              />
             </div>
 
 

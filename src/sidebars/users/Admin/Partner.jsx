@@ -572,14 +572,25 @@ loginAsUser(userId, navigate);
                     </td>
 
                     <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center gap-1 h-full">
+                      <div className="flex items-center gap-2 h-full">
                         <button
+                          type="button"
                           className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-                          onClick={() => {
-                            setPartnerData(p);
-                          }}
+                          title="Open analytics"
+                          onClick={() =>
+                            navigate("/admin/Analytics", {
+                              state: { id: p._id, role: "Partner" },
+                            })
+                          }
                         >
                           <Eye size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+                          onClick={() => setPartnerData(p)}
+                        >
+                          Details
                         </button>
                       </div>
                     </td>

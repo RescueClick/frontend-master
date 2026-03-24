@@ -9,6 +9,7 @@ import { designSystem, formatCurrency, formatNumber } from "../../../utils/desig
 import { parseAnalyticsData, getRoleMetrics } from "../../../utils/analyticsParser";
 import MetricCard from "../../../components/shared/MetricCard";
 import PageHeader from "../../../components/shared/PageHeader";
+import ReportingHierarchyCard from "../../../components/shared/ReportingHierarchyCard";
 import ChartCard from "../../../components/shared/ChartCard";
 import FiltersBar from "../../../components/shared/FiltersBar";
 import { FunnelChart, ConversionChart, FinancialsChart, AgingChart } from "../../../components/shared/KpiCharts";
@@ -189,6 +190,7 @@ const Analytics = () => {
       targetValue: parsed.assignedTarget.targetValue,
       role: parsed.profile.role || role,
       monthlyPerformance: parsed.monthlyPerformance || [],
+      reportingChain: parsed.profile.reportingChain || [],
     };
   }, [Analyticsdashboard, role]);
 
@@ -324,7 +326,12 @@ const Analytics = () => {
             </div>
           </div>
         </div>
-      </div>
+        {analyticsData.reportingChain?.length > 0 && (
+          <div className="mt-6 border-t border-gray-100 pt-6">
+            <ReportingHierarchyCard chain={analyticsData.reportingChain} />
+          </div>
+        )}
+        </div>
 
       {/* KPI section moved below Metrics Cards */}
 

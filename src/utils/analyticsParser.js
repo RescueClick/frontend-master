@@ -19,6 +19,8 @@ export const parseAnalyticsData = (rawData, role = "ASM") => {
       phone: "N/A",
       employeeId: "N/A",
       status: "UNKNOWN",
+      role: null,
+      reportingChain: [],
     },
     totals: {
       rms: 0,
@@ -153,6 +155,8 @@ export const parseAnalyticsData = (rawData, role = "ASM") => {
       phone: profile.phone || "N/A",
       employeeId: profile.employeeId || "N/A",
       status: profile.status || "UNKNOWN",
+      role: profile.role || role,
+      reportingChain: Array.isArray(profile.reportingChain) ? profile.reportingChain : [],
     },
     totals: {
       rms: totals.rms || totals.totalRMs || 0,

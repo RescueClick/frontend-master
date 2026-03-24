@@ -8,6 +8,7 @@ import { designSystem, formatCurrency, formatNumber } from '../../../utils/desig
 import { parseAnalyticsData } from '../../../utils/analyticsParser';
 import MetricCard from '../../../components/shared/MetricCard';
 import PageHeader from "../../../components/shared/PageHeader";
+import ReportingHierarchyCard from "../../../components/shared/ReportingHierarchyCard";
 import ChartCard from "../../../components/shared/ChartCard";
 import FiltersBar from "../../../components/shared/FiltersBar";
 import { FunnelChart, ConversionChart, FinancialsChart, AgingChart } from "../../../components/shared/KpiCharts";
@@ -207,6 +208,11 @@ const RManalytics = () => {
               </div>
             </div>
           </div>
+          {parsedData.profile.reportingChain?.length > 0 && (
+            <div className="mt-6 border-t border-gray-100 pt-6">
+              <ReportingHierarchyCard chain={parsedData.profile.reportingChain} />
+            </div>
+          )}
         </div>
 
         {/* Metrics Cards - Linear Design */}

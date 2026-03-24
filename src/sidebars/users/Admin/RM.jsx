@@ -376,12 +376,25 @@ loginAsUser(userId, navigate);
 
 
                     <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center gap-1 h-full">
+                      <div className="flex items-center gap-2 h-full flex-wrap">
                         <button
+                          type="button"
                           className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-                          onClick={() => handleViewRM(rm)}
+                          title="Open analytics"
+                          onClick={() =>
+                            navigate("/admin/Analytics", {
+                              state: { id: rm._id, role: "RM" },
+                            })
+                          }
                         >
                           <Eye size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+                          onClick={() => handleViewRM(rm)}
+                        >
+                          Details
                         </button>
                         {rm.status !== "ACTIVE" && (
                           <button

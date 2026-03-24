@@ -461,12 +461,25 @@ export default function RSM() {
                       </button>
                     </td>
                     <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center gap-1 h-full">
+                      <div className="flex items-center gap-2 h-full">
                         <button
+                          type="button"
                           className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-                          onClick={() => handleViewRSM(rsm)}
+                          title="Open analytics"
+                          onClick={() =>
+                            navigate("/admin/Analytics", {
+                              state: { id: rsm._id, role: "RSM" },
+                            })
+                          }
                         >
                           <Eye size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+                          onClick={() => handleViewRSM(rsm)}
+                        >
+                          Details
                         </button>
                       </div>
                     </td>

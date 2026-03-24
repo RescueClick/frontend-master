@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import {
   Users,
   UserCheck,
@@ -24,6 +24,7 @@ import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from
 
 import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
+import DhanSourceLoader from "../components/DhanSourceLoader";
 
 // Admin sidebar component
 const AdminSideBar = () => {
@@ -228,7 +229,13 @@ const AdminSideBar = () => {
 
         {/* Content Area */}
         <main className="flex-1 p-6 bg-gray-50 overflow-y-auto">
-          <Outlet />
+          <Suspense
+            fallback={
+              <DhanSourceLoader label="Loading page…" className="min-h-[50vh]" />
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

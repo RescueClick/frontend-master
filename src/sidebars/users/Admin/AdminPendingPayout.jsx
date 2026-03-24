@@ -28,6 +28,8 @@ import {
 import { matchesSearchTerm, matchesStatusFilter } from "../../../utils/tableFilter";
 import { matchesMonthYear } from "../../../utils/dateFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import TableLoader from "../../../components/shared/TableLoader";
+import DhanSourceLoader from "../../../components/DhanSourceLoader";
 
 const AdminPendingPayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -66,9 +68,14 @@ const AdminPendingPayout = () => {
     (state) => state.admin?.pendingPayout || { data: [], loading: false, error: null }
   );
 
-  const { data: customerPartnersPayout } = useSelector(
-    (state) => state.admin?.customerPartnersPayout || { data: null }
-  );
+  const { data: customerPartnersPayout, loading: payoutDetailLoading } =
+    useSelector(
+      (state) =>
+        state.admin?.customerPartnersPayout || {
+          data: null,
+          loading: false,
+        }
+    );
 
   // When modal opens and partner payout data is loaded, prefill admin payout form
   useEffect(() => {
@@ -183,36 +190,45 @@ const AdminPendingPayout = () => {
 
   return (
     <>
-      {/* Popup (Modal) */}
-      {customerID && customerPartnersPayout && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/25 bg-opacity-40 z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl relative transform transition-all duration-300 ease-out scale-100 max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover p-6 rounded-t-2xl text-white relative overflow-hidden flex-shrink-0">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full translate-y-12 -translate-x-12"></div>
-              <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="bg-white bg-opacity-20 p-2 rounded-lg">
-                    <User className="w-6 h-6 text-[#F59E0B]" />
-                  </div>
-                  <h2 className="text-xl font-bold">Partner Details</h2>
+      {/* Popup (Modal) — payout review */}
+      {customerID && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl max-h-[92vh] overflow-hidden flex flex-col border border-slate-200/80">
+            <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary">
+                  <User className="w-6 h-6" />
                 </div>
-                <button
-                  onClick={handleClose}
-                  className="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition-all duration-200"
-                >
-                  <X className="w-5 h-5 text-[#F59E0B]" />
-                </button>
+                <div className="min-w-0">
+                  <h2 className="text-lg font-bold text-slate-900 truncate">
+                    Apply payout
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Partner bank details &amp; payout calculation
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="p-6 overflow-y-auto max-h-[70vh]">
-              {customerPartnersPayout.partners?.map((partner, index) => (
+            <div className="flex-1 overflow-y-auto min-h-[200px]">
+              {payoutDetailLoading || !customerPartnersPayout ? (
+                <div className="flex min-h-[280px] items-center justify-center p-8">
+                  <DhanSourceLoader size="sm" label="Loading partner details…" />
+                </div>
+              ) : (
+                <div className="p-6 space-y-8">
+                {customerPartnersPayout.partners?.map((partner, index) => (
                 <div
                   key={partner._id || index}
-                  className="mb-8 border-b border-gray-200 pb-6 last:border-none"
+                  className="mb-8 border-b border-gray-200 pb-8 last:mb-0 last:border-b-0 last:pb-0"
                 >
                   <h3 className="text-lg font-bold text-gray-800 mb-4">
                     Partner {index + 1}: {partner.firstName} {partner.lastName}
@@ -410,6 +426,8 @@ const AdminPendingPayout = () => {
                   </div>
                 </div>
               ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -492,11 +510,7 @@ const AdminPendingPayout = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={9} className="text-center py-4">
-                    Loading...
-                  </td>
-                </tr>
+                <TableLoader colSpan={9} label="Loading payouts…" />
               ) : error ? (
                 <tr>
                   <td colSpan={9} className="text-center py-4 text-red-600">

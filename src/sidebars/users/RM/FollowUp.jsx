@@ -18,6 +18,11 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPartnersWithFollowUp, updateFollowUp } from "../../../feature/thunks/rmThunks";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import {
+  FOLLOW_UP_STATUS_OPTIONS,
+  getFollowUpStatusStyle,
+} from "../../../utils/followUpStatusConfig";
+import TableLoader from "../../../components/shared/TableLoader";
 
 
 const FollowUp = () => {
@@ -53,51 +58,6 @@ const FollowUp = () => {
     remarks: item.remarks,
     lastCall: item.lastCall,
   }));
-
-  const statusOptions = [
-    {
-      value: "Ringing",
-      label: "Ringing",
-      color: "bg-amber-500",
-      textColor: "text-amber-700",
-      bgColor: "bg-amber-100",
-    },
-    {
-      value: "Connected",
-      label: "Connected",
-      color: "bg-emerald-500",
-      textColor: "text-emerald-700",
-      bgColor: "bg-emerald-100",
-    },
-    {
-      value: "Switch Off",
-      label: "Switch Off",
-      color: "bg-red-500",
-      textColor: "text-red-700",
-      bgColor: "bg-red-100",
-    },
-     {
-      value: "Not Reachable",
-      label: "Not Reachable",
-      color: "bg-gray-500",
-      textColor: "text-gray-700",
-      bgColor: "bg-gray-100",
-    },
-  ];
-
-  const getStatusStyle = (status) => {
-    const option = statusOptions.find((opt) => opt.value === status);
-    return (
-      option || {
-        color: "bg-gray-500",
-        textColor: "text-gray-700",
-        bgColor: "bg-gray-100",
-      }
-    );
-  };
-
-
-
 
 
 
@@ -241,7 +201,7 @@ const FollowUp = () => {
                 className="appearance-none bg-white border-2 border-gray-200 rounded-xl px-4 py-3 pr-10  transition-all duration-200"
               >
                 <option value="">All Status</option>
-                {statusOptions.map((option) => (
+                {FOLLOW_UP_STATUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -286,8 +246,12 @@ const FollowUp = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {sortedFilteredFollowUps.map((followUp, index) => {
-                  const statusStyle = getStatusStyle(followUp.status);
+                {loading ? (
+                  <TableLoader colSpan={7} label="Loading follow-ups…" />
+                ) : null}
+                {!loading &&
+                  sortedFilteredFollowUps.map((followUp, index) => {
+                  const statusStyle = getFollowUpStatusStyle(followUp.status);
                   return (
                     <tr
                       key={followUp.id}
@@ -320,7 +284,7 @@ const FollowUp = () => {
                         <span
                           className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${statusStyle.bgColor} ${statusStyle.textColor}`}
                         >
-                          {statusOptions.find(
+                          {FOLLOW_UP_STATUS_OPTIONS.find(
                             (opt) => opt.value === followUp.status
                           )?.label || "N/A"}
                         </span>
@@ -364,7 +328,7 @@ const FollowUp = () => {
             </table>
           </div>
 
-          {sortedFilteredFollowUps.length === 0 && (
+          {!loading && sortedFilteredFollowUps.length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-400 text-lg">No follow-ups found</div>
               <p className="text-gray-500 mt-2">
@@ -472,7 +436,7 @@ const FollowUp = () => {
                       required
                     >
                       <option value="">Select status</option>
-                      {statusOptions.map((option) => (
+                      {FOLLOW_UP_STATUS_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
                         </option>

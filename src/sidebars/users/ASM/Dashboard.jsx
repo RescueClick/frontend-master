@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   TrendingUp,
   Users,
@@ -11,6 +11,7 @@ import {
   BarChart3,
   IndianRupee,
   FileText,
+  Eye,
 } from "lucide-react";
 import { fetchAsmDashboard } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
@@ -22,6 +23,16 @@ import { designSystem, formatCurrency, formatNumber, typography } from "../../..
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
+
+  const openRsmAnalytics = useCallback(
+    (performer) => {
+      if (!performer?.id) return;
+      navigate("/asm/ASManalytics", {
+        state: { id: performer.id, role: "RSM" },
+      });
+    },
+    [navigate]
+  );
 
   const dispatch = useDispatch();
 
@@ -106,6 +117,7 @@ const Dashboard = () => {
   const topPerformers = useMemo(() => {
     // ASM sees top RSM performers
     return (data?.topRSMPerformers || []).map((item, index) => ({
+      id: item.id,
       name: item.name,
       revenue: `₹${(item.totalRevenue / 10000000).toFixed(2)}Cr`,
       achievement: `${item.totalDisbursedApps || 0} Apps`,
@@ -288,11 +300,17 @@ const Dashboard = () => {
                 topPerformers.map((performer, index) => (
                   <div
                     key={performer.id || index}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                    onClick={() => openRsmAnalytics(performer)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") openRsmAnalytics(performer);
+                    }}
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center min-w-0">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3 ${
+                        className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3 ${
                           index === 0
                             ? "bg-yellow-500"
                             : index === 1
@@ -304,8 +322,8 @@ const Dashboard = () => {
                       >
                         {index + 1}
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">
                           {performer.name}
                         </p>
                         <p className="text-gray-500 text-xs">
@@ -313,13 +331,27 @@ const Dashboard = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-gray-800 text-sm font-semibold">
-                        {performer.revenue || "-"}
-                      </p>
-                      <p className="text-gray-500 text-xs">
-                        {performer.achievement || "0 Apps"}
-                      </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-brand-primary/5"
+                        title="Open RSM analytics"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openRsmAnalytics(performer);
+                        }}
+                      >
+                        <Eye size={14} className="text-brand-primary" />
+                        View
+                      </button>
+                      <div className="text-right">
+                        <p className="text-gray-800 text-sm font-semibold">
+                          {performer.revenue || "-"}
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          {performer.achievement || "0 Apps"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))

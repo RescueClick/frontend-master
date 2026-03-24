@@ -302,6 +302,8 @@ export default function PersonalLoan() {
     // Loan
     if (formData.loanAmount === "" || formData.loanAmount === null || formData.loanAmount === undefined) {
       errors.loanAmount = "Loan amount is required.";
+    } else if (Number(formData.loanAmount) <= 0) {
+      errors.loanAmount = "Loan amount must be greater than zero.";
     }
 
 

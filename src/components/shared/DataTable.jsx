@@ -1,4 +1,5 @@
 // Shared Data Table Component - Linear Design System
+import DhanSourceLoader from "../DhanSourceLoader";
 import { designSystem } from "../../utils/designSystem";
 
 const DataTable = ({ 
@@ -12,10 +13,7 @@ const DataTable = ({
   if (loading) {
     return (
       <div className={`${designSystem.table.container} ${className}`}>
-        <div className="p-8 text-center">
-          <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading data...</p>
-        </div>
+        <DhanSourceLoader size="sm" label="Loading table…" className="py-12" />
       </div>
     );
   }

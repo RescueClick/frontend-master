@@ -78,6 +78,13 @@ export default function AsmPartner() {
     setShowViewModal(true);
   };
 
+  const openPartnerAnalytics = (c) => {
+    if (!c?.id) return;
+    navigate("/asm/ASManalytics", {
+      state: { id: c.id, role: "PARTNER" },
+    });
+  };
+
   const formatDate = (dateString) => {
     const [day, month, year] = dateString.split("-");
     const date = new Date(`${year}-${month}-${day}`);
@@ -245,7 +252,10 @@ loginAsUser(userId, navigate);
                 {filteredCustomers.length > 0 ? (
                   sortedFilteredCustomers.map((c) => (
                     <tr key={c.id} className="border-b hover:bg-gray-50">
-                      <td className="px-2 py-3 align-top">
+                      <td
+                        className="px-2 py-3 align-top cursor-pointer hover:text-brand-primary"
+                        onClick={() => openPartnerAnalytics(c)}
+                      >
                         <div className="flex items-center gap-3">
                           <img src={c?.profilePic} alt="profile" className="w-8 h-8 rounded-full border border-gray-300" />
                           <span className="font-semibold text-sm">
@@ -299,12 +309,21 @@ loginAsUser(userId, navigate);
                         </div>
                       </td>
                       <td className="px-2 py-3 align-middle">
-                        <div className="flex items-center gap-1 h-full">
+                        <div className="flex items-center gap-2 h-full">
                           <button
+                            type="button"
                             className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-                            onClick={() => handleViewCustomer(c)}
+                            title="Open partner analytics"
+                            onClick={() => openPartnerAnalytics(c)}
                           >
                             <Eye size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+                            onClick={() => handleViewCustomer(c)}
+                          >
+                            Details
                           </button>
                         </div>
                       </td>

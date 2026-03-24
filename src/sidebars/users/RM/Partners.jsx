@@ -1,36 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import {
-  Users,
-  User,
-  Search,
-  Filter,
-  Plus,
-  Star,
-  TrendingUp,
-  DollarSign,
-  FileText,
-  Phone,
-  Mail,
-  MapPin,
-  Calendar,
-  Award,
-  Target,
-  Activity,
-  MoreHorizontal,
-  ArrowUp,
-  ArrowDown,
-  Eye,
-  Edit,
-  Building2,
-  Handshake,
-  BarChart3,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Download,
-  Upload,
-  Briefcase,
-} from "lucide-react";
+import { User, Search, Plus, Download, Eye } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -45,6 +14,7 @@ import axios from "axios";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import TableLoader from "../../../components/shared/TableLoader";
 
 
 const colors = {
@@ -64,15 +34,17 @@ const Partners = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
 
-  const [PartnerProfile, setPartnerProfile] = useState(null);
-
-
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [newPartnerId, setNewPartnerId] = useState(null);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const openPartnerAnalytics = useCallback((partner) => {
+    if (!partner?.id) return;
+    navigate("/rm/RManalytics", { state: { id: partner.id, role: "RM" } });
+  }, [navigate]);
 
   const { loading, error, data } = useSelector((state) => state.rm.partner);
   
@@ -102,7 +74,7 @@ const Partners = () => {
 
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+    switch (String(status || "").toLowerCase()) {
       case "active":
         return "text-green-700 bg-green-100 border-green-200";
       case "inactive":
@@ -216,6 +188,11 @@ const Partners = () => {
       "Total Disbursed": item.totalDisbursed,
       "Assigned Target": item.assignedTarget,
       "Performance": item.performance,
+      "Payout (done)": item.totalPayout ?? item.payoutDone,
+      "Payout (pending)": item.payoutPending,
+      "Incentive (paid)": item.incentivePaid,
+      "Incentive (pending)": item.incentivePending,
+      "Incentive (total)": item.incentiveTotal,
 
     }));
 
@@ -319,251 +296,6 @@ const Partners = () => {
 
 
       }
-
-      {PartnerProfile && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div
-            className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-gray-200/50"
-            style={{ backgroundColor: "#F8FAFC" }}
-          >
-            {/* Header Card */}
-            <div
-              className="p-6 text-white rounded-t-3xl relative overflow-hidden"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--color-brand-primary) 0%, #0d7a72 50%, var(--color-brand-primary-hover) 100%)",
-              }}
-            >
-              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between">
-                {/* Profile Picture and Name Section */}
-                <div className="flex items-center space-x-4 mb-4 md:mb-0">
-                  <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm border-4 border-white/30 flex items-center justify-center overflow-hidden shadow-lg relative">
-                    {PartnerProfile?.profilePic ? (
-                      <img
-                        src={PartnerProfile.profilePic}
-                        alt={PartnerProfile.name || "Partner"}
-                        className="w-full h-full object-cover"
-                        style={{ minWidth: '100%', minHeight: '100%' }}
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          const fallback = e.target.parentElement.querySelector('.profile-fallback');
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    {(!PartnerProfile?.profilePic || PartnerProfile.profilePic === null || PartnerProfile.profilePic === '') && (
-                      <div className="profile-fallback w-full h-full flex items-center justify-center absolute inset-0">
-                        <User className="w-12 h-12 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-white mb-1">
-                      {PartnerProfile.name || "Partner Profile"}
-                    </h2>
-                    <p className="text-white/80 text-sm capitalize">
-                      {PartnerProfile.status || "Active Partner"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Close Button */}
-                <div className="flex items-center">
-                  <button
-                    onClick={() => setPartnerProfile(null)}
-                    className="cursor-pointer bg-white/10 hover:bg-white/20 text-white transition-all duration-200 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/20 font-semibold"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Contact Information - TOP SECTION */}
-            <div className="bg-white rounded-2xl shadow-xl p-4 border border-gray-200/50 mx-8 mt-3 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
-              <div className="flex items-center space-x-3 mb-2">
-                <div
-                  className="p-3 rounded-xl shadow-lg"
-                  style={{ backgroundColor: "var(--color-brand-primary)" }}
-                >
-                  <Users className="w-4 h-4 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold" style={{ color: "#111827" }}>
-                  Contact Information
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Partner Name */}
-                <div className=" space-y-4 p-4 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl border border-gray-200/30">
-                  <h3 className="font-bold text-gray-700 text-sm uppercase tracking-wider">
-                    Partner Name
-                  </h3>
-                  <p
-                    className="text-md font-semibold"
-                    style={{ color: "#111827" }}
-                  >
-                    {PartnerProfile.name}
-                  </p>
-                </div>
-
-                {/* Email */}
-                <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl border border-blue-200/30">
-                  <h3 className="font-bold text-gray-700 text-md uppercase tracking-wider">
-                    Email
-                  </h3>
-                  <div className="flex items-center space-x-3">
-                    <Mail className="w-5 h-5" style={{ color: "var(--color-brand-primary)" }} />
-                    <a
-                      href={`mailto:${PartnerProfile.email}`}
-                      className="font-semibold transition-colors hover:opacity-80"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    >
-                      {PartnerProfile.email}
-                    </a>
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-4 p-6 bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl border border-green-200/30">
-                  <h3 className="font-bold text-gray-700 text-md uppercase tracking-wider">
-                    Phone
-                  </h3>
-                  <div className="flex items-center space-x-3">
-                    <Phone className="w-5 h-5" style={{ color: "var(--color-brand-primary)" }} />
-                    <a
-                      href={`tel:${PartnerProfile.phone}`}
-                      className="font-semibold transition-colors hover:opacity-80"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    >
-                      {PartnerProfile.phone}
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Middle Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-4">
-              {/* Deals This Month */}
-              <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-200/50">
-                <div
-                  className="absolute top-0 left-0 w-full h-1"
-                  style={{ backgroundColor: "var(--color-brand-primary)" }}
-                ></div>
-                <div className="flex items-center justify-between mb-6">
-                  <div
-                    className="p-4 rounded-2xl shadow-lg"
-                    style={{ backgroundColor: "var(--color-brand-primary)" }}
-                  >
-                    <Target className="w-4 h-4 text-white" />
-                  </div>
-                  <span
-                    className="text-2xl font-bold"
-                    style={{ color: "#111827" }}
-                  >
-                    {PartnerProfile.dealsThisMonth}
-                  </span>
-                </div>
-                <h3
-                  className="font-bold text-md mb-2"
-                  style={{ color: "#111827" }}
-                >
-                  Deals This Month
-                </h3>
-              </div>
-
-              {/* Revenue Generated */}
-              <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-200/50">
-                <div
-                  className="absolute top-0 left-0 w-full h-1"
-                  style={{ backgroundColor: "#F59E0B" }}
-                ></div>
-                <div className="flex items-center justify-between mb-6">
-                  <div
-                    className="p-4 rounded-2xl shadow-lg"
-                    style={{ backgroundColor: "#F59E0B" }}
-                  >
-                    <DollarSign className="w-4 h-4 text-white" />
-                  </div>
-                  <span
-                    className="text-2xl font-bold"
-                    style={{ color: "#111827" }}
-                  >
-                    {formatCurrency(PartnerProfile.totalDisbursed)}
-                  </span>
-                </div>
-                <h3
-                  className="font-bold text-lg mb-2"
-                  style={{ color: "#111827" }}
-                >
-                  Revenue Generated
-                </h3>
-              </div>
-
-              {/* Rating */}
-              <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-200/50">
-                <div className="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="p-4 bg-purple-500 rounded-2xl shadow-lg">
-                    <Briefcase className="w-4 h-4 text-white" />
-                  </div>
-                  <span
-                    className="text-2xl font-bold"
-                    style={{ color: "#111827" }}
-                  >
-                    {PartnerProfile.rating}
-                  </span>
-                </div>
-                <h3
-                  className="font-bold text-lg mb-2"
-                  style={{ color: "#111827" }}
-                >
-                  Rating
-                </h3>
-              </div>
-            </div>
-
-            {/* Success Rate */}
-            <div className="bg-white rounded-2xl shadow-xl p-4 border border-gray-200/50 mx-8 mb-8">
-              <div className="flex items-center space-x-6">
-                <div
-                  className="p-4 rounded-2xl shadow-lg"
-                  style={{ backgroundColor: "#F59E0B" }}
-                >
-                  <Award className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h2
-                    className="text-xl font-bold mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Success Rate
-                  </h2>
-                  <p className="text-lg font-medium text-gray-600">
-                    Deal closure performance
-                  </p>
-                </div>
-              </div>
-              <div
-                className="text-2xl font-bold my-4"
-                style={{ color: "#F59E0B" }}
-              >
-                {PartnerProfile.successRate}%
-              </div>
-              <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-1000 ease-out"
-                  style={{
-                    backgroundColor: "#F59E0B",
-                    width: `${PartnerProfile.successRate}%`,
-                  }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -681,6 +413,7 @@ const Partners = () => {
                         <th className="px-2 py-4 text-left">Deals</th>
                         <th className="px-2 py-4 text-left">Revenue</th>
                         <th className="px-2 py-4 text-left">Payout</th>
+                        <th className="px-2 py-4 text-left">Incentive</th>
                         <th className="px-2 py-4 text-left">Login As</th>
                         <th className="px-2 py-4 text-left">Activation</th>
                         <th className="px-2 py-4 text-left">Action</th>
@@ -688,21 +421,13 @@ const Partners = () => {
                     </thead>
                     <tbody>
                       {loading ? (
-                        <tr>
-                          <td colSpan="8" className="text-center py-4">
-                            Loading...
-                          </td>
-                        </tr>
+                        <TableLoader colSpan={10} label="Loading partners…" />
                       ) : sortedFilteredPartners.length > 0 ? (
                         sortedFilteredPartners.map((partner) => (
                           <tr key={partner.id} className="border-b hover:bg-gray-50">
                             <td
                               className="px-2 py-3 align-top cursor-pointer"
-                              onClick={() => {
-                                navigate("/rm/RManalytics", {
-                                  state: { id: partner.id, role: "RM" },
-                                });
-                              }}
+                              onClick={() => openPartnerAnalytics(partner)}
                             >
                               <div className="flex items-center gap-2">
                                 {partner?.profilePic ? (
@@ -755,8 +480,18 @@ const Partners = () => {
                             </td>
                             <td className="px-2 py-3 align-middle">
                               <span className="text-sm font-medium text-purple-700">
-                                {formatCurrency(partner.totalPayout || 0)}
+                                {formatCurrency(partner.totalPayout ?? partner.payoutDone ?? 0)}
                               </span>
+                            </td>
+                            <td className="px-2 py-3 align-middle">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-sm font-semibold text-emerald-700">
+                                  {formatCurrency(partner.incentivePaid ?? 0)}
+                                </span>
+                                <span className="text-[10px] leading-tight text-slate-500">
+                                  Pending {formatCurrency(partner.incentivePending ?? 0)}
+                                </span>
+                              </div>
                             </td>
                             <td className="px-2 py-3 align-middle">
                               <button
@@ -796,13 +531,14 @@ const Partners = () => {
                             <td className="px-3 py-3 align-middle">
                               <div className="flex items-center gap-3">
 
-                                {/* View Profile */}
+                                {/* Analytics — same destination as clicking partner name */}
                                 <button
-                                  onClick={() => setPartnerProfile(partner)}
-                                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition"
-                                  title="View Profile"
+                                  type="button"
+                                  onClick={() => openPartnerAnalytics(partner)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-brand-primary/40 hover:bg-brand-primary/5 hover:text-brand-primary"
+                                  title="Open partner analytics"
                                 >
-                                  <Eye size={14} />
+                                  <Eye size={14} className="text-brand-primary" />
                                   View
                                 </button>
 
@@ -822,7 +558,7 @@ const Partners = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="8" className="text-center py-4">
+                          <td colSpan={10} className="text-center py-4">
                             No partners found
                           </td>
                         </tr>

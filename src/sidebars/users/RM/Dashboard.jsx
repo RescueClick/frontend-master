@@ -39,6 +39,11 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
+  const openPartnerAnalytics = useCallback((p) => {
+    if (!p?.id) return;
+    navigate("/rm/RManalytics", { state: { id: p.id, role: "RM" } });
+  }, [navigate]);
+
   const dispatch = useDispatch();
   const { data, loading, error } = useSelector((state) => state.rm.dashboard);
 
@@ -387,6 +392,77 @@ const Dashboard = () => {
             />
           ))}
         </div>
+
+        {data?.partnerPayoutSummary?.length > 0 ? (
+          <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 mb-8">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Partner snapshot
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Disbursement and completed payout by partner (top {data.partnerPayoutSummary.length})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/rm/partners")}
+                className="text-sm font-semibold text-brand-primary hover:underline"
+              >
+                View partner list
+              </button>
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-gray-100">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-gray-600">
+                    <th className="px-4 py-3 font-semibold">Partner</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Deals (month)</th>
+                    <th className="px-4 py-3 font-semibold">Disbursed</th>
+                    <th className="px-4 py-3 font-semibold">Payout</th>
+                    <th className="px-4 py-3 font-semibold text-right">View</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {data.partnerPayoutSummary.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50/80">
+                      <td
+                        className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:text-brand-primary"
+                        onClick={() => openPartnerAnalytics(p)}
+                      >
+                        {p.name}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                          {p.status || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-800">{p.dealsThisMonth ?? 0}</td>
+                      <td className="px-4 py-3 font-semibold text-emerald-700">
+                        {formatCurrency(p.totalDisbursed || 0)}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-violet-700">
+                        {formatCurrency(p.totalPayout || 0)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => openPartnerAnalytics(p)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:border-brand-primary/40 hover:bg-brand-primary/5 hover:text-brand-primary"
+                          title="Open partner analytics"
+                        >
+                          <Eye size={14} className="text-brand-primary" />
+                          Analytics
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
 
         {/* Current Month Target - RM focuses on Disbursement (Business Metric) */}
         <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 mb-5">

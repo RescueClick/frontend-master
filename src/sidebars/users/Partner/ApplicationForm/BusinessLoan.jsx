@@ -267,6 +267,9 @@ function validateForm(formData) {
   // Loan Deatils..........
 
   if (!formData.loanAmount) errors.loanAmount = "loan Amount is required.";
+  else if (Number(formData.loanAmount) <= 0) {
+    errors.loanAmount = "Loan amount must be greater than zero.";
+  }
 
   // Personal Documents.......
 

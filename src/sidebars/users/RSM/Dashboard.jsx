@@ -39,6 +39,11 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
+  const openRmAnalytics = useCallback((rm) => {
+    if (!rm?.id) return;
+    navigate("/rsm/analytics", { state: { id: rm.id, role: "RM" } });
+  }, [navigate]);
+
   const dispatch = useDispatch();
   const { data, loading, error } = useSelector((state) => state.rsm?.dashboard || { data: null, loading: false, error: null });
 
@@ -417,9 +422,14 @@ const Dashboard = () => {
               {data?.topPerformers?.length > 0 ? (
                 data.topPerformers.map((rm, index) => (
                   <div
-                    key={index}
+                    key={rm.id || index}
                     className="p-4 border rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/rsm/rms`)}
+                    onClick={() => openRmAnalytics(rm)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") openRmAnalytics(rm);
+                    }}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
@@ -435,13 +445,27 @@ const Dashboard = () => {
                           </p>
                         </div>
                       </div>
-                      <span
-                        className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                          "disbursed"
-                        )}`}
-                      >
-                        Active
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-brand-primary/5 hover:text-brand-primary"
+                          title="Open RM analytics"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openRmAnalytics(rm);
+                          }}
+                        >
+                          <Eye size={14} className="text-brand-primary" />
+                          View
+                        </button>
+                        <span
+                          className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
+                            "disbursed"
+                          )}`}
+                        >
+                          Active
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
