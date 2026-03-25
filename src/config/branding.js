@@ -6,6 +6,9 @@
  * Logo: transparent PNG for nav / login (works on any background). Source: `src/assets/logo_list/`.
  */
 import brandLogo from "../assets/logo_list/logo-horizontal-1200x400.png";
+
+export const loginBanner = brandLogo;
+
 export const COMPANY_NAME = "DhanSource Capital";
 
 /** Full legal name — website footer copyright, legal name field, contracts */

@@ -37,6 +37,21 @@ export default function PartnerEditProfile() {
   const [saveMsg, setSaveMsg] = useState(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  const getErrMsg = (err, fallback) => {
+    const data = err?.response?.data;
+
+    if (typeof err === "string") return err;
+    if (typeof data === "string" && data) return data;
+
+    return (
+      data?.message ||
+      data?.msg ||
+      err?.message ||
+      fallback ||
+      "Update failed. Please try again."
+    );
+  };
+
   useEffect(() => {
     dispatch(fetchPartnerProfile());
   }, [dispatch]);
@@ -108,13 +123,7 @@ export default function PartnerEditProfile() {
         }
       }, 900);
     } catch (err) {
-      const msg =
-        typeof err === "string"
-          ? err
-          : err && typeof err === "object" && typeof err.message === "string"
-            ? err.message
-            : "Update failed. Try again.";
-      setSaveMsg({ type: "err", text: msg });
+      setSaveMsg({ type: "err", text: getErrMsg(err, "Could not update profile.") });
     }
   };
 
@@ -141,13 +150,10 @@ export default function PartnerEditProfile() {
       setSaveMsg({ type: "ok", text: "Profile photo updated successfully." });
       await dispatch(fetchPartnerProfile());
     } catch (err) {
-      const msg =
-        typeof err === "string"
-          ? err
-          : err && typeof err === "object" && typeof err.message === "string"
-            ? err.message
-            : "Could not upload profile photo.";
-      setSaveMsg({ type: "err", text: msg });
+      setSaveMsg({
+        type: "err",
+        text: getErrMsg(err, "Could not upload profile photo."),
+      });
     } finally {
       setAvatarUploading(false);
       e.target.value = "";
