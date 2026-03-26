@@ -8,6 +8,8 @@ import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 
+import toast, { Toaster } from "react-hot-toast";
+
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
@@ -28,6 +30,9 @@ export default function RSM() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [rsmToView, setRsmToView] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+const [selectedNewRsmId, setSelectedNewRsmId] = useState(null);
+const [searchRsm, setSearchRsm] = useState("");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -192,11 +197,28 @@ export default function RSM() {
   const [RSMactiveModel, setRSMactiveModel] = useState(null);
   const [rsmToDeactivate, setRsmToDeactivate] = useState(null);
 
-  const handleRSMactive = () => {
-    dispatch(activateRSM(RSMactiveModel));
-    setTimeout(() => {
-      setRSMactiveModel(null);
-    }, 100);
+  const handleRSMactive = async () => {
+    const { adminToken } = getAuthData() || {};
+    if (!adminToken) {
+      toast.error("Missing admin token");
+      return;
+    }
+
+    try {
+      await dispatch(activateRSM(RSMactiveModel)).unwrap();
+      toast.success("RSM activated successfully");
+      dispatch(fetchRSMs(adminToken));
+    } catch (err) {
+      toast.error(
+        typeof err === "string"
+          ? err
+          : err?.message || "Failed to activate RSM"
+      );
+    } finally {
+      setTimeout(() => {
+        setRSMactiveModel(null);
+      }, 100);
+    }
   };
 
   const toggleActivation = (rsm) => {
@@ -213,16 +235,22 @@ export default function RSM() {
     if (!rsmToDeactivate) return;
     const { adminToken } = getAuthData() || {};
     if (!adminToken) {
-      alert("Not authenticated");
+      toast.error("Not authenticated");
       return;
     }
 
     try {
-      await dispatch(deactivateRSM(rsmToDeactivate._id)).unwrap();
+      await dispatch(
+        deactivateRSM({
+          rsmId: rsmToDeactivate._id,
+          // newRsmId: selectedNewRsm?._id  // optional (recommended)
+        })
+      ).unwrap();
       dispatch(fetchRSMs(adminToken));
+      toast.success("RSM deactivated successfully");
       setRsmToDeactivate(null);
     } catch (err) {
-      alert(
+      toast.error(
         typeof err === "string"
           ? err
           : err?.message || "Failed to deactivate RSM"
@@ -431,13 +459,20 @@ export default function RSM() {
                       <div
                         className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${rsm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
                           }`}
-                        onClick={() => {
-                          if (rsm.status === "ACTIVE") {
-                            setRsmToDeactivate(rsm);
-                          } else {
-                            setRSMactiveModel(rsm._id);
-                          }
-                        }}
+                          onClick={() => {
+                            if (rsm.status === "ACTIVE") {
+                              setRsmToDeactivate(rsm);
+                          
+                              // 🔥 ADD THIS (THIS WAS MISSING)
+                              setShowDeactivateModal(true);
+                          
+                              // optional reset
+                              setSelectedNewRsmId(null);
+                              setSearchRsm("");
+                            } else {
+                              setRSMactiveModel(rsm._id);
+                            }
+                          }}
                       >
                         <div
                           className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${rsm.status === "ACTIVE"
@@ -928,34 +963,179 @@ export default function RSM() {
       )}
 
       {/* Deactivation Confirmation Modal */}
-      {rsmToDeactivate && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 bg-opacity-40 z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-80 text-center">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Deactivate RSM?</h3>
-            <p className="text-gray-600 mb-5">
-              Are you sure you want to deactivate {rsmToDeactivate.firstName} {rsmToDeactivate.lastName}?
+      {showDeactivateModal && rsmToDeactivate && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div
+      className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl relative"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="bg-brand-primary p-6 text-white relative">
+        <button
+          onClick={() => {
+            setShowDeactivateModal(false);
+            setRsmToDeactivate(null);
+          }}
+          className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2"
+        >
+          ✕
+        </button>
+
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold">Deactivate RSM</h3>
+
+          {/* 🔥 Disclaimer */}
+          <div className="flex items-center gap-3 bg-red-50 border-l-4 border-red-500 rounded-md p-3">
+            <div className="text-red-600">⚠️</div>
+            <p className="text-sm text-red-700">
+              <b>Disclaimer:</b> All RMs under this RSM will be reassigned to another ACTIVE RSM.
             </p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => {
-                  setRsmToDeactivate(null);
-                }}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  confirmDeactivate();
-                }}
-                className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
-              >
-                Deactivate
-              </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-6 bg-[#F8FAFC] space-y-4">
+
+        {/* Current RSM */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border">
+          <div className="flex justify-between">
+            <div>
+              <h4 className="font-semibold">
+                {rsmToDeactivate.firstName} {rsmToDeactivate.lastName}
+              </h4>
+              <p className="text-sm text-gray-600">
+                Status: {rsmToDeactivate.status}
+              </p>
+            </div>
+            <span className="text-red-600 text-xs">Will be deactivated</span>
+          </div>
+        </div>
+
+        {/* Search */}
+        <input
+          type="text"
+          value={searchRsm}
+          onChange={(e) => setSearchRsm(e.target.value)}
+          placeholder="Search RSM..."
+          className="w-full px-3 py-2 border rounded-md"
+        />
+
+        {/* RSM List */}
+        <div className="max-h-64 overflow-auto divide-y rounded-lg border">
+  {(Array.isArray(rsms) ? rsms : [])
+    .filter((r) => {
+      if (!rsmToDeactivate) return false;
+
+      return (
+        r._id !== rsmToDeactivate._id &&
+        r.status === "ACTIVE" &&
+        r.rsmType?.toUpperCase() ===
+          rsmToDeactivate.rsmType?.toUpperCase()
+      );
+    })
+    .filter((r) =>
+      `${r.firstName} ${r.lastName}`
+        .toLowerCase()
+        .includes((searchRsm || "").toLowerCase())
+    )
+    .map((r) => (
+      <label
+        key={r._id}
+        className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <input
+            type="radio"
+            checked={selectedNewRsmId === r._id}
+            onChange={() => setSelectedNewRsmId(r._id)}
+          />
+
+          <div>
+            <div className="text-sm font-medium">
+              {r.firstName} {r.lastName}
+            </div>
+
+            <div className="text-xs text-gray-500">
+              {r.employeeId}
             </div>
           </div>
         </div>
-      )}
+
+        <span className="text-xs text-green-600">
+          {r.status}
+        </span>
+      </label>
+    ))}
+
+  {/* EMPTY STATE */}
+  {(Array.isArray(rsms) ? rsms : []).filter((r) => {
+    if (!rsmToDeactivate) return false;
+
+    return (
+      r._id !== rsmToDeactivate._id &&
+      r.status === "ACTIVE" &&
+      r.rsmType?.toUpperCase() ===
+        rsmToDeactivate.rsmType?.toUpperCase()
+    );
+  }).length === 0 && (
+    <div className="p-4 text-sm text-gray-500 text-center">
+      No active RSM available for this type
+    </div>
+  )}
+</div>
+        {/* Buttons */}
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => {
+              setShowDeactivateModal(false);
+              setRsmToDeactivate(null);
+              setSelectedNewRsmId(null);
+            }}
+            className="px-4 py-2 border rounded-md"
+          >
+            Cancel
+          </button>
+
+          <button
+            disabled={!selectedNewRsmId}
+            onClick={async () => {
+              const { adminToken } = getAuthData();
+
+              try {
+                await dispatch(
+                  deactivateRSM({
+                    rsmId: rsmToDeactivate._id,
+                    newRsmId: selectedNewRsmId,
+                  })
+                ).unwrap();
+
+                dispatch(fetchRSMs(adminToken));
+
+                toast.success("RSM reassigned & deactivated");
+
+                setShowDeactivateModal(false);
+                setRsmToDeactivate(null);
+                setSelectedNewRsmId(null);
+              } catch (err) {
+                toast.error(err?.message || "Failed");
+              }
+            }}
+            className={`px-4 py-2 text-white rounded-md ${
+              selectedNewRsmId
+                ? "bg-brand-primary"
+                : "bg-gray-300"
+            }`}
+          >
+            Confirm & Deactivate
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+      <Toaster position="top-center" reverseOrder={false} />
     </>
   );
 }

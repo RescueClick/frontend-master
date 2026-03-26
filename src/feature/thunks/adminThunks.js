@@ -13,7 +13,16 @@ export const loginUser = createAsyncThunk(
         password,
       });
 
-      const { token, user } = response.data;
+      // Backend wraps login payload as: { success, message, data: { token, user } }
+      // (but some endpoints may return token/user at the top-level).
+      const payload = response?.data?.data ?? response?.data ?? {};
+      const { token, user } = payload;
+
+      if (!token || !user) {
+        return rejectWithValue(
+          "Invalid server response during login (missing token/user)."
+        );
+      }
 
       // Save auth data based on role
       if (user.role === "SUPER_ADMIN") {
@@ -245,7 +254,7 @@ export const reassignAllRmsFromAsm = createAsyncThunk(
     try {
       const { adminToken } = getAuthData();
       const response = await axios.post(
-        `${backendurl}/admin/reassign-rms-asm`,
+        `${backendurl}/admin/assign-rms-to-asm`,
         { oldAsmId, newAsmId },
         {
           headers: {
@@ -271,7 +280,7 @@ export const activateAsm = createAsyncThunk(
       const { adminToken } = getAuthData();
       const response = await axios.post(
         `${backendurl}/admin/asm/activate`,
-        { asmId },
+         asmId ,
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,
@@ -806,6 +815,36 @@ export const assignPartnersToRM = createAsyncThunk(
   }
 );
 
+// Deactivate RM (Admin role) - with optional newRmId override
+export const deactivateRM = createAsyncThunk(
+  "admin/deactivateRM",
+  async ({ rmId, newRmId }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+
+      const payload = { rmId };
+      if (newRmId) payload.newRmId = newRmId;
+
+      const response = await axios.post(
+        `${backendurl}/admin/rm/deactivate`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to deactivate RM"
+      );
+    }
+  }
+);
+
 // Activate RSM (Admin role)
 export const activateRSM = createAsyncThunk(
   "admin/activateRSM",
@@ -834,12 +873,13 @@ export const activateRSM = createAsyncThunk(
 // Deactivate RSM (Admin role)
 export const deactivateRSM = createAsyncThunk(
   "admin/deactivateRSM",
-  async (rsmId, { rejectWithValue }) => {
+  async ({ rsmId, newRsmId }, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
+
       const response = await axios.post(
         `${backendurl}/admin/rsm/deactivate`,
-        { rsmId },
+        { rsmId, newRsmId },   // ✅ send both
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,
@@ -847,6 +887,7 @@ export const deactivateRSM = createAsyncThunk(
           },
         }
       );
+
       return response.data;
     } catch (error) {
       return rejectWithValue(

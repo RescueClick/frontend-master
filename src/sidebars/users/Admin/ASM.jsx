@@ -805,15 +805,17 @@ const handleLoginAs = (userId) => {
                         // Refresh lists
                         dispatch(fetchRMs(token));
                         dispatch(fetchAsms(token));
+                        toast.success("ASM deactivated and responsibilities reassigned");
                         setShowDeactivateModal(false);
                         setUserToDeactivate(null);
                         setSelectedReplacementId(null);
                       } catch (err) {
-                        setConfirmError(
+                        const msg =
                           typeof err === "string"
                             ? err
-                            : err?.message || "Failed to reassign"
-                        );
+                            : err?.message || "Failed to reassign";
+                        setConfirmError(msg);
+                        toast.error(msg);
                       } finally {
                         setConfirmBusy(false);
                       }
@@ -884,9 +886,15 @@ const handleLoginAs = (userId) => {
                         activateAsm({ asmId: userToActivate._id, token })
                       ).unwrap();
                       dispatch(fetchAsms(token));
+                      toast.success("ASM activated successfully");
                       setShowActivateModal(false);
                       setUserToActivate(null);
                     } catch (err) {
+                      const msg =
+                        typeof err === "string"
+                          ? err
+                          : err?.message || "Failed to activate ASM";
+                      toast.error(msg);
                       console.error(err);
                     } finally {
                       setConfirmBusy(false);

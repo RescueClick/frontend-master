@@ -3,10 +3,12 @@ import { Eye, Edit, Trash, Search, Download } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
-import { activateRM, assignPartnersToRM, deleteRm, fetchRMs } from "../../../feature/thunks/adminThunks";
+import { activateRM, deactivateRM, deleteRm, fetchRMs } from "../../../feature/thunks/adminThunks";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+
+import toast, { Toaster } from "react-hot-toast";
 
 
 
@@ -107,20 +109,36 @@ export default function RM() {
   };
 
 
-  const deactivateRm = (rmToDeactivate, selectedReplacement) => {
+  const deactivateRm = async (rmToDeactivate, selectedReplacement) => {
+    const { adminToken } = getAuthData() || {};
+    if (!adminToken) {
+      toast.error("Missing admin token");
+      return;
+    }
 
+    try {
+      await dispatch(
+        deactivateRM({
+          rmId: rmToDeactivate,
+          newRmId: selectedReplacement,
+        })
+      ).unwrap();
 
+      toast.success("RM deactivated successfully");
+      dispatch(fetchRMs(adminToken));
 
-    dispatch(
-      assignPartnersToRM({ oldRmId: rmToDeactivate, newRmId: selectedReplacement })
-    );
-
-    setShowDeactivateModal(false);
-    setRmToDeactivate(null);
-    setSelectedReplacement(null);
-    setReplacementSearch("");
-
-  }
+      setShowDeactivateModal(false);
+      setRmToDeactivate(null);
+      setSelectedReplacement(null);
+      setReplacementSearch("");
+    } catch (err) {
+      toast.error(
+        typeof err === "string"
+          ? err
+          : err?.message || "Failed to deactivate RM"
+      );
+    }
+  };
 
 
   const handleExport = () => {
@@ -156,14 +174,29 @@ export default function RM() {
   };
 
 
-  const handleRMactive = () => {
+  const handleRMactive = async () => {
+    const { adminToken } = getAuthData() || {};
+    if (!adminToken) {
+      toast.error("Missing admin token");
+      return;
+    }
 
-    dispatch(activateRM(RMactiveModel));
-    setTimeout(() => {
-      setRMactiveModel(null)
-    }, 100);
-
-  }
+    try {
+      await dispatch(activateRM(RMactiveModel)).unwrap();
+      toast.success("RM activated successfully");
+      dispatch(fetchRMs(adminToken));
+    } catch (err) {
+      toast.error(
+        typeof err === "string"
+          ? err
+          : err?.message || "Failed to activate RM"
+      );
+    } finally {
+      setTimeout(() => {
+        setRMactiveModel(null);
+      }, 100);
+    }
+  };
 
 
   
@@ -784,7 +817,7 @@ loginAsUser(userId, navigate);
         </div>
       }
 
-
+      <Toaster position="top-center" reverseOrder={false} />
     </>
   );
 }
