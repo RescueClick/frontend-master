@@ -422,7 +422,7 @@ const FollowUp = () => {
                   <label className="flex items-center text-gray-800 font-semibold mb-3">
                     <div
                       className={`w-3 h-3 rounded-full mr-2 ${
-                        getStatusStyle(formData.status).color || "bg-gray-300"
+                        getFollowUpStatusStyle(formData.status).color || "bg-gray-300"
                       }`}
                     ></div>
                     Status

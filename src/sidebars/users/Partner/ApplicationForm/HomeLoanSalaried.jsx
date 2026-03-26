@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import axios from "axios";
+import { z } from "zod";
 
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
@@ -129,6 +130,20 @@ export default function HomeLoanSalaried() {
   const abortControllerRef = useRef(null);
   const objectUrlsRef = useRef([]); // Store all created object URLs
 
+  const loanDraftStorageKey = "trustline.homeLoanSalariedDraft.v1";
+  const steps = ["Personal", "Address", "Loan & Employment", "Documents", "References", "Review"];
+  const [currentStep, setCurrentStep] = useState(0);
+  const [maxStep, setMaxStep] = useState(0);
+
+  const stepFirstFieldName = [
+    "firstName",
+    "currentAddress",
+    "loanAmount",
+    "aadharFront",
+    "reference1Name",
+    "partnerReferralCode",
+  ];
+
   // Cleanup function to cancel pending requests and revoke object URLs
   useEffect(() => {
     return () => {
@@ -149,6 +164,133 @@ export default function HomeLoanSalaried() {
       }
     };
   }, []);
+
+  const serializeDraftFormData = (data) => {
+    const copy = { ...data };
+    for (const key of Object.keys(copy)) {
+      const v = copy[key];
+      if (v instanceof File) copy[key] = null;
+    }
+    return copy;
+  };
+
+  // Load draft
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(loanDraftStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.formData) setFormData((prev) => ({ ...prev, ...parsed.formData }));
+      if (typeof parsed?.currentStep === "number") {
+        setCurrentStep(Math.max(0, Math.min(parsed.currentStep, steps.length - 1)));
+      }
+      if (typeof parsed?.maxStep === "number") {
+        setMaxStep(Math.max(0, Math.min(parsed.maxStep, steps.length - 1)));
+      }
+    } catch (e) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist draft
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          loanDraftStorageKey,
+          JSON.stringify({
+            currentStep,
+            maxStep,
+            formData: serializeDraftFormData(formData),
+          })
+        );
+      } catch (e) {
+        // ignore
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [currentStep, maxStep, formData]);
+
+  const scrollToFirstError = (errorMap) => {
+    const keys = Object.keys(errorMap || {});
+    if (keys.length === 0) return;
+    const firstKey = keys[0];
+    const el = document.querySelector(`[name="${firstKey}"]`);
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (typeof el.focus === "function") el.focus();
+    }
+  };
+
+  const phoneSchema = z.string().trim().regex(/^\d{10}$/, "Phone number must be exactly 10 digits.");
+  const emailSchema = z.string().trim().email("Invalid email format.");
+  const pinSchema = z.string().trim().regex(/^[1-9][0-9]{5}$/, "Enter a valid 6-digit PIN code.");
+  const panSchema = z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$/, "Enter a valid PAN card number (e.g., ABCDE1234F).")
+    .transform((s) => s.toUpperCase());
+
+  const min3 = (msg) => z.string().trim().min(3, msg);
+
+  function validateHomeLoanSalariedStep(stepIndex) {
+    const fullErrors = validateRegistrationForm(formData, sameAddress);
+
+    const stepFields = (() => {
+      if (stepIndex === 0) {
+        return ["firstName", "middleName", "lastName", "motherName", "gender", "maritalStatus", "password", "confirmPassword", "contactNo", "email", "dob", "pan"];
+      }
+      if (stepIndex === 1) {
+        return ["currentAddress", "stabilityOfResidency", "currentLandmark", "currentHouseStatus", "currentAddressPinCode", "permanentAddress", "permanentStability", "permanentLandmark", "permanentHouseStatus", "permanentAddressPinCode"];
+      }
+      if (stepIndex === 2) {
+        return ["loanAmount", "companyName", "designation", "companyAddress", "monthlySalary", "totalExperience", "currentExperience", "salaryInHand", "companyIdCard", "salarySlip1", "salarySlip2", "salarySlip3", "form16_26as"];
+      }
+      if (stepIndex === 3) {
+        return ["aadharFront", "aadharBack", "panCard", "passportPhoto", "selfie", "newAddressProofs", "bankStatement1", "bankStatement2"];
+      }
+      if (stepIndex === 4) {
+        return ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"];
+      }
+      return [];
+    })();
+
+    const errors = {};
+    for (const key of stepFields) {
+      if (fullErrors[key]) errors[key] = fullErrors[key];
+    }
+
+    // Zod overlays for fintech-level niceties (names + patterns)
+    if (stepIndex === 0) {
+      const rFirst = min3("First name must be at least 3 characters.").safeParse(formData.firstName);
+      if (!rFirst.success) errors.firstName = rFirst.error.issues[0].message;
+
+      const rLast = min3("Last name must be at least 3 characters.").safeParse(formData.lastName);
+      if (!rLast.success) errors.lastName = rLast.error.issues[0].message;
+
+      const rMother = min3("Mother name must be at least 3 characters.").safeParse(formData.motherName);
+      if (!rMother.success) errors.motherName = rMother.error.issues[0].message;
+
+      const rPhone = phoneSchema.safeParse(formData.contactNo);
+      if (!rPhone.success) errors.contactNo = rPhone.error.issues[0].message;
+
+      const rEmail = emailSchema.safeParse(formData.email);
+      if (!rEmail.success) errors.email = rEmail.error.issues[0].message;
+
+      const rPan = panSchema.safeParse(formData.pan);
+      if (!rPan.success) errors.pan = rPan.error.issues[0].message;
+    }
+
+    if (stepIndex === 1) {
+      const rPin = pinSchema.safeParse(formData.currentAddressPinCode);
+      if (!rPin.success) errors.currentAddressPinCode = rPin.error.issues[0].message;
+      const rPermPin = pinSchema.safeParse(formData.permanentAddressPinCode);
+      if (!rPermPin.success) errors.permanentAddressPinCode = rPermPin.error.issues[0].message;
+    }
+
+    return errors;
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -793,6 +935,16 @@ export default function HomeLoanSalaried() {
       password: "",
       confirmPassword: "",
     });
+    setCurrentStep(0);
+    setMaxStep(0);
+    setFieldErrors({});
+    setValidationErrors([]);
+    setError("");
+    try {
+      localStorage.removeItem(loanDraftStorageKey);
+    } catch (e) {
+      // ignore
+    }
   };
 
   const checkFileSize = (files) => {
@@ -891,8 +1043,47 @@ export default function HomeLoanSalaried() {
             </div>
 
             <div className="p-8 space-y-8">
+              <div className="px-8 pt-5 pb-2 bg-slate-50 border-b border-slate-200 -mx-8 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+                  {steps.map((step, idx) => {
+                    const isActive = idx === currentStep;
+                    const isDone = idx < currentStep;
+                    const isClickable = idx <= maxStep;
+                    return (
+                      <button
+                        key={step}
+                        type="button"
+                        onClick={() => {
+                          if (!isClickable) return;
+                          setCurrentStep(idx);
+                        }}
+                        disabled={!isClickable}
+                        className="rounded-lg border px-2 py-2 text-center font-medium transition-colors"
+                        style={{
+                          borderColor: isActive
+                            ? "var(--color-brand-primary)"
+                            : isDone
+                            ? "#22C55E"
+                            : "#CBD5E1",
+                          backgroundColor: isActive ? "#EEF2FF" : "#FFFFFF",
+                          color: isActive ? "#4F46E5" : "#334155",
+                          opacity: isClickable ? 1 : 0.6,
+                          cursor: isClickable ? "pointer" : "not-allowed",
+                        }}
+                        aria-current={isActive ? "step" : undefined}
+                      >
+                        {idx + 1}. {step}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-xs text-slate-600">
+                  Step-by-step wizard. Draft is saved locally (text fields only).
+                </p>
+              </div>
+
               {/* Personal Information */}
-              <section>
+              <section hidden={currentStep !== 0}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -1201,7 +1392,7 @@ export default function HomeLoanSalaried() {
               </section>
 
               {/* Address Information */}
-              <section>
+              <section hidden={currentStep !== 1}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -1485,7 +1676,7 @@ export default function HomeLoanSalaried() {
                 </div>
               </section>
 
-              <section>
+              <section hidden={currentStep !== 2}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -1528,7 +1719,7 @@ export default function HomeLoanSalaried() {
               </section>
 
               {/* Document Upload */}
-              <section>
+              <section hidden={currentStep !== 3}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -1657,7 +1848,7 @@ export default function HomeLoanSalaried() {
               </section>
 
               {/* Employment Information */}
-              <section>
+              <section hidden={currentStep !== 2}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2274,7 +2465,7 @@ export default function HomeLoanSalaried() {
               </section>
 
               {/* Bank Details Section */}
-              <section>
+              <section hidden={currentStep !== 3}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2462,7 +2653,7 @@ export default function HomeLoanSalaried() {
                 </div>
               </section>
 
-              <section>
+              <section hidden={currentStep !== 3}>
                 <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-gray-900">
                   <FileText className="w-6 h-6 text-teal-500" />
                   4.3 Address Proof Document
@@ -2512,7 +2703,7 @@ export default function HomeLoanSalaried() {
               </section>
 
               {/* References */}
-              <section>
+              <section hidden={currentStep !== 4}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2648,7 +2839,7 @@ export default function HomeLoanSalaried() {
               </section>
 
               {/* Password Section */}
-              <section>
+              <section hidden={currentStep !== 5}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2773,9 +2964,9 @@ export default function HomeLoanSalaried() {
                 </div>
               </section>
 
-            {/* Submit Button + inline messages */}
+            {/* Submit + Wizard Navigation */}
             <div className="pt-8">
-              {error && (
+              {currentStep === steps.length - 1 && error && (
                 <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
                   <p className="font-semibold">{error}</p>
                   {Array.isArray(validationErrors) && validationErrors.length > 0 && (
@@ -2788,16 +2979,69 @@ export default function HomeLoanSalaried() {
                 </div>
               )}
 
-              <div className="flex justify-center">
+              <div className="flex items-center justify-between gap-4">
                 <button
                   type="button"
-                  onClick={handleSubmit}
-                  className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                  style={{ backgroundColor: "var(--color-brand-primary)" }}
-                  disabled={loading}
+                  onClick={() => {
+                    if (currentStep === 0) return;
+                    setError("");
+                    setFieldErrors({});
+                    setValidationErrors([]);
+                    const next = currentStep - 1;
+                    setCurrentStep(next);
+                    requestAnimationFrame(() => {
+                      const el = document.querySelector(`[name="${stepFirstFieldName[next]}"]`);
+                      if (el && typeof el.focus === "function") el.focus();
+                    });
+                  }}
+                  className="px-6 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+                  disabled={loading || currentStep === 0}
                 >
-                  {loading ? "Saving..." : "Submit Loan"}
+                  Back
                 </button>
+
+                {currentStep < steps.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError("");
+                      const stepErrors = validateHomeLoanSalariedStep(currentStep);
+                      setFieldErrors(stepErrors);
+                      setValidationErrors(Object.values(stepErrors));
+
+                      if (Object.keys(stepErrors).length > 0) {
+                        setError("Please fix the highlighted fields to continue.");
+                        scrollToFirstError(stepErrors);
+                        return;
+                      }
+
+                      const nextStep = currentStep + 1;
+                      setCurrentStep(nextStep);
+                      setMaxStep((m) => Math.max(m, nextStep));
+                      setFieldErrors({});
+                      setValidationErrors([]);
+                      requestAnimationFrame(() => {
+                        const el = document.querySelector(`[name="${stepFirstFieldName[nextStep]}"]`);
+                        if (el && typeof el.focus === "function") el.focus();
+                      });
+                    }}
+                    className="px-8 py-3 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-200"
+                    style={{ backgroundColor: "var(--color-brand-primary)" }}
+                    disabled={loading}
+                  >
+                    Next
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-200"
+                    style={{ backgroundColor: "var(--color-brand-primary)" }}
+                    disabled={loading}
+                  >
+                    {loading ? "Saving..." : "Submit Loan"}
+                  </button>
+                )}
               </div>
             </div>
             </div>

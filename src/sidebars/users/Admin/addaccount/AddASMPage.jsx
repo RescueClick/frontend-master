@@ -93,8 +93,7 @@ const AddASMPage = () => {
     }
 
     if (formData?.dob && getAgeFromDOB(formData?.dob) < 18) {
-      alert("You must be at least 18 years old to proceed.");
-      return;
+      newErrors.dob = "You must be at least 18 years old to proceed.";
     }
 
     setErrors(newErrors);
@@ -173,6 +172,7 @@ const handleSubmit = async (e) => {
 
     // ✅ Show error message
     setMessage(error?.message || "Failed to create ASM. Please try again.");
+    handleAddASM();
   }
 };
 
@@ -481,7 +481,7 @@ const handleSubmit = async (e) => {
               </div>
 
               {/* Error from API */}
-              {error && (
+              {!showModal && error && (
                 <p className="mt-4 text-sm text-red-600 flex items-center">
                   <AlertCircle className="w-4 h-4 mr-1" /> {error}
                 </p>

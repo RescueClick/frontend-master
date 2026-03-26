@@ -164,8 +164,7 @@ const AddRMPage = () => {
     }
 
     if (formData?.dob && getAgeFromDOB(formData?.dob) < 18) {
-      alert("You must be at least 18 years old to proceed.");
-      return;
+      newErrors.dob = "You must be at least 18 years old to proceed.";
     }
 
     setErrors(newErrors);
@@ -223,7 +222,8 @@ const handleSubmit = async (e) => {
 
   const { adminToken } = getAuthData() || {};
   if (!adminToken) {
-    alert("Unauthorized. Please login again.");
+    setMessage("Unauthorized. Please login again.");
+    setShowModal(true);
     return;
   }
 
@@ -254,6 +254,7 @@ const handleSubmit = async (e) => {
   } catch (error) {
     console.error("Failed to create RM:", error);
     setMessage(error?.message || "Failed to create RM. Please try again.");
+    setShowModal(true);
   }
 };
 
@@ -637,7 +638,7 @@ const handleSubmit = async (e) => {
               </div>
 
               {/* Error from API */}
-              {error && (
+              {!showModal && error && (
                 <p className="mt-4 text-sm text-red-600 flex items-center">
                   <AlertCircle className="w-4 h-4 mr-1" /> {error}
                 </p>

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Modal from "../../../../components/Modal"; // Assume you have or will create a Modal component
 import axios from "axios";
+import { z } from "zod";
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
 
@@ -110,10 +111,33 @@ export default function BusinessLoan() {
   const [applicationId, setApplicationId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [validationErrors, setValidationErrors] = useState([]);
+  const [validationErrors, setValidationErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
   const [savedApplication, setSavedApplication] = useState(null);
   const abortControllerRef = useRef(null);
+
+  const loanDraftStorageKey = "trustline.businessLoanDraft.v1";
+  const steps = [
+    "Personal",
+    "Address",
+    "Loan & Business",
+    "Documents",
+    "References",
+    "Review",
+  ];
+  const [currentStep, setCurrentStep] = useState(0);
+  const [maxStep, setMaxStep] = useState(0);
+  const [touchedFields, setTouchedFields] = useState({});
+  const [showClientValidation, setShowClientValidation] = useState(false);
+
+  const stepFirstFieldName = [
+    "firstName",
+    "currentAddress",
+    "loanAmount",
+    "aadharFront",
+    "reference1Name",
+    "partnerReferralCode",
+  ];
 
   // Cleanup function to cancel pending requests
   useEffect(() => {
@@ -123,6 +147,242 @@ export default function BusinessLoan() {
       }
     };
   }, []);
+
+  const serializeDraftFormData = (data) => {
+    const copy = { ...data };
+    // localStorage can't persist File objects; drop them so draft restore doesn't break.
+    for (const key of Object.keys(copy)) {
+      const v = copy[key];
+      if (v instanceof File) copy[key] = null;
+    }
+    return copy;
+  };
+
+  // Load draft from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(loanDraftStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.formData) {
+        setFormData((prev) => ({ ...prev, ...parsed.formData }));
+      }
+      if (typeof parsed?.currentStep === "number") {
+        setCurrentStep(Math.max(0, Math.min(parsed.currentStep, steps.length - 1)));
+      }
+      if (typeof parsed?.maxStep === "number") {
+        setMaxStep(Math.max(0, Math.min(parsed.maxStep, steps.length - 1)));
+      }
+    } catch (e) {
+      // Ignore draft restore failures
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist draft as the user progresses
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          loanDraftStorageKey,
+          JSON.stringify({
+            currentStep,
+            maxStep,
+            formData: serializeDraftFormData(formData),
+          })
+        );
+      } catch (e) {
+        // ignore quota errors etc.
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [currentStep, maxStep, formData]);
+
+  const fileLike = (v) =>
+    v instanceof File ||
+    (v && typeof v === "object" && typeof v.size === "number");
+
+  const zodFileRequired = (message) =>
+    z.any().refine((v) => fileLike(v), { message: message || "This document is required." });
+
+  const zodRequiredTextMin3 = (message) =>
+    z.string().trim().min(3, message || "This field must be at least 3 characters long.");
+
+  const pinSchema = z
+    .string()
+    .trim()
+    .regex(/^[1-9][0-9]{5}$/, "Enter a valid 6-digit PIN code.");
+
+  const phoneSchema = z
+    .string()
+    .trim()
+    .regex(/^\d{10}$/, "Phone number must be exactly 10 digits.");
+
+  const panSchema = z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().toUpperCase() : v),
+    z
+      .string()
+      .regex(
+        /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
+        "Enter a valid PAN card number (e.g., ABCDE1234F)."
+      )
+  );
+
+  const emailSchema = z.string().trim().email("Invalid email format.");
+
+  const positiveNumberSchema = z.preprocess(
+    (v) => {
+      if (v === "" || v === null || v === undefined) return undefined;
+      const n = typeof v === "number" ? v : Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    },
+    z.number().positive("Value must be greater than zero.")
+  );
+
+  function validateBusinessLoanStep(stepIndex, data) {
+    const errors = {};
+
+    if (stepIndex === 0) {
+      const firstRes = zodRequiredTextMin3("First name must be at least 3 characters.").safeParse(data.firstName);
+      if (!firstRes.success) errors.firstName = firstRes.error.issues[0].message;
+
+      const lastRes = zodRequiredTextMin3("Last name must be at least 3 characters.").safeParse(data.lastName);
+      if (!lastRes.success) errors.lastName = lastRes.error.issues[0].message;
+
+      const motherRes = zodRequiredTextMin3("Mother name must be at least 3 characters.").safeParse(data.motherName);
+      if (!motherRes.success) errors.motherName = motherRes.error.issues[0].message;
+
+      const panRes = panSchema.safeParse(data.panNumber);
+      if (!panRes.success) errors.panNumber = panRes.error.issues[0].message;
+
+      const phoneRes = phoneSchema.safeParse(data.phone);
+      if (!phoneRes.success) errors.phone = phoneRes.error.issues[0].message;
+
+      const emailRes = emailSchema.safeParse(data.email);
+      if (!emailRes.success) errors.email = emailRes.error.issues[0].message;
+
+      if (!data.gender) errors.gender = "Gender is required.";
+      if (!data.maritalStatus) errors.maritalStatus = "Marital status is required.";
+
+      if (data.maritalStatus === "married") {
+        const spouseRes = zodRequiredTextMin3("Spouse name must be at least 3 characters.").safeParse(data.SpouseName);
+        if (!spouseRes.success) errors.SpouseName = spouseRes.error.issues[0].message;
+      }
+    }
+
+    if (stepIndex === 1) {
+      if (!data.currentAddress) errors.currentAddress = "Current address is required.";
+
+      const pinRes = pinSchema.safeParse(data.currentAddressPincode);
+      if (!pinRes.success) errors.currentAddressPincode = pinRes.error.issues[0].message;
+
+      if (!data.currentAddressOwnRented) errors.currentAddressOwnRented = "Ownership status is required.";
+      if (!data.currentAddressStability) errors.currentAddressStability = "Address stability is required.";
+
+      if (!data.permanentAddress) errors.permanentAddress = "Permanent address is required.";
+
+      const pPinRes = pinSchema.safeParse(data.permanentAddressPincode);
+      if (!pPinRes.success) errors.permanentAddressPincode = pPinRes.error.issues[0].message;
+
+      if (!data.permanentAddressOwnRented) errors.permanentAddressOwnRented = "Ownership status is required.";
+      if (!data.permanentAddressStability) errors.permanentAddressStability = "Address stability is required.";
+    }
+
+    if (stepIndex === 2) {
+      const loanRes = positiveNumberSchema.safeParse(data.loanAmount);
+      if (!loanRes.success) errors.loanAmount = "Loan amount must be greater than zero.";
+
+      const businessNameRes = zodRequiredTextMin3("Business name must be at least 3 characters.").safeParse(data.businessName);
+      if (!businessNameRes.success) errors.businessName = businessNameRes.error.issues[0].message;
+
+      const vintageRes = positiveNumberSchema.safeParse(data.businessVintage);
+      if (!vintageRes.success) errors.businessVintage = "Business vintage must be greater than zero.";
+
+      if (!data.businessAddress) errors.businessAddress = "Business address is required.";
+
+      const turnoverRes = positiveNumberSchema.safeParse(data.annualTurnover);
+      if (!turnoverRes.success) errors.annualTurnover = "Annual turnover must be greater than zero.";
+    }
+
+    if (stepIndex === 3) {
+      const aFrontRes = zodFileRequired("Aadhar Front is required.").safeParse(data.aadharFront);
+      if (!aFrontRes.success) errors.aadharFront = aFrontRes.error.issues[0].message;
+
+      const aBackRes = zodFileRequired("Aadhar Back is required.").safeParse(data.aadharBack);
+      if (!aBackRes.success) errors.aadharBack = aBackRes.error.issues[0].message;
+
+      const panCardRes = zodFileRequired("PAN Card is required.").safeParse(data.panCard);
+      if (!panCardRes.success) errors.panCard = panCardRes.error.issues[0].message;
+
+      const selfieRes = zodFileRequired("Applicant photo is required.").safeParse(data.selfie);
+      if (!selfieRes.success) errors.selfie = selfieRes.error.issues[0].message;
+
+      if (data.gender === "female") {
+        const coaFrontRes = zodFileRequired("Co-applicant Aadhar Front is required.").safeParse(data.coApplicantAadharFront);
+        if (!coaFrontRes.success) errors.coApplicantAadharFront = coaFrontRes.error.issues[0].message;
+
+        const coaBackRes = zodFileRequired("Co-applicant Aadhar Back is required.").safeParse(data.coApplicantAadharBack);
+        if (!coaBackRes.success) errors.coApplicantAadharBack = coaBackRes.error.issues[0].message;
+
+        const coaPanRes = zodFileRequired("Co-applicant PAN is required.").safeParse(data.coApplicantPan);
+        if (!coaPanRes.success) errors.coApplicantPan = coaPanRes.error.issues[0].message;
+
+        const coMobileRes = phoneSchema.safeParse(data.coApplicantMobile);
+        if (!coMobileRes.success) errors.coApplicantMobile = coMobileRes.error.issues[0].message;
+
+        const coaSelfieRes = zodFileRequired("Co-applicant selfie is required.").safeParse(data.coApplicantSelfie);
+        if (!coaSelfieRes.success) errors.coApplicantSelfie = coaSelfieRes.error.issues[0].message;
+      }
+
+      if (!data.shopAct) errors.shopAct = "Shop Act is required.";
+      if (!data.udhyamAadhar) errors.udhyamAadhar = "Udhyam Aadhar is required.";
+      if (!data.itr) errors.itr = "ITR is required.";
+      if (!data.shopPhoto) errors.shopPhoto = "Shop Photo is required.";
+      if (!data.bankStatementFile1) errors.bankStatementFile1 = "Bank Statement File 1 is required.";
+    }
+
+    if (stepIndex === 4) {
+      if (!data.reference1Name) errors.reference1Name = "Reference 1 name is required.";
+
+      const r1PhoneRes = phoneSchema.safeParse(data.reference1Contact);
+      if (!r1PhoneRes.success) errors.reference1Contact = r1PhoneRes.error.issues[0].message;
+
+      if (!data.reference2Name) errors.reference2Name = "Reference 2 name is required.";
+
+      const r2PhoneRes = phoneSchema.safeParse(data.reference2Contact);
+      if (!r2PhoneRes.success) errors.reference2Contact = r2PhoneRes.error.issues[0].message;
+
+      if (
+        data.reference1Contact &&
+        data.reference2Contact &&
+        data.reference1Contact === data.reference2Contact
+      ) {
+        errors.reference2Contact = "Reference 2 contact cannot be the same as Reference 1.";
+      }
+    }
+
+    return errors;
+  }
+
+  function validateBusinessLoanAll(data) {
+    const allErrors = {};
+    for (let i = 0; i <= 4; i++) {
+      const e = validateBusinessLoanStep(i, data);
+      Object.assign(allErrors, e);
+    }
+    return allErrors;
+  }
+
+  function scrollToFirstError(errorMap) {
+    const keys = Object.keys(errorMap || {});
+    if (keys.length === 0) return;
+    const firstKey = keys[0];
+    const el = document.querySelector(`[name="${firstKey}"]`);
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (typeof el.focus === "function") el.focus();
+    }
+  }
 
   // const handleInputChange = (e) => {
   //     const { name, value } = e.target;
@@ -134,15 +394,23 @@ export default function BusinessLoan() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setTouchedFields((prev) => ({ ...prev, [name]: true }));
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "loanAmount" ? parseInt(value, 10) || 0 : value,
-    }));
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [name]: name === "loanAmount" ? parseInt(value, 10) || 0 : value,
+      };
+      if (showClientValidation) {
+        setValidationErrors(validateBusinessLoanStep(currentStep, next));
+      }
+      return next;
+    });
   };
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
+    setTouchedFields((prev) => ({ ...prev, [name]: true }));
     if (name.startsWith("newAddressProofs.")) {
       const proofType = name.split(".")[1];
       setFormData((prev) => ({
@@ -153,10 +421,13 @@ export default function BusinessLoan() {
         },
       }));
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: files[0],
-      }));
+      setFormData((prev) => {
+        const next = { ...prev, [name]: files[0] };
+        if (showClientValidation) {
+          setValidationErrors(validateBusinessLoanStep(currentStep, next));
+        }
+        return next;
+      });
     }
   };
 
@@ -341,16 +612,20 @@ const handleSubmit = async () => {
 
   setLoading(true);
   setError("");
-  setValidationErrors([]);
+  setValidationErrors({});
   setSuccessMessage("");
   setSavedApplication(null);
 
   try {
     // 1) Validate form
-    const errors = validateForm(formData);
+    const errors = validateBusinessLoanAll(formData);
     if (Object.keys(errors).length > 0) {
       console.warn("Validation errors:", errors);
       setValidationErrors(errors);
+      setTouchedFields(Object.fromEntries(Object.keys(errors).map((k) => [k, true])));
+      setShowClientValidation(true);
+      setError("Please correct the highlighted fields to submit your application.");
+      scrollToFirstError(errors);
       setLoading(false);
       return;
     }
@@ -653,6 +928,17 @@ const handleSubmit = async () => {
     otherDocs: null,
     annualTurnover: "",
     })
+    setCurrentStep(0);
+    setMaxStep(0);
+    setTouchedFields({});
+    setShowClientValidation(false);
+    setValidationErrors({});
+    setError("");
+    try {
+      localStorage.removeItem(loanDraftStorageKey);
+    } catch (e) {
+      // ignore
+    }
   }
 
 
@@ -673,7 +959,7 @@ const handleSubmit = async () => {
   };
 
   const renderError = (field) => {
-    return validationErrors[field] ? (
+    return showClientValidation && touchedFields[field] && validationErrors[field] ? (
       <p className="text-red-500 text-sm mt-1">{validationErrors[field]}</p>
     ) : null;
   };
@@ -685,6 +971,11 @@ const handleSubmit = async () => {
       className="min-h-screen py-8 px-4"
       style={{ backgroundColor: "#F8FAFC" }}
     >
+      <style>{`
+        input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] {
+          border-color: #EF4444 !important;
+        }
+      `}</style>
       <div className="max-w-4xl mx-auto">
         {successMessage && (
           <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
@@ -713,13 +1004,18 @@ const handleSubmit = async () => {
             <p className="font-semibold">
               {error}
             </p>
-            {Array.isArray(validationErrors) && validationErrors.length > 0 && (
-              <ul className="list-disc list-inside mt-2 text-sm space-y-1">
-                {validationErrors.map((msg, idx) => (
-                  <li key={idx}>{msg}</li>
-                ))}
-              </ul>
-            )}
+            {(() => {
+              const messages = Array.isArray(validationErrors)
+                ? validationErrors
+                : Object.values(validationErrors || {});
+              return messages.length > 0 ? (
+                <ul className="list-disc list-inside mt-2 text-sm space-y-1">
+                  {messages.map((msg, idx) => (
+                    <li key={idx}>{msg}</li>
+                  ))}
+                </ul>
+              ) : null;
+            })()}
           </div>
         )}
 
@@ -738,8 +1034,49 @@ const handleSubmit = async () => {
           </div>
 
           <div className="p-8 space-y-8">
+            <div className="px-8 pt-5 pb-2 bg-slate-50 border-b border-slate-200 -mx-8 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+                {steps.map((step, idx) => {
+                  const isActive = idx === currentStep;
+                  const isDone = idx < currentStep;
+                  const isClickable = idx <= maxStep;
+                  return (
+                    <button
+                      key={step}
+                      type="button"
+                      onClick={() => {
+                        if (!isClickable) return;
+                        setShowClientValidation(false);
+                        setError("");
+                        setCurrentStep(idx);
+                      }}
+                      disabled={!isClickable}
+                      className="rounded-lg border px-2 py-2 text-center font-medium transition-colors"
+                      style={{
+                        borderColor: isActive
+                          ? "var(--color-brand-primary)"
+                          : isDone
+                          ? "#22C55E"
+                          : "#CBD5E1",
+                        backgroundColor: isActive ? "#EEF2FF" : "#FFFFFF",
+                        color: isActive ? "#4F46E5" : "#334155",
+                        opacity: isClickable ? 1 : 0.6,
+                        cursor: isClickable ? "pointer" : "not-allowed",
+                      }}
+                      aria-current={isActive ? "step" : undefined}
+                    >
+                      {idx + 1}. {step}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-xs text-slate-600">
+                Complete step-by-step. Your progress is saved on this device.
+              </p>
+            </div>
+
             {/* Personal Information */}
-            <section>
+            <section hidden={currentStep !== 0} id="loan-business-step-personal">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -768,8 +1105,15 @@ const handleSubmit = async () => {
                     }}
                     placeholder="Enter your first name"
                     required
+                    aria-invalid={
+                      showClientValidation &&
+                      touchedFields.firstName &&
+                      validationErrors.firstName
+                        ? "true"
+                        : undefined
+                    }
                   />
-                   {formData.firstName ? "" : renderError("firstName")}
+                   {renderError("firstName")}
                 </div>
                 {/* Middle Name */}
                 <div>
@@ -812,8 +1156,15 @@ const handleSubmit = async () => {
                     }}
                     placeholder="Enter your last name"
                     required
+                    aria-invalid={
+                      showClientValidation &&
+                      touchedFields.lastName &&
+                      validationErrors.lastName
+                        ? "true"
+                        : undefined
+                    }
                   />
-                  {formData.lastName ? "" : renderError("lastName")}
+                  {renderError("lastName")}
                 </div>
                 {/* Mother Name */}
                 <div>
@@ -835,8 +1186,15 @@ const handleSubmit = async () => {
                     }}
                     placeholder="Enter your mother's name"
                     required
+                    aria-invalid={
+                      showClientValidation &&
+                      touchedFields.motherName &&
+                      validationErrors.motherName
+                        ? "true"
+                        : undefined
+                    }
                   />
-                  {formData.motherName ? "" : renderError("motherName")}
+                  {renderError("motherName")}
                 </div>
                 {/* PAN Number */}
                 <div>
@@ -858,8 +1216,15 @@ const handleSubmit = async () => {
                     }}
                     placeholder="Enter your PAN number"
                     required
+                    aria-invalid={
+                      showClientValidation &&
+                      touchedFields.panNumber &&
+                      validationErrors.panNumber
+                        ? "true"
+                        : undefined
+                    }
                   />
-                   { formData.panNumber ? "" : renderError("panNumber")}
+                   { renderError("panNumber")}
                 </div>
                 {/* Gender */}
                 <div>
@@ -879,13 +1244,20 @@ const handleSubmit = async () => {
                       backgroundColor: "#F8FAFC",
                     }}
                     required
+                    aria-invalid={
+                      showClientValidation &&
+                      touchedFields.gender &&
+                      validationErrors.gender
+                        ? "true"
+                        : undefined
+                    }
                   >
                     <option value="">Select Gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                     <option value="other">Other</option>
                   </select>
-                  {formData.gender ? "" : renderError("gender")}
+                  {renderError("gender")}
                 </div>
                 {/* Marital Status */}
                 <div>
@@ -905,13 +1277,20 @@ const handleSubmit = async () => {
                       backgroundColor: "#F8FAFC",
                     }}
                     required
+                    aria-invalid={
+                      showClientValidation &&
+                      touchedFields.maritalStatus &&
+                      validationErrors.maritalStatus
+                        ? "true"
+                        : undefined
+                    }
                   >
                     <option value="">Select Status</option>
                     <option value="single">Single</option>
                     <option value="married">Married</option>
                     <option value="other">Other</option>
                   </select>
-                  {formData.maritalStatus ? "" : renderError("maritalStatus")}
+                  {renderError("maritalStatus")}
                 </div>
                 {/* Password fields removed as not required here */}
                 {/* Contact Number */}
@@ -939,8 +1318,15 @@ const handleSubmit = async () => {
                       }}
                       placeholder="Enter your contact number"
                       required
+                      aria-invalid={
+                        showClientValidation &&
+                        touchedFields.phone &&
+                        validationErrors.phone
+                          ? "true"
+                          : undefined
+                      }
                     />
-                     {formData.phone ? "" : renderError("phone")}
+                     {renderError("phone")}
                   </div>
                 </div>
                 {/* Alternate Contact */}
@@ -995,8 +1381,15 @@ const handleSubmit = async () => {
                       }}
                       placeholder="Enter your email address"
                       required
+                      aria-invalid={
+                        showClientValidation &&
+                        touchedFields.email &&
+                        validationErrors.email
+                          ? "true"
+                          : undefined
+                      }
                     />
-                     { formData.email ? "" : renderError("email")}
+                     { renderError("email")}
                   </div>
                 </div>
                 {/* Referral moved to end */}
@@ -1021,7 +1414,15 @@ const handleSubmit = async () => {
                       }}
                       placeholder="Enter Spouse's name"
                       required
+                      aria-invalid={
+                        showClientValidation &&
+                        touchedFields.SpouseName &&
+                        validationErrors.SpouseName
+                          ? "true"
+                          : undefined
+                      }
                     />
+                    {renderError("SpouseName")}
                   </div>
                 )}
               </div>
@@ -1029,7 +1430,7 @@ const handleSubmit = async () => {
 
             {/* Address Information */}
 
-            <section>
+            <section hidden={currentStep !== 1} id="loan-business-step-address">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -1092,7 +1493,7 @@ const handleSubmit = async () => {
                         placeholder="Enter pincode"
                         required
                       />
-                       {formData.currentAddressPincode ? "" : renderError("currentAddressPincode")}
+                       {renderError("currentAddressPincode")}
                     </div>
                     <div>
                       <label
@@ -1238,7 +1639,7 @@ const handleSubmit = async () => {
                         disabled={sameAddress}
                         required
                       />
-                      {formData.permanentAddressPincode ? "" : renderError("permanentAddressPincode")}
+                      {renderError("permanentAddressPincode")}
                     </div>
                     <div>
                       <label
@@ -1314,7 +1715,7 @@ const handleSubmit = async () => {
               </div>
             </section>
 
-            <section>
+            <section hidden={currentStep !== 2} id="loan-business-step-loan">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -1356,7 +1757,7 @@ const handleSubmit = async () => {
             </section>
 
             {/* Address Proof Selection */}
-            <section>
+            <section hidden={currentStep !== 3} id="loan-business-step-documents">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -1480,7 +1881,7 @@ const handleSubmit = async () => {
             </section>
 
             {/* Personal Document Upload */}
-            <section>
+            <section hidden={currentStep !== 3} id="loan-business-step-documents-2">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -1676,8 +2077,8 @@ const handleSubmit = async () => {
             </section>
 
             {/* Co-applicant Section (for female applicants) */}
-            {formData.gender === "female" && (
-              <section>
+              {formData.gender === "female" && currentStep === 3 && (
+                <section>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -1778,7 +2179,7 @@ const handleSubmit = async () => {
                           placeholder="Enter co-applicant mobile number"
                           required
                         />
-                         { formData.coApplicantMobile ? "" : renderError("coApplicantMobile")}
+                         { renderError("coApplicantMobile")}
                       </div>
                     </div>
                     <div>
@@ -1808,7 +2209,7 @@ const handleSubmit = async () => {
             )}
 
             {/* Business Information */}
-            <section>
+            <section hidden={currentStep !== 2} id="loan-business-step-business">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -1973,7 +2374,7 @@ const handleSubmit = async () => {
             </section>
 
             {/* Business Documents */}
-            <section>
+            <section hidden={currentStep !== 3} id="loan-business-step-business-docs">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -2117,7 +2518,7 @@ const handleSubmit = async () => {
             </section>
 
             {/* Financial Documents */}
-            <section>
+            <section hidden={currentStep !== 3} id="loan-business-step-fin-docs">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -2179,7 +2580,7 @@ const handleSubmit = async () => {
             </section>
 
             {/* References */}
-            <section>
+            <section hidden={currentStep !== 4} id="loan-business-step-references">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -2246,7 +2647,7 @@ const handleSubmit = async () => {
                           placeholder="Enter contact number"
                           required
                         />
-                        {formData.reference1Contact ? "" : renderError("reference1Contact")}
+                        {renderError("reference1Contact")}
                       </div>
                     </div>
                   </div>
@@ -2309,7 +2710,7 @@ const handleSubmit = async () => {
                           placeholder="Enter contact number"
                           required
                         />
-                         {formData.reference2Contact ? "" : renderError("reference2Contact")}
+                         {renderError("reference2Contact")}
                       </div>
                     </div>
                   </div>
@@ -2318,7 +2719,7 @@ const handleSubmit = async () => {
             </section>
 
             {/* Partner Referral */}
-            <section>
+            <section hidden={currentStep !== 5} id="loan-business-step-review">
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -2350,9 +2751,9 @@ const handleSubmit = async () => {
               </div>
             </section>
 
-            {/* Submit Button + inline messages */}
+            {/* Submit + Wizard Navigation */}
             <div className="pt-8">
-              {successMessage && (
+              {currentStep === steps.length - 1 && successMessage && (
                 <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
                   <p className="font-semibold">{successMessage}</p>
                   {savedApplication?.appNo && (
@@ -2363,29 +2764,83 @@ const handleSubmit = async () => {
                 </div>
               )}
 
-              {error && (
+              {currentStep === steps.length - 1 && error && (
                 <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
                   <p className="font-semibold">{error}</p>
-                  {Array.isArray(validationErrors) && validationErrors.length > 0 && (
-                    <ul className="list-disc list-inside mt-2 text-sm space-y-1">
-                      {validationErrors.map((msg, idx) => (
-                        <li key={idx}>{msg}</li>
-                      ))}
-                    </ul>
-                  )}
+                  {validationErrors &&
+                    typeof validationErrors === "object" &&
+                    !Array.isArray(validationErrors) &&
+                    Object.keys(validationErrors).length > 0 && (
+                      <ul className="list-disc list-inside mt-2 text-sm space-y-1">
+                        {Object.values(validationErrors).map((msg, idx) => (
+                          <li key={idx}>{msg}</li>
+                        ))}
+                      </ul>
+                    )}
                 </div>
               )}
 
-              <div className="flex justify-center">
+              <div className="flex items-center justify-between gap-4">
                 <button
                   type="button"
-                  onClick={handleSubmit}
-                  className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                  style={{ backgroundColor: "var(--color-brand-primary)" }}
-                  disabled={loading}
+                  onClick={() => {
+                    if (currentStep === 0) return;
+                    setShowClientValidation(false);
+                    setError("");
+                    const next = currentStep - 1;
+                    setCurrentStep(next);
+                    requestAnimationFrame(() => {
+                      const el = document.querySelector(`[name="${stepFirstFieldName[next]}"]`);
+                      if (el && typeof el.focus === "function") el.focus();
+                    });
+                  }}
+                  className="px-6 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+                  disabled={loading || currentStep === 0}
                 >
-                  {loading ? "Saving..." : "Submit Loan"}
+                  Back
                 </button>
+
+                {currentStep < steps.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowClientValidation(true);
+                      setError("");
+                      const stepErrors = validateBusinessLoanStep(currentStep, formData);
+                      setValidationErrors(stepErrors);
+                      setTouchedFields(Object.fromEntries(Object.keys(stepErrors).map((k) => [k, true])));
+
+                      if (Object.keys(stepErrors).length > 0) {
+                        setError("Please fix the highlighted fields to continue.");
+                        scrollToFirstError(stepErrors);
+                        return;
+                      }
+
+                      const nextStep = currentStep + 1;
+                      setCurrentStep(nextStep);
+                      setMaxStep((m) => Math.max(m, nextStep));
+                      requestAnimationFrame(() => {
+                        const el = document.querySelector(`[name="${stepFirstFieldName[nextStep]}"]`);
+                        if (el && typeof el.focus === "function") el.focus();
+                      });
+                    }}
+                    className="px-8 py-3 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-200"
+                    style={{ backgroundColor: "var(--color-brand-primary)" }}
+                    disabled={loading}
+                  >
+                    Next
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-200"
+                    style={{ backgroundColor: "var(--color-brand-primary)" }}
+                    disabled={loading || Object.keys(validateBusinessLoanAll(formData)).length > 0}
+                  >
+                    {loading ? "Saving..." : "Submit Loan"}
+                  </button>
+                )}
               </div>
             </div>
           </div>

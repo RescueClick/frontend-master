@@ -55,7 +55,7 @@ export default function RSM() {
 
   // Get ASMs for dropdown
   const { data: asms } = useSelector((state) => state.admin.asm);
-  const { loading: createLoading, error: createError, success: createSuccess } = useSelector((state) => state.admin.createRSMAdmin);
+  const { loading: createLoading, error: createError } = useSelector((state) => state.admin.createRSMAdmin);
 
   // Prefill search from navigation state
   useEffect(() => {
@@ -285,7 +285,7 @@ export default function RSM() {
 
     const { adminToken } = getAuthData();
     if (!adminToken) {
-      alert("Not authenticated");
+      setCreateNotice("Not authenticated. Please log in again.");
       return;
     }
 
@@ -318,9 +318,8 @@ export default function RSM() {
         asmId: "",
         rsmType: "",
       });
-      alert("RSM created successfully!");
     } catch (err) {
-      alert(err || "Failed to create RSM");
+      // createError from redux is shown in the modal UI
     }
   };
 
@@ -367,7 +366,7 @@ export default function RSM() {
         </div>
 
         {/* Error message */}
-        {error && (
+        {!showCreateModal && error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
             {error}
           </div>

@@ -49,7 +49,6 @@ import {
   deleteBank,
 } from "../thunks/adminThunks";
 
-
 import { saveAuthData } from "../../utils/localStorage";
 
 const initialState = {
@@ -312,8 +311,7 @@ const initialState = {
     error: null,
     success: false,
     data: null,
-  }
-
+  },
 };
 
 const adminSlice = createSlice({
@@ -352,9 +350,7 @@ const adminSlice = createSlice({
 
     resetBankState: (state) => {
       state.addBank = { ...initialState.addBank };
-    }
-
-
+    },
   },
 
   extraReducers: (builder) => {
@@ -368,7 +364,9 @@ const adminSlice = createSlice({
         state.login.loading = false;
         state.login.token = action.payload?.token || null;
         state.login.user = action.payload?.user || null;
-        state.login.isAuthenticated = !!(action.payload?.token && action.payload?.user);
+        state.login.isAuthenticated = !!(
+          action.payload?.token && action.payload?.user
+        );
         state.login.success = true;
 
         if (action.payload?.token && action.payload?.user) {
@@ -688,7 +686,6 @@ const adminSlice = createSlice({
         state.unassignedPartners.error = action.payload;
       });
 
-
     // Fetch All Customers
     builder
       .addCase(getAllCustomers.pending, (state) => {
@@ -706,7 +703,6 @@ const adminSlice = createSlice({
         state.allCustomers.error = action.payload;
       });
 
-
     builder
       // Fetch Banners
       .addCase(fetchBanners.pending, (state) => {
@@ -720,7 +716,7 @@ const adminSlice = createSlice({
         // Handle both array and object with banners property
         state.allBanners.data = Array.isArray(action.payload)
           ? action.payload
-          : (action.payload?.banners || []);
+          : action.payload?.banners || [];
       })
       .addCase(fetchBanners.rejected, (state, action) => {
         state.allBanners.loading = false;
@@ -739,7 +735,7 @@ const adminSlice = createSlice({
         // Handle both array and object with banners property
         state.allBanners.data = Array.isArray(action.payload)
           ? action.payload
-          : (action.payload?.banners || []);
+          : action.payload?.banners || [];
       })
       .addCase(uploadBanners.rejected, (state, action) => {
         state.allBanners.loading = false;
@@ -758,9 +754,13 @@ const adminSlice = createSlice({
         // Handle both array and object with banners property
         state.allBanners.data = Array.isArray(action.payload)
           ? action.payload
-          : (action.payload?.banners || []);
+          : action.payload?.banners || [];
         // If delete was successful, refetch banners
-        if (action.payload && !Array.isArray(action.payload) && !action.payload.banners) {
+        if (
+          action.payload &&
+          !Array.isArray(action.payload) &&
+          !action.payload.banners
+        ) {
           // If response doesn't contain banners array, keep existing data
           // The component will refetch after delete
         }
@@ -787,24 +787,6 @@ const adminSlice = createSlice({
         state.partner.success = false;
       });
 
-    // 🔹 Delete RM
-    builder
-      .addCase(deleteRm.pending, (state) => {
-        state.deleteRm.loading = true;
-        state.deleteRm.error = null;
-        state.deleteRm.success = false;
-      })
-      .addCase(deleteRm.fulfilled, (state, action) => {
-        state.deleteRm.loading = false;
-        state.deleteRm.data = action.payload;
-        state.deleteRm.success = true;
-      })
-      .addCase(deleteRm.rejected, (state, action) => {
-        state.deleteRm.loading = false;
-        state.deleteRm.error = action.payload;
-        state.deleteRm.success = false;
-      });
-
     // 🔹 Reject Partner
     builder
       .addCase(rejectPartner.pending, (state) => {
@@ -820,14 +802,14 @@ const adminSlice = createSlice({
         // Remove rejected partner from partners list
         if (state.partners.data) {
           state.partners.data = state.partners.data.filter(
-            (p) => p._id !== action.meta.arg
+            (p) => p._id !== action.meta.arg,
           );
         }
 
         // Remove rejected partner from unassignedPartners list (optimistic update)
         if (state.unassignedPartners.data) {
           state.unassignedPartners.data = state.unassignedPartners.data.filter(
-            (p) => p._id !== action.meta.arg
+            (p) => p._id !== action.meta.arg,
           );
         }
       })
@@ -864,7 +846,7 @@ const adminSlice = createSlice({
         const updated = action.payload;
         if (!updated) return;
         const idx = state.deleteAccountRequests.data.findIndex(
-          (r) => r._id === updated._id
+          (r) => r._id === updated._id,
         );
         if (idx !== -1) {
           state.deleteAccountRequests.data[idx] = updated;
@@ -884,7 +866,9 @@ const adminSlice = createSlice({
         state.login.loading = false;
         state.login.token = action.payload?.token || null;
         state.login.user = action.payload?.user || null;
-        state.login.isAuthenticated = !!(action.payload?.token && action.payload?.user);
+        state.login.isAuthenticated = !!(
+          action.payload?.token && action.payload?.user
+        );
         state.login.success = true;
 
         if (action.payload?.token && action.payload?.user) {
@@ -973,7 +957,7 @@ const adminSlice = createSlice({
         // Update partner in partners list if exists
         if (state.partners.data && Array.isArray(state.partners.data)) {
           const index = state.partners.data.findIndex(
-            (p) => p._id === action.payload?.partner?._id
+            (p) => p._id === action.payload?.partner?._id,
           );
           if (index !== -1) {
             state.partners.data[index] = {
@@ -995,50 +979,170 @@ const adminSlice = createSlice({
         state.partner.error = null;
         state.partner.success = false;
       })
-      .addCase(reassignCustomersAndDeactivatePartner.fulfilled, (state, action) => {
-        state.partner.loading = false;
-        state.partner.data = action.payload;
-        state.partner.success = true;
-      })
-      .addCase(reassignCustomersAndDeactivatePartner.rejected, (state, action) => {
-        state.partner.loading = false;
-        state.partner.error = action.payload;
-        state.partner.success = false;
-      })
+      .addCase(
+        reassignCustomersAndDeactivatePartner.fulfilled,
+        (state, action) => {
+          state.partner.loading = false;
+          state.partner.data = action.payload;
+          state.partner.success = true;
+        },
+      )
+      .addCase(
+        reassignCustomersAndDeactivatePartner.rejected,
+        (state, action) => {
+          state.partner.loading = false;
+          state.partner.error = action.payload;
+          state.partner.success = false;
+        },
+      )
 
-      // Activate RM
-      .addCase(activateRM.pending, (state) => {
-        state.rm.loading = true;
-        state.rm.error = null;
-        state.rm.success = false;
-      })
-      .addCase(activateRM.fulfilled, (state, action) => {
-        state.rm.loading = false;
-        state.rm.data = action.payload;
-        state.rm.success = true;
-      })
-      .addCase(activateRM.rejected, (state, action) => {
-        state.rm.loading = false;
-        state.rm.error = action.payload;
-        state.rm.success = false;
-      })
-
-      // Assign Partners to RM
-      .addCase(assignPartnersToRM.pending, (state) => {
+      // 🔹 Assign Partners to RM ----------------------------------------------
+      .addCase(assignPartnersToRM.pending, (state, action) => {
         state.partner.loading = true;
         state.partner.error = null;
         state.partner.success = false;
+
+        const { oldRmId } = action.meta.arg;
+
+        // ✅ Instant UI update
+        if (Array.isArray(state.rm.data)) {
+          state.rm.data = state.rm.data.map((rm) =>
+            String(rm._id) === String(oldRmId)
+              ? { ...rm, status: "INACTIVE", _optimistic: true }
+              : rm,
+          );
+        }
       })
       .addCase(assignPartnersToRM.fulfilled, (state, action) => {
         state.partner.loading = false;
         state.partner.data = action.payload;
         state.partner.success = true;
+
+        const { oldRmId } = action.meta.arg || {};
+
+        // remove optimistic flag + ensure final status for old RM
+        if (Array.isArray(state.rm.data) && oldRmId != null) {
+          state.rm.data = state.rm.data.map((rm) => {
+            if (String(rm._id) === String(oldRmId)) {
+              return { ...rm, status: "INACTIVE", _optimistic: false };
+            }
+          
+            if (rm._optimistic) {
+              return { ...rm, _optimistic: false };
+            }
+          
+            return rm;
+          });
+        } else if (Array.isArray(state.rm.data)) {
+          state.rm.data = state.rm.data.map((rm) =>
+            rm._optimistic ? { ...rm, _optimistic: false } : rm,
+          );
+        }
       })
       .addCase(assignPartnersToRM.rejected, (state, action) => {
         state.partner.loading = false;
         state.partner.error = action.payload;
         state.partner.success = false;
+
+        const { oldRmId } = action.meta.arg;
+
+        // ❌ rollback if failed
+        if (Array.isArray(state.rm.data)) {
+          state.rm.data = state.rm.data.map((rm) =>
+            String(rm._id) === String(oldRmId)
+              ? { ...rm, status: "ACTIVE", _optimistic: false }
+              : rm._optimistic
+                ? { ...rm, _optimistic: false }
+                : rm,
+          );
+        }
       })
+
+      //-    ------------------------------------------------------------------------------------------------------------------------------------------  //
+      // Activate RM ----------------------------------------------------------------------------
+      .addCase(activateRM.pending, (state, action) => {
+        // Keep activation instant: RM list shouldn't show "Loading..." while toggling status.
+        state.rm.loading = false;
+        state.rm.error = null;
+        state.rm.success = false;
+
+        const rmId = action.meta.arg;
+
+        // ⚡ instant UI update
+        if (Array.isArray(state.rm.data)) {
+          state.rm.data = state.rm.data.map((rm) =>
+            String(rm._id) === String(rmId)
+              ? { ...rm, status: "ACTIVE", _optimistic: true }
+              : rm,
+          );
+        }
+      })
+
+      .addCase(activateRM.fulfilled, (state, action) => {
+        state.rm.loading = false;
+        state.rm.success = true;
+
+        const rmId = action.meta.arg;
+
+        // ✅ confirm update (ensure final status + remove optimistic flag)
+        if (Array.isArray(state.rm.data)) {
+          state.rm.data = state.rm.data.map((rm) =>
+            String(rm._id) === String(rmId)
+              ? { ...rm, status: "ACTIVE", _optimistic: false }
+              : rm,
+          );
+        }
+      })
+
+      .addCase(activateRM.rejected, (state, action) => {
+        state.rm.loading = false;
+        state.rm.error = action.payload;
+        state.rm.success = false;
+
+        const rmId = action.meta.arg;
+
+        // ❌ rollback if API fails
+        if (Array.isArray(state.rm.data)) {
+          state.rm.data = state.rm.data.map((rm) =>
+            String(rm._id) === String(rmId)
+              ? { ...rm, status: "INACTIVE", _optimistic: false }
+              : rm,
+          );
+        }
+      });
+
+    // 🔹 Delete RM------------------------------------------------------------------------
+    builder
+      .addCase(deleteRm.pending, (state, action) => {
+        state.deleteRm.loading = true;
+        state.deleteRm.error = null;
+        state.deleteRm.success = false;
+
+        const rmId = action.meta.arg;
+
+        // 🧠 backup for rollback
+        state._rmBackup = state.rm.data;
+
+        // ⚡ instant remove from UI
+        state.rm.data = state.rm.data.filter((rm) => rm._id !== rmId);
+      })
+
+      .addCase(deleteRm.fulfilled, (state, action) => {
+        state.deleteRm.loading = false;
+        state.deleteRm.success = true;
+
+        // ✅ no need to do anything (already removed)
+      })
+
+      .addCase(deleteRm.rejected, (state, action) => {
+        state.deleteRm.loading = false;
+        state.deleteRm.error = action.payload;
+        state.deleteRm.success = false;
+
+        // ❌ rollback if API fails
+        state.rm.data = state._rmBackup;
+      })
+      //----------------------------------------------------------------------------------------------------------------------------------------------//
 
       // Activate RSM
       .addCase(activateRSM.pending, (state) => {
@@ -1191,21 +1295,21 @@ const adminSlice = createSlice({
         state.payIncentive.success = false;
       });
 
-      builder
+    builder
       .addCase(createBank.pending, (state) => {
-           state.addBank.loading = true;
-           state.addBank.error = null;
-           state.addBank.success = false;
+        state.addBank.loading = true;
+        state.addBank.error = null;
+        state.addBank.success = false;
       })
-      .addCase(createBank.fulfilled, (state, action) =>{
-         state.addBank.loading = false;
-         state.addBank.success = true;
-         state.addBank.bank = action.payload;
+      .addCase(createBank.fulfilled, (state, action) => {
+        state.addBank.loading = false;
+        state.addBank.success = true;
+        state.addBank.bank = action.payload;
       })
-      .addCase(createBank.rejected, (state, action) =>{
-         state.addBank.loading = false;
-         state.addBank.success = false;
-         state.addBank.error = action.payload;
+      .addCase(createBank.rejected, (state, action) => {
+        state.addBank.loading = false;
+        state.addBank.success = false;
+        state.addBank.error = action.payload;
       })
 
       //fetch banks
@@ -1225,7 +1329,6 @@ const adminSlice = createSlice({
         state.fetchBanksData.success = false;
       })
 
-
       // delete bank
 
       .addCase(deleteBank.pending, (state) => {
@@ -1242,7 +1345,7 @@ const adminSlice = createSlice({
         // We update the cached list so the UI reflects immediately.
         const deletedId = action.meta.arg;
         state.fetchBanksData.data = state.fetchBanksData.data.map((b) =>
-          b?._id === deletedId ? { ...b, isActive: false } : b
+          b?._id === deletedId ? { ...b, isActive: false } : b,
         );
       })
       .addCase(deleteBank.rejected, (state, action) => {
@@ -1250,7 +1353,6 @@ const adminSlice = createSlice({
         state.deleteBank.error = action.payload;
         state.deleteBank.success = false;
       });
-
   },
 });
 
@@ -1263,7 +1365,6 @@ export const {
   resetAllAdminState,
   resetCreateRmState,
   resetBankState,
-
 } = adminSlice.actions;
 
 export default adminSlice.reducer;

@@ -821,6 +821,9 @@ const CustomerApplication = () => {
     
     const requiredDocTypes = getRequiredDocTypes(applicationData.loanType);
     const uploadedDocs = applicationData.docs || [];
+
+    // Do not allow completion if partner hasn't uploaded anything
+    if (!uploadedDocs.length) return false;
     
     for (const docType of requiredDocTypes) {
       const doc = uploadedDocs.find(
@@ -831,8 +834,9 @@ const CustomerApplication = () => {
         return false;
       }
     }
-    
-    return true;
+
+    // ✅ If any SINGLE uploaded document is not VERIFIED, block completion.
+    return uploadedDocs.every((doc) => doc?.status === "VERIFIED");
   };
 
   // Get missing or unverified documents
@@ -842,7 +846,13 @@ const CustomerApplication = () => {
     const requiredDocTypes = getRequiredDocTypes(applicationData.loanType);
     const uploadedDocs = applicationData.docs || [];
     const missing = [];
-    const unverified = [];
+    const unverifiedMap = new Map();
+
+    const addUnverified = (docType, status) => {
+      const key = String(docType || "").toUpperCase();
+      if (!key) return;
+      unverifiedMap.set(key, { docType, status });
+    };
     
     for (const docType of requiredDocTypes) {
       const doc = uploadedDocs.find(
@@ -852,11 +862,18 @@ const CustomerApplication = () => {
       if (!doc) {
         missing.push(docType);
       } else if (doc.status !== "VERIFIED") {
-        unverified.push({ docType, status: doc.status });
+        addUnverified(docType, doc.status);
       }
     }
-    
-    return { missing, unverified };
+
+    // Include any non-required documents that are still PENDING/UPDATED/REJECTED.
+    uploadedDocs.forEach((doc) => {
+      if (doc?.status !== "VERIFIED") {
+        addUnverified(doc?.docType, doc?.status);
+      }
+    });
+  
+    return { missing, unverified: Array.from(unverifiedMap.values()) };
   };
 
   const handleSubmit = async (e) => {
@@ -892,7 +909,8 @@ const CustomerApplication = () => {
             const unverifiedList = issues.unverified.map(u => `${u.docType} (${u.status})`).join(", ");
             errorMsg += `Unverified documents: ${unverifiedList}. `;
           }
-          errorMsg += "Please verify all required documents first or change status to DOC_INCOMPLETE.";
+          errorMsg +=
+            "Please verify all documents first (no PENDING/UPDATED/REJECTED allowed) or change status to DOC_INCOMPLETE.";
           
           toast.error(errorMsg, {
             duration: 6000,
@@ -2073,7 +2091,6 @@ const CustomerApplication = () => {
                         <option value="DOC_INCOMPLETE">DOC_INCOMPLETE</option>
                         <option 
                           value="DOC_COMPLETE"
-                          disabled={!areAllDocumentsVerified()}
                         >
                           DOC_COMPLETE {!areAllDocumentsVerified() ? "(All docs must be verified)" : ""}
                         </option>
@@ -2097,7 +2114,7 @@ const CustomerApplication = () => {
                               <p className="text-xs text-yellow-700 mt-1">
                                 {(() => {
                                   const issues = getDocumentIssues();
-                                  let msg = "All required documents must be verified first. ";
+                                  let msg = "All documents must be verified first (no PENDING/UPDATED/REJECTED allowed). ";
                                   if (issues.missing.length > 0) {
                                     msg += `Missing: ${issues.missing.join(", ")}. `;
                                   }
@@ -2105,7 +2122,10 @@ const CustomerApplication = () => {
                                     const unverifiedList = issues.unverified.map(u => `${u.docType} (${u.status})`).join(", ");
                                     msg += `Unverified: ${unverifiedList}. `;
                                   }
-                                  return msg + "Please verify all documents or select DOC_INCOMPLETE to allow document uploads.";
+                                  return (
+                                    msg +
+                                    "Please verify all documents (no PENDING/UPDATED/REJECTED allowed) or select DOC_INCOMPLETE to allow document uploads."
+                                  );
                                 })()}
                               </p>
                             </div>
@@ -2123,7 +2143,7 @@ const CustomerApplication = () => {
                                 ✓ All documents verified
                               </p>
                               <p className="text-xs text-green-700 mt-1">
-                                All required documents are verified. You can proceed with DOC_COMPLETE status.
+                                All documents are verified. You can proceed with DOC_COMPLETE status.
                               </p>
                             </div>
                           </div>
@@ -2575,4 +2595,5 @@ export default CustomerApplication;
 //       </div>
 //     </div>
 //   </div>
+// )}
 // )}

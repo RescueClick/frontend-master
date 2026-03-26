@@ -5,6 +5,9 @@ import {
   Save,
   ArrowLeft,
   AlertCircle,
+  CheckCircle,
+  XCircle,
+  X,
   Lock,
   Eye,
   EyeOff,
@@ -21,7 +24,7 @@ const AddRSMPage = () => {
   const dispatch = useDispatch();
 
   const { data: asms } = useSelector((state) => state.admin.asm);
-  const { loading, error } = useSelector((state) => state.admin.createRSMAdmin || { loading: false, error: null });
+  const { loading } = useSelector((state) => state.admin.createRSMAdmin || { loading: false });
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -39,6 +42,9 @@ const AddRSMPage = () => {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [message, setMessage] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const colors = {
     primary: "var(--color-brand-primary)",
@@ -117,7 +123,9 @@ const AddRSMPage = () => {
 
     const { adminToken } = getAuthData();
     if (!adminToken) {
-      alert("Missing admin token");
+      setIsSuccess(false);
+      setMessage("Not authenticated. Please log in again.");
+      setShowModal(true);
       return;
     }
 
@@ -137,10 +145,26 @@ const AddRSMPage = () => {
         })
       ).unwrap();
 
-      alert("RSM created successfully");
-      navigate("/admin/RSM");
+      setIsSuccess(true);
+      setMessage("Regional Sales Manager has been added successfully to your team.");
+      setShowModal(true);
+
+      setFormData({
+        firstName: "",
+        lastName: "",
+        phone: "",
+        email: "",
+        dob: "",
+        region: "",
+        password: "",
+        confirmPassword: "",
+        asmId: "",
+        rsmType: "",
+      });
     } catch (err) {
-      alert(typeof err === "string" ? err : err?.message || "Failed to create RSM");
+      setIsSuccess(false);
+      setMessage(typeof err === "string" ? err : err?.message || "Failed to create RSM");
+      setShowModal(true);
     }
   };
 
@@ -176,6 +200,56 @@ const AddRSMPage = () => {
             Fill in the details to add a new Regional Sales Manager
           </p>
         </div>
+
+        {/* Success/Failure popup */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+              <div className="relative p-6 pb-4">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                  type="button"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="px-6 pb-8 text-center">
+                <div
+                  className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                    isSuccess ? "bg-green-100" : "bg-red-100"
+                  }`}
+                >
+                  {isSuccess ? (
+                    <CheckCircle size={32} className="text-green-500" />
+                  ) : (
+                    <XCircle size={32} className="text-red-500" />
+                  )}
+                </div>
+
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  {isSuccess ? "Success!" : "Something went wrong"}
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  {message ||
+                    "We couldn't process your request. Please try again or contact support."}
+                </p>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="px-6 py-3 rounded-lg text-white font-medium transition-all duration-200"
+                    style={{ backgroundColor: "var(--color-brand-primary)" }}
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         <div className="bg-white rounded-xl shadow-lg p-8">
@@ -423,12 +497,7 @@ const AddRSMPage = () => {
               </div>
             </div>
 
-            {/* Error message */}
-            {error && (
-              <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                {error}
-              </div>
-            )}
+            {/* (Success/Failure is shown via the popup above) */}
 
             {/* Actions */}
             <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   User,
   Phone,
@@ -108,7 +108,148 @@ export default function PersonalLoan() {
     password: false,
     confirmPassword: false,
   });
+
+  // Multi-step wizard state
+  const steps = [
+    "Personal",
+    "Address",
+    "Loan & Employment",
+    "Documents",
+    "References",
+    "Review",
+  ];
+  const [currentStep, setCurrentStep] = useState(0);
+  const [maxStep, setMaxStep] = useState(0);
+  const stepAnchorIds = [
+    "loan-personal-step",
+    "loan-address-step",
+    "loan-loan-step",
+    "loan-docs-step",
+    "loan-references-step",
+    "loan-review-step",
+  ];
+  const loanDraftStorageKey = "personalLoanDraft_v1";
+
+  const stepFirstFieldName = [
+    "firstName",
+    "currentAddress",
+    "loanAmount",
+    "aadharFront",
+    "reference1Name",
+    "partnerReferralCode",
+  ];
+
   const abortControllerRef = useRef(null);
+
+  const fileLike = (v) =>
+    v &&
+    typeof v === "object" &&
+    (v instanceof File ||
+      (typeof v.name === "string" &&
+        typeof v.size === "number" &&
+        typeof v.type === "string"));
+
+  const serializeDraftFormData = (data) => {
+    const serialized = {};
+    for (const [k, v] of Object.entries(data || {})) {
+      // Do not persist password data in localStorage
+      if (k === "password" || k === "confirmPassword") {
+        serialized[k] = "";
+        continue;
+      }
+
+      if (fileLike(v)) {
+        serialized[k] = null;
+        continue;
+      }
+
+      // Handle nested file object for address proofs
+      if (k === "newAddressProofs" && v && typeof v === "object") {
+        serialized[k] = {};
+        for (const [nk, nv] of Object.entries(v)) {
+          serialized[k][nk] = fileLike(nv) ? null : nv;
+        }
+        continue;
+      }
+
+      serialized[k] = v;
+    }
+    return serialized;
+  };
+
+  const scrollToStep = (idx) => {
+    const stepId = stepAnchorIds[idx];
+    if (!stepId) return;
+    const el = document.getElementById(stepId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const scrollToFirstError = (errorMap) => {
+    if (!errorMap || typeof errorMap !== "object") return;
+    const firstField = Object.keys(errorMap)[0];
+    if (!firstField) return;
+    const el = document.querySelector(`[name="${firstField}"]`);
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    if (el && typeof el.focus === "function") {
+      try {
+        el.focus();
+      } catch (e) {
+        // ignore focus errors
+      }
+    }
+  };
+
+  // Load draft (best-effort). Files can't be persisted, but scalar progress can.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(loanDraftStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.formData && typeof parsed.formData === "object") {
+        setFormData((prev) => ({
+          ...prev,
+          ...parsed.formData,
+          loanAmount:
+            parsed.formData.loanAmount === "" || parsed.formData.loanAmount == null
+              ? prev.loanAmount
+              : parsed.formData.loanAmount,
+        }));
+      }
+      if (typeof parsed?.currentStep === "number") {
+        setCurrentStep(
+          Math.max(0, Math.min(parsed.currentStep, steps.length - 1))
+        );
+      }
+      if (typeof parsed?.maxStep === "number") {
+        setMaxStep(Math.max(0, Math.min(parsed.maxStep, steps.length - 1)));
+      }
+    } catch (e) {
+      // ignore draft load errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist draft with throttling (so typing doesn't spam localStorage).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          loanDraftStorageKey,
+          JSON.stringify({
+            currentStep,
+            maxStep,
+            formData: serializeDraftFormData(formData),
+          })
+        );
+      } catch (e) {
+        // ignore storage errors
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [formData, currentStep, maxStep]);
 
   // Cleanup function to cancel pending requests
   useEffect(() => {
@@ -312,6 +453,112 @@ export default function PersonalLoan() {
 
     return errors;
   }
+
+  const stepFieldKeys = [
+    // 0: Personal
+    [
+      "firstName",
+      "middleName",
+      "lastName",
+      "motherName",
+      "pan",
+      "gender",
+      "maritalStatus",
+      "contactNo",
+      "email",
+      "dob",
+    ],
+    // 1: Address
+    [
+      "currentAddress",
+      "permanentAddress",
+      "stabilityOfResidency",
+      "currentHouseStatus",
+      "currentLandmark",
+      "currentAddressPinCode",
+      "permanentHouseStatus",
+      "permanentLandmark",
+      "permanentStability",
+      "permanentAddressPinCode",
+    ],
+    // 2: Loan & Employment
+    [
+      "loanAmount",
+      "companyName",
+      "designation",
+      "companyAddress",
+      "monthlySalary",
+      "totalExperience",
+      "currentExperience",
+      "salaryInHand",
+      "companyIdCard",
+      "salarySlip1",
+      "salarySlip2",
+      "salarySlip3",
+      "form16_26as",
+      "bankStatement1",
+      "bankStatement2",
+    ],
+    // 3: Documents
+    ["aadharFront", "aadharBack", "panCard", "passportPhoto", "selfie"],
+    // 4: References
+    ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"],
+    // 5: Review
+    ["password", "confirmPassword"],
+  ];
+
+  const canSubmit = useMemo(
+    () => Object.keys(validateRegistrationForm(formData)).length === 0,
+    [formData]
+  );
+
+  const validateStep = (stepIdx) => {
+    const errors = validateRegistrationForm(formData);
+    const keys = stepFieldKeys[stepIdx] || [];
+    return keys.reduce((acc, key) => {
+      if (errors[key]) acc[key] = errors[key];
+      return acc;
+    }, {});
+  };
+
+  const handleNext = () => {
+    if (loading) return;
+    setError("");
+    const stepErrors = validateStep(currentStep);
+    if (Object.keys(stepErrors).length > 0) {
+      setError("Please fix the highlighted fields to continue.");
+      setFieldErrors(stepErrors);
+      setValidationErrors(Object.values(stepErrors));
+      scrollToFirstError(stepErrors);
+      return;
+    }
+
+    setFieldErrors({});
+    setValidationErrors([]);
+    const nextIdx = Math.min(currentStep + 1, steps.length - 1);
+    setCurrentStep(nextIdx);
+    setMaxStep((m) => Math.max(m, nextIdx));
+    scrollToStep(nextIdx);
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[name="${stepFirstFieldName[nextIdx]}"]`);
+      if (el && typeof el.focus === "function") el.focus();
+    });
+  };
+
+  const handleBack = () => {
+    if (loading) return;
+    if (currentStep === 0) return;
+    setError("");
+    setFieldErrors({});
+    setValidationErrors([]);
+    const prevIdx = Math.max(0, currentStep - 1);
+    setCurrentStep(prevIdx);
+    scrollToStep(prevIdx);
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[name="${stepFirstFieldName[prevIdx]}"]`);
+      if (el && typeof el.focus === "function") el.focus();
+    });
+  };
 
   const handleSubmit = async () => {
     console.log("working");
@@ -659,6 +906,16 @@ export default function PersonalLoan() {
       password: "",
       confirmPassword: "",
     });
+    setCurrentStep(0);
+    setMaxStep(0);
+    setError("");
+    setFieldErrors({});
+    setValidationErrors([]);
+    try {
+      localStorage.removeItem(loanDraftStorageKey);
+    } catch (e) {
+      // ignore
+    }
   };
 
   const checkFileSize = (files) => {
@@ -735,7 +992,7 @@ export default function PersonalLoan() {
             </div>
           )}
 
-          {error && (
+          {currentStep === steps.length - 1 && error && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
               <p className="font-semibold">
                 {error}
@@ -762,27 +1019,57 @@ export default function PersonalLoan() {
               <p className="text-center mt-2 opacity-90">
                 Complete all fields to process your loan application
               </p>
-              <p className="text-center mt-3 text-sm font-medium opacity-95">
-                Flow: 1) Personal, 2) Address, 3) Loan & Employment, 4) Documents, 5) References, 6) Review & Submit
-              </p>
-            </div>
-
-            <div className="px-8 pt-5 pb-2 bg-slate-50 border-b border-slate-200">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
-                {["Personal", "Address", "Loan & Employment", "Documents", "References", "Review"].map((step, idx) => (
-                  <div key={step} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center font-medium text-slate-700">
-                    {idx + 1}. {step}
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-slate-600">
-                Upload clear JPG/PNG/PDF files and verify preview before submit.
-              </p>
             </div>
 
             <div className="p-8 space-y-8">
+              <div className="px-8 pt-5 pb-2 bg-slate-50 border-b border-slate-200 -mx-8 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+                  {steps.map((step, idx) => {
+                    const isActive = idx === currentStep;
+                    const isDone = idx < currentStep;
+                    const isClickable = idx <= maxStep;
+                    return (
+                      <button
+                        key={step}
+                        type="button"
+                        onClick={() => {
+                          if (!isClickable) return;
+                          setError("");
+                          setFieldErrors({});
+                          setValidationErrors([]);
+                          setCurrentStep(idx);
+                          requestAnimationFrame(() => {
+                            const el = document.querySelector(`[name="${stepFirstFieldName[idx]}"]`);
+                            if (el && typeof el.focus === "function") el.focus();
+                          });
+                        }}
+                        disabled={!isClickable || loading}
+                        className="rounded-lg border px-2 py-2 text-center font-medium transition-colors"
+                        style={{
+                          borderColor: isActive
+                            ? "var(--color-brand-primary)"
+                            : isDone
+                            ? "#22C55E"
+                            : "#CBD5E1",
+                          backgroundColor: isActive ? "#EEF2FF" : "#FFFFFF",
+                          color: isActive ? "#4F46E5" : "#334155",
+                          opacity: isClickable ? 1 : 0.6,
+                          cursor: isClickable ? "pointer" : "not-allowed",
+                        }}
+                        aria-current={isActive ? "step" : undefined}
+                      >
+                        {idx + 1}. {step}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-xs text-slate-600">
+                  Step-by-step wizard. Draft is saved locally (text fields only).
+                </p>
+              </div>
+
               {/* Personal Information */}
-              <section>
+              <section id="loan-personal-step" hidden={currentStep !== 0}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -1086,7 +1373,7 @@ export default function PersonalLoan() {
               </section>
 
               {/* Address Information */}
-              <section>
+              <section id="loan-address-step" hidden={currentStep !== 1}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -1367,7 +1654,7 @@ export default function PersonalLoan() {
                 </div>
               </section>
 
-              <section>
+              <section id="loan-loan-step" hidden={currentStep !== 2}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -1411,7 +1698,7 @@ export default function PersonalLoan() {
               </section>
 
               {/* Document Upload */}
-              <section>
+              <section id="loan-docs-step" hidden={currentStep !== 3}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -1537,7 +1824,7 @@ export default function PersonalLoan() {
               </section>
 
               {/* Employment Information */}
-              <section>
+              <section hidden={currentStep !== 3}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2141,7 +2428,7 @@ export default function PersonalLoan() {
               </section>
 
               {/* Bank Details Section */}
-              <section>
+              <section hidden={currentStep !== 3}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2325,7 +2612,7 @@ export default function PersonalLoan() {
                 </div>
               </section>
 
-              <section>
+              <section hidden={currentStep !== 3}>
                 <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-gray-900">
                   <FileText className="w-6 h-6 text-teal-500" />
                   4.3 Address Proof Document
@@ -2360,7 +2647,7 @@ export default function PersonalLoan() {
               </section>
 
               {/* References */}
-              <section>
+              <section id="loan-references-step" hidden={currentStep !== 4}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2493,7 +2780,7 @@ export default function PersonalLoan() {
               </section>
 
               {/* Password Section */}
-              <section>
+              <section id="loan-review-step" hidden={currentStep !== 5}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2585,7 +2872,7 @@ export default function PersonalLoan() {
               </section>
 
               {/* Partner Referral */}
-              <section>
+              <section hidden={currentStep !== 5}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2617,9 +2904,9 @@ export default function PersonalLoan() {
                 </div>
               </section>
 
-            {/* Submit Button + inline messages */}
+            {/* Submit + Wizard Navigation */}
             <div className="pt-8">
-              {successMessage && (
+              {currentStep === steps.length - 1 && successMessage && (
                 <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
                   <p className="font-semibold">{successMessage}</p>
                   {savedApplication?.appNo && (
@@ -2630,7 +2917,7 @@ export default function PersonalLoan() {
                 </div>
               )}
 
-              {error && (
+              {currentStep === steps.length - 1 && error && (
                 <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
                   <p className="font-semibold">{error}</p>
                   {Array.isArray(validationErrors) && validationErrors.length > 0 && (
@@ -2643,16 +2930,37 @@ export default function PersonalLoan() {
                 </div>
               )}
 
-              <div className="flex justify-center">
+              <div className="flex items-center justify-between gap-4">
                 <button
                   type="button"
-                  onClick={handleSubmit}
-                  className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                  style={{ backgroundColor: "var(--color-brand-primary)" }}
-                  disabled={loading}
+                  onClick={handleBack}
+                  className="px-6 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+                  disabled={loading || currentStep === 0}
                 >
-                  {loading ? "Saving..." : "Submit Loan"}
+                  Back
                 </button>
+
+                {currentStep < steps.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="px-8 py-3 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-200"
+                    style={{ backgroundColor: "var(--color-brand-primary)" }}
+                    disabled={loading}
+                  >
+                    Next
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="px-12 py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-200"
+                    style={{ backgroundColor: "var(--color-brand-primary)" }}
+                    disabled={loading}
+                  >
+                    {loading ? "Saving..." : "Submit Loan"}
+                  </button>
+                )}
               </div>
             </div>
             </div>
