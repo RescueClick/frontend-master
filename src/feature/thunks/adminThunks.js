@@ -8,6 +8,12 @@ import {
 } from "./activationDeactivationUx";
 
 const unwrapApiData = (payload) => payload?.data ?? payload;
+const extractApiErrorMessage = (error, fallback = "Something went wrong") =>
+  error?.response?.data?.message ||
+  error?.response?.data?.error ||
+  error?.response?.data?.data?.message ||
+  error?.message ||
+  fallback;
 
 // Login User (for all roles)
 export const loginUser = createAsyncThunk(
@@ -19,14 +25,21 @@ export const loginUser = createAsyncThunk(
         password,
       });
 
-      // Backend wraps login payload as: { success, message, data: { token, user } }
-      // (but some endpoints may return token/user at the top-level).
-      const payload = response?.data?.data ?? response?.data ?? {};
-      const { token, user } = payload;
+      // Handle multiple backend shapes:
+      // 1) { data: { token, user }, message }
+      // 2) { token, user, message }
+      // 3) { data: { data: { token, user } }, message }
+      const body = response?.data ?? {};
+      const nestedData = body?.data ?? {};
+      const deepestData = nestedData?.data ?? {};
+      const token = body?.token || nestedData?.token || deepestData?.token;
+      const user = body?.user || nestedData?.user || deepestData?.user;
 
       if (!token || !user) {
         return rejectWithValue(
-          "Invalid server response during login (missing token/user)."
+          body?.message ||
+            nestedData?.message ||
+            "Invalid server response during login (missing token/user)."
         );
       }
 
@@ -42,9 +55,7 @@ export const loginUser = createAsyncThunk(
 
       return { token, user };
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Login failed"
-      );
+      return rejectWithValue(extractApiErrorMessage(error, "Login failed"));
     }
   }
 );
