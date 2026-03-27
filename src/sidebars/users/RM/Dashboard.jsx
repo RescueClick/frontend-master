@@ -41,7 +41,7 @@ const Dashboard = () => {
 
   const openPartnerAnalytics = useCallback((p) => {
     if (!p?.id) return;
-    navigate("/rm/RManalytics", { state: { id: p.id, role: "RM" } });
+    navigate("/rm/analytics", { state: { id: p.id, role: "RM" } });
   }, [navigate]);
 
   const dispatch = useDispatch();

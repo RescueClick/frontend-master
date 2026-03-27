@@ -3,6 +3,12 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { backendurl } from "../urldata";
 import { getAuthData } from "../../utils/localStorage";
+import {
+  runActivationRequest,
+  runDeactivationRequest,
+} from "./activationDeactivationUx";
+
+const unwrapApiData = (payload) => payload?.data ?? payload;
 
 
  
@@ -26,7 +32,7 @@ export const createPartner = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to create Partner"
@@ -71,7 +77,7 @@ export const fetchRmProfile = createAsyncThunk(
         },
       });
    
-      return response.data; // returns only profile object
+      return unwrapApiData(response.data); // returns only profile object
      
     } catch (error) {
       return rejectWithValue(
@@ -124,7 +130,7 @@ export const fetchDashboard = createAsyncThunk(
       const response = await axios.get(`${backendurl}/rm/dashboard`, {
         headers: { Authorization: `Bearer ${rmToken}` },
       });
-      return response.data; // { totalPartners, activePartners, totalRevenue, avgRating }
+      return unwrapApiData(response.data); // { totalPartners, activePartners, totalRevenue, avgRating }
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Failed to fetch dashboard");
     }
@@ -141,7 +147,7 @@ export const fetchRmCustomers = createAsyncThunk(
         headers: { Authorization: `Bearer ${rmToken}` },
       });
 
-      return response.data; // returns array of customer objects
+      return unwrapApiData(response.data); // returns array of customer objects
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RM customers"
@@ -160,7 +166,7 @@ export const fetchRmCustomersPayOutPending = createAsyncThunk(
         headers: { Authorization: `Bearer ${rmToken}` },
       });
 
-      return response.data; // returns array of customer objects
+      return unwrapApiData(response.data); // returns array of customer objects
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RM customers"
@@ -179,7 +185,7 @@ export const fetchRmCustomersPayOutDone = createAsyncThunk(
         headers: { Authorization: `Bearer ${rmToken}` },
       });
 
-      return response.data; // returns array of customer objects
+      return unwrapApiData(response.data); // returns array of customer objects
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RM customers"
@@ -201,7 +207,7 @@ export const fetchPartnerLoans = createAsyncThunk(
         headers: { Authorization: `Bearer ${rmToken}` },
       });
 
-      return response.data; // { partner, applications }
+      return unwrapApiData(response.data); // { partner, applications }
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch partner loan details"
@@ -212,7 +218,7 @@ export const fetchPartnerLoans = createAsyncThunk(
 
 export const assignPartnerBulkTarget = createAsyncThunk(
   "target/assignPartnerBulk",
-  async ({ month, year, totalTarget }, { rejectWithValue }) => {
+  async ({ month, year, totalTarget }, { rejectWithValue, dispatch }) => {
 
     const {rmToken} = getAuthData();
 
@@ -229,7 +235,9 @@ export const assignPartnerBulkTarget = createAsyncThunk(
       );
 
       
-      return response.data; // returns success data
+      dispatch(fetchDashboard());
+      dispatch(fetchPartners());
+      return unwrapApiData(response.data); // returns success data
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to assign bulk target"
@@ -257,7 +265,7 @@ export const fetchCustomerPartnersPayout = createAsyncThunk(
         }
       );
 
-      return response.data; // { customerId, partners }
+      return unwrapApiData(response.data); // { customerId, partners }
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch partners payout details"
@@ -271,7 +279,7 @@ export const fetchCustomerPartnersPayout = createAsyncThunk(
 
 export const setPayouts = createAsyncThunk(
   "rm/setPayouts",
-  async (payoutData, { rejectWithValue }) => {
+  async (payoutData, { rejectWithValue, dispatch }) => {
     const { rmToken } = getAuthData();
 
     try {
@@ -286,7 +294,9 @@ export const setPayouts = createAsyncThunk(
         }
       );
 
-      return response.data; // { message, payout }
+      dispatch(fetchRmCustomersPayOutPending());
+      dispatch(fetchRmCustomersPayOutDone());
+      return unwrapApiData(response.data); // { message, payout }
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to set payout"
@@ -306,7 +316,7 @@ export const fetchPartnersWithFollowUp = createAsyncThunk(
         headers: { Authorization: `Bearer ${rmToken}` },
       });
 
-      return response.data; // returns partner list with follow-up data
+      return unwrapApiData(response.data); // returns partner list with follow-up data
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch partners with follow-up"
@@ -319,7 +329,7 @@ export const fetchPartnersWithFollowUp = createAsyncThunk(
 
 export const updateFollowUp = createAsyncThunk(
   "followUp/updateFollowUp",
-  async ({ partnerId, status, remarks, lastCall }, { rejectWithValue }) => {
+  async ({ partnerId, status, remarks, lastCall }, { rejectWithValue, dispatch }) => {
 
     
 
@@ -334,7 +344,8 @@ export const updateFollowUp = createAsyncThunk(
         }
       );
 
-      return response.data; // backend sends message + followUp object
+      dispatch(fetchPartnersWithFollowUp());
+      return unwrapApiData(response.data); // backend sends message + followUp object
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to update follow-up"
@@ -364,7 +375,7 @@ export const getAnalytics = createAsyncThunk(
         },
       });
 
-      return response.data; // { data: { profile, analytics } }
+      return unwrapApiData(response.data); // { data: { profile, analytics } }
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch partner analytics"
@@ -374,26 +385,35 @@ export const getAnalytics = createAsyncThunk(
 );
 
 
-export const assignCustomerToPartner = createAsyncThunk(
-  "rm/assignCustomerToPartner",
-  async ({ oldPartnerId }, { rejectWithValue }) => {
+export const rmDeactivatePartner = createAsyncThunk(
+  "rm/rmDeactivatePartner",
+  async ({ oldPartnerId, newPartnerId }, { rejectWithValue, dispatch }) => {
 
   
     try {
       const { rmToken } = getAuthData();
 
-      const response = await axios.post(
-        `${backendurl}/rm/deactivate-partner`,
-        { oldPartnerId }, // Data from frontend
-        {
-          headers: {
-            Authorization: `Bearer ${rmToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await runDeactivationRequest({
+        pendingMessage: "Partner deactivation in progress...",
+        progressMessage: "Reassigning customers and active workload...",
+        successMessage: "Partner deactivated successfully.",
+        errorMessage: "Failed to reassign customers and deactivate partner",
+        request: () =>
+          axios.post(
+            `${backendurl}/rm/partner-deactivate`,
+            { oldPartnerId, newPartnerId }, // Data from frontend
+            {
+              headers: {
+                Authorization: `Bearer ${rmToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
 
-      return response.data.message; // ✅ Success message from backend
+      dispatch(fetchPartners());
+      dispatch(fetchRmCustomers());
+      return response.data.message; // Success message from backend
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.message ||
@@ -404,26 +424,33 @@ export const assignCustomerToPartner = createAsyncThunk(
 );
 
 
-export const activatePartner = createAsyncThunk(
-  "rm/activatePartner",
-  async ({ partnerId }, { rejectWithValue }) => {
+export const rmActivatePartner = createAsyncThunk(
+  "rm/rmActivatePartner",
+  async ({ partnerId }, { rejectWithValue, dispatch }) => {
     
 
     try {
       const { rmToken } = getAuthData();
 
-      const response = await axios.post(
-        `${backendurl}/rm/partner/activate`,
-        { partnerId },
-        {
-          headers: {
-            Authorization: `Bearer ${rmToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await runActivationRequest({
+        pendingMessage: "Activating partner...",
+        successMessage: "Partner activated successfully.",
+        errorMessage: "Failed to activate partner",
+        request: () =>
+          axios.post(
+            `${backendurl}/rm/partner-activate`,
+            { partnerId },
+            {
+              headers: {
+                Authorization: `Bearer ${rmToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
 
-      return response.data.message; // ✅ success message from backend
+      dispatch(fetchPartners());
+      return response.data.message; // success message from backend
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.message || "Failed to activate partner"
@@ -450,7 +477,7 @@ export const fetchRmPartnerTargets = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch partner targets"

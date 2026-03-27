@@ -67,7 +67,7 @@ const Home = () => {
   const cardData = [
     {
       icon: <FaHandshake size={32} className="text-brand-primary" />,
-      title: "Tie-up with Leading NBFCs",
+      title: "Tie-up with Leading Lenders",
       desc: "Our top-grade collaborations ensure an extended range of financial services for our customers.",
     },
     {
@@ -98,7 +98,7 @@ const Home = () => {
     { name: "Faircent", domain: "faircent.com", description: "India’s leading P2P lending platform." },
     { name: "Hero Fincorp", domain: "herofincorp.com", description: "Trusted non-banking finance firm." },
     { name: "Kotak Mahindra", domain: "kotak.com", description: "Progressive financial services." },
-    { name: "Muthoot Finance", domain: "muthootfinance.com", description: "Largest gold loan NBFC." },
+    { name: "Muthoot Finance", domain: "muthootfinance.com", description: "Leading gold loan institution." },
     { name: "Tata Capital", domain: "tatacapital.com", description: "Trusted TATA financial arm." },
     { name: "Aditya Birla Capital", domain: "adityabirlacapital.com", description: "Diverse financial solutions." },
 ];
@@ -283,8 +283,8 @@ const Home = () => {
               {
                 icon: <Shield className="w-8 h-8 text-white" />,
                 value: <Star className="w-10 h-10 mx-auto" />,
-                title: 'Leading NBFCs',
-                desc: 'Strategic partnerships with top NBFCs for superior collaborations',
+                title: 'Leading Lenders',
+                desc: 'Strategic partnerships with top lenders for superior collaborations',
                 color: 'from-purple-500 to-pink-500',
               },
               {

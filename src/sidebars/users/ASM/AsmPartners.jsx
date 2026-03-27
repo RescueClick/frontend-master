@@ -3,7 +3,7 @@ import { Eye, Search } from "lucide-react";
 import {
   activatePartner,
   fetchAsmPartners,
-  reassignCustomersAndDeactivatePartner,
+  asmDeactivatePartner,
 } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -11,6 +11,8 @@ import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import axios from "axios"
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
+import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 
 
 
@@ -27,7 +29,9 @@ const colors = {
 export default function AsmPartner() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState(null);
+  const [partnerToActivate, setPartnerToActivate] = useState(null);
   const [newPartnerId, setNewPartnerId] = useState("");
+  const [replacementSearch, setReplacementSearch] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showViewModal, setShowViewModal] = useState(false);
@@ -80,7 +84,7 @@ export default function AsmPartner() {
 
   const openPartnerAnalytics = (c) => {
     if (!c?.id) return;
-    navigate("/asm/ASManalytics", {
+    navigate("/asm/analytics", {
       state: { id: c.id, role: "PARTNER" },
     });
   };
@@ -100,8 +104,7 @@ export default function AsmPartner() {
   const { data, loading, success, error } = useSelector(
     (state) => state.asm.partners
   );
-
-  const otherPartners = data.filter((p) => p._id !== selectedPartner?._id);
+  const otherPartners = (Partners || []).filter((p) => p.id !== selectedPartner?.id);
 
  
 
@@ -155,17 +158,34 @@ export default function AsmPartner() {
   const handleCancelDeactivation = () => {
     setModalOpen(false);
     setSelectedPartner(null);
+    setNewPartnerId("");
+    setReplacementSearch("");
   };
 
   const handleConfirmDeactivation = () => {
-   
+    if (!newPartnerId) return;
 
     dispatch(
-      reassignCustomersAndDeactivatePartner({
-        oldPartnerId: selectedPartner.PartnersID,
-        // newPartnerId: newPartnerId,
+      asmDeactivatePartner({
+        oldPartnerId: selectedPartner.id,
+        newPartnerId,
       })
     );
+    dispatch(fetchAsmPartners());
+    setModalOpen(false);
+    setSelectedPartner(null);
+    setNewPartnerId("");
+    setReplacementSearch("");
+  };
+
+  const handleConfirmActivation = async () => {
+    if (!partnerToActivate?.id) return;
+    try {
+      await dispatch(activatePartner(partnerToActivate.id));
+      await dispatch(fetchAsmPartners());
+    } finally {
+      setPartnerToActivate(null);
+    }
   };
 
   const loginAsUser = async (userId, navigate) => {
@@ -295,7 +315,7 @@ loginAsUser(userId, navigate);
                             if (c.activation === "ACTIVE") {
                               toggleActivation(c);
                             } else {
-                              dispatch(activatePartner(c.id));
+                              setPartnerToActivate(c);
                             }
                           }}
                         >
@@ -494,41 +514,50 @@ loginAsUser(userId, navigate);
         </div>
       )}
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <ReassignmentDeactivateModal
+        isOpen={modalOpen}
+        title="Suspend Partner"
+        summaryBadgeText="Will be suspended"
+        subjectName={selectedPartner?.name || ""}
+        subjectMeta={
+          selectedPartner?.employeeId
+            ? `Employee ID: ${selectedPartner.employeeId}`
+            : ""
+        }
+        warningText="Linked customers and applications will be reassigned to the active partner you select. This action suspends the current partner."
+        searchValue={replacementSearch}
+        onSearchChange={setReplacementSearch}
+        searchPlaceholder="Search replacement partner..."
+        candidates={otherPartners
+          .filter((p) => p.activation === "ACTIVE")
+          .filter((p) =>
+            `${p.name || ""} ${p.employeeId || ""}`
+              .toLowerCase()
+              .includes((replacementSearch || "").toLowerCase())
+          )
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            meta: p.employeeId || p.id,
+            statusBadge: p.activation || "ACTIVE",
+          }))}
+        selectedId={newPartnerId}
+        onSelect={setNewPartnerId}
+        onCancel={handleCancelDeactivation}
+        onConfirm={handleConfirmDeactivation}
+        confirmLabel="Yes, Suspend"
+        confirmDisabled={!newPartnerId}
+      />
 
-
-        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Suspend Partner
-          </h3>
-          <p className="text-gray-700 mb-6">
-            Are you sure you want to <span className="font-semibold text-red-600">suspend</span> the partner{" "}
-            <span className="font-semibold">{selectedPartner?.name}</span>?<br />
-            This will deactivate their account and they will not be able to log in.
-          </p>
-          <div className="flex justify-end gap-3">
-            <button
-              className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition"
-              onClick={handleCancelDeactivation}
-            >
-              Cancel
-            </button>
-            <button
-              className="px-4 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition"
-              onClick={() => {
-                handleConfirmDeactivation();
-                setModalOpen(false);
-                setSelectedPartner(null);
-              }}
-            >
-              Yes, Suspend
-            </button>
-          </div>
-        </div>
-         
-        </div>
-      )}
+      <ActivationConfirmModal
+        isOpen={!!partnerToActivate}
+        title="Activate Partner"
+        message="Are you sure you want to activate"
+        subjectName={partnerToActivate?.name || ""}
+        confirmLabel="Activate"
+        onCancel={() => setPartnerToActivate(null)}
+        onConfirm={handleConfirmActivation}
+      />
     </>
   );
 }

@@ -17,6 +17,36 @@ const colors = {
   text: "#111827",
 };
 
+const docTypeDisplayNames = {
+  PAN: "PAN Card",
+  AADHAR_FRONT: "Aadhaar Front",
+  AADHAR_BACK: "Aadhaar Back",
+  PHOTO: "Photo",
+  SELFIE: "Selfie",
+  ADDRESS_PROOF: "Address Proof",
+  OTHER_DOCS: "Other Documents",
+  BUSINESS_OTHER_DOCS: "Business Other Documents",
+  COMPANY_ID_CARD: "Company ID Card",
+  SALARY_SLIP_1: "Salary Slip 1",
+  SALARY_SLIP_2: "Salary Slip 2",
+  SALARY_SLIP_3: "Salary Slip 3",
+  FORM_16_26AS: "Form 16 / 26AS",
+  BANK_STATEMENT_1: "Bank Statement 1",
+  BANK_STATEMENT_2: "Bank Statement 2",
+  BANK_STATEMENT: "Bank Statement",
+  SHOP_ACT: "Shop Act / Gumasta",
+  UDHYAM_AADHAR: "Udyam Aadhaar",
+  ITR: "ITR",
+  GST_DOCUMENT: "GST Document",
+  GST_CERTIFICATE: "GST Certificate",
+  SHOP_PHOTO: "Shop Photo",
+};
+
+const toDocLabel = (docType) => {
+  const key = String(docType || "").trim().toUpperCase();
+  return docTypeDisplayNames[key] || key || "Document";
+};
+
 // Sample customer data
 const customersData = [
   {
@@ -465,7 +495,7 @@ export default function RMpartner() {
                       key={index}
                       className="flex justify-between py-0.5 border-b border-gray-200 last:border-b-0"
                     >
-                      <span className="text-gray-500">{doc.docType}</span>
+                      <span className="text-gray-500">{toDocLabel(doc.docType)}</span>
                       <a
                         href={doc.url}
                         target="_blank"

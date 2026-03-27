@@ -27,7 +27,7 @@ const Dashboard = () => {
   const openRsmAnalytics = useCallback(
     (performer) => {
       if (!performer?.id) return;
-      navigate("/asm/ASManalytics", {
+      navigate("/asm/analytics", {
         state: { id: performer.id, role: "RSM" },
       });
     },

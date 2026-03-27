@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   activatePartner,
   fetchPartners,
-  reassignCustomersAndDeactivatePartner,
+  adminDeactivatePartner,
 } from "../../../feature/thunks/adminThunks";
 import { getAuthData,saveAuthData } from "../../../utils/localStorage";
 import axios from "axios";
@@ -14,6 +14,8 @@ import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
+import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 
 
 const colors = {
@@ -22,6 +24,36 @@ const colors = {
   background: "#F8FAFC",
   accent: "#F59E0B",
   text: "#111827",
+};
+
+const docTypeDisplayNames = {
+  PAN: "PAN Card",
+  AADHAR_FRONT: "Aadhaar Front",
+  AADHAR_BACK: "Aadhaar Back",
+  PHOTO: "Photo",
+  SELFIE: "Selfie",
+  ADDRESS_PROOF: "Address Proof",
+  OTHER_DOCS: "Other Documents",
+  BUSINESS_OTHER_DOCS: "Business Other Documents",
+  COMPANY_ID_CARD: "Company ID Card",
+  SALARY_SLIP_1: "Salary Slip 1",
+  SALARY_SLIP_2: "Salary Slip 2",
+  SALARY_SLIP_3: "Salary Slip 3",
+  FORM_16_26AS: "Form 16 / 26AS",
+  BANK_STATEMENT_1: "Bank Statement 1",
+  BANK_STATEMENT_2: "Bank Statement 2",
+  BANK_STATEMENT: "Bank Statement",
+  SHOP_ACT: "Shop Act / Gumasta",
+  UDHYAM_AADHAR: "Udyam Aadhaar",
+  ITR: "ITR",
+  GST_DOCUMENT: "GST Document",
+  GST_CERTIFICATE: "GST Certificate",
+  SHOP_PHOTO: "Shop Photo",
+};
+
+const toDocLabel = (docType) => {
+  const key = String(docType || "").trim().toUpperCase();
+  return docTypeDisplayNames[key] || key || "Document";
 };
 
 
@@ -37,6 +69,7 @@ export default function PartnerTable() {
 
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [newPartnerId, setNewPartnerId] = useState("");
+  const [replacementSearch, setReplacementSearch] = useState("");
 
   const [PartneractiveModel, setPartneractiveModel] = useState(null);
 
@@ -65,19 +98,25 @@ export default function PartnerTable() {
   const otherPartners = data.filter((p) => p._id !== selectedPartner?._id);
 
   const handleConfirmDeactivation = () => {
+    if (!newPartnerId) return;
     dispatch(
-      reassignCustomersAndDeactivatePartner({
+      adminDeactivatePartner({
         oldPartnerId: selectedPartner._id,
+        newPartnerId,
       })
     );
 
     setModalOpen(false);
     setSelectedPartner(null);
+    setNewPartnerId("");
+    setReplacementSearch("");
   };
 
   const handleCancelDeactivation = () => {
     setModalOpen(false);
     setSelectedPartner(null);
+    setNewPartnerId("");
+    setReplacementSearch("");
   };
 
   const handleExport = () => {
@@ -109,7 +148,7 @@ export default function PartnerTable() {
       "ASM Employee ID": user.asmEmployeeId,
       "RM Name": user.rmName,
       "RM Employee ID": user.rmEmployeeId,
-      Documents: user.docs.map((doc) => doc.docType).join(", "), // list all doc types
+      Documents: user.docs.map((doc) => toDocLabel(doc.docType)).join(", "), // list all doc types
     }));
 
     // Convert JSON to worksheet
@@ -373,72 +412,49 @@ loginAsUser(userId, navigate);
       >
         {/* Modal for Partner Deactivation */}
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <ReassignmentDeactivateModal
+        isOpen={modalOpen}
+        title="Suspend Partner"
+        summaryBadgeText="Will be suspended"
+        subjectName={`${selectedPartner?.firstName || ""} ${selectedPartner?.lastName || ""}`.trim()}
+        subjectMeta={
+          selectedPartner?.employeeId
+            ? `Employee ID: ${selectedPartner.employeeId}`
+            : ""
+        }
+        warningText="Linked customers and applications will be reassigned to the active partner you select. This action deactivates the current partner."
+        searchValue={replacementSearch}
+        onSearchChange={setReplacementSearch}
+        searchPlaceholder="Search replacement partner..."
+        candidates={otherPartners
+          .filter((p) => p.status === "ACTIVE")
+          .filter((p) =>
+            `${p.firstName || ""} ${p.lastName || ""} ${p.employeeId || ""}`
+              .toLowerCase()
+              .includes((replacementSearch || "").toLowerCase())
+          )
+          .map((p) => ({
+            id: p._id,
+            name: `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+            meta: p.employeeId || p._id,
+            statusBadge: p.status,
+          }))}
+        selectedId={newPartnerId}
+        onSelect={setNewPartnerId}
+        onCancel={handleCancelDeactivation}
+        onConfirm={handleConfirmDeactivation}
+        confirmLabel="Yes, Suspend"
+        confirmDisabled={!newPartnerId}
+      />
 
-
-        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Suspend Partner
-          </h3>
-          <p className="text-gray-700 mb-6">
-            Are you sure you want to <span className="font-semibold text-red-600">suspend</span> the partner{" "}
-            <span className="font-semibold">{selectedPartner?.name}</span>?<br />
-            This will deactivate their account and they will not be able to log in.
-          </p>
-          <div className="flex justify-end gap-3">
-            <button
-              className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition"
-              onClick={handleCancelDeactivation}
-            >
-              Cancel
-            </button>
-            <button
-              className="px-4 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition"
-              onClick={() => {
-                handleConfirmDeactivation();
-                setModalOpen(false);
-                setSelectedPartner(null);
-              }}
-            >
-              Yes, Suspend
-            </button>
-          </div>
-        </div>
-         
-        </div>
-      )}
-
-        {PartneractiveModel && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 bg-opacity-40 z-50">
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-80 text-center">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                Are you sure?
-              </h3>
-              <p className="text-gray-600 mb-5">
-                Do you really want to proceed?
-              </p>
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={() => {
-                    setPartneractiveModel(null);
-                  }}
-                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
-                >
-                  No
-                </button>
-                <button
-                  onClick={() => {
-                    handlePartneractive(PartneractiveModel);
-                  }}
-                  className="px-4 py-2 rounded-lg bg-brand-primary text-white "
-                >
-                  Yes
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ActivationConfirmModal
+          isOpen={!!PartneractiveModel}
+          title="Activate Partner"
+          message="Are you sure you want to activate"
+          confirmLabel="Activate"
+          onCancel={() => setPartneractiveModel(null)}
+          onConfirm={handlePartneractive}
+        />
 
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
@@ -512,7 +528,7 @@ loginAsUser(userId, navigate);
                     <td
                       className="px-2 py-3 align-top"
                       onClick={() =>
-                        navigate("/admin/Analytics", {
+                        navigate("/admin/analytics", {
                           state: { id: p._id, role: "Partner" },
                         })
                       }
@@ -578,7 +594,7 @@ loginAsUser(userId, navigate);
                           className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                           title="Open analytics"
                           onClick={() =>
-                            navigate("/admin/Analytics", {
+                            navigate("/admin/analytics", {
                               state: { id: p._id, role: "Partner" },
                             })
                           }

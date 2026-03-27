@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Search, Download } from "lucide-react";
-import { fetchRsmList, activateRSM, deactivateRSM } from "../../../feature/thunks/asmThunks";
+import { fetchRsmList, activateRSM, asmDeactivateRsm } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { designSystem, formatNumber } from "../../../utils/designSystem";
@@ -9,6 +9,8 @@ import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import toast from "react-hot-toast";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
+import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 
 const colors = {
   primary: "var(--color-brand-primary)",
@@ -27,6 +29,8 @@ export default function AsmRSM() {
   const [rsmToView, setRsmToView] = useState(null);
   const [rsmToDeactivate, setRsmToDeactivate] = useState(null);
   const [rsmToActivate, setRsmToActivate] = useState(null);
+  const [replacementRsmId, setReplacementRsmId] = useState("");
+  const [replacementSearch, setReplacementSearch] = useState("");
 
   const { data: rsmsData, loading, error } = useSelector((state) => state.asm.rsmList || { data: [], loading: false, error: null });
   
@@ -63,7 +67,7 @@ export default function AsmRSM() {
 
   // Handle view RSM analytics
   const handleViewAnalytics = (rsm) => {
-    navigate("/asm/ASManalytics", {
+    navigate("/asm/analytics", {
       state: { id: rsm._id, role: "RSM" },
     });
   };
@@ -88,24 +92,30 @@ export default function AsmRSM() {
     if (!rsmToActivate) return;
     try {
       await dispatch(activateRSM(rsmToActivate._id)).unwrap();
-      toast.success("RSM activated successfully");
       dispatch(fetchRsmList());
       setRsmToActivate(null);
     } catch (err) {
-      toast.error(err || "Failed to activate RSM");
+      // toast is handled in thunk
     }
   };
 
   // Confirm deactivation
   const confirmDeactivate = async () => {
     if (!rsmToDeactivate) return;
+    if (!replacementRsmId) {
+      toast.error("Please select replacement RSM");
+      return;
+    }
     try {
-      await dispatch(deactivateRSM(rsmToDeactivate._id)).unwrap();
-      toast.success("RSM deactivated successfully");
+      await dispatch(
+        asmDeactivateRsm({ rsmId: rsmToDeactivate._id, newRsmId: replacementRsmId })
+      ).unwrap();
       dispatch(fetchRsmList());
       setRsmToDeactivate(null);
+      setReplacementRsmId("");
+      setReplacementSearch("");
     } catch (err) {
-      toast.error(err || "Failed to deactivate RSM");
+      // toast is handled in thunk
     }
   };
 
@@ -429,85 +439,60 @@ export default function AsmRSM() {
         </div>
       )}
 
-      {/* Activation Confirmation Modal */}
-      {rsmToActivate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-brand-primary p-6 text-white relative">
-              <button
-                onClick={() => setRsmToActivate(null)}
-                className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
-              >
-                ✕
-              </button>
-              <h3 className="text-xl font-bold">Activate RSM</h3>
-            </div>
-            <div className="p-6 bg-[#F8FAFC] space-y-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p className="text-sm text-[#111827]">Are you sure?</p>
-              </div>
-              <div className="flex items-center justify-end gap-3 mt-2">
-                <button
-                  onClick={() => setRsmToActivate(null)}
-                  className="px-4 py-2 text-sm border rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmActivate}
-                  className="px-4 py-2 text-sm rounded-md text-white bg-brand-primary hover:opacity-90"
-                >
-                  OK
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ActivationConfirmModal
+        isOpen={!!rsmToActivate}
+        title="Activate RSM"
+        message="Are you sure you want to activate"
+        subjectName={`${rsmToActivate?.firstName || ""} ${rsmToActivate?.lastName || ""}`.trim()}
+        confirmLabel="Activate"
+        onCancel={() => setRsmToActivate(null)}
+        onConfirm={confirmActivate}
+      />
 
-      {/* Deactivation Confirmation Modal */}
-      {rsmToDeactivate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-brand-primary p-6 text-white relative">
-              <button
-                onClick={() => setRsmToDeactivate(null)}
-                className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
-              >
-                ✕
-              </button>
-              <h3 className="text-xl font-bold">Deactivate RSM?</h3>
-            </div>
-            <div className="p-6 bg-[#F8FAFC] space-y-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p className="text-sm text-[#111827]">
-                  Are you sure you want to deactivate {rsmToDeactivate.name}?
-                </p>
-              </div>
-              <div className="flex items-center justify-end gap-3 mt-2">
-                <button
-                  onClick={() => setRsmToDeactivate(null)}
-                  className="px-4 py-2 text-sm border rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDeactivate}
-                  className="px-4 py-2 text-sm rounded-md text-white bg-red-500 hover:bg-red-600"
-                >
-                  Deactivate
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ReassignmentDeactivateModal
+        isOpen={!!rsmToDeactivate}
+        title="Deactivate RSM"
+        subjectName={`${rsmToDeactivate?.firstName || ""} ${rsmToDeactivate?.lastName || ""}`.trim()}
+        subjectMeta={
+          rsmToDeactivate?.rsmType
+            ? `RSM type: ${rsmToDeactivate.rsmType}`
+            : ""
+        }
+        warningText="RMs reporting to this RSM must be reassigned to another active RSM of the same loan type before deactivation. Select the replacement below."
+        searchValue={replacementSearch}
+        onSearchChange={setReplacementSearch}
+        searchPlaceholder="Search replacement RSM..."
+        candidates={(rsms || [])
+          .filter(
+            (r) =>
+              rsmToDeactivate &&
+              r._id !== rsmToDeactivate._id &&
+              r.status === "ACTIVE" &&
+              String(r.rsmType || "").toUpperCase() ===
+                String(rsmToDeactivate.rsmType || "").toUpperCase()
+          )
+          .filter((r) =>
+            `${r.firstName || ""} ${r.lastName || ""} ${r.employeeId || ""}`
+              .toLowerCase()
+              .includes((replacementSearch || "").toLowerCase())
+          )
+          .map((r) => ({
+            id: r._id,
+            name: `${r.firstName || ""} ${r.lastName || ""}`.trim(),
+            meta: r.employeeId || r._id,
+            statusBadge: r.status,
+          }))}
+        selectedId={replacementRsmId}
+        onSelect={setReplacementRsmId}
+        onCancel={() => {
+          setRsmToDeactivate(null);
+          setReplacementRsmId("");
+          setReplacementSearch("");
+        }}
+        onConfirm={confirmDeactivate}
+        confirmLabel="Confirm & Deactivate"
+        confirmDisabled={!replacementRsmId}
+      />
     </div>
   );
 }

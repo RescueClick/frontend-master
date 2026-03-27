@@ -197,13 +197,13 @@ const Analytics = () => {
   // Navigate to RM page
   const handleNavigateToRM = useCallback(() => {
     if (userAnalyticsID) {
-      navigate("/admin/RM", { state: userAnalyticsID });
+      navigate("/admin/rm", { state: userAnalyticsID });
     }
   }, [navigate, userAnalyticsID]);
 
   const handleNavigateToPartner = useCallback(() => {
     if (userAnalyticsID) {
-      navigate("/admin/Partner", { state: userAnalyticsID });
+      navigate("/admin/partner", { state: userAnalyticsID });
     }
   }, [navigate, userAnalyticsID]);
 

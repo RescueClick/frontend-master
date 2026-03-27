@@ -1,7 +1,13 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { backendurl } from "../urldata";
-import { getAuthData, saveAuthData } from "../../utils/localStorage";
+import { clearAuthData, getAuthData, saveAuthData } from "../../utils/localStorage";
+import {
+  runActivationRequest,
+  runDeactivationRequest,
+} from "./activationDeactivationUx";
+
+const unwrapApiData = (payload) => payload?.data ?? payload;
 
 // Login User (for all roles)
 export const loginUser = createAsyncThunk(
@@ -24,20 +30,15 @@ export const loginUser = createAsyncThunk(
         );
       }
 
-      // Save auth data based on role
-      if (user.role === "SUPER_ADMIN") {
-        saveAuthData(token, user, false, "admin");
-      } else if (user.role === "ASM") {
-        saveAuthData(token, user, false, "asm");
-      } else if (user.role === "RSM") {
-        saveAuthData(token, user, false, "rsm");
-      } else if (user.role === "RM") {
-        saveAuthData(token, user, false, "rm");
-      } else if (user.role === "PARTNER") {
-        saveAuthData(token, user, false, "partner");
-      } else if (user.role === "CUSTOMER") {
-        saveAuthData(token, user, false, "customer");
+      if (!user.role) {
+        return rejectWithValue(
+          "Invalid server response during login (missing user role)."
+        );
       }
+
+      // Replace any stale tokens / impersonation stack so ProtectedRoute matches this session
+      clearAuthData();
+      saveAuthData(token, user);
 
       return { token, user };
     } catch (error) {
@@ -61,7 +62,7 @@ export const fetchAdminDashboard = createAsyncThunk(
         },
       });
 
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch dashboard stats"
@@ -84,7 +85,7 @@ export const fetchRecentActivities = createAsyncThunk(
         params: { limit },
       });
 
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch recent activities"
@@ -102,7 +103,7 @@ export const fetchAsms = createAsyncThunk(
       const response = await axios.get(`${backendurl}/admin/get-asm`, {
         headers: { Authorization: `Bearer ${adminToken}` },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch ASMs"
@@ -120,7 +121,7 @@ export const fetchRMs = createAsyncThunk(
       const response = await axios.get(`${backendurl}/admin/get-rm`, {
         headers: { Authorization: `Bearer ${adminToken}` },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RMs"
@@ -138,7 +139,7 @@ export const fetchRSMs = createAsyncThunk(
       const response = await axios.get(`${backendurl}/admin/get-rsm`, {
         headers: { Authorization: `Bearer ${adminToken}` },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RSMs"
@@ -150,7 +151,7 @@ export const fetchRSMs = createAsyncThunk(
 // Create ASM
 export const createAsm = createAsyncThunk(
   "admin/createAsm",
-  async (asmData, { rejectWithValue }) => {
+  async (asmData, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
       const response = await axios.post(
@@ -163,7 +164,8 @@ export const createAsm = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      dispatch(fetchAsms());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to create ASM"
@@ -175,7 +177,7 @@ export const createAsm = createAsyncThunk(
 // Create RSM
 export const createRSM = createAsyncThunk(
   "admin/createRSM",
-  async (rsmData, { rejectWithValue }) => {
+  async (rsmData, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
       const response = await axios.post(
@@ -188,7 +190,8 @@ export const createRSM = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      dispatch(fetchRSMs());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to create RSM"
@@ -200,7 +203,7 @@ export const createRSM = createAsyncThunk(
 // Create RM
 export const createRm = createAsyncThunk(
   "admin/createRm",
-  async (rmData, { rejectWithValue }) => {
+  async (rmData, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
       const response = await axios.post(
@@ -213,7 +216,8 @@ export const createRm = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      dispatch(fetchRMs());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to create RM"
@@ -223,47 +227,66 @@ export const createRm = createAsyncThunk(
 );
 
 // Assign RM to ASM
-export const assignRmToAsm = createAsyncThunk(
-  "admin/assignRmToAsm",
-  async ({ rmId, asmId }, { rejectWithValue }) => {
+export const adminDeactivateAsm = createAsyncThunk(
+  "admin/adminDeactivateAsm",
+  async ({ oldAsmId, newAsmId }, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.post(
-        `${backendurl}/admin/assign-rm-asm`,
-        { rmId, asmId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      return response.data;
+      const response = await runDeactivationRequest({
+        pendingMessage: "ASM deactivation in progress...",
+        progressMessage: "Reassigning RSM/RM/partner/customer hierarchy...",
+        successMessage: "ASM deactivated successfully.",
+        errorMessage: "Failed to deactivate ASM",
+        request: () =>
+          axios.post(
+            `${backendurl}/admin/asm-deactivate`,
+            { oldAsmId, newAsmId },
+            {
+              headers: {
+                Authorization: `Bearer ${adminToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
+      dispatch(fetchAsms());
+      dispatch(fetchRSMs());
+      dispatch(fetchRMs());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to assign RM to ASM"
+        error.response?.data?.message || "Failed to     deactivate ASM"
       );
     }
   }
 );
 
 // Reassign all RMs from ASM
-export const reassignAllRmsFromAsm = createAsyncThunk(
-  "admin/reassignAllRmsFromAsm",
-  async ({ oldAsmId, newAsmId }, { rejectWithValue }) => {
+export const adminDeactivateRsm = createAsyncThunk(
+  "admin/adminDeactivateRsm",
+  async ({ rsmId, newRsmId }, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.post(
-        `${backendurl}/admin/assign-rms-to-asm`,
-        { oldAsmId, newAsmId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      return response.data;
+      const response = await runDeactivationRequest({
+        pendingMessage: "RSM deactivation in progress...",
+        progressMessage: "Reassigning RM ownership...",
+        successMessage: "RSM deactivated successfully.",
+        errorMessage: "Failed to reassign RMs",
+        request: () =>
+          axios.post(
+            `${backendurl}/admin/rsm-deactivate`,
+            { rsmId, newRsmId },
+            {
+              headers: {
+                Authorization: `Bearer ${adminToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
+      dispatch(fetchRSMs());
+      dispatch(fetchRMs());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to reassign RMs"
@@ -275,20 +298,31 @@ export const reassignAllRmsFromAsm = createAsyncThunk(
 // Activate ASM
 export const activateAsm = createAsyncThunk(
   "admin/activateAsm",
-  async (asmId, { rejectWithValue }) => {
+  async (payload, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.post(
-        `${backendurl}/admin/asm/activate`,
-         asmId ,
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      return response.data;
+      const asmId = typeof payload === "string" ? payload : payload?.asmId;
+      if (!asmId) {
+        return rejectWithValue("asmId is required");
+      }
+      const response = await runActivationRequest({
+        pendingMessage: "Activating ASM...",
+        successMessage: "ASM activated successfully.",
+        errorMessage: "Failed to activate ASM",
+        request: () =>
+          axios.post(
+            `${backendurl}/admin/asm-activate`,
+             { asmId },
+            {
+              headers: {
+                Authorization: `Bearer ${adminToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
+      dispatch(fetchAsms());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to activate ASM"
@@ -300,7 +334,7 @@ export const activateAsm = createAsyncThunk(
 // Delete ASM
 export const deleteAsm = createAsyncThunk(
   "admin/deleteAsm",
-  async (asmId, { rejectWithValue }) => {
+  async (asmId, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
       const response = await axios.delete(
@@ -311,7 +345,8 @@ export const deleteAsm = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      dispatch(fetchAsms());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to delete ASM"
@@ -341,7 +376,7 @@ export const fetchAnalyticsdashboard = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch analytics"
@@ -361,7 +396,7 @@ export const fetchAdminProfile = createAsyncThunk(
           Authorization: `Bearer ${adminToken}`,
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch admin profile"
@@ -381,7 +416,7 @@ export const fetchPartners = createAsyncThunk(
           Authorization: `Bearer ${adminToken}`,
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch partners"
@@ -404,7 +439,7 @@ export const getUnassignedPartners = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch unassigned partners"
@@ -424,7 +459,7 @@ export const getAllCustomers = createAsyncThunk(
           Authorization: `Bearer ${adminToken}`,
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch customers"
@@ -444,7 +479,7 @@ export const fetchBanners = createAsyncThunk(
           Authorization: `Bearer ${adminToken}`,
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch banners"
@@ -639,7 +674,7 @@ export const fetchAdminCustomerPartnersPayout = createAsyncThunk(
 
 export const setAdminPayouts = createAsyncThunk(
   "admin/setPayouts",
-  async (payoutData, { rejectWithValue }) => {
+  async (payoutData, { rejectWithValue, dispatch }) => {
     const { adminToken } = getAuthData();
 
     try {
@@ -654,7 +689,9 @@ export const setAdminPayouts = createAsyncThunk(
         }
       );
 
-      return response.data; // { message, payout }
+      dispatch(fetchAdminCustomersPayOutPending());
+      dispatch(fetchAdminCustomersPayOutDone());
+      return unwrapApiData(response.data); // { message, payout }
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to set payout"
@@ -681,7 +718,7 @@ export const fetchAdminIncentives = createAsyncThunk(
           ...(month ? { month } : {}),
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch incentives"
@@ -693,7 +730,7 @@ export const fetchAdminIncentives = createAsyncThunk(
 // Mark incentive as PAID (Admin)
 export const payAdminIncentive = createAsyncThunk(
   "admin/payIncentive",
-  async (incentiveId, { rejectWithValue }) => {
+  async (incentiveId, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
       const response = await axios.post(
@@ -706,7 +743,8 @@ export const payAdminIncentive = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      dispatch(fetchAdminIncentives({}));
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to pay incentive"
@@ -718,20 +756,27 @@ export const payAdminIncentive = createAsyncThunk(
 // Activate Partner
 export const activatePartner = createAsyncThunk(
   "admin/activatePartner",
-  async (partnerId, { rejectWithValue }) => {
+  async (partnerId, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.post(
-        `${backendurl}/admin/partner/activate`,
-        { partnerId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      return response.data;
+      const response = await runActivationRequest({
+        pendingMessage: "Activating partner...",
+        successMessage: "Partner activated successfully.",
+        errorMessage: "Failed to activate partner",
+        request: () =>
+          axios.post(
+            `${backendurl}/admin/partner-activate`,
+            { partnerId },
+            {
+              headers: {
+                Authorization: `Bearer ${adminToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
+      dispatch(fetchPartners());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to activate partner"
@@ -741,22 +786,31 @@ export const activatePartner = createAsyncThunk(
 );
 
 // Reassign Customers and Deactivate Partner
-export const reassignCustomersAndDeactivatePartner = createAsyncThunk(
+export const adminDeactivatePartner = createAsyncThunk(
   "admin/reassignCustomersAndDeactivatePartner",
-  async ({ oldPartnerId }, { rejectWithValue }) => {
+  async ({ oldPartnerId, newPartnerId }, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.post(
-        `${backendurl}/admin/deactivate-partner`,
-        { oldPartnerId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      return response.data;
+      const response = await runDeactivationRequest({
+        pendingMessage: "Partner deactivation in progress...",
+        progressMessage: "Reassigning customers, applications and pending finance...",
+        successMessage: "Partner deactivated successfully.",
+        errorMessage: "Failed to reassign customers and deactivate partner",
+        request: () =>
+          axios.post(
+            `${backendurl}/admin/partner-deactivate`,
+            { oldPartnerId, newPartnerId },
+            {
+              headers: {
+                Authorization: `Bearer ${adminToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
+      dispatch(fetchPartners());
+      dispatch(getAllCustomers());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to reassign customers and deactivate partner"
@@ -768,20 +822,27 @@ export const reassignCustomersAndDeactivatePartner = createAsyncThunk(
 // Activate RM (Admin role)
 export const activateRM = createAsyncThunk(
   "admin/activateRM",
-  async (rmId, { rejectWithValue }) => {
+  async (rmId, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.post(
-        `${backendurl}/admin/rm/activate`,
-        { rmId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      return response.data;
+      const response = await runActivationRequest({
+        pendingMessage: "Activating RM...",
+        successMessage: "RM activated successfully.",
+        errorMessage: "Failed to activate RM",
+        request: () =>
+          axios.post(
+            `${backendurl}/admin/rm-activate`,
+            { rmId },
+            {
+              headers: {
+                Authorization: `Bearer ${adminToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
+      dispatch(fetchRMs());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to activate RM"
@@ -791,22 +852,31 @@ export const activateRM = createAsyncThunk(
 );
 
 // Assign Partners to RM (Admin role) - Reassigns partners from old RM to new RM
-export const assignPartnersToRM = createAsyncThunk(
+export const adminDeactivateRM = createAsyncThunk(
   "admin/assignPartnersToRM",
-  async ({ oldRmId, newRmId }, { rejectWithValue }) => {
+  async ({ oldRmId, newRmId }, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.post(
-        `${backendurl}/admin/assign-partners-rm`,
-        { oldRmId, newRmId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      return response.data;
+      const response = await runDeactivationRequest({
+        pendingMessage: "RM deactivation in progress...",
+        progressMessage: "Reassigning partners and active applications...",
+        successMessage: "RM deactivated successfully.",
+        errorMessage: "Failed to assign partners to RM",
+        request: () =>
+          axios.post(
+            `${backendurl}/admin/rm-deactivate`,
+            { oldRmId, newRmId },
+            {
+              headers: {
+                Authorization: `Bearer ${adminToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
+      dispatch(fetchRMs());
+      dispatch(fetchPartners());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to assign partners to RM"
@@ -815,53 +885,32 @@ export const assignPartnersToRM = createAsyncThunk(
   }
 );
 
-// Deactivate RM (Admin role) - with optional newRmId override
-export const deactivateRM = createAsyncThunk(
-  "admin/deactivateRM",
-  async ({ rmId, newRmId }, { rejectWithValue }) => {
-    try {
-      const { adminToken } = getAuthData();
 
-      const payload = { rmId };
-      if (newRmId) payload.newRmId = newRmId;
-
-      const response = await axios.post(
-        `${backendurl}/admin/rm/deactivate`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to deactivate RM"
-      );
-    }
-  }
-);
 
 // Activate RSM (Admin role)
 export const activateRSM = createAsyncThunk(
   "admin/activateRSM",
-  async (rsmId, { rejectWithValue }) => {
+  async (rsmId, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.post(
-        `${backendurl}/admin/rsm/activate`,
-        { rsmId },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      return response.data;
+      const response = await runActivationRequest({
+        pendingMessage: "Activating RSM...",
+        successMessage: "RSM activated successfully.",
+        errorMessage: "Failed to activate RSM",
+        request: () =>
+          axios.post(
+            `${backendurl}/admin/rsm-activate`,
+            { rsmId },
+            {
+              headers: {
+                Authorization: `Bearer ${adminToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
+      dispatch(fetchRSMs());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to activate RSM"
@@ -870,37 +919,11 @@ export const activateRSM = createAsyncThunk(
   }
 );
 
-// Deactivate RSM (Admin role)
-export const deactivateRSM = createAsyncThunk(
-  "admin/deactivateRSM",
-  async ({ rsmId, newRsmId }, { rejectWithValue }) => {
-    try {
-      const { adminToken } = getAuthData();
-
-      const response = await axios.post(
-        `${backendurl}/admin/rsm/deactivate`,
-        { rsmId, newRsmId },   // ✅ send both
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to deactivate RSM"
-      );
-    }
-  }
-);
 
 // Assign ASM Bulk Target (Admin role)
 export const assignAsmBulkTarget = createAsyncThunk(
   "admin/assignAsmBulkTarget",
-  async ({ month, year, totalTarget }, { rejectWithValue }) => {
+  async ({ month, year, totalTarget }, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
       const response = await axios.post(
@@ -913,7 +936,8 @@ export const assignAsmBulkTarget = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      dispatch(fetchAdminDashboard());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to assign ASM bulk target"
@@ -925,7 +949,7 @@ export const assignAsmBulkTarget = createAsyncThunk(
 // Assign Bulk Target All (Admin role) - Assigns targets to all ASMs, RMs, and Partners
 export const assignBulkTargetAll = createAsyncThunk(
   "admin/assignBulkTargetAll",
-  async ({ month, year, totalTarget }, { rejectWithValue }) => {
+  async ({ month, year, totalTarget }, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
       const response = await axios.post(
@@ -938,7 +962,8 @@ export const assignBulkTargetAll = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      dispatch(fetchAdminDashboard());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to assign bulk target to all"
@@ -1078,12 +1103,12 @@ export const assignAdminPartnerTarget = createAsyncThunk(
 // Distribute Hierarchical Targets (Admin) - Top-Down Model
 export const distributeHierarchicalTargets = createAsyncThunk(
   "admin/distributeHierarchicalTargets",
-  async ({ month, year, totalCompanyTarget, partnerFileCountTarget }, { rejectWithValue }) => {
+  async ({ month, year, totalCompanyTarget, partnerFileCountTarget, assignmentMode = "replace" }, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
       const response = await axios.post(
         `${backendurl}/admin/target/distribute-hierarchical`,
-        { month, year, totalCompanyTarget, partnerFileCountTarget },
+        { month, year, totalCompanyTarget, partnerFileCountTarget, assignmentMode },
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,

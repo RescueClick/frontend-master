@@ -4,6 +4,7 @@ import { fetchAsmApplications } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import { getLoanStatusBadgeClass, getLoanStatusLabel } from "../../../utils/loanStatus";
 
 const Application = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -69,23 +70,6 @@ const Application = () => {
     return sortNewestFirst(filtered, { dateKeys: ["applicationDateRaw"] });
   }, [applications, searchTerm, filterStatus]);
 
-
-  // Helpers for status color
-  const getStatusColor = (status) => {
-    switch (normalizeStatus(status)) {
-      case "DISBURSED":
-        return "bg-green-100 text-green-800";
-      case "UNDER_REVIEW":
-      case "APPROVED":
-      case "AGREEMENT":
-      case "LOGIN":
-        return "bg-amber-100 text-amber-800";
-      case "REJECTED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-slate-100 text-slate-800";
-    }
-  };
 
   const colors = {
     primary: "var(--color-brand-primary)",
@@ -198,11 +182,11 @@ const Application = () => {
                   </td>
                   <td className="px-3 py-4">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        customer.status === "DRAFT" ? "SUBMITTED" : customer.status
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${getLoanStatusBadgeClass(
+                        getLoanStatusLabel(customer.status)
                       )}`}
                     >
-                      {customer.status === "DRAFT" ? "SUBMITTED" : customer.status}
+                      {getLoanStatusLabel(customer.status)}
                     </span>
                   </td>
                   {/* <td className="px-3 py-4">

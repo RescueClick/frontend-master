@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { getAuthData } from "../../../utils/localStorage";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 import {
   User,
@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
+import { getLoanStatusBadgeClass, getLoanStatusLabel } from "../../../utils/loanStatus";
 
 // ================== FIELD DEFINITIONS (Outside component) ==================
 const customerFields = [
@@ -79,6 +80,7 @@ const CustomerApplication = () => {
   // State for API data
   
   const [applicationData, setApplicationData] = useState(null);
+  const [requiredDocRules, setRequiredDocRules] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
@@ -115,6 +117,8 @@ const CustomerApplication = () => {
 
      
       setApplicationData(response.data);
+      const rules = await fetchRequiredDocRules(response.data, rmToken);
+      setRequiredDocRules(rules);
     } catch (err) {
       console.error("Error fetching application data:", err);
       setError(
@@ -802,33 +806,122 @@ const CustomerApplication = () => {
 
   const [submitLoading, setSubmitLoading] = useState(false);
 
-  // Helper function to get required document types
-  const getRequiredDocTypes = (loanType) => {
+  const getLocalRequiredDocRules = (loanType) => {
     const baseDocs = ["PAN", "AADHAR_FRONT", "AADHAR_BACK"];
-    
-    if (loanType === "PERSONAL" || loanType === "HOME_LOAN_SALARIED") {
-      return [...baseDocs, "SALARY_SLIP_1", "BANK_STATEMENT"];
-    } else if (loanType === "BUSINESS" || loanType === "HOME_LOAN_SELF_EMPLOYED") {
-      return [...baseDocs, "BANK_STATEMENT", "GST_CERTIFICATE"];
+    const key = String(loanType || "").toUpperCase();
+    if (key === "PERSONAL" || key === "HOME_LOAN_SALARIED") {
+      return [
+        ...baseDocs.map((docType) => ({ key: docType, acceptedDocTypes: [docType] })),
+        { key: "SALARY_SLIP_1", acceptedDocTypes: ["SALARY_SLIP_1"] },
+        { key: "BANK_STATEMENT_1", acceptedDocTypes: ["BANK_STATEMENT_1", "BANK_STATEMENT"] },
+      ];
     }
-    
-    return baseDocs;
+    if (key === "BUSINESS" || key === "HOME_LOAN_SELF_EMPLOYED") {
+      return [
+        ...baseDocs.map((docType) => ({ key: docType, acceptedDocTypes: [docType] })),
+        { key: "BANK_STATEMENT_1", acceptedDocTypes: ["BANK_STATEMENT_1", "BANK_STATEMENT"] },
+        { key: "GST_DOCUMENT", acceptedDocTypes: ["GST_DOCUMENT", "GST_CERTIFICATE"] },
+      ];
+    }
+    return baseDocs.map((docType) => ({ key: docType, acceptedDocTypes: [docType] }));
+  };
+
+  const getEffectiveRules = () => {
+    if (Array.isArray(requiredDocRules) && requiredDocRules.length) return requiredDocRules;
+    return getLocalRequiredDocRules(applicationData?.loanType);
+  };
+
+  const normalizeDocKey = (value) => String(value || "").trim().toUpperCase();
+
+  const isRuleMatchedByDoc = (rule, doc) => {
+    const acceptedDocTypes = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
+    const docType = normalizeDocKey(doc?.docType);
+    return acceptedDocTypes.some(
+      (type) => normalizeDocKey(type) === docType
+    );
+  };
+
+  const findDocForRule = (rule, docs = []) => {
+    return docs.find((doc) => isRuleMatchedByDoc(rule, doc));
+  };
+
+  const docTypeDisplayNames = {
+    PAN: "PAN Card",
+    AADHAR_FRONT: "Aadhaar Front",
+    AADHAR_BACK: "Aadhaar Back",
+    PHOTO: "Photo",
+    SELFIE: "Selfie",
+    ADDRESS_PROOF: "Address Proof",
+    LIGHT_BILL: "Light Bill",
+    UTILITY_BILL: "Utility Bill",
+    RENT_AGREEMENT: "Rent Agreement",
+    OTHER_DOCS: "Other Documents",
+    BUSINESS_OTHER_DOCS: "Business Other Documents",
+    COMPANY_ID_CARD: "Company ID Card",
+    SALARY_SLIP_1: "Salary Slip 1",
+    SALARY_SLIP_2: "Salary Slip 2",
+    SALARY_SLIP_3: "Salary Slip 3",
+    FORM_16_26AS: "Form 16 / 26AS",
+    BANK_STATEMENT_1: "Bank Statement 1",
+    BANK_STATEMENT_2: "Bank Statement 2",
+    BANK_STATEMENT: "Bank Statement",
+    SHOP_ACT: "Shop Act / Gumasta",
+    UDHYAM_AADHAR: "Udyam Aadhaar",
+    ITR: "ITR",
+    GST_DOCUMENT: "GST Document",
+    GST_CERTIFICATE: "GST Certificate",
+    SHOP_PHOTO: "Shop Photo",
+    CO_APPLICANT_AADHAR_FRONT: "Co-applicant Aadhaar Front",
+    CO_APPLICANT_AADHAR_BACK: "Co-applicant Aadhaar Back",
+    CO_APPLICANT_PAN: "Co-applicant PAN",
+    CO_APPLICANT_SELFIE: "Co-applicant Selfie",
+  };
+
+  const toDocLabel = (docType) => {
+    const key = normalizeDocKey(docType);
+    return docTypeDisplayNames[key] || key || "Document";
+  };
+
+  const getCanonicalRuleKeyForDoc = (docType) => {
+    const key = normalizeDocKey(docType);
+    const match = getEffectiveRules().find((rule) =>
+      Array.isArray(rule?.acceptedDocTypes) &&
+      rule.acceptedDocTypes.some((type) => normalizeDocKey(type) === key)
+    );
+    return normalizeDocKey(match?.key) || key;
+  };
+
+  const toDocLabelByRule = (docType) => toDocLabel(getCanonicalRuleKeyForDoc(docType));
+
+  const fetchRequiredDocRules = async (application, rmToken) => {
+    try {
+      const response = await axios.get(`${backendurl}/partner/loan-doc-rules`, {
+        params: {
+          loanType: application?.loanType,
+          gender: application?.customer?.gender || "",
+        },
+        headers: { Authorization: `Bearer ${rmToken}` },
+      });
+      if (Array.isArray(response?.data?.rules) && response.data.rules.length) {
+        return response.data.rules;
+      }
+    } catch (_err) {}
+
+    return getLocalRequiredDocRules(application?.loanType);
   };
 
   // Check if all required documents are verified
   const areAllDocumentsVerified = () => {
     if (!applicationData) return false;
     
-    const requiredDocTypes = getRequiredDocTypes(applicationData.loanType);
+    const requiredRules = getEffectiveRules();
     const uploadedDocs = applicationData.docs || [];
 
     // Do not allow completion if partner hasn't uploaded anything
     if (!uploadedDocs.length) return false;
     
-    for (const docType of requiredDocTypes) {
-      const doc = uploadedDocs.find(
-        (d) => d.docType?.toUpperCase() === docType.toUpperCase()
-      );
+    for (const rule of requiredRules) {
+      const doc = findDocForRule(rule, uploadedDocs);
       
       if (!doc || doc.status !== "VERIFIED") {
         return false;
@@ -843,7 +936,7 @@ const CustomerApplication = () => {
   const getDocumentIssues = () => {
     if (!applicationData) return { missing: [], unverified: [] };
     
-    const requiredDocTypes = getRequiredDocTypes(applicationData.loanType);
+    const requiredRules = getEffectiveRules();
     const uploadedDocs = applicationData.docs || [];
     const missing = [];
     const unverifiedMap = new Map();
@@ -854,15 +947,14 @@ const CustomerApplication = () => {
       unverifiedMap.set(key, { docType, status });
     };
     
-    for (const docType of requiredDocTypes) {
-      const doc = uploadedDocs.find(
-        (d) => d.docType?.toUpperCase() === docType.toUpperCase()
-      );
+    for (const rule of requiredRules) {
+      const doc = findDocForRule(rule, uploadedDocs);
+      const key = String(rule?.key || "").toUpperCase();
       
       if (!doc) {
-        missing.push(docType);
+        if (key) missing.push(key);
       } else if (doc.status !== "VERIFIED") {
-        addUnverified(docType, doc.status);
+        addUnverified(key || doc.docType, doc.status);
       }
     }
 
@@ -903,10 +995,12 @@ const CustomerApplication = () => {
           let errorMsg = "Cannot set DOC_COMPLETE status. ";
           
           if (issues.missing.length > 0) {
-            errorMsg += `Missing documents: ${issues.missing.join(", ")}. `;
+            errorMsg += `Missing documents: ${issues.missing.map(toDocLabel).join(", ")}. `;
           }
           if (issues.unverified.length > 0) {
-            const unverifiedList = issues.unverified.map(u => `${u.docType} (${u.status})`).join(", ");
+            const unverifiedList = issues.unverified
+              .map((u) => `${toDocLabel(u.docType)} (${u.status})`)
+              .join(", ");
             errorMsg += `Unverified documents: ${unverifiedList}. `;
           }
           errorMsg +=
@@ -1006,10 +1100,10 @@ const CustomerApplication = () => {
         const unverified = err.response.data.unverifiedDocs || [];
         let details = "";
         if (missing.length > 0) {
-          details += `Missing: ${missing.join(", ")}. `;
+          details += `Missing: ${missing.map(toDocLabel).join(", ")}. `;
         }
         if (unverified.length > 0) {
-          details += `Unverified: ${unverified.join(", ")}. `;
+          details += `Unverified: ${unverified.map(toDocLabel).join(", ")}. `;
         }
         if (details) {
           errorMessage = `${errorMessage} ${details}`;
@@ -1027,164 +1121,73 @@ const CustomerApplication = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "KYC_PENDING":
-        return "bg-orange-100 text-orange-800 border-orange-200";
-      case "KYC_COMPLETE":
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      case "UNDER_REVIEW":
-        return "bg-indigo-100 text-indigo-800 border-indigo-200";
-      case "IN_PROCESS":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "SUBMITTED":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "APPROVED":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "AGREEMENT":
-        return "bg-cyan-100 text-cyan-800 border-cyan-200";
-      case "DISBURSED":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "REJECTED":
-        return "bg-red-100 text-red-800 border-red-200";
-      case "PENDING":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
+  const getStatusColor = (status) =>
+    `${getLoanStatusBadgeClass(status)} border border-gray-200`;
 
   // Don't render anything if no data and still loading
   if (loading) {
     return (
-      <>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: 'var(--color-brand-primary)',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              duration: 4000,
-              iconTheme: {
-                primary: '#EF4444',
-                secondary: '#fff',
-              },
-            },
-          }}
-        />
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-8 shadow-lg">
-            <div className="flex items-center gap-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
-              <span className="text-gray-700 text-lg">
-                Loading application data...
-              </span>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+            <span className="text-gray-700 text-lg">
+              Loading application data...
+            </span>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   // Don't render anything if there's an error and no data
   if (error && !applicationData) {
     return (
-      <>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: 'var(--color-brand-primary)',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              duration: 4000,
-              iconTheme: {
-                primary: '#EF4444',
-                secondary: '#fff',
-              },
-            },
-          }}
-        />
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-8 shadow-lg text-center">
-            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Failed to Load Application
-            </h2>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <button
-            onClick={fetchApplicationData}
-            className="px-6 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Failed to Load Application
+          </h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+          onClick={fetchApplicationData}
+          className="px-6 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition"
+        >
+          Retry
+        </button>
       </div>
-      </>
+    </div>
     );
   }
 
   // Don't render anything if no data
   if (!applicationData) {
     return (
-      <>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: 'var(--color-brand-primary)',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              duration: 4000,
-              iconTheme: {
-                primary: '#EF4444',
-                secondary: '#fff',
-              },
-            },
-          }}
-        />
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-8 shadow-lg text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Clock className="w-8 h-8 text-gray-400" />
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              No Application Data
-            </h2>
-            <p className="text-gray-600">Application data not available</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-8 h-8 text-gray-400" />
           </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            No Application Data
+          </h2>
+          <p className="text-gray-600">Application data not available</p>
         </div>
-      </>
+      </div>
     );
   }
+
+  const summaryRequiredRules = getEffectiveRules();
+  const summaryRequiredCount = summaryRequiredRules.length;
+  const summaryUploadedCount = summaryRequiredRules.filter((rule) =>
+    findDocForRule(rule, docs)?.url
+  ).length;
+  const summaryVerifiedCount = summaryRequiredRules.filter((rule) => {
+    const matched = findDocForRule(rule, docs);
+    return matched?.status === "VERIFIED";
+  }).length;
+  const summaryPendingCount = Math.max(summaryRequiredCount - summaryVerifiedCount, 0);
 
   // Helper functions for rendering
   const renderFields = (fields, data) => (
@@ -1212,30 +1215,6 @@ const CustomerApplication = () => {
 
   return (
     <>
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            iconTheme: {
-              primary: 'var(--color-brand-primary)',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            duration: 4000,
-            iconTheme: {
-              primary: '#EF4444',
-              secondary: '#fff',
-            },
-          },
-        }}
-      />
       {/* Error message banner */}
       {error && (
         <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
@@ -1312,7 +1291,7 @@ const CustomerApplication = () => {
                   Document Type:
                 </p>
                 <p className="font-semibold text-gray-900">
-                  {selectedDocForStatus.docType}
+                  {toDocLabelByRule(selectedDocForStatus.docType)}
                 </p>
               </div>
 
@@ -1404,7 +1383,7 @@ const CustomerApplication = () => {
           <div className="bg-white rounded-xl p-6 w-[800px] max-h-[90vh] shadow-lg overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-800">
-                {selectedDoc ? selectedDoc.docType : "Document Preview"}
+                {selectedDoc ? toDocLabelByRule(selectedDoc.docType) : "Document Preview"}
               </h3>
               <button
                 onClick={() => {
@@ -1427,7 +1406,7 @@ const CustomerApplication = () => {
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-600">
-                      Document Type: {selectedDoc.docType}
+                      Document Type: {toDocLabelByRule(selectedDoc.docType)}
                     </span>
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium ${getDocStatusColor(
@@ -1887,6 +1866,56 @@ const CustomerApplication = () => {
                   </div>
                 )}
 
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  <div className="bg-white rounded-lg border border-gray-200 p-3">
+                    <p className="text-xs text-gray-500">Required</p>
+                    <p className="text-lg font-bold text-gray-900">{summaryRequiredCount}</p>
+                  </div>
+                  <div className="bg-white rounded-lg border border-gray-200 p-3">
+                    <p className="text-xs text-gray-500">Uploaded</p>
+                    <p className="text-lg font-bold text-blue-700">{summaryUploadedCount}</p>
+                  </div>
+                  <div className="bg-white rounded-lg border border-gray-200 p-3">
+                    <p className="text-xs text-gray-500">Verified</p>
+                    <p className="text-lg font-bold text-green-700">{summaryVerifiedCount}</p>
+                  </div>
+                  <div className="bg-white rounded-lg border border-gray-200 p-3">
+                    <p className="text-xs text-gray-500">Pending</p>
+                    <p className="text-lg font-bold text-amber-700">{summaryPendingCount}</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+                  <h3 className="text-sm font-bold text-gray-900 mb-3">Required Documents Checklist</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {summaryRequiredRules.map((rule, idx) => {
+                      const matchedDoc = findDocForRule(rule, docs);
+                      const isUploaded = Boolean(matchedDoc?.url);
+                      const isVerified = matchedDoc?.status === "VERIFIED";
+                      const stateText = isVerified ? "Verified" : isUploaded ? "Uploaded" : "Missing";
+                      const stateClass = isVerified
+                        ? "text-green-700 bg-green-100"
+                        : isUploaded
+                        ? "text-blue-700 bg-blue-100"
+                        : "text-amber-700 bg-amber-100";
+
+                      return (
+                        <div
+                          key={`${rule?.key || "rule"}-${idx}`}
+                          className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2"
+                        >
+                          <span className="text-sm font-medium text-gray-800">
+                            {toDocLabel(rule?.key)}
+                          </span>
+                          <span className={`text-xs font-semibold px-2 py-1 rounded ${stateClass}`}>
+                            {stateText}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 transition-all duration-300">
                   {(() => {
                     // Sort: UPDATED documents first
@@ -1941,7 +1970,7 @@ const CustomerApplication = () => {
 
                             <div className="ml-3 flex-1">
                               <h3 className="font-semibold text-gray-900 text-sm">
-                                {doc.docType || "Document"}
+                                {toDocLabelByRule(doc.docType)}
                               </h3>
                               {doc.status === "UPDATED" && (
                                 <p className="text-xs text-blue-600 font-semibold mt-1">
@@ -2116,10 +2145,12 @@ const CustomerApplication = () => {
                                   const issues = getDocumentIssues();
                                   let msg = "All documents must be verified first (no PENDING/UPDATED/REJECTED allowed). ";
                                   if (issues.missing.length > 0) {
-                                    msg += `Missing: ${issues.missing.join(", ")}. `;
+                                    msg += `Missing: ${issues.missing.map(toDocLabel).join(", ")}. `;
                                   }
                                   if (issues.unverified.length > 0) {
-                                    const unverifiedList = issues.unverified.map(u => `${u.docType} (${u.status})`).join(", ");
+                                    const unverifiedList = issues.unverified
+                                      .map((u) => `${toDocLabel(u.docType)} (${u.status})`)
+                                      .join(", ");
                                     msg += `Unverified: ${unverifiedList}. `;
                                   }
                                   return (
@@ -2160,7 +2191,7 @@ const CustomerApplication = () => {
                                 Application Transferred to RSM
                               </p>
                               <p className="text-xs text-blue-600 mt-1">
-                                Current Status: {applicationData?.status}. This application has been transferred to RSM. Further status changes (UNDER_REVIEW, APPROVED, DISBURSED, etc.) are handled by RSM only.
+                                Current Status: {getLoanStatusLabel(applicationData?.status)}. This application has been transferred to RSM. Further status changes (UNDER_REVIEW, APPROVED, DISBURSED, etc.) are handled by RSM only.
                               </p>
                             </div>
                           </div>
@@ -2342,7 +2373,7 @@ const CustomerApplication = () => {
                             <Clock className="w-8 h-8 text-gray-400" />
                           </div>
                           <p className="text-gray-500 font-medium">
-                            Current Status: {applicationData.status || "N/A"}
+                            Current Status: {getLoanStatusLabel(applicationData.status) || "N/A"}
                           </p>
                           <p className="text-gray-500 font-medium">
                             Approved Loan Amount: {applicationData.approvedLoanAmount || "N/A"}

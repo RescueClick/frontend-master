@@ -2,6 +2,12 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { backendurl } from "../urldata";
 import { getAuthData } from "../../utils/localStorage";
+import {
+  runActivationRequest,
+  runDeactivationRequest,
+} from "./activationDeactivationUx";
+
+const unwrapApiData = (payload) => payload?.data ?? payload;
 
 // Fetch RSM Profile
 export const fetchRsmProfile = createAsyncThunk(
@@ -13,7 +19,7 @@ export const fetchRsmProfile = createAsyncThunk(
           Authorization: `Bearer ${token}`,
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RSM profile"
@@ -66,7 +72,7 @@ export const fetchRsmDashboard = createAsyncThunk(
           Authorization: `Bearer ${rsmToken}`,
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RSM dashboard"
@@ -86,7 +92,7 @@ export const fetchRsmRms = createAsyncThunk(
           Authorization: `Bearer ${rsmToken}`,
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RMs"
@@ -109,7 +115,7 @@ export const fetchRsmApplications = createAsyncThunk(
           Authorization: `Bearer ${rsmToken}`,
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch applications"
@@ -144,7 +150,7 @@ export const fetchRsmApplication = createAsyncThunk(
 // Transition Application Status (RSM)
 export const transitionRsmApplication = createAsyncThunk(
   "rsm/transitionApplication",
-  async ({ applicationId, to, note, approvedLoanAmount }, { rejectWithValue }) => {
+  async ({ applicationId, to, note, approvedLoanAmount }, { rejectWithValue, dispatch }) => {
     try {
       const { rsmToken } = getAuthData();
       const response = await axios.post(
@@ -156,7 +162,8 @@ export const transitionRsmApplication = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      dispatch(fetchRsmApplications({}));
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to transition application"
@@ -168,7 +175,7 @@ export const transitionRsmApplication = createAsyncThunk(
 // Create RM (RSM)
 export const createRmByRsm = createAsyncThunk(
   "rsm/createRm",
-  async (rmData, { rejectWithValue }) => {
+  async (rmData, { rejectWithValue, dispatch }) => {
     try {
       const { rsmToken } = getAuthData();
       const response = await axios.post(
@@ -180,7 +187,8 @@ export const createRmByRsm = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      dispatch(fetchRsmRms());
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to create RM"
@@ -192,21 +200,28 @@ export const createRmByRsm = createAsyncThunk(
 // Thunk to activate RM (RSM role)
 export const activateRM = createAsyncThunk(
   "rsm/activateRM",
-  async (rmId, { rejectWithValue }) => {
+  async (rmId, { rejectWithValue, dispatch }) => {
     try {
       const { rsmToken } = getAuthData();
 
-      const response = await axios.post(
-        `${backendurl}/rsm/rm/activate`,
-        { rmId },
-        {
-          headers: {
-            Authorization: `Bearer ${rsmToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await runActivationRequest({
+        pendingMessage: "Activating RM...",
+        successMessage: "RM activated successfully.",
+        errorMessage: "Failed to activate RM",
+        request: () =>
+          axios.post(
+            `${backendurl}/rsm/rm-activate`,
+            { rmId },
+            {
+              headers: {
+                Authorization: `Bearer ${rsmToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
 
+      dispatch(fetchRsmRms());
       return response.data.message;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Failed to activate RM");
@@ -215,23 +230,32 @@ export const activateRM = createAsyncThunk(
 );
 
 // Thunk to deactivate RM (RSM role)
-export const deactivateRM = createAsyncThunk(
-  "rsm/deactivateRM",
-  async (rmId, { rejectWithValue }) => {
+export const rsmDeactivateRM = createAsyncThunk(
+  "rsm/rsmDeactivateRM",
+  async ({ rmId, newRmId }, { rejectWithValue, dispatch }) => {
     try {
       const { rsmToken } = getAuthData();
 
-      const response = await axios.post(
-        `${backendurl}/rsm/rm/deactivate`,
-        { rmId },
-        {
-          headers: {
-            Authorization: `Bearer ${rsmToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await runDeactivationRequest({
+        pendingMessage: "RM deactivation in progress...",
+        progressMessage: "Reassigning partners, applications and customers...",
+        successMessage: "RM deactivated successfully.",
+        errorMessage: "Failed to deactivate RM",
+        request: () =>
+          axios.post(
+            `${backendurl}/rsm/rm-deactivate`,
+            { rmId, newRmId },
+            {
+              headers: {
+                Authorization: `Bearer ${rsmToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          ),
+      });
 
+      dispatch(fetchRsmRms());
+      dispatch(fetchRsmApplications({}));
       return response.data.message;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Failed to deactivate RM");
@@ -254,7 +278,7 @@ export const fetchRmAnalytics = createAsyncThunk(
         },
       });
 
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RM analytics"
@@ -279,7 +303,7 @@ export const recordRmFollowUp = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to record follow-up"
@@ -299,7 +323,7 @@ export const fetchRmFollowUps = createAsyncThunk(
           Authorization: `Bearer ${rsmToken}`,
         },
       });
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RM follow-ups"
@@ -326,7 +350,7 @@ export const fetchRsmPartnerTargets = createAsyncThunk(
           },
         }
       );
-      return response.data;
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch partner targets"
@@ -347,7 +371,7 @@ export const fetchBanks = createAsyncThunk("rsm/fetchBanks", async (_, { rejectW
       }
     })
 
-    return response.data;
+    return unwrapApiData(response.data);
   }
   catch (error) {
     return rejectWithValue(error.response?.data?.message || "Failed to fetch banks");

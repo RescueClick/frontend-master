@@ -26,6 +26,12 @@ import {
   fetchPartnerTargets,
   fetchRsmAnalytics,
   payIncentive,
+  activateRM,
+  activateRSM,
+  activatePartner,
+  asmDeactivateRM,
+  asmDeactivatePartner,
+  asmDeactivateRsm,
 } from "../thunks/asmThunks";
 
 
@@ -295,6 +301,195 @@ const asmSlice = createSlice({
           success: false,
           data: [],
         };
+      })
+      .addCase(asmDeactivateRM.pending, (state, action) => {
+        const { oldRmId } = action.meta.arg || {};
+        if (!Array.isArray(state.rmList.data) || !oldRmId) return;
+        state.rmList.data = state.rmList.data.map((rm) =>
+          String(rm._id) === String(oldRmId)
+            ? { ...rm, status: "INACTIVE", _optimistic: true }
+            : rm
+        );
+      })
+      .addCase(asmDeactivateRM.fulfilled, (state, action) => {
+        const { oldRmId } = action.meta.arg || {};
+        if (!Array.isArray(state.rmList.data)) return;
+        state.rmList.data = state.rmList.data.map((rm) =>
+          String(rm._id) === String(oldRmId)
+            ? { ...rm, status: "INACTIVE", _optimistic: false }
+            : rm._optimistic
+              ? { ...rm, _optimistic: false }
+              : rm
+        );
+      })
+      .addCase(asmDeactivateRM.rejected, (state, action) => {
+        const { oldRmId } = action.meta.arg || {};
+        if (!Array.isArray(state.rmList.data)) return;
+        state.rmList.data = state.rmList.data.map((rm) =>
+          String(rm._id) === String(oldRmId)
+            ? { ...rm, status: "ACTIVE", _optimistic: false }
+            : rm._optimistic
+              ? { ...rm, _optimistic: false }
+              : rm
+        );
+      })
+      .addCase(activateRM.pending, (state, action) => {
+        const rmId = action.meta.arg;
+        if (!Array.isArray(state.rmList.data) || !rmId) return;
+        state.rmList.data = state.rmList.data.map((rm) =>
+          String(rm._id) === String(rmId)
+            ? { ...rm, status: "ACTIVE", _optimistic: true }
+            : rm
+        );
+      })
+      .addCase(activateRM.fulfilled, (state, action) => {
+        const rmId = action.meta.arg;
+        if (!Array.isArray(state.rmList.data)) return;
+        state.rmList.data = state.rmList.data.map((rm) =>
+          String(rm._id) === String(rmId)
+            ? { ...rm, status: "ACTIVE", _optimistic: false }
+            : rm._optimistic
+              ? { ...rm, _optimistic: false }
+              : rm
+        );
+      })
+      .addCase(activateRM.rejected, (state, action) => {
+        const rmId = action.meta.arg;
+        if (!Array.isArray(state.rmList.data)) return;
+        state.rmList.data = state.rmList.data.map((rm) =>
+          String(rm._id) === String(rmId)
+            ? { ...rm, status: "INACTIVE", _optimistic: false }
+            : rm._optimistic
+              ? { ...rm, _optimistic: false }
+              : rm
+        );
+      })
+      .addCase(asmDeactivateRsm.pending, (state, action) => {
+        const arg = action.meta.arg;
+        const rsmId = typeof arg === "string" ? arg : arg?.rsmId;
+        if (!Array.isArray(state.rsmList.data) || !rsmId) return;
+        state.rsmList.data = state.rsmList.data.map((rsm) =>
+          String(rsm._id) === String(rsmId)
+            ? { ...rsm, status: "INACTIVE", _optimistic: true }
+            : rsm
+        );
+      })
+      .addCase(asmDeactivateRsm.fulfilled, (state, action) => {
+        const arg = action.meta.arg;
+        const rsmId = typeof arg === "string" ? arg : arg?.rsmId;
+        if (!Array.isArray(state.rsmList.data)) return;
+        state.rsmList.data = state.rsmList.data.map((rsm) =>
+          String(rsm._id) === String(rsmId)
+            ? { ...rsm, status: "INACTIVE", _optimistic: false }
+            : rsm._optimistic
+              ? { ...rsm, _optimistic: false }
+              : rsm
+        );
+      })
+      .addCase(asmDeactivateRsm.rejected, (state, action) => {
+        const arg = action.meta.arg;
+        const rsmId = typeof arg === "string" ? arg : arg?.rsmId;
+        if (!Array.isArray(state.rsmList.data)) return;
+        state.rsmList.data = state.rsmList.data.map((rsm) =>
+          String(rsm._id) === String(rsmId)
+            ? { ...rsm, status: "ACTIVE", _optimistic: false }
+            : rsm._optimistic
+              ? { ...rsm, _optimistic: false }
+              : rsm
+        );
+      })
+      .addCase(activateRSM.pending, (state, action) => {
+        const rsmId = action.meta.arg;
+        if (!Array.isArray(state.rsmList.data) || !rsmId) return;
+        state.rsmList.data = state.rsmList.data.map((rsm) =>
+          String(rsm._id) === String(rsmId)
+            ? { ...rsm, status: "ACTIVE", _optimistic: true }
+            : rsm
+        );
+      })
+      .addCase(activateRSM.fulfilled, (state, action) => {
+        const rsmId = action.meta.arg;
+        if (!Array.isArray(state.rsmList.data)) return;
+        state.rsmList.data = state.rsmList.data.map((rsm) =>
+          String(rsm._id) === String(rsmId)
+            ? { ...rsm, status: "ACTIVE", _optimistic: false }
+            : rsm._optimistic
+              ? { ...rsm, _optimistic: false }
+              : rsm
+        );
+      })
+      .addCase(activateRSM.rejected, (state, action) => {
+        const rsmId = action.meta.arg;
+        if (!Array.isArray(state.rsmList.data)) return;
+        state.rsmList.data = state.rsmList.data.map((rsm) =>
+          String(rsm._id) === String(rsmId)
+            ? { ...rsm, status: "INACTIVE", _optimistic: false }
+            : rsm._optimistic
+              ? { ...rsm, _optimistic: false }
+              : rsm
+        );
+      })
+      .addCase(asmDeactivatePartner.pending, (state, action) => {
+        const { oldPartnerId } = action.meta.arg || {};
+        if (!Array.isArray(state.partners.data) || !oldPartnerId) return;
+        state.partners.data = state.partners.data.map((p) =>
+          String(p._id) === String(oldPartnerId)
+            ? { ...p, status: "INACTIVE", _optimistic: true }
+            : p
+        );
+      })
+      .addCase(asmDeactivatePartner.fulfilled, (state, action) => {
+        const { oldPartnerId } = action.meta.arg || {};
+        if (!Array.isArray(state.partners.data)) return;
+        state.partners.data = state.partners.data.map((p) =>
+          String(p._id) === String(oldPartnerId)
+            ? { ...p, status: "INACTIVE", _optimistic: false }
+            : p._optimistic
+              ? { ...p, _optimistic: false }
+              : p
+        );
+      })
+      .addCase(asmDeactivatePartner.rejected, (state, action) => {
+        const { oldPartnerId } = action.meta.arg || {};
+        if (!Array.isArray(state.partners.data)) return;
+        state.partners.data = state.partners.data.map((p) =>
+          String(p._id) === String(oldPartnerId)
+            ? { ...p, status: "ACTIVE", _optimistic: false }
+            : p._optimistic
+              ? { ...p, _optimistic: false }
+              : p
+        );
+      })
+      .addCase(activatePartner.pending, (state, action) => {
+        const partnerId = action.meta.arg;
+        if (!Array.isArray(state.partners.data) || !partnerId) return;
+        state.partners.data = state.partners.data.map((p) =>
+          String(p._id) === String(partnerId)
+            ? { ...p, status: "ACTIVE", _optimistic: true }
+            : p
+        );
+      })
+      .addCase(activatePartner.fulfilled, (state, action) => {
+        const partnerId = action.meta.arg;
+        if (!Array.isArray(state.partners.data)) return;
+        state.partners.data = state.partners.data.map((p) =>
+          String(p._id) === String(partnerId)
+            ? { ...p, status: "ACTIVE", _optimistic: false }
+            : p._optimistic
+              ? { ...p, _optimistic: false }
+              : p
+        );
+      })
+      .addCase(activatePartner.rejected, (state, action) => {
+        const partnerId = action.meta.arg;
+        if (!Array.isArray(state.partners.data)) return;
+        state.partners.data = state.partners.data.map((p) =>
+          String(p._id) === String(partnerId)
+            ? { ...p, status: "INACTIVE", _optimistic: false }
+            : p._optimistic
+              ? { ...p, _optimistic: false }
+              : p
+        );
       })
 
       .addCase(fetchAsmDashboard.pending, (state) => {

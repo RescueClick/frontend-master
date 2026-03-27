@@ -12,6 +12,8 @@ import {
   fetchRmFollowUps,
   recordRmFollowUp,
   fetchBanks,
+  activateRM,
+  rsmDeactivateRM,
 } from "../thunks/rsmThunks";
 
 const initialState = {
@@ -155,6 +157,71 @@ const rsmSlice = createSlice({
       .addCase(fetchRsmRms.rejected, (state, action) => {
         state.rms.loading = false;
         state.rms.error = action.payload;
+      })
+      .addCase(rsmDeactivateRM.pending, (state, action) => {
+        const { rmId, oldRmId } = action.meta.arg || {};
+        const targetId = rmId || oldRmId;
+        if (!Array.isArray(state.rms.data) || !targetId) return;
+        state.rms.data = state.rms.data.map((rm) =>
+          String(rm._id) === String(targetId)
+            ? { ...rm, status: "INACTIVE", _optimistic: true }
+            : rm
+        );
+      })
+      .addCase(rsmDeactivateRM.fulfilled, (state, action) => {
+        const { rmId, oldRmId } = action.meta.arg || {};
+        const targetId = rmId || oldRmId;
+        if (!Array.isArray(state.rms.data)) return;
+        state.rms.data = state.rms.data.map((rm) =>
+          String(rm._id) === String(targetId)
+            ? { ...rm, status: "INACTIVE", _optimistic: false }
+            : rm._optimistic
+              ? { ...rm, _optimistic: false }
+              : rm
+        );
+      })
+      .addCase(rsmDeactivateRM.rejected, (state, action) => {
+        const { rmId, oldRmId } = action.meta.arg || {};
+        const targetId = rmId || oldRmId;
+        if (!Array.isArray(state.rms.data)) return;
+        state.rms.data = state.rms.data.map((rm) =>
+          String(rm._id) === String(targetId)
+            ? { ...rm, status: "ACTIVE", _optimistic: false }
+            : rm._optimistic
+              ? { ...rm, _optimistic: false }
+              : rm
+        );
+      })
+      .addCase(activateRM.pending, (state, action) => {
+        const rmId = action.meta.arg;
+        if (!Array.isArray(state.rms.data) || !rmId) return;
+        state.rms.data = state.rms.data.map((rm) =>
+          String(rm._id) === String(rmId)
+            ? { ...rm, status: "ACTIVE", _optimistic: true }
+            : rm
+        );
+      })
+      .addCase(activateRM.fulfilled, (state, action) => {
+        const rmId = action.meta.arg;
+        if (!Array.isArray(state.rms.data)) return;
+        state.rms.data = state.rms.data.map((rm) =>
+          String(rm._id) === String(rmId)
+            ? { ...rm, status: "ACTIVE", _optimistic: false }
+            : rm._optimistic
+              ? { ...rm, _optimistic: false }
+              : rm
+        );
+      })
+      .addCase(activateRM.rejected, (state, action) => {
+        const rmId = action.meta.arg;
+        if (!Array.isArray(state.rms.data)) return;
+        state.rms.data = state.rms.data.map((rm) =>
+          String(rm._id) === String(rmId)
+            ? { ...rm, status: "INACTIVE", _optimistic: false }
+            : rm._optimistic
+              ? { ...rm, _optimistic: false }
+              : rm
+        );
       });
 
 

@@ -1,3 +1,5 @@
+import { normalizeLoanStatus } from "./loanStatus";
+
 export function normalizeText(value) {
   if (value == null) return "";
   return String(value).trim().toLowerCase();
@@ -13,11 +15,7 @@ export function matchesSearchTerm(searchTerm, fields) {
 }
 
 export function normalizeStatus(status) {
-  if (!status) return "";
-  const s = String(status).trim().toUpperCase();
-  // UI shows SUBMITTED for DRAFT in several pages
-  if (s === "DRAFT") return "SUBMITTED";
-  return s;
+  return normalizeLoanStatus(status);
 }
 
 export function matchesStatusFilter(value, selected) {

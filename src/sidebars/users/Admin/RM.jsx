@@ -3,12 +3,14 @@ import { Eye, Edit, Trash, Search, Download } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
-import { activateRM, deactivateRM, deleteRm, fetchRMs } from "../../../feature/thunks/adminThunks";
+import { activateRM, adminDeactivateRM, deleteRm, fetchRMs } from "../../../feature/thunks/adminThunks";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
+import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 
 
@@ -26,7 +28,37 @@ const colors = {
   text: "#111827",
 };
 
-export default function RM() {
+const docTypeDisplayNames = {
+  PAN: "PAN Card",
+  AADHAR_FRONT: "Aadhaar Front",
+  AADHAR_BACK: "Aadhaar Back",
+  PHOTO: "Photo",
+  SELFIE: "Selfie",
+  ADDRESS_PROOF: "Address Proof",
+  OTHER_DOCS: "Other Documents",
+  BUSINESS_OTHER_DOCS: "Business Other Documents",
+  COMPANY_ID_CARD: "Company ID Card",
+  SALARY_SLIP_1: "Salary Slip 1",
+  SALARY_SLIP_2: "Salary Slip 2",
+  SALARY_SLIP_3: "Salary Slip 3",
+  FORM_16_26AS: "Form 16 / 26AS",
+  BANK_STATEMENT_1: "Bank Statement 1",
+  BANK_STATEMENT_2: "Bank Statement 2",
+  BANK_STATEMENT: "Bank Statement",
+  SHOP_ACT: "Shop Act / Gumasta",
+  UDHYAM_AADHAR: "Udyam Aadhaar",
+  ITR: "ITR",
+  GST_DOCUMENT: "GST Document",
+  GST_CERTIFICATE: "GST Certificate",
+  SHOP_PHOTO: "Shop Photo",
+};
+
+const toDocLabel = (docType) => {
+  const key = String(docType || "").trim().toUpperCase();
+  return docTypeDisplayNames[key] || key || "Document";
+};
+
+function RM() {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -38,8 +70,7 @@ export default function RM() {
   const [rmToView, setRmToView] = useState(null);
   const [rmToDeactivate, setRmToDeactivate] = useState(null);
   const [replacementSearch, setReplacementSearch] = useState("");
-
-  const [selectedReplacement, setSelectedReplacement] = useState(null);
+  const [selectedReplacementRmId, setSelectedReplacementRmId] = useState(null);
 
 
   const [RMactiveModel, setRMactiveModel] = useState(null)
@@ -102,6 +133,25 @@ export default function RM() {
 
   const sortedFilteredRms = sortNewestFirst(filteredRms, { dateKeys: ["createdAt"] });
 
+  const rmDeactivateCandidates = useMemo(() => {
+    if (!rmToDeactivate || !rms) return [];
+    const term = replacementSearch.trim().toLowerCase();
+    return (rms || [])
+      .filter((r) => r._id !== rmToDeactivate._id && r.status === "ACTIVE")
+      .filter((r) => {
+        if (!term) return true;
+        const name = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
+        const code = `${r.rmCode || ""}`.toLowerCase();
+        return name.includes(term) || code.includes(term);
+      })
+      .map((r) => ({
+        id: r._id,
+        name: `${r.firstName} ${r.lastName}`,
+        meta: r.rmCode ? `RM ${r.rmCode}` : undefined,
+        statusBadge: r.status,
+      }));
+  }, [rms, rmToDeactivate, replacementSearch]);
+
   // Handle view RM details
   const handleViewRM = (rm) => {
     setRmToView(rm);
@@ -109,7 +159,7 @@ export default function RM() {
   };
 
 
-  const deactivateRm = async (rmToDeactivate, selectedReplacement) => {
+  const handleDeactivateRM = async (rmToDeactivate, selectedReplacement) => {
     const { adminToken } = getAuthData() || {};
     if (!adminToken) {
       toast.error("Missing admin token");
@@ -118,25 +168,20 @@ export default function RM() {
 
     try {
       await dispatch(
-        deactivateRM({
-          rmId: rmToDeactivate,
+        adminDeactivateRM({
+          oldRmId: rmToDeactivate,
           newRmId: selectedReplacement,
         })
       ).unwrap();
 
-      toast.success("RM deactivated successfully");
       dispatch(fetchRMs(adminToken));
 
       setShowDeactivateModal(false);
       setRmToDeactivate(null);
-      setSelectedReplacement(null);
+      setSelectedReplacementRmId(null);
       setReplacementSearch("");
     } catch (err) {
-      toast.error(
-        typeof err === "string"
-          ? err
-          : err?.message || "Failed to deactivate RM"
-      );
+      // toast is handled in thunk
     }
   };
 
@@ -155,7 +200,7 @@ export default function RM() {
       "RM Code": user.rmCode || "",
       "ASM Name": user.asmName || "",
       "ASM Employee ID": user.asmEmployeeId || "",
-      "Documents": user.docs ? user.docs.map(doc => doc.docType).join(", ") : "",
+      "Documents": user.docs ? user.docs.map((doc) => toDocLabel(doc.docType)).join(", ") : "",
       "Created At": user.createdAt ? new Date(user.createdAt).toLocaleString() : "",
       "Updated At": user.updatedAt ? new Date(user.updatedAt).toLocaleString() : "",
     }));
@@ -183,14 +228,9 @@ export default function RM() {
 
     try {
       await dispatch(activateRM(RMactiveModel)).unwrap();
-      toast.success("RM activated successfully");
       dispatch(fetchRMs(adminToken));
     } catch (err) {
-      toast.error(
-        typeof err === "string"
-          ? err
-          : err?.message || "Failed to activate RM"
-      );
+      // toast is handled in thunk
     } finally {
       setTimeout(() => {
         setRMactiveModel(null);
@@ -348,7 +388,7 @@ loginAsUser(userId, navigate);
                       
                       onClick={() =>
 
-                        navigate("/admin/Analytics", {
+                        navigate("/admin/analytics", {
                           state: { id: rm._id, role: "RM" },
                         })
                       }
@@ -388,7 +428,7 @@ loginAsUser(userId, navigate);
                         onClick={() => {
                           if (rm.status === "ACTIVE") {
                             setRmToDeactivate(rm);
-                            setSelectedReplacement(null);
+                            setSelectedReplacementRmId(null);
                             setReplacementSearch("");
                             setShowDeactivateModal(true);
                           } else {
@@ -415,7 +455,7 @@ loginAsUser(userId, navigate);
                           className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                           title="Open analytics"
                           onClick={() =>
-                            navigate("/admin/Analytics", {
+                            navigate("/admin/analytics", {
                               state: { id: rm._id, role: "RM" },
                             })
                           }
@@ -649,175 +689,50 @@ loginAsUser(userId, navigate);
         </div>
       )}
 
-      {/* Deactivate RM Modal */}
-      {showDeactivateModal && rmToDeactivate && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowDeactivateModal(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-xl relative max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="p-5 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">Deactivate RM</h3>
-                  <p className="text-white/90 text-sm mt-1">
-                    Select a replacement RM to assign partners before
-                    deactivation.
-                  </p>
-                </div>
-                <button
-                  className="text-white/80 hover:text-white rounded-full p-2"
-                  onClick={() => setShowDeactivateModal(false)}
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-5 bg-[#F8FAFC] overflow-y-auto">
-              {/* Current RM info */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-gray-500">Deactivating</p>
-                    <p className="font-semibold text-[#111827]">
-                      {rmToDeactivate.firstName} {rmToDeactivate.lastName}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      RM Code:{" "}
-                      <span className="font-mono">{rmToDeactivate.rmCode}</span>
-                    </p>
-                  </div>
-                  <span className="px-2 py-1 rounded-full text-xs bg-red-50 text-red-600 border border-red-100">
-                    Active → Inactive
-                  </span>
-                </div>
-              </div>
-
-              {/* Replacement picker */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-[#111827]">
-                    Assign Replacement RM
-                  </h4>
-                  <div className="relative">
-                    <Search
-                      size={16}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      type="text"
-                      className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                      placeholder="Search by name or RM code"
-                      value={replacementSearch}
-                      onChange={(e) => setReplacementSearch(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="max-h-56 overflow-auto divide-y divide-gray-100">
-                  {(rms || [])
-                    .filter((r) => r._id !== rmToDeactivate._id && r.status == "ACTIVE")
-                    .filter((r) => {
-                      const term = replacementSearch.trim().toLowerCase();
-                      if (!term) return true;
-                      const name = `${r.firstName || ""} ${r.lastName || ""
-                        }`.toLowerCase();
-                      const code = `${r.rmCode || ""}`.toLowerCase();
-                      return name.includes(term) || code.includes(term);
-                    })
-                    .map((r) => (
-                      <label
-                        key={r._id}
-                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="replacementRm"
-                            className="text-brand-primary"
-                            checked={selectedReplacement?._id === r._id}
-                            onChange={() => setSelectedReplacement(r)}
-                          />
-                          <div>
-                            <p className="font-medium text-sm text-[#111827]">
-                              {r.firstName} {r.lastName}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              RM Code:{" "}
-                              <span className="font-mono">{r.rmCode}</span>
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-brand-primary/10 text-brand-primary">
-                          {r.status}
-                        </span>
-                      </label>
-                    ))}
-                </div>
-              </div>
-
-              {/* Footer actions */}
-              <div className="flex items-center justify-end gap-3 mt-5">
-                <button
-                  className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-                  onClick={() => setShowDeactivateModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="px-4 py-2 text-sm rounded-md text-white disabled:opacity-50"
-                  style={{ background: colors.primary }}
-                  disabled={!selectedReplacement}
-                  onClick={() => { deactivateRm(rmToDeactivate._id, selectedReplacement._id) }}
-
-                >
-                  Confirm Deactivate & Assign
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ReassignmentDeactivateModal
+        isOpen={showDeactivateModal && !!rmToDeactivate}
+        title="Deactivate RM"
+        subjectName={`${rmToDeactivate?.firstName || ""} ${rmToDeactivate?.lastName || ""}`.trim()}
+        subjectMeta={
+          rmToDeactivate?.rmCode
+            ? `RM Code: ${rmToDeactivate.rmCode}`
+            : rmToDeactivate?.status
+              ? `Status: ${rmToDeactivate.status}`
+              : ""
+        }
+        warningText="Partners and linked records must be reassigned to another active RM before deactivation. Choose the replacement RM below."
+        searchValue={replacementSearch}
+        onSearchChange={setReplacementSearch}
+        searchPlaceholder="Search by name or RM code"
+        candidates={rmDeactivateCandidates}
+        selectedId={selectedReplacementRmId}
+        onSelect={setSelectedReplacementRmId}
+        onCancel={() => {
+          setShowDeactivateModal(false);
+          setRmToDeactivate(null);
+          setSelectedReplacementRmId(null);
+          setReplacementSearch("");
+        }}
+        onConfirm={() =>
+          handleDeactivateRM(rmToDeactivate._id, selectedReplacementRmId)
+        }
+        confirmLabel="Confirm Deactivate & Assign"
+        confirmDisabled={!selectedReplacementRmId}
+      />
 
 
-      {RMactiveModel &&
+      <ActivationConfirmModal
+        isOpen={!!RMactiveModel}
+        title="Activate RM"
+        message="Are you sure you want to activate"
+        confirmLabel="Activate"
+        onCancel={() => setRMactiveModel(null)}
+        onConfirm={handleRMactive}
+      />
 
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 bg-opacity-40 z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-80 text-center">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Are you sure?</h3>
-            <p className="text-gray-600 mb-5">Do you really want to proceed?</p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => {
-                  setRMactiveModel(null)
-                }}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
-              >
-                No
-              </button>
-              <button
-                onClick={() => {
-                  handleRMactive()
-
-                }}
-
-                className="px-4 py-2 rounded-lg bg-brand-primary text-white "
-              >
-                Yes
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <Toaster position="top-center" reverseOrder={false} />
     </>
   );
 }
+
+export { RM };
+export default RM;

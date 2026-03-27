@@ -62,9 +62,9 @@ const AdminSideBar = () => {
   // Sidebar navigation items with icons and routes
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: "/admin/dashboard" },
-    { name: "ASM", icon: Users, path: "/admin/ASM" },
-    { name: "RSM", icon: Users, path: "/admin/RSM" },
-    { name: "RM", icon: Users, path: "/admin/RM" },
+    { name: "ASM", icon: Users, path: "/admin/asm" },
+    { name: "RSM", icon: Users, path: "/admin/rsm" },
+    { name: "RM", icon: Users, path: "/admin/rm" },
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
     { name: "Customer", icon: Users, path: "/admin/customer" },
     // highlight payout / incentives / target / add bank
@@ -72,7 +72,7 @@ const AdminSideBar = () => {
     { name: "Incentives", icon: Award, path: "/admin/incentives", highlight: true },
     { name: "Set Target", icon: TrendingUp, path: "/admin/target", highlight: true },
     { name: "Banner", icon: Download, path: "/admin/banner" },
-    { name: "Admin → Partner", icon: UserCheck, path: "/admin/RM-partner" },
+    { name: "Admin → Partner", icon: UserCheck, path: "/admin/rm-partner" },
     { name: "Add Bank", icon: Building2, path: "/admin/banks", highlight: true },
     {
       name: "Delete Requests",

@@ -19,6 +19,7 @@ const CompleteApplication = () => {
   const [loading, setLoading] = useState(true);
   const [applicationData, setApplicationData] = useState(null);
   const [pendingDocuments, setPendingDocuments] = useState([]);
+  const [requiredDocRules, setRequiredDocRules] = useState([]);
 
   // Treat PHOTO and SELFIE (and co-applicant selfie) as the same logical document
   const normalizeDocType = (docType) => {
@@ -61,6 +62,8 @@ const CompleteApplication = () => {
       );
 
       setApplicationData(response.data);
+      const rules = await fetchRequiredDocRules(response.data, partnerToken);
+      setRequiredDocRules(rules);
       const appStatus = String(response.data?.status || "").toUpperCase();
 
       // Disbursed applications should never show pending docs.
@@ -76,19 +79,11 @@ const CompleteApplication = () => {
       );
 
       // Also check for required documents that might not exist yet
-      // Common required document types based on loan type
-      const requiredDocTypes = getRequiredDocTypes(response.data.loanType);
-      
-      const missingDocs = requiredDocTypes
-        .filter(
-          (docType) =>
-            !allDocs.some(
-              (doc) =>
-                normalizeDocType(doc.docType) === normalizeDocType(docType)
-            )
-        )
-        .map((docType) => ({
-          docType,
+      const effectiveRules = getEffectiveRules(response.data.loanType, rules);
+      const missingDocs = effectiveRules
+        .filter((rule) => !hasRuleUpload(rule, allDocs))
+        .map((rule) => ({
+          docType: getPrimaryDocType(rule),
           status: "PENDING",
           url: "",
           remarks: "",
@@ -118,7 +113,7 @@ const CompleteApplication = () => {
     }
   };
 
-  const getRequiredDocTypes = (loanType) => {
+  const getLocalRequiredDocTypes = (loanType) => {
     const baseDocs = ["PAN", "AADHAR_FRONT", "AADHAR_BACK", "PHOTO", "ADDRESS_PROOF"];
     const key = (loanType || "").toUpperCase();
 
@@ -165,21 +160,63 @@ const CompleteApplication = () => {
     return baseDocs;
   };
 
+  const getEffectiveRules = (loanType, rules = []) => {
+    if (Array.isArray(rules) && rules.length) return rules;
+    return getLocalRequiredDocTypes(loanType).map((docType) => ({
+      key: docType,
+      acceptedDocTypes: [docType],
+    }));
+  };
+
+  const getPrimaryDocType = (rule) => {
+    const accepted = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
+    return accepted[0] || rule?.key || "";
+  };
+
+  const hasRuleUpload = (rule, docs = []) => {
+    const accepted = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
+    return docs.some((doc) =>
+      accepted.some(
+        (docType) => normalizeDocType(doc.docType) === normalizeDocType(docType) && doc.url && doc.url.trim() !== ""
+      )
+    );
+  };
+
+  const hasRuleVerified = (rule, docs = []) => {
+    const accepted = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
+    return docs.some((doc) =>
+      accepted.some(
+        (docType) => normalizeDocType(doc.docType) === normalizeDocType(docType) && doc.status === "VERIFIED"
+      )
+    );
+  };
+
+  const fetchRequiredDocRules = async (application, partnerToken) => {
+    try {
+      const response = await axios.get(`${backendurl}/partner/loan-doc-rules`, {
+        params: {
+          loanType: application?.loanType,
+          gender: application?.customer?.gender || "",
+        },
+        headers: { Authorization: `Bearer ${partnerToken}` },
+      });
+      if (Array.isArray(response?.data?.rules) && response.data.rules.length) {
+        return response.data.rules;
+      }
+    } catch (_err) {}
+
+    return getEffectiveRules(application?.loanType, []);
+  };
+
   const calculateProgress = () => {
     if (!applicationData) return 0;
     
     const allDocs = applicationData.docs || [];
-    const requiredDocTypes = getRequiredDocTypes(applicationData.loanType);
-    const totalRequired = requiredDocTypes.length;
+    const effectiveRules = getEffectiveRules(applicationData.loanType, requiredDocRules);
+    const totalRequired = effectiveRules.length;
     
     // Count verified documents
-    const verifiedDocs = requiredDocTypes.filter((docType) => {
-      const target = normalizeDocType(docType);
-      const doc = allDocs.find(
-        (d) => normalizeDocType(d.docType) === target
-      );
-      return doc && doc.status === "VERIFIED";
-    }).length;
+    const verifiedDocs = effectiveRules.filter((rule) => hasRuleVerified(rule, allDocs)).length;
     
     // Calculate progress percentage
     const progress = totalRequired > 0 ? Math.round((verifiedDocs / totalRequired) * 100) : 0;
@@ -217,6 +254,13 @@ const CompleteApplication = () => {
     return docNames[docType] || docType;
   };
 
+  const getRuleLabel = (rule) => {
+    const key = String(rule?.key || "").toUpperCase();
+    if (key === "PHOTO_OR_SELFIE") return "Photo or Selfie";
+    if (key === "CO_APPLICANT_SELFIE_OR_PHOTO") return "Co-applicant Selfie or Photo";
+    return getDocumentDisplayName(key);
+  };
+
   const handleDocumentClick = (document) => {
     navigate(
       `/partner/document-upload?applicationId=${applicationId}&customerId=${customerId}&docType=${encodeURIComponent(document.docType)}`
@@ -233,17 +277,8 @@ const CompleteApplication = () => {
 
       // Check if all required documents are uploaded (not necessarily verified)
       const allDocs = applicationData?.docs || [];
-      const requiredDocTypes = getRequiredDocTypes(applicationData?.loanType);
-      const hasAllUploaded = requiredDocTypes.every((docType) =>
-        allDocs.some((doc) => {
-          const target = normalizeDocType(docType);
-          return (
-            normalizeDocType(doc.docType) === target &&
-            doc.url &&
-            doc.url.trim() !== ""
-          );
-        })
-      );
+      const effectiveRules = getEffectiveRules(applicationData?.loanType, requiredDocRules);
+      const hasAllUploaded = effectiveRules.every((rule) => hasRuleUpload(rule, allDocs));
 
       // Check if there are any rejected documents that need re-upload
       const hasRejectedDocs = allDocs.some(
@@ -285,19 +320,16 @@ const CompleteApplication = () => {
   }
 
   const progress = calculateProgress();
-  const requiredDocTypes = applicationData
-    ? getRequiredDocTypes(applicationData.loanType)
+  const effectiveRules = applicationData
+    ? getEffectiveRules(applicationData.loanType, requiredDocRules)
     : [];
   const allDocs = applicationData?.docs || [];
   
   // Calculate completed (verified) docs
-  const completedSteps = requiredDocTypes.filter((docType) => {
-    const target = normalizeDocType(docType);
-    const doc = allDocs.find(
-      (d) => normalizeDocType(d.docType) === target
-    );
-    return doc && doc.status === "VERIFIED";
-  }).length;
+  const completedSteps = effectiveRules.filter((rule) => hasRuleVerified(rule, allDocs)).length;
+  const requiredDocsCount = effectiveRules.length;
+  const uploadedSteps = effectiveRules.filter((rule) => hasRuleUpload(rule, allDocs)).length;
+  const pendingRequiredDocsCount = Math.max(requiredDocsCount - completedSteps, 0);
   
   // Calculate pending docs count (including missing and rejected/updated)
   const pendingDocsCount = pendingDocuments.length;
@@ -372,6 +404,55 @@ const CompleteApplication = () => {
               </p>
             </div>
           )}
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <p className="text-xs text-gray-500">Required</p>
+            <p className="text-lg font-bold text-gray-900">{requiredDocsCount}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <p className="text-xs text-gray-500">Uploaded</p>
+            <p className="text-lg font-bold text-blue-700">{uploadedSteps}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <p className="text-xs text-gray-500">Verified</p>
+            <p className="text-lg font-bold text-green-700">{completedSteps}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <p className="text-xs text-gray-500">Pending</p>
+            <p className="text-lg font-bold text-amber-700">{pendingRequiredDocsCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <h3 className="text-base font-bold text-gray-900 mb-3">Required Documents Checklist</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {effectiveRules.map((rule, index) => {
+              const isUploaded = hasRuleUpload(rule, allDocs);
+              const isVerified = hasRuleVerified(rule, allDocs);
+              const stateText = isVerified ? "Verified" : isUploaded ? "Uploaded" : "Missing";
+              const stateClass = isVerified
+                ? "text-green-700 bg-green-100"
+                : isUploaded
+                ? "text-blue-700 bg-blue-100"
+                : "text-amber-700 bg-amber-100";
+
+              return (
+                <div
+                  key={`${rule?.key || "rule"}-${index}`}
+                  className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2"
+                >
+                  <span className="text-sm font-medium text-gray-800">
+                    {getRuleLabel(rule)}
+                  </span>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded ${stateClass}`}>
+                    {stateText}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Pending Documents List */}

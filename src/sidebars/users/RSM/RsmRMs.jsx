@@ -3,10 +3,12 @@ import { Eye, Search, X, User, Mail, Phone, Calendar, Users } from "lucide-react
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
-import { fetchRsmRms, activateRM, deactivateRM } from "../../../feature/thunks/rsmThunks";
+import { fetchRsmRms, activateRM, rsmDeactivateRM } from "../../../feature/thunks/rsmThunks";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 
 const colors = {
   primary: "var(--color-brand-primary)",
@@ -25,6 +27,9 @@ export default function RsmRMs() {
   const [rmToView, setRmToView] = useState(null);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [rmToDeactivate, setRmToDeactivate] = useState(null);
+  const [rmToActivate, setRmToActivate] = useState(null);
+  const [selectedReplacement, setSelectedReplacement] = useState(null);
+  const [replacementSearch, setReplacementSearch] = useState("");
 
   const { data: rmList, loading, error } = useSelector((state) => state.rsm.rms);
 
@@ -57,6 +62,26 @@ export default function RsmRMs() {
 
   const sortedFilteredRms = sortNewestFirst(filteredRms, { dateKeys: ["createdAt"] });
 
+  const rmDeactivateCandidates = useMemo(() => {
+    if (!rmToDeactivate || !rmList) return [];
+    const term = replacementSearch.trim().toLowerCase();
+    return (rmList || [])
+      .filter(
+        (r) =>
+          r._id !== rmToDeactivate._id &&
+          r.status === "ACTIVE" &&
+          `${r.firstName} ${r.lastName} ${r.rmCode || ""} ${r.phone || ""}`
+            .toLowerCase()
+            .includes(term)
+      )
+      .map((r) => ({
+        id: r._id,
+        name: `${r.firstName} ${r.lastName}`,
+        meta: [r.rmCode, r.phone].filter(Boolean).join(" • ") || undefined,
+        statusBadge: r.status,
+      }));
+  }, [rmList, rmToDeactivate, replacementSearch]);
+
   // Handle view RM details
   const handleViewRM = (rm) => {
     setRmToView(rm);
@@ -65,33 +90,37 @@ export default function RsmRMs() {
 
   const handleToggleActivation = async (rm) => {
     if (rm.status === "ACTIVE") {
-      const confirmed = window.confirm(
-        `Are you sure you want to deactivate ${rm.firstName} ${rm.lastName}? All their data will be reassigned to another RM.`
-      );
-      if (!confirmed) return;
       setRmToDeactivate(rm);
+      setReplacementSearch("");
+      setSelectedReplacement(null);
       setShowDeactivateModal(true);
     } else {
-      try {
-        await dispatch(activateRM(rm._id)).unwrap();
-        dispatch(fetchRsmRms());
-        alert("RM activated successfully");
-      } catch (err) {
-        alert(err || "Failed to activate RM");
-      }
+      setRmToActivate(rm);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (!rmToActivate?._id) return;
+    try {
+      await dispatch(activateRM(rmToActivate._id)).unwrap();
+      dispatch(fetchRsmRms());
+      setRmToActivate(null);
+    } catch (err) {
+      // toast is handled in thunk
     }
   };
 
   const handleDeactivate = async () => {
-    if (!rmToDeactivate) return;
+    if (!rmToDeactivate || !selectedReplacement) return;
     try {
-      await dispatch(deactivateRM(rmToDeactivate._id)).unwrap();
+      await dispatch(rsmDeactivateRM({ rmId: rmToDeactivate._id, newRmId: selectedReplacement })).unwrap();
       dispatch(fetchRsmRms());
       setShowDeactivateModal(false);
       setRmToDeactivate(null);
-      alert("RM deactivated successfully. All data has been reassigned.");
+      setSelectedReplacement(null);
+      setReplacementSearch("");
     } catch (err) {
-      alert(err || "Failed to deactivate RM");
+      // toast is handled in thunk
     }
   };
 
@@ -445,43 +474,48 @@ export default function RsmRMs() {
         </div>
       )}
 
-      {/* Deactivate Confirmation Modal */}
-      {showDeactivateModal && rmToDeactivate && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowDeactivateModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Confirm Deactivation
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to deactivate <strong>{rmToDeactivate.firstName} {rmToDeactivate.lastName}</strong>?
-              All their applications, partners, and customers will be automatically reassigned to another active RM.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-                onClick={() => {
-                  setShowDeactivateModal(false);
-                  setRmToDeactivate(null);
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700"
-                onClick={handleDeactivate}
-              >
-                Deactivate
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ActivationConfirmModal
+        isOpen={!!rmToActivate}
+        title="Activate RM"
+        message="Are you sure you want to activate"
+        subjectName={`${rmToActivate?.firstName || ""} ${rmToActivate?.lastName || ""}`.trim()}
+        confirmLabel="Activate"
+        onCancel={() => setRmToActivate(null)}
+        onConfirm={handleActivate}
+      />
+
+      <ReassignmentDeactivateModal
+        isOpen={showDeactivateModal && !!rmToDeactivate}
+        title="Deactivate RM"
+        subjectName={
+          rmToDeactivate
+            ? `${rmToDeactivate.firstName} ${rmToDeactivate.lastName}`
+            : ""
+        }
+        subjectMeta={
+          rmToDeactivate?.rmCode
+            ? `RM Code: ${rmToDeactivate.rmCode}`
+            : rmToDeactivate?.status
+              ? `Status: ${rmToDeactivate.status}`
+              : ""
+        }
+        warningText={`Partners and customers under this RM will be reassigned to the active RM you select below.`}
+        searchValue={replacementSearch}
+        onSearchChange={setReplacementSearch}
+        searchPlaceholder="Search replacement RM by name, code, or phone"
+        candidates={rmDeactivateCandidates}
+        selectedId={selectedReplacement}
+        onSelect={setSelectedReplacement}
+        onCancel={() => {
+          setShowDeactivateModal(false);
+          setRmToDeactivate(null);
+          setSelectedReplacement(null);
+          setReplacementSearch("");
+        }}
+        onConfirm={handleDeactivate}
+        confirmLabel="Confirm Deactivate & Assign"
+        confirmDisabled={!selectedReplacement}
+      />
     </>
   );
 }

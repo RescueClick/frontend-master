@@ -16,10 +16,13 @@ import {
 } from "lucide-react";
 
 import axios from "axios";
+import toast from "react-hot-toast";
 
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
-import Modal from "../../../../components/Modal";
+import LoanStepper from "../../../../components/loan/LoanStepper";
+import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
+import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 
 export default function PersonalLoan() {
   const [documentModel, setdocumentModel] = useState(null);
@@ -96,7 +99,6 @@ export default function PersonalLoan() {
   });
 
   const [sameAddress, setSameAddress] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [applicationId, setApplicationId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -259,6 +261,14 @@ export default function PersonalLoan() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (successMessage) toast.success(successMessage);
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (error) toast.error(error);
+  }, [error]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -496,21 +506,23 @@ export default function PersonalLoan() {
       "salarySlip2",
       "salarySlip3",
       "form16_26as",
-      "bankStatement1",
-      "bankStatement2",
     ],
     // 3: Documents
-    ["aadharFront", "aadharBack", "panCard", "passportPhoto", "selfie"],
+    [
+      "aadharFront",
+      "aadharBack",
+      "panCard",
+      "passportPhoto",
+      "selfie",
+      "bankStatement1",
+      "bankStatement2",
+      "newAddressProofs",
+    ],
     // 4: References
     ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"],
     // 5: Review
     ["password", "confirmPassword"],
   ];
-
-  const canSubmit = useMemo(
-    () => Object.keys(validateRegistrationForm(formData)).length === 0,
-    [formData]
-  );
 
   const validateStep = (stepIdx) => {
     const errors = validateRegistrationForm(formData);
@@ -520,6 +532,15 @@ export default function PersonalLoan() {
       return acc;
     }, {});
   };
+
+  const canSubmit = useMemo(
+    () => Object.keys(validateRegistrationForm(formData)).length === 0,
+    [formData]
+  );
+  const stepErrorCounts = useMemo(
+    () => steps.map((_, idx) => Object.keys(validateStep(idx)).length),
+    [formData]
+  );
 
   const handleNext = () => {
     if (loading) return;
@@ -561,6 +582,7 @@ export default function PersonalLoan() {
   };
 
   const handleSubmit = async () => {
+    if (loading) return;
     console.log("working");
     
     setLoading(true);
@@ -714,9 +736,9 @@ export default function PersonalLoan() {
       setApplicationId(data.id);
       setSavedApplication(data);
       setSuccessMessage(
-        data.message || "Application saved successfully. You can submit now."
+        data.message || "Application saved successfully. Submitting now."
       );
-      setModalOpen(true);
+      await handleApplyNow(data.id);
     } catch (error) {
       console.error(error);
       
@@ -764,22 +786,24 @@ export default function PersonalLoan() {
     }
   };
 
-  const handleApplyNow = async () => {
-    if (!applicationId) return;
+  const handleApplyNow = async (forcedApplicationId) => {
+    if (loading) return;
+    const targetApplicationId = forcedApplicationId || applicationId;
+    if (!targetApplicationId) return;
     setLoading(true);
     setError("");
     try {
       const { partnerToken } = getAuthData();
       if (!partnerToken) {
-        // No login -> treat as already submitted
-        setModalOpen(false);
+        setSuccessMessage("Application submitted successfully.");
+        resetFields();
         return;
       }
       // Create AbortController for request cancellation
       abortControllerRef.current = new AbortController();
 
       await axios.post(
-        `${backendurl}/partner/applications/${applicationId}/submit`,
+        `${backendurl}/partner/applications/${targetApplicationId}/submit`,
         {},
         {
           headers: {
@@ -789,7 +813,6 @@ export default function PersonalLoan() {
           signal: abortControllerRef.current.signal,
         }
       );
-      setModalOpen(false);
       setSuccessMessage("Application submitted successfully.");
       resetFields();
     } catch (err) {
@@ -936,34 +959,10 @@ export default function PersonalLoan() {
 
   return (
     <>
-      {documentModel && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-          <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full relative p-4">
-            {/* Close Button */}
-            <button
-              onClick={() => setdocumentModel(null)}
-              className="absolute top-2 right-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-            >
-              Close
-            </button>
-
-            {/* Preview Image or PDF */}
-            {documentModel.endsWith(".pdf") ? (
-              <iframe
-                src={documentModel}
-                title="Document Preview"
-                className="w-full h-[500px] rounded-lg"
-              />
-            ) : (
-              <img
-                src={documentModel}
-                alt="Document Preview"
-                className="w-full h-auto rounded-lg object-contain"
-              />
-            )}
-          </div>
-        </div>
-      )}
+      <DocumentPreviewModal
+        url={documentModel}
+        onClose={() => setdocumentModel(null)}
+      />
 
       <div
         className="min-h-screen py-8 px-0 sm:px-4"
@@ -1021,52 +1020,25 @@ export default function PersonalLoan() {
               </p>
             </div>
 
-            <div className="p-8 space-y-8">
-              <div className="px-8 pt-5 pb-2 bg-slate-50 border-b border-slate-200 -mx-8 mb-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
-                  {steps.map((step, idx) => {
-                    const isActive = idx === currentStep;
-                    const isDone = idx < currentStep;
-                    const isClickable = idx <= maxStep;
-                    return (
-                      <button
-                        key={step}
-                        type="button"
-                        onClick={() => {
-                          if (!isClickable) return;
-                          setError("");
-                          setFieldErrors({});
-                          setValidationErrors([]);
-                          setCurrentStep(idx);
-                          requestAnimationFrame(() => {
-                            const el = document.querySelector(`[name="${stepFirstFieldName[idx]}"]`);
-                            if (el && typeof el.focus === "function") el.focus();
-                          });
-                        }}
-                        disabled={!isClickable || loading}
-                        className="rounded-lg border px-2 py-2 text-center font-medium transition-colors"
-                        style={{
-                          borderColor: isActive
-                            ? "var(--color-brand-primary)"
-                            : isDone
-                            ? "#22C55E"
-                            : "#CBD5E1",
-                          backgroundColor: isActive ? "#EEF2FF" : "#FFFFFF",
-                          color: isActive ? "#4F46E5" : "#334155",
-                          opacity: isClickable ? 1 : 0.6,
-                          cursor: isClickable ? "pointer" : "not-allowed",
-                        }}
-                        aria-current={isActive ? "step" : undefined}
-                      >
-                        {idx + 1}. {step}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-3 text-xs text-slate-600">
-                  Step-by-step wizard. Draft is saved locally (text fields only).
-                </p>
-              </div>
+            <div className="p-6 space-y-6">
+              <LoanStepper
+                steps={steps}
+                currentStep={currentStep}
+                maxStep={maxStep}
+                loading={loading}
+                stepErrorCounts={stepErrorCounts}
+                helperText="Step-by-step wizard. Draft is saved locally (text fields only)."
+                onStepClick={(idx) => {
+                  setError("");
+                  setFieldErrors({});
+                  setValidationErrors([]);
+                  setCurrentStep(idx);
+                  requestAnimationFrame(() => {
+                    const el = document.querySelector(`[name="${stepFirstFieldName[idx]}"]`);
+                    if (el && typeof el.focus === "function") el.focus();
+                  });
+                }}
+              />
 
               {/* Personal Information */}
               <section id="loan-personal-step" hidden={currentStep !== 0}>
@@ -1712,16 +1684,8 @@ export default function PersonalLoan() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {[
-                    {
-                      name: "aadharFront",
-                      label: "Aadhar Card (Front) *",
-                      required: true,
-                    },
-                    {
-                      name: "aadharBack",
-                      label: "Aadhar Card (Back) *",
-                      required: true,
-                    },
+                    { name: "aadharFront", label: "Aadhar Card (Front) *", required: true },
+                    { name: "aadharBack", label: "Aadhar Card (Back) *", required: true },
                     { name: "panCard", label: "PAN Card *", required: true },
                     {
                       name: "passportPhoto",
@@ -1729,102 +1693,34 @@ export default function PersonalLoan() {
                       required: true,
                       accept: ".jpg,.jpeg,.png",
                     },
-                    {
-                      name: "otherDocument",
-                      label: "Other Document",
-                      required: false,
-                    },
-                  ].map((doc, index) => (
-                    <div key={index}>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        {doc.label}
-                      </label>
-                      <div className="relative flex items-center gap-2">
-                        {/* File Input */}
-                        <input
-                          type="file"
-                          name={doc.name}
-                          onChange={handleFileChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "#F8FAFC",
-                          }}
-                          accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
-                          required={doc.required}
-                        />
-                        {formData[doc.name]? "" : renderError(doc.name)}
-
-                        {/* View Button */}
-                        {formData[doc.name] && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData[doc.name].preview
-                                  ? formData[doc.name].preview
-                                  : formData[doc.name] instanceof File
-                                    ? URL.createObjectURL(formData[doc.name])
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-                        )}
-
-                        {/* Remove Button */}
-                        {formData[doc.name] && (
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove(doc.name)}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* File Name */}
-                      {formData[doc.name] && (
-                        <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                          <span>✓</span> {formData[doc.name].name}
-                        </p>
-                      )}
-                    </div>
+                    { name: "otherDocument", label: "Other Document", required: false },
+                  ].map((doc) => (
+                    <DocumentUploadCard
+                      key={doc.name}
+                      name={doc.name}
+                      label={doc.label}
+                      file={formData[doc.name]}
+                      accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
+                      required={doc.required}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError(doc.name)}
+                      onPreview={() =>
+                        setdocumentModel(
+                          formData[doc.name]?.preview
+                            ? formData[doc.name].preview
+                            : formData[doc.name] instanceof File
+                            ? URL.createObjectURL(formData[doc.name])
+                            : ""
+                        )
+                      }
+                    />
                   ))}
                 </div>
               </section>
 
               {/* Employment Information */}
-              <section hidden={currentStep !== 3}>
+              <section hidden={currentStep !== 2}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2634,13 +2530,25 @@ export default function PersonalLoan() {
                 {formData.newAddressProofs && (
                   <div className="mt-2 text-sm text-gray-700">
                     {formData.newAddressProofs.type.includes("image") ? (
-                      <img
-                        src={URL.createObjectURL(formData.newAddressProofs)}
-                        alt="New Address Proof"
-                        className="w-40 h-40 object-cover rounded-lg border mt-2"
-                      />
+                      <button
+                        type="button"
+                        className="text-blue-600 underline"
+                        onClick={() =>
+                          setdocumentModel(URL.createObjectURL(formData.newAddressProofs))
+                        }
+                      >
+                        🖼️ {formData.newAddressProofs.name} (Preview)
+                      </button>
                     ) : (
-                      <p>📄 {formData.newAddressProofs.name}</p>
+                      <button
+                        type="button"
+                        className="text-blue-600 underline"
+                        onClick={() =>
+                          setdocumentModel(URL.createObjectURL(formData.newAddressProofs))
+                        }
+                      >
+                        📄 {formData.newAddressProofs.name} (Preview)
+                      </button>
                     )}
                   </div>
                 )}
@@ -2967,31 +2875,6 @@ export default function PersonalLoan() {
           </div>
         </div>
       </div>
-      {modalOpen && (
-        <Modal onClose={() => setModalOpen(false)}>
-          <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">
-              Your application has been saved.
-            </h2>
-            <p className="mb-4">Do you want to submit it?</p>
-            {error && <div className="text-red-500 mb-2">{error}</div>}
-            <button
-              className="px-6 py-2 bg-green-600 text-white rounded-lg mr-4"
-              onClick={handleApplyNow}
-              disabled={loading}
-            >
-              {loading ? "Submitting..." : "Apply Now"}
-            </button>
-            <button
-              className="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg"
-              onClick={() => setModalOpen(false)}
-              disabled={loading}
-            >
-              Cancel
-            </button>
-          </div>
-        </Modal>
-      )}
     </>
   );
 }

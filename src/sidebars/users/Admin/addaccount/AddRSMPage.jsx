@@ -53,6 +53,21 @@ const AddRSMPage = () => {
     text: "#111827",
   };
 
+  const VALIDATION_PATTERNS = {
+    name: /^[A-Za-z][A-Za-z\s'-]{1,49}$/,
+    phone: /^[6-9]\d{9}$/,
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/,
+  };
+
+  const getPasswordChecks = (password = "") => ({
+    minLength: password.length >= 8,
+    hasUpper: /[A-Z]/.test(password),
+    hasLower: /[a-z]/.test(password),
+    hasNumber: /\d/.test(password),
+    hasSpecial: /[^A-Za-z\d]/.test(password),
+  });
+
   // Load available ASMs when page opens
   useEffect(() => {
     const { adminToken } = getAuthData() || {};
@@ -63,22 +78,37 @@ const AddRSMPage = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
-    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "First name is required";
+    } else if (!VALIDATION_PATTERNS.name.test(formData.firstName.trim())) {
+      newErrors.firstName = "Enter a valid first name";
+    }
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Last name is required";
+    } else if (!VALIDATION_PATTERNS.name.test(formData.lastName.trim())) {
+      newErrors.lastName = "Enter a valid last name";
+    }
     if (!formData.phone.trim()) {
       newErrors.phone = "Phone number is required";
-    } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ""))) {
-      newErrors.phone = "Phone number must be 10 digits";
+    } else if (!VALIDATION_PATTERNS.phone.test(formData.phone.trim())) {
+      newErrors.phone = "Enter a valid 10-digit phone number";
     }
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid";
+    } else if (!VALIDATION_PATTERNS.email.test(formData.email.trim().toLowerCase())) {
+      newErrors.email = "Enter a valid email address";
+    }
+    if (!formData.dob) {
+      newErrors.dob = "Date of birth is required";
+    }
+    if (!formData.region.trim()) {
+      newErrors.region = "Region is required";
     }
     if (!formData.password.trim()) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters long";
+    } else if (!VALIDATION_PATTERNS.password.test(formData.password)) {
+      newErrors.password =
+        "Password must be 8+ chars with uppercase, lowercase, number, and special character";
     }
     if (!formData.confirmPassword.trim()) {
       newErrors.confirmPassword = "Please confirm your password";
@@ -111,7 +141,14 @@ const AddRSMPage = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    let nextValue = value;
+    if (name === "phone") {
+      nextValue = value.replace(/\D/g, "").slice(0, 10);
+    }
+    if (name === "email") {
+      nextValue = value.trim().toLowerCase();
+    }
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -464,6 +501,33 @@ const AddRSMPage = () => {
                     <AlertCircle className="w-4 h-4 mr-1" /> {errors.password}
                   </p>
                 )}
+                <div className="mt-2 space-y-1 text-xs">
+                  {(() => {
+                    const checks = getPasswordChecks(formData.password);
+                    const rules = [
+                      { ok: checks.minLength, label: "At least 8 characters" },
+                      { ok: checks.hasUpper, label: "At least 1 uppercase letter" },
+                      { ok: checks.hasLower, label: "At least 1 lowercase letter" },
+                      { ok: checks.hasNumber, label: "At least 1 number" },
+                      { ok: checks.hasSpecial, label: "At least 1 special character" },
+                    ];
+                    return rules.map((rule) => (
+                      <p
+                        key={rule.label}
+                        className={`flex items-center ${
+                          rule.ok ? "text-green-600" : "text-gray-500"
+                        }`}
+                      >
+                        {rule.ok ? (
+                          <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        {rule.label}
+                      </p>
+                    ));
+                  })()}
+                </div>
               </div>
 
               {/* Confirm Password */}

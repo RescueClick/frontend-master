@@ -93,7 +93,7 @@ const Home = () => {
   const cardData = [
     {
       icon: <FaHandshake size={32} className="text-brand-primary" />,
-      title: "Tie-up with Leading NBFCs",
+      title: "Tie-up with Leading Lenders",
       desc: "Our top-grade collaborations ensure an extended range of financial services for our customers.",
     },
     {
@@ -124,7 +124,7 @@ const Home = () => {
     { name: "Faircent", logo: faircentLogo, description: "India’s leading P2P lending platform." },
     { name: "Hero Fincorp", logo: heroFincorpLogo, description: "Trusted non-banking finance firm." },
     { name: "Kotak Mahindra", logo: kotakLogo, description: "Progressive financial services." },
-    { name: "Muthoot Finance", logo: muthootLogo, description: "Largest gold loan NBFC." },
+    { name: "Muthoot Finance", logo: muthootLogo, description: "Leading gold loan institution." },
     { name: "Tata Capital", logo: tataCapitalLogo, description: "Trusted TATA financial arm." },
     { name: "Aditya Birla Capital", logo: adityaBirlaLogo, description: "Diverse financial solutions." },
   ];
@@ -169,7 +169,7 @@ const Home = () => {
               </h1>
 
               <p className="mx-auto mb-8 max-w-lg text-[15px] leading-[1.7] text-slate-400 sm:text-lg lg:mx-0">
-                Compare loan options across leading banks and NBFCs with a guided digital journey, expert assistance, and a partner program designed for growth.
+                Compare loan options across leading banks and lenders with a guided digital journey, expert assistance, and a partner program designed for growth.
               </p>
 
               <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center lg:justify-start">
@@ -501,7 +501,7 @@ const Home = () => {
                 icon: <Shield className="h-7 w-7 text-white" />,
                 value: "100+",
                 title: "Lender tie-ups",
-                desc: "Collaborations with banks and NBFCs to widen product choice and eligibility.",
+                desc: "Collaborations with banks and lenders to widen product choice and eligibility.",
               },
               {
                 icon: <MapPin className="h-7 w-7 text-white" />,
@@ -622,7 +622,7 @@ const Home = () => {
                 Institutional network you can rely on
               </h2>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-                Curated relationships with leading banks and NBFCs—so every recommendation is backed by credible, regulated lenders.
+                Curated relationships with leading banks and institutions so every recommendation is backed by credible, regulated lenders.
               </p>
             </div>
             <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-0">
@@ -643,7 +643,7 @@ const Home = () => {
               <div className="rounded-2xl border border-slate-200/90 bg-white/90 px-6 py-4 text-sm leading-snug text-slate-600 shadow-sm shadow-slate-900/5 backdrop-blur-sm sm:rounded-l-none sm:border-l-0 sm:py-5 sm:pl-5 lg:max-w-[220px]">
                 <span className="font-medium text-slate-800">Pan-India coverage</span>
                 <span className="mt-1 block text-xs text-slate-500">
-                  Consistent product access across major banks &amp; NBFCs
+                  Consistent product access across major banks &amp; lenders
                 </span>
               </div>
             </div>

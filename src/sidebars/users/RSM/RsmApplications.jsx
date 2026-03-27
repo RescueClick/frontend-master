@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import { getLoanStatusBadgeClass, getLoanStatusLabel } from "../../../utils/loanStatus";
 
 const colors = {
   primary: "var(--color-brand-primary)",
@@ -91,28 +92,6 @@ export default function RsmApplications() {
     });
     return sortNewestFirst(filtered, { dateKeys: ["applicationDateRaw"] });
   }, [applications, searchTerm, filterStatus]);
-
-  // Helpers for status color
-  const getStatusColor = (status) => {
-    switch (status?.toUpperCase()) {
-      case "DISBURSED":
-        return "bg-green-100 text-green-800";
-      case "APPROVED":
-        return "bg-blue-100 text-blue-800";
-      case "UNDER_REVIEW":
-      case "AGREEMENT":
-        return "bg-amber-100 text-amber-800";
-      case "REJECTED":
-        return "bg-red-100 text-red-800";
-      case "DOC_COMPLETE":
-      case "DOC_SUBMITTED":
-        return "bg-purple-100 text-purple-800";
-      case "DOC_INCOMPLETE":
-        return "bg-orange-100 text-orange-800";
-      default:
-        return "bg-slate-100 text-slate-800";
-    }
-  };
 
   const formatCurrency = (amount) => {
     if (!amount) return "₹0";
@@ -250,11 +229,11 @@ export default function RsmApplications() {
                     </td>
                     <td className="px-3 py-4">
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${getLoanStatusBadgeClass(
                           app.status
                         )}`}
                       >
-                        {app.status === "DRAFT" ? "SUBMITTED" : app.status}
+                        {getLoanStatusLabel(app.status)}
                       </span>
                     </td>
                     <td className="px-3 py-4">

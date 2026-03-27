@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { getAuthData } from "../../../utils/localStorage";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
   User,
   FileText,
@@ -28,6 +28,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
 import { fetchRsmApplication, transitionRsmApplication } from "../../../feature/thunks/rsmThunks";
 import { useDispatch } from "react-redux";
+import { getLoanStatusBadgeClass, getLoanStatusLabel } from "../../../utils/loanStatus";
 
 // ================== FIELD DEFINITIONS (Outside component) ==================
 const customerFields = [
@@ -77,6 +78,7 @@ const businessFields = [
 
 const RsmApplicationView = () => {
   const [applicationData, setApplicationData] = useState(null);
+  const [requiredDocRules, setRequiredDocRules] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
@@ -95,6 +97,145 @@ const RsmApplicationView = () => {
   const dispatch = useDispatch();
   const { applicationId, customerId } = location.state || {};
 
+  const normalizeDocType = (value) => String(value || "").trim().toUpperCase();
+
+  const getLocalRequiredDocRules = (loanType, gender) => {
+    const isFemale = String(gender || "").toLowerCase() === "female";
+
+    if (loanType === "PERSONAL" || loanType === "HOME_LOAN_SALARIED") {
+      return [
+        { key: "AADHAR_FRONT", acceptedDocTypes: ["AADHAR_FRONT"] },
+        { key: "AADHAR_BACK", acceptedDocTypes: ["AADHAR_BACK"] },
+        { key: "PAN", acceptedDocTypes: ["PAN"] },
+        { key: "PHOTO_OR_SELFIE", acceptedDocTypes: ["PHOTO", "SELFIE"] },
+        { key: "OTHER_DOCS", acceptedDocTypes: ["OTHER_DOCS"] },
+        { key: "ADDRESS_PROOF", acceptedDocTypes: ["ADDRESS_PROOF", "LIGHT_BILL", "UTILITY_BILL", "RENT_AGREEMENT"] },
+        { key: "COMPANY_ID_CARD", acceptedDocTypes: ["COMPANY_ID_CARD"] },
+        { key: "SALARY_SLIP_1", acceptedDocTypes: ["SALARY_SLIP_1"] },
+        { key: "SALARY_SLIP_2", acceptedDocTypes: ["SALARY_SLIP_2"] },
+        { key: "SALARY_SLIP_3", acceptedDocTypes: ["SALARY_SLIP_3"] },
+        { key: "FORM_16_26AS", acceptedDocTypes: ["FORM_16_26AS"] },
+        { key: "BANK_STATEMENT_1", acceptedDocTypes: ["BANK_STATEMENT_1", "BANK_STATEMENT"] },
+        { key: "BANK_STATEMENT_2", acceptedDocTypes: ["BANK_STATEMENT_2"] },
+      ];
+    }
+
+    const baseRules = [
+      { key: "ADDRESS_PROOF", acceptedDocTypes: ["ADDRESS_PROOF", "LIGHT_BILL", "UTILITY_BILL", "RENT_AGREEMENT"] },
+      { key: "AADHAR_FRONT", acceptedDocTypes: ["AADHAR_FRONT"] },
+      { key: "AADHAR_BACK", acceptedDocTypes: ["AADHAR_BACK"] },
+      { key: "BUSINESS_OTHER_DOCS", acceptedDocTypes: ["BUSINESS_OTHER_DOCS"] },
+      { key: "PAN", acceptedDocTypes: ["PAN"] },
+      { key: "PHOTO_OR_SELFIE", acceptedDocTypes: ["PHOTO", "SELFIE"] },
+      { key: "SHOP_ACT", acceptedDocTypes: ["SHOP_ACT"] },
+      { key: "UDHYAM_AADHAR", acceptedDocTypes: ["UDHYAM_AADHAR"] },
+      { key: "ITR", acceptedDocTypes: ["ITR"] },
+      { key: "GST_DOCUMENT", acceptedDocTypes: ["GST_DOCUMENT", "GST_CERTIFICATE"] },
+      { key: "SHOP_PHOTO", acceptedDocTypes: ["SHOP_PHOTO"] },
+      { key: "BANK_STATEMENT_1", acceptedDocTypes: ["BANK_STATEMENT_1", "BANK_STATEMENT"] },
+      { key: "BANK_STATEMENT_2", acceptedDocTypes: ["BANK_STATEMENT_2"] },
+    ];
+
+    if (isFemale && (loanType === "BUSINESS" || loanType === "HOME_LOAN_SELF_EMPLOYED")) {
+      baseRules.push(
+        { key: "CO_APPLICANT_AADHAR_FRONT", acceptedDocTypes: ["CO_APPLICANT_AADHAR_FRONT"] },
+        { key: "CO_APPLICANT_AADHAR_BACK", acceptedDocTypes: ["CO_APPLICANT_AADHAR_BACK"] },
+        { key: "CO_APPLICANT_PAN", acceptedDocTypes: ["CO_APPLICANT_PAN"] },
+        { key: "CO_APPLICANT_SELFIE_OR_PHOTO", acceptedDocTypes: ["CO_APPLICANT_SELFIE"] }
+      );
+    }
+
+    return baseRules;
+  };
+
+  const getEffectiveRules = () => {
+    if (Array.isArray(requiredDocRules) && requiredDocRules.length) return requiredDocRules;
+    return getLocalRequiredDocRules(applicationData?.loanType, applicationData?.customer?.gender);
+  };
+
+  const findDocForRule = (rule, docs = []) => {
+    const accepted = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
+    return docs.find((doc) =>
+      accepted.some((type) => normalizeDocType(type) === normalizeDocType(doc?.docType))
+    );
+  };
+
+  const hasRuleUpload = (rule, docs = []) => {
+    const matched = findDocForRule(rule, docs);
+    return Boolean(matched?.url);
+  };
+
+  const hasRuleVerified = (rule, docs = []) => {
+    const matched = findDocForRule(rule, docs);
+    return matched?.status === "VERIFIED";
+  };
+
+  const docTypeDisplayNames = {
+    PAN: "PAN Card",
+    AADHAR_FRONT: "Aadhaar Front",
+    AADHAR_BACK: "Aadhaar Back",
+    PHOTO: "Photo",
+    SELFIE: "Selfie",
+    PHOTO_OR_SELFIE: "Photo or Selfie",
+    ADDRESS_PROOF: "Address Proof",
+    LIGHT_BILL: "Light Bill",
+    UTILITY_BILL: "Utility Bill",
+    RENT_AGREEMENT: "Rent Agreement",
+    OTHER_DOCS: "Other Documents",
+    BUSINESS_OTHER_DOCS: "Business Other Documents",
+    COMPANY_ID_CARD: "Company ID Card",
+    SALARY_SLIP_1: "Salary Slip 1",
+    SALARY_SLIP_2: "Salary Slip 2",
+    SALARY_SLIP_3: "Salary Slip 3",
+    FORM_16_26AS: "Form 16 / 26AS",
+    BANK_STATEMENT_1: "Bank Statement 1",
+    BANK_STATEMENT_2: "Bank Statement 2",
+    BANK_STATEMENT: "Bank Statement",
+    SHOP_ACT: "Shop Act / Gumasta",
+    UDHYAM_AADHAR: "Udyam Aadhaar",
+    ITR: "ITR",
+    GST_DOCUMENT: "GST Document",
+    GST_CERTIFICATE: "GST Certificate",
+    SHOP_PHOTO: "Shop Photo",
+    CO_APPLICANT_AADHAR_FRONT: "Co-applicant Aadhaar Front",
+    CO_APPLICANT_AADHAR_BACK: "Co-applicant Aadhaar Back",
+    CO_APPLICANT_PAN: "Co-applicant PAN",
+    CO_APPLICANT_SELFIE: "Co-applicant Selfie",
+    CO_APPLICANT_SELFIE_OR_PHOTO: "Co-applicant Selfie or Photo",
+  };
+
+  const toDocLabel = (docType) => {
+    const key = normalizeDocType(docType);
+    return docTypeDisplayNames[key] || key || "Document";
+  };
+
+  const getCanonicalRuleKeyForDoc = (docType) => {
+    const match = getEffectiveRules().find((rule) =>
+      Array.isArray(rule?.acceptedDocTypes) &&
+      rule.acceptedDocTypes.some((type) => normalizeDocType(type) === normalizeDocType(docType))
+    );
+    return normalizeDocType(match?.key) || normalizeDocType(docType);
+  };
+
+  const toDocLabelByRule = (docType) => toDocLabel(getCanonicalRuleKeyForDoc(docType));
+
+  const fetchRequiredDocRules = async (appData) => {
+    try {
+      const { rsmToken } = getAuthData();
+      const response = await axios.get(`${backendurl}/partner/loan-doc-rules`, {
+        params: {
+          loanType: appData?.loanType,
+          gender: appData?.customer?.gender || "",
+        },
+        headers: { Authorization: `Bearer ${rsmToken}` },
+      });
+      if (Array.isArray(response?.data?.rules) && response.data.rules.length) {
+        return response.data.rules;
+      }
+    } catch (_err) {}
+    return getLocalRequiredDocRules(appData?.loanType, appData?.customer?.gender);
+  };
+
   // Fetch application data from API
   const fetchApplicationData = async () => {
     if (!applicationId) {
@@ -109,6 +250,8 @@ const RsmApplicationView = () => {
       const result = await dispatch(fetchRsmApplication(applicationId));
       if (fetchRsmApplication.fulfilled.match(result)) {
         setApplicationData(result.payload);
+        const rules = await fetchRequiredDocRules(result.payload);
+        setRequiredDocRules(rules);
         setStatus(result.payload.status || "");
       } else {
         setError(result.payload || "Failed to fetch application data");
@@ -394,26 +537,7 @@ const RsmApplicationView = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "LOGIN":
-        return "bg-amber-100 text-amber-800 border-amber-200";
-      case "UNDER_REVIEW":
-        return "bg-indigo-100 text-indigo-800 border-indigo-200";
-      case "APPROVED":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "AGREEMENT":
-        return "bg-cyan-100 text-cyan-800 border-cyan-200";
-      case "DISBURSED":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "REJECTED":
-        return "bg-red-100 text-red-800 border-red-200";
-      case "DOC_COMPLETE":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
+  const getStatusColor = (status) => `${getLoanStatusBadgeClass(status)} border border-gray-200`;
 
   const getDocStatusColor = (status) => {
     switch (status) {
@@ -445,15 +569,7 @@ const RsmApplicationView = () => {
     }
   };
 
-  const statusColors = {
-    LOGIN: "bg-amber-100 text-amber-700 border border-amber-300",
-    UNDER_REVIEW: "bg-indigo-100 text-indigo-700 border border-indigo-300",
-    APPROVED: "bg-green-100 text-green-700 border border-green-300",
-    AGREEMENT: "bg-cyan-100 text-cyan-700 border border-cyan-300",
-    DISBURSED: "bg-purple-100 text-purple-700 border border-purple-300",
-    REJECTED: "bg-red-100 text-red-700 border border-red-300",
-    DOC_COMPLETE: "bg-purple-100 text-purple-700 border border-purple-300",
-  };
+  const statusColors = (status) => `${getLoanStatusBadgeClass(status)} border border-gray-200`;
 
   // Helper functions for rendering
   const renderFields = (fields, data) => (
@@ -481,64 +597,46 @@ const RsmApplicationView = () => {
 
   if (loading) {
     return (
-      <>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-          }}
-        />
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-8 shadow-lg">
-            <div className="flex items-center gap-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
-              <span className="text-gray-700 text-lg">Loading application data...</span>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+            <span className="text-gray-700 text-lg">Loading application data...</span>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   if (error && !applicationData) {
     return (
-      <>
-        <Toaster position="top-right" />
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-8 shadow-lg text-center">
-            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Application</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <button
-              onClick={fetchApplicationData}
-              className="px-6 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition"
-            >
-              Retry
-            </button>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Application</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={fetchApplicationData}
+            className="px-6 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition"
+          >
+            Retry
+          </button>
         </div>
-      </>
+      </div>
     );
   }
 
   if (!applicationData) {
     return (
-      <>
-        <Toaster position="top-right" />
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-8 shadow-lg text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Clock className="w-8 h-8 text-gray-400" />
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No Application Data</h2>
-            <p className="text-gray-600">Application data not available</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-8 h-8 text-gray-400" />
           </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Application Data</h2>
+          <p className="text-gray-600">Application data not available</p>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -559,17 +657,6 @@ const RsmApplicationView = () => {
 
   return (
     <>
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-        }}
-      />
-      
       {error && (
         <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
           <div className="flex items-center gap-2">
@@ -591,7 +678,7 @@ const RsmApplicationView = () => {
           <div className="bg-white rounded-xl p-6 w-[800px] max-h-[90vh] shadow-lg overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-800">
-                {selectedDoc ? selectedDoc.docType : "Document Preview"}
+                {selectedDoc ? toDocLabelByRule(selectedDoc.docType) : "Document Preview"}
               </h3>
               <button
                 onClick={() => {
@@ -611,7 +698,7 @@ const RsmApplicationView = () => {
               <div className="space-y-4">
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">Document Type: {selectedDoc.docType}</span>
+                    <span className="text-sm text-gray-600">Document Type: {toDocLabelByRule(selectedDoc.docType)}</span>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${getDocStatusColor(selectedDoc.status)}`}>
                       {selectedDoc.status}
                     </span>
@@ -881,6 +968,65 @@ const RsmApplicationView = () => {
                   </div>
                 </div>
 
+                {(() => {
+                  const rules = getEffectiveRules();
+                  const docs = applicationData.docs || [];
+                  const requiredCount = rules.length;
+                  const uploadedCount = rules.filter((rule) => hasRuleUpload(rule, docs)).length;
+                  const verifiedCount = rules.filter((rule) => hasRuleVerified(rule, docs)).length;
+                  const pendingCount = Math.max(requiredCount - verifiedCount, 0);
+
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                        <div className="bg-white rounded-lg border border-gray-200 p-3">
+                          <p className="text-xs text-gray-500">Required</p>
+                          <p className="text-lg font-bold text-gray-900">{requiredCount}</p>
+                        </div>
+                        <div className="bg-white rounded-lg border border-gray-200 p-3">
+                          <p className="text-xs text-gray-500">Uploaded</p>
+                          <p className="text-lg font-bold text-blue-700">{uploadedCount}</p>
+                        </div>
+                        <div className="bg-white rounded-lg border border-gray-200 p-3">
+                          <p className="text-xs text-gray-500">Verified</p>
+                          <p className="text-lg font-bold text-green-700">{verifiedCount}</p>
+                        </div>
+                        <div className="bg-white rounded-lg border border-gray-200 p-3">
+                          <p className="text-xs text-gray-500">Pending</p>
+                          <p className="text-lg font-bold text-amber-700">{pendingCount}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+                        <h3 className="text-sm font-bold text-gray-900 mb-3">Required Documents Checklist</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {rules.map((rule, idx) => {
+                            const isUploaded = hasRuleUpload(rule, docs);
+                            const isVerified = hasRuleVerified(rule, docs);
+                            const stateText = isVerified ? "Verified" : isUploaded ? "Uploaded" : "Missing";
+                            const stateClass = isVerified
+                              ? "text-green-700 bg-green-100"
+                              : isUploaded
+                              ? "text-blue-700 bg-blue-100"
+                              : "text-amber-700 bg-amber-100";
+                            return (
+                              <div
+                                key={`${rule?.key || "rule"}-${idx}`}
+                                className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2"
+                              >
+                                <span className="text-sm font-medium text-gray-800">{toDocLabel(rule?.key)}</span>
+                                <span className={`text-xs font-semibold px-2 py-1 rounded ${stateClass}`}>
+                                  {stateText}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                   {(applicationData.docs || []).map((doc, index) => {
                     const getDocIcon = (docType) => {
@@ -908,7 +1054,7 @@ const RsmApplicationView = () => {
                             </div>
                             <div className="ml-3 flex-1">
                               <h3 className="font-semibold text-gray-900 text-sm">
-                                {doc.docType || "Document"}
+                                {toDocLabelByRule(doc.docType)}
                               </h3>
                               {doc.remarks && (
                                 <p className="text-xs text-gray-600 mt-1">Remark: {doc.remarks}</p>
@@ -1004,7 +1150,7 @@ const RsmApplicationView = () => {
                                 No status transitions available
                               </p>
                               <p className="text-xs text-yellow-700 mt-1">
-                                Current status: {applicationData.status}. No further transitions are allowed from this status.
+                                Current status: {getLoanStatusLabel(applicationData.status)}. No further transitions are allowed from this status.
                               </p>
                             </div>
                           </div>
@@ -1087,8 +1233,8 @@ const RsmApplicationView = () => {
                     <div className="space-y-4">
                       {submittedStatus ? (
                         <div className="space-y-3">
-                          <div className={`inline-flex items-center px-4 py-2 rounded-xl font-semibold text-sm ${statusColors[submittedStatus.status]}`}>
-                            {submittedStatus.status}
+                          <div className={`inline-flex items-center px-4 py-2 rounded-xl font-semibold text-sm ${statusColors(submittedStatus.status)}`}>
+                            {getLoanStatusLabel(submittedStatus.status)}
                           </div>
                           {submittedStatus.remark && (
                             <div className="bg-gray-50 p-2 rounded-lg">
@@ -1111,7 +1257,7 @@ const RsmApplicationView = () => {
                             <Clock className="w-8 h-8 text-gray-400" />
                           </div>
                           <p className="text-gray-500 font-medium">
-                            Current Status: {applicationData.status || "N/A"}
+                            Current Status: {getLoanStatusLabel(applicationData.status) || "N/A"}
                           </p>
                           <p className="text-gray-500 font-medium">
                             Approved Loan Amount: {applicationData.approvedLoanAmount ? formatCurrency(applicationData.approvedLoanAmount) : "N/A"}

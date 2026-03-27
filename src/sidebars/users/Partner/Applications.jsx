@@ -16,6 +16,7 @@ import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
 import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import { getLoanStatusBadgeClass, getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
 
 const Application = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -90,47 +91,7 @@ const Application = () => {
     fetchApplications();
   }, []);
 
-  // ✅ Status normalizer: backend enums → UI friendly labels
-  // Note: DRAFT status is mapped to SUBMITTED as applications go directly to SUBMITTED
-  const mapStatus = (status) => {
-    switch (status) {
-      case "DRAFT":
-        return "SUBMITTED"; // Map DRAFT to SUBMITTED (no draft concept)
-      case "SUBMITTED":
-        return "SUBMITTED";
-      case "DOC_INCOMPLETE":
-        return "DOC_INCOMPLETE";
-      case "DOC_COMPLETE":
-        return "DOC_COMPLETE";
-      case "DOC_SUBMITTED":
-        return "DOC_SUBMITTED";
-      case "UNDER_REVIEW":
-        return "UNDER_REVIEW";
-      case "APPROVED":
-        return "APPROVED";
-      case "AGREEMENT":
-        return "AGREEMENT";
-      case "REJECTED":
-        return "REJECTED";
-      case "DISBURSED":
-        return "DISBURSED";
-      default:
-        return status || "Unknown";
-    }
-  };
-
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case "DISBURSED":
-        return "bg-green-100 text-green-800";
-      case "REJECTED":
-        return "bg-red-100 text-red-800";
-      case "UNDER_REVIEW":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  const mapStatus = (status) => normalizeLoanStatus(status);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -455,11 +416,11 @@ const Application = () => {
                     <td className="px-2 py-3 align-middle">
                       <div className="flex justify-center">
                         <span
-                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusBadgeColor(
+                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getLoanStatusBadgeClass(
                             application.status
                           )}`}
                         >
-                          {application.status}
+                          {getLoanStatusLabel(application.status)}
                         </span>
                       </div>
                     </td>
@@ -533,11 +494,11 @@ const Application = () => {
                     </div>
                   </div>
                   <span
-                    className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
+                    className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getLoanStatusBadgeClass(
                       application.status
                     )}`}
                   >
-                    {application.status}
+                    {getLoanStatusLabel(application.status)}
                   </span>
                 </div>
 

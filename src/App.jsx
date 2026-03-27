@@ -1,6 +1,7 @@
 import "./App.css";
 import { lazy, Suspense, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import { getAuthData } from "./utils/localStorage";
 import DhanSourceLoader from "./components/DhanSourceLoader";
 
@@ -52,6 +53,7 @@ function App() {
 
   return (
     <Suspense fallback={<DhanSourceLoader fullScreen label="Loading app…" />}>
+      <Toaster position="top-right" reverseOrder={false} />
       <AppRoutes />
     </Suspense>
   );

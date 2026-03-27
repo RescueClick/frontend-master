@@ -16,6 +16,7 @@ import {
 import { getAuthData } from "../../../utils/localStorage";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
+import { getLoanStatusBadgeClass, getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
 
 const Customer = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,20 +54,6 @@ const Customer = () => {
     fetchCustomers();
   }, []);
 
-  // Badge colors for status
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "Rejected":
-        return "bg-red-100 text-red-800";
-      case "Disbursed":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const filteredCustomers = customersData.filter((customer) => {
     const search = searchTerm.toLowerCase();
     const matchesSearch =
@@ -74,8 +61,8 @@ const Customer = () => {
       customer.customerEmployeeId.toLowerCase().includes(search) ||
       customer.contact.includes(search);
 
-    // Normalize DRAFT to SUBMITTED for filtering
-    const normalizedStatus = customer.status === "DRAFT" ? "SUBMITTED" : customer.status;
+    // Centralized status normalization for filtering
+    const normalizedStatus = normalizeLoanStatus(customer.status);
     const matchesStatus =
       statusFilter === "All" ||
       normalizedStatus?.toLowerCase() === statusFilter.toLowerCase();
@@ -140,8 +127,8 @@ const Customer = () => {
             <div className="text-sm font-mono text-teal-600">{customer.customerEmployeeId}</div>
           </div>
         </div>
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(customer.status === "DRAFT" ? "SUBMITTED" : customer.status)} whitespace-nowrap ml-2`}>
-                            {customer.status === "DRAFT" ? "SUBMITTED" : customer.status}
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getLoanStatusBadgeClass(customer.status)} whitespace-nowrap ml-2`}>
+                            {getLoanStatusLabel(customer.status)}
                           </span>
       </div>
 
@@ -330,8 +317,8 @@ const Customer = () => {
                           ₹ {(customer.payoutAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </td>
                     <td className="px-3 lg:px-5 py-3">
-                          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(customer.status === "DRAFT" ? "SUBMITTED" : customer.status)} whitespace-nowrap`}>
-                            {customer.status === "DRAFT" ? "SUBMITTED" : customer.status}
+                          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getLoanStatusBadgeClass(customer.status)} whitespace-nowrap`}>
+                            {getLoanStatusLabel(customer.status)}
                           </span>
                         </td>
                       </tr>

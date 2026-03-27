@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Eye, Search, X } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 
 import {
   activateRM,
   fetchRmList,
-  reassignPartnersAndDeactivateRM,
+  asmDeactivateRM,
   deleteRmAsm,
 } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
@@ -13,6 +13,8 @@ import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import axios from "axios"
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
+import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 
 
 
@@ -28,13 +30,11 @@ export default function AsmRM() {
   const navigate = useNavigate();
 
 
-  const [showActivateModal, setShowActivateModal] = useState(null)
-
-  const [userToDeactivate, setUserToDeactivate] = useState(null)
+  const [rmToActivate, setRmToActivate] = useState(null);
 
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [rmToDeactivate, setRmToDeactivate] = useState(null);
-  const [selectedReplacement, setSelectedReplacement] = useState(null);
+  const [selectedReplacementRmId, setSelectedReplacementRmId] = useState(null);
   const [replacementSearch, setReplacementSearch] = useState("");
   
   
@@ -79,6 +79,25 @@ export default function AsmRM() {
 
   const sortedFilteredRms = sortNewestFirst(filteredRms, { dateKeys: ["createdAt"] });
 
+  const rmDeactivateCandidates = useMemo(() => {
+    if (!rmToDeactivate || !data) return [];
+    const term = replacementSearch.trim().toLowerCase();
+    return (data || [])
+      .filter((r) => r._id !== rmToDeactivate._id && r.status === "ACTIVE")
+      .filter((r) => {
+        if (!term) return true;
+        const name = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
+        const code = `${r.rmCode || ""}`.toLowerCase();
+        return name.includes(term) || code.includes(term);
+      })
+      .map((r) => ({
+        id: r._id,
+        name: `${r.firstName} ${r.lastName}`,
+        meta: r.rmCode ? `RM ${r.rmCode}` : undefined,
+        statusBadge: r.status,
+      }));
+  }, [data, rmToDeactivate, replacementSearch]);
+
   // Handle view RM details
   const handleViewRM = (rm) => {
     setRmToView(rm);
@@ -87,21 +106,33 @@ export default function AsmRM() {
 
 
 
-  const deactivateRm =(rmToDeactivate,selectedReplacement )=>{
+  const deactivateRm = async (rmToDeactivateId, selectedReplacementId) => {
+    try {
+      await dispatch(
+        asmDeactivateRM({ oldRmId: rmToDeactivateId, newRmId: selectedReplacementId })
+      ).unwrap();
+      dispatch(fetchRmList());
+    } catch (err) {
+      // toast is handled in thunk
+    } finally {
+      setShowDeactivateModal(false);
+      setRmToDeactivate(null);
+      setSelectedReplacementRmId(null);
+      setReplacementSearch("");
+    }
+  };
 
-    
-    
-  
-    dispatch(
-        reassignPartnersAndDeactivateRM({ oldRmId: rmToDeactivate, newRmId: selectedReplacement })
-    );
-    
-     setShowDeactivateModal(false);
-     setRmToDeactivate(null);
-     setSelectedReplacement(null);
-     setReplacementSearch ("");
-    
-  }
+  const confirmActivateRm = async () => {
+    if (!rmToActivate?._id) return;
+    try {
+      await dispatch(activateRM(rmToActivate._id)).unwrap();
+      await dispatch(fetchRmList());
+    } catch (err) {
+      // Keep existing page behavior: silent fail in toggle path.
+    } finally {
+      setRmToActivate(null);
+    }
+  };
 
     
   const loginAsUser = async (userId, navigate) => {
@@ -224,7 +255,7 @@ loginAsUser(userId, navigate);
                     <td
                       className="px-2 py-3 align-top cursor-pointer"
                       onClick={() => {
-                        navigate("/asm/ASManalytics", {
+                        navigate("/asm/analytics", {
                           state: { id: rm._id },
                         });
                       }}
@@ -264,11 +295,11 @@ loginAsUser(userId, navigate);
                         onClick={() => {
                           if (rm.status === "ACTIVE") {
                             setRmToDeactivate(rm);
-                            setSelectedReplacement(null);
+                            setSelectedReplacementRmId(null);
                             setReplacementSearch("");
                             setShowDeactivateModal(true);
                           } else {
-                            dispatch(activateRM(rm._id));
+                            setRmToActivate(rm);
                           }
                         }}
                       >
@@ -288,7 +319,7 @@ loginAsUser(userId, navigate);
                           className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                           title="Open RM analytics"
                           onClick={() =>
-                            navigate("/asm/ASManalytics", {
+                            navigate("/asm/analytics", {
                               state: { id: rm._id },
                             })
                           }
@@ -514,417 +545,52 @@ loginAsUser(userId, navigate);
       )}
 
 
-         {/* Deactivate RM Modal */}
-         {showDeactivateModal && rmToDeactivate && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowDeactivateModal(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-xl relative max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="p-5 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">Deactivate RM</h3>
-                  <p className="text-white/90 text-sm mt-1">
-                    Select a replacement RM to assign partners before
-                    deactivation.
-                  </p>
-                </div>
-                <button
-                  className="text-white/80 hover:text-white rounded-full p-2"
-                  onClick={() => setShowDeactivateModal(false)}
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
+      <ReassignmentDeactivateModal
+        isOpen={showDeactivateModal && !!rmToDeactivate}
+        title="Deactivate RM"
+        subjectName={`${rmToDeactivate?.firstName || ""} ${rmToDeactivate?.lastName || ""}`.trim()}
+        subjectMeta={
+          rmToDeactivate?.rmCode
+            ? `RM Code: ${rmToDeactivate.rmCode}`
+            : rmToDeactivate?.status
+              ? `Status: ${rmToDeactivate.status}`
+              : ""
+        }
+        warningText="Partners and linked records must be reassigned to another active RM under your ASM before deactivation. Choose the replacement below."
+        searchValue={replacementSearch}
+        onSearchChange={setReplacementSearch}
+        searchPlaceholder="Search by name or RM code"
+        candidates={rmDeactivateCandidates}
+        selectedId={selectedReplacementRmId}
+        onSelect={setSelectedReplacementRmId}
+        onCancel={() => {
+          setShowDeactivateModal(false);
+          setRmToDeactivate(null);
+          setSelectedReplacementRmId(null);
+          setReplacementSearch("");
+        }}
+        onConfirm={() =>
+          deactivateRm(rmToDeactivate._id, selectedReplacementRmId)
+        }
+        confirmLabel="Confirm Deactivate & Assign"
+        confirmDisabled={!selectedReplacementRmId}
+      />
 
-            {/* Content */}
-            <div className="p-5 bg-[#F8FAFC] overflow-y-auto">
-              {/* Current RM info */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-gray-500">Deactivating</p>
-                    <p className="font-semibold text-[#111827]">
-                      {rmToDeactivate.firstName} {rmToDeactivate.lastName}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      RM Code:{" "}
-                      <span className="font-mono">{rmToDeactivate.rmCode}</span>
-                    </p>
-                  </div>
-                  <span className="px-2 py-1 rounded-full text-xs bg-red-50 text-red-600 border border-red-100">
-                    Active → Inactive
-                  </span>
-                </div>
-              </div>
-
-              {/* Replacement picker */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-[#111827]">
-                    Assign Replacement RM
-                  </h4>
-                  <div className="relative">
-                    <Search
-                      size={16}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      type="text"
-                      className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                      placeholder="Search by name or RM code"
-                      value={replacementSearch}
-                      onChange={(e) => setReplacementSearch(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="max-h-56 overflow-auto divide-y divide-gray-100">
-                  {(data|| [])
-                    .filter((r) => r._id !== rmToDeactivate._id)
-                    .filter((r) => {
-                      const term = replacementSearch.trim().toLowerCase();
-                      if (!term) return true;
-                      const name = `${r.firstName || ""} ${
-                        r.lastName || ""
-                      }`.toLowerCase();
-                      const code = `${r.rmCode || ""}`.toLowerCase();
-                      return name.includes(term) || code.includes(term);
-                    })
-                    .map((r) => (
-                      <label
-                        key={r._id}
-                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="replacementRm"
-                            className="text-brand-primary"
-                            checked={selectedReplacement?._id === r._id}
-                            onChange={() => setSelectedReplacement(r)}
-                          />
-                          <div>
-                            <p className="font-medium text-sm text-[#111827]">
-                              {r.firstName} {r.lastName}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              RM Code:{" "}
-                              <span className="font-mono">{r.rmCode}</span>
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded-full bg-brand-primary/10 text-brand-primary">
-                          {r.status}
-                        </span>
-                      </label>
-                    ))}
-                </div>
-              </div>
-
-              {/* Footer actions */}
-              <div className="flex items-center justify-end gap-3 mt-5">
-                <button
-                  className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-                  onClick={() => setShowDeactivateModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="px-4 py-2 text-sm rounded-md text-white disabled:opacity-50"
-                  style={{ background: colors.primary }}
-                  disabled={!selectedReplacement}
-                  onClick={() => {deactivateRm(rmToDeactivate._id,selectedReplacement._id)}}
-                >
-                  Confirm Deactivate & Assign
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ActivationConfirmModal
+        isOpen={!!rmToActivate}
+        title="Activate RM"
+        message="Are you sure you want to activate"
+        subjectName={`${rmToActivate?.firstName || ""} ${rmToActivate?.lastName || ""}`.trim()}
+        confirmLabel="Activate"
+        onCancel={() => setRmToActivate(null)}
+        onConfirm={confirmActivateRm}
+      />
 
 
 
 
 
             
-      {/* Deactivate & Reassign Modal (UI-only) */}
-      {showDeactivateModal && userToDeactivate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="bg-brand-primary p-6 text-white relative">
-              <button
-                onClick={() => {
-                  setShowDeactivateModal(false);
-                  setUserToDeactivate(null);
-                }}
-                className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
-              >
-                ✕
-              </button>
-
-              {/* Disclaimer */}
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold">Deactivate ASM</h3>
-
-                {/* Disclaimer */}
-                <div className="flex items-center gap-3 bg-red-50 border-l-4 border-red-500 rounded-md p-3 shadow-sm">
-                  <div className="flex-shrink-0">
-                    <FontAwesomeIcon
-                      icon={faTriangleExclamation}
-                      className="text-red-600 text-lg"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm text-red-700">
-                      <span className="font-semibold">Disclaimer:</span> When
-                      you deactivate an ASM, their responsibilities will be
-                      reassigned to the new ASM you select.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 bg-[#F8FAFC] space-y-4">
-              {/* Summary Card */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-[#111827] text-lg">
-                      {userToDeactivate.firstName} {userToDeactivate.lastName}
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                      Current status: {userToDeactivate.status}
-                    </p>
-                  </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-50 text-red-600">
-                    Will be deactivated
-                  </span>
-                </div>
-              </div>
-
-              {/* Selector */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <input
-                    type="text"
-                    value={searchReplacement}
-                    onChange={(e) => setSearchReplacement(e.target.value)}
-                    placeholder="Search ASM by name, phone, or code"
-                    className="w-60 sm:w-72 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                  />
-                </div>
-
-                {/* Results List */}
-                <div className="max-h-64 overflow-auto divide-y rounded-lg border">
-                  {(() => {
-                    const sourceList = asm || [];
-                    const filtered = sourceList
-                      .filter((u) => u?._id !== userToDeactivate._id)
-                      .filter((u) => {
-                        const hay = `${u.firstName || ""} ${u.lastName || ""} ${
-                          u.phone || ""
-                        } ${u.asmCode || ""}`.toLowerCase();
-                        return hay.includes(searchReplacement.toLowerCase());
-                      });
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="p-4 text-sm text-gray-500">
-                          No results
-                        </div>
-                      );
-                    }
-                    return filtered.map((u) => (
-                      <label
-                        key={u._id}
-                        className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="replacement"
-                            checked={selectedReplacementId === u._id}
-                            onChange={() => setSelectedReplacementId(u._id)}
-                          />
-                          <div>
-                            <div className="text-sm font-medium text-[#111827]">
-                              {u.firstName} {u.lastName}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              {u.phone || "N/A"}{" "}
-                              {u.asmCode ? `• ${u.asmCode}` : ""}{" "}
-                              {u.rmCode ? `• ${u.rmCode}` : ""}
-                            </div>
-                          </div>
-                        </div>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] ${
-                            u.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {u.status}
-                        </span>
-                      </label>
-                    ));
-                  })()}
-                </div>
-
-                {/* Footer Actions */}
-                <div className="flex items-center justify-end gap-3 mt-4">
-                  <button
-                    onClick={() => {
-                      setShowDeactivateModal(false);
-                      setUserToDeactivate(null);
-                      setSelectedReplacementId(null);
-                    }}
-                    className="px-4 py-2 text-sm border rounded-md text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  {confirmError && (
-                    <span className="text-red-600 text-xs mr-auto">
-                      {confirmError}
-                    </span>
-                  )}
-                  <button
-                    onClick={async () => {
-                      setConfirmError("");
-                      if (!selectedReplacementId || !userToDeactivate?._id)
-                        return;
-                      const { adminToken } = getAuthData() || {};
-
-                      let token = adminToken;
-
-                      if (!token) {
-                        setConfirmError("Missing auth token");
-                        return;
-                      }
-                      try {
-                        setConfirmBusy(true);
-                        // Bulk reassign all RMs under old ASM to the selected new ASM
-                        await dispatch(
-                          reassignAllRmsFromAsm({
-                            oldAsmId: userToDeactivate._id,
-                            newAsmId: selectedReplacementId,
-                            token,
-                          })
-                        ).unwrap();
-                        // Refresh lists
-                        dispatch(fetchRMs(token));
-                        dispatch(fetchAsms(token));
-                        setShowDeactivateModal(false);
-                        setUserToDeactivate(null);
-                        setSelectedReplacementId(null);
-                      } catch (err) {
-                        setConfirmError(
-                          typeof err === "string"
-                            ? err
-                            : err?.message || "Failed to reassign"
-                        );
-                      } finally {
-                        setConfirmBusy(false);
-                      }
-                    }}
-                    disabled={!selectedReplacementId || confirmBusy}
-                    className={`px-4 py-2 text-sm rounded-md text-white ${
-                      selectedReplacementId && !confirmBusy
-                        ? "bg-brand-primary hover:opacity-90"
-                        : "bg-gray-300 cursor-not-allowed"
-                    }`}
-                  >
-                    {confirmBusy ? "Reassigning..." : "Confirm & Deactivate"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Activate Confirmation Modal */}
-      {showActivateModal && userToActivate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-brand-primary p-6 text-white relative">
-              <button
-                onClick={() => {
-                  setShowActivateModal(false);
-                  setUserToActivate(null);
-                }}
-                className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
-              >
-                ✕
-              </button>
-              <h3 className="text-xl font-bold">Activate ASM</h3>
-            </div>
-            <div className="p-6 bg-[#F8FAFC] space-y-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p className="text-sm text-[#111827]">Are you sure?</p>
-              </div>
-              <div className="flex items-center justify-end gap-3 mt-2">
-                <button
-                  onClick={() => {
-                    setShowActivateModal(false);
-                    setUserToActivate(null);
-                  }}
-                  className="px-4 py-2 text-sm border rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    const { adminToken } = getAuthData() || {};
-
-                    let token = adminToken;
-
-                    if (!token || !userToActivate?._id) return;
-                    try {
-                      setConfirmBusy(true);
-                      await dispatch(
-                        activateAsm({ asmId: userToActivate._id, token })
-                      ).unwrap();
-                      dispatch(fetchAsms(token));
-                      setShowActivateModal(false);
-                      setUserToActivate(null);
-                    } catch (err) {
-                      console.error(err);
-                    } finally {
-                      setConfirmBusy(false);
-                    }
-                  }}
-                  disabled={confirmBusy}
-                  className={`px-4 py-2 text-sm rounded-md text-white ${
-                    !confirmBusy
-                      ? "bg-brand-primary hover:opacity-90"
-                      : "bg-gray-300 cursor-not-allowed"
-                  }`}
-                >
-                  {confirmBusy ? "Activating..." : "OK"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

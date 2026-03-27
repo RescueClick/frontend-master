@@ -4,7 +4,7 @@ import { User, Search, Plus, Download, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
-import { activatePartner, assignCustomerToPartner, fetchPartners } from "../../../feature/thunks/rmThunks";
+import { rmActivatePartner, rmDeactivatePartner, fetchPartners } from "../../../feature/thunks/rmThunks";
 import { matchesSearchTerm, matchesStatusFilter } from "../../../utils/tableFilter";
 import { useRealtimeData, useRefetch } from "../../../utils/useRealtimeData";
 
@@ -15,6 +15,8 @@ import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import TableLoader from "../../../components/shared/TableLoader";
+import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
+import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 
 
 const colors = {
@@ -37,13 +39,14 @@ const Partners = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [newPartnerId, setNewPartnerId] = useState(null);
+  const [replacementSearch, setReplacementSearch] = useState("");
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const openPartnerAnalytics = useCallback((partner) => {
     if (!partner?.id) return;
-    navigate("/rm/RManalytics", { state: { id: partner.id, role: "RM" } });
+    navigate("/rm/analytics", { state: { id: partner.id, role: "RM" } });
   }, [navigate]);
 
   const { loading, error, data } = useSelector((state) => state.rm.partner);
@@ -58,10 +61,21 @@ const Partners = () => {
   // Manual refetch function
   const refetchPartners = useRefetch(fetchPartners);
 
-  const otherPartners = useMemo(
-    () => data?.filter((p) => p.id !== selectedPartner?.id) || [],
-    [data, selectedPartner?.id]
-  );
+  const deactivatePartnerCandidates = useMemo(() => {
+    if (!selectedPartner || !data) return [];
+    const term = replacementSearch.trim().toLowerCase();
+    return data
+      .filter((p) => p.id !== selectedPartner.id && p.status === "ACTIVE")
+      .filter((p) =>
+        `${p.name || ""} ${p.employeeId || ""}`.toLowerCase().includes(term)
+      )
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        meta: p.employeeId || p.id,
+        statusBadge: p.status,
+      }));
+  }, [data, selectedPartner, replacementSearch]);
 
   const partnerStats = {
     totalPartners: 48,
@@ -119,6 +133,8 @@ const Partners = () => {
   const toggleActivation = (partner) => {
     if (partner.status === "ACTIVE") {
       setSelectedPartner(partner);
+      setReplacementSearch("");
+      setNewPartnerId(null);
       setModalOpen(true);
     } else {
       // Optionally handle re-activation here
@@ -128,14 +144,21 @@ const Partners = () => {
   const handleCancelDeactivation = () => {
     setModalOpen(false);
     setSelectedPartner(null);
+    setNewPartnerId(null);
+    setReplacementSearch("");
   };
 
 
   const handleConfirmDeactivation = useCallback(async () => {
     try {
+      if (!newPartnerId) {
+        alert("Please select a replacement partner");
+        return;
+      }
       await dispatch(
-        assignCustomerToPartner({
+        rmDeactivatePartner({
           oldPartnerId: selectedPartner.id,
+          newPartnerId,
         })
       ).unwrap();
 
@@ -144,14 +167,16 @@ const Partners = () => {
 
       setModalOpen(false);
       setSelectedPartner(null);
+      setNewPartnerId(null);
+      setReplacementSearch("");
     } catch (error) {
       console.error("Deactivation error:", error);
     }
-  }, [dispatch, selectedPartner, refetchPartners]);
+  }, [dispatch, selectedPartner, newPartnerId, refetchPartners]);
 
   const handlePartnerActive = useCallback(async () => {
     try {
-      await dispatch(activatePartner({ partnerId: selectedPartner.id })).unwrap();
+      await dispatch(rmActivatePartner({ partnerId: selectedPartner.id })).unwrap();
 
       // Refetch partners after activation
       refetchPartners();
@@ -267,71 +292,37 @@ const Partners = () => {
   return (
     <>
 
-      {ActivateModel &&
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 bg-opacity-40 z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-80 text-center">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Are you sure?</h3>
-            <p className="text-gray-600 mb-5">Do you really want to proceed?</p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => {
-                  setActivateModel(null)
-                }}
-                className="cursor-pointer px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
-              >
-                No
-              </button>
-              <button
-                onClick={() => {
-                  handlePartnerActive()
-                }}
+      <ActivationConfirmModal
+        isOpen={!!ActivateModel}
+        title="Activate Partner"
+        message="Are you sure you want to activate"
+        confirmLabel="Activate"
+        onCancel={() => setActivateModel(null)}
+        onConfirm={handlePartnerActive}
+      />
 
-                className=" cursor-pointer px-4 py-2 rounded-lg bg-brand-primary text-white "
-              >
-                Yes
-              </button>
-            </div>
-          </div>
-        </div>
-
-
-      }
-
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-
-
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
-              Suspend Partner
-            </h3>
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to <span className="font-semibold text-red-600">suspend</span> the partner{" "}
-              <span className="font-semibold">{selectedPartner?.name}</span>?<br />
-              This will deactivate their account and they will not be able to log in.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition"
-                onClick={handleCancelDeactivation}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition"
-                onClick={() => {
-                  handleConfirmDeactivation();
-                  setModalOpen(false);
-                  setSelectedPartner(null);
-                }}
-              >
-                Yes, Suspend
-              </button>
-            </div>
-          </div>
-
-        </div>
-      )}
+      <ReassignmentDeactivateModal
+        isOpen={modalOpen}
+        title="Suspend Partner"
+        summaryBadgeText="Will be suspended"
+        subjectName={selectedPartner?.name || ""}
+        subjectMeta={
+          selectedPartner?.employeeId
+            ? `Employee ID: ${selectedPartner.employeeId}`
+            : ""
+        }
+        warningText="Linked customers and applications will be reassigned to the active partner you select. This action suspends the current partner."
+        searchValue={replacementSearch}
+        onSearchChange={setReplacementSearch}
+        searchPlaceholder="Search replacement partner..."
+        candidates={deactivatePartnerCandidates}
+        selectedId={newPartnerId}
+        onSelect={setNewPartnerId}
+        onCancel={handleCancelDeactivation}
+        onConfirm={handleConfirmDeactivation}
+        confirmLabel="Yes, Suspend"
+        confirmDisabled={!newPartnerId}
+      />
       <div className="min-h-screen" style={{ backgroundColor: "#F8FAFC" }}>
         {/* Header */}
         <div className="bg-white border-b border-gray-200">

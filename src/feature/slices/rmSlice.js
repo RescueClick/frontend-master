@@ -14,6 +14,8 @@ import {
   setPayouts, // ✅ Add setPayouts thunk
   getAnalytics,
   fetchRmPartnerTargets,
+  rmActivatePartner,
+  rmDeactivatePartner,
 } from "../thunks/rmThunks";
 
 
@@ -154,6 +156,71 @@ const rmSlice = createSlice({
         state.partner.error = action.payload;
         state.partner.success = false;
         state.partner.data = null;
+      })
+      .addCase(rmDeactivatePartner.pending, (state, action) => {
+        const { oldPartnerId } = action.meta.arg || {};
+        if (!Array.isArray(state.partner.data) || !oldPartnerId) return;
+        state.partner.data = state.partner.data.map((p) =>
+          String(p._id) === String(oldPartnerId)
+            ? { ...p, status: "INACTIVE", _optimistic: true }
+            : p
+        );
+      })
+      .addCase(rmDeactivatePartner.fulfilled, (state, action) => {
+        const { oldPartnerId } = action.meta.arg || {};
+        if (!Array.isArray(state.partner.data)) return;
+        state.partner.data = state.partner.data.map((p) =>
+          String(p._id) === String(oldPartnerId)
+            ? { ...p, status: "INACTIVE", _optimistic: false }
+            : p._optimistic
+              ? { ...p, _optimistic: false }
+              : p
+        );
+      })
+      .addCase(rmDeactivatePartner.rejected, (state, action) => {
+        const { oldPartnerId } = action.meta.arg || {};
+        if (!Array.isArray(state.partner.data)) return;
+        state.partner.data = state.partner.data.map((p) =>
+          String(p._id) === String(oldPartnerId)
+            ? { ...p, status: "ACTIVE", _optimistic: false }
+            : p._optimistic
+              ? { ...p, _optimistic: false }
+              : p
+        );
+      })
+      .addCase(rmActivatePartner.pending, (state, action) => {
+        const arg = action.meta.arg || {};
+        const partnerId = arg.partnerId || arg;
+        if (!Array.isArray(state.partner.data) || !partnerId) return;
+        state.partner.data = state.partner.data.map((p) =>
+          String(p._id) === String(partnerId)
+            ? { ...p, status: "ACTIVE", _optimistic: true }
+            : p
+        );
+      })
+      .addCase(rmActivatePartner.fulfilled, (state, action) => {
+        const arg = action.meta.arg || {};
+        const partnerId = arg.partnerId || arg;
+        if (!Array.isArray(state.partner.data)) return;
+        state.partner.data = state.partner.data.map((p) =>
+          String(p._id) === String(partnerId)
+            ? { ...p, status: "ACTIVE", _optimistic: false }
+            : p._optimistic
+              ? { ...p, _optimistic: false }
+              : p
+        );
+      })
+      .addCase(rmActivatePartner.rejected, (state, action) => {
+        const arg = action.meta.arg || {};
+        const partnerId = arg.partnerId || arg;
+        if (!Array.isArray(state.partner.data)) return;
+        state.partner.data = state.partner.data.map((p) =>
+          String(p._id) === String(partnerId)
+            ? { ...p, status: "INACTIVE", _optimistic: false }
+            : p._optimistic
+              ? { ...p, _optimistic: false }
+              : p
+        );
       });
 
     // ✅ RM Profile

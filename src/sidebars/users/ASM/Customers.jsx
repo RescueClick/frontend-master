@@ -7,6 +7,7 @@ import { useRealtimeData } from "../../../utils/useRealtimeData";
 import axios from "axios"
 import { useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
+import { getLoanStatusBadgeClass, getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
 
 
 
@@ -58,8 +59,8 @@ const Customer = () => {
         customer.id?.toLowerCase().includes(term) ||
         customer.phone?.toLowerCase().includes(term);
 
-      // Normalize DRAFT to SUBMITTED for filtering
-      const normalizedStatus = customer.status === "DRAFT" ? "SUBMITTED" : customer.status;
+      // Normalize loan status for consistent filtering
+      const normalizedStatus = normalizeLoanStatus(customer.status);
       const matchesFilter =
         filterStatus === "All" ||
         normalizedStatus?.toLowerCase() === filterStatus.toLowerCase();
@@ -73,20 +74,6 @@ const Customer = () => {
     });
   }, [customers, searchTerm, filterStatus]);
 
-
-  // Helpers for status color
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Disbursed":
-        return "bg-green-100 text-green-800";
-      case "In Process":
-        return "bg-amber-100 text-amber-800";
-      case "Rejected":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-slate-100 text-slate-800";
-    }
-  };
 
   const colors = {
     primary: "var(--color-brand-primary)",
@@ -264,7 +251,7 @@ const Customer = () => {
 
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
               <p className="text-xs text-gray-500">Status</p>
-              <p className="font-medium text-gray-800">{model.status}</p>
+              <p className="font-medium text-gray-800">{getLoanStatusLabel(model.status)}</p>
             </div>
           </div>
         </div>
@@ -387,11 +374,11 @@ const Customer = () => {
                   
                   <td className="px-2 py-4">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        customer.status === "DRAFT" ? "SUBMITTED" : customer.status
+                      className={`px-2 py-1 rounded-full text-xs font-medium border ${getLoanStatusBadgeClass(
+                        customer.status
                       )}`}
                     >
-                      {customer.status === "DRAFT" ? "SUBMITTED" : customer.status}
+                      {getLoanStatusLabel(customer.status)}
                     </span>
                   </td>
                   <td className="px-2 py-4">

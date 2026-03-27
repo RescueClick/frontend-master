@@ -70,10 +70,7 @@ const LoginPage = () => {
 
   const dispatch = useDispatch();
 
-  // const { loading, error, isAuthenticated } = useSelector(state => state.loginUser);
-  const { error, isAuthenticated, user, token, login } = useSelector(
-    (state) => state.admin
-  );
+  const { error: reduxLoginError } = useSelector((state) => state.admin.login);
 
   
 
@@ -98,12 +95,29 @@ const LoginPage = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.username.trim()) newErrors.username = 'Username is required';
+    const email = formData.username.trim();
+    if (!email) newErrors.username = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.username = 'Enter a valid email address';
+
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+ };
+
+
+  const routeForRole = (role) => {
+    const r = String(role || '').toUpperCase();
+    const map = {
+      SUPER_ADMIN: '/admin',
+      ASM: '/asm',
+      RSM: '/rsm',
+      RM: '/rm',
+      PARTNER: '/partner',
+      CUSTOMER: '/customer',
+    };
+    return map[r] || null;
   };
 
   // const handleSubmit = async (e) => {
@@ -171,24 +185,25 @@ const LoginPage = () => {
   
       // Dispatch login
       const result = await dispatch(
-        loginUser({ email: formData.username, password: formData.password })
+        loginUser({ email: formData.username.trim(), password: formData.password })
       ).unwrap();
-  
-      // Get auth data including impersonation stack
-      const { impersonationStack } = getAuthData();
-  
-      // Determine the current role (impersonated role if exists)
-      const lastRole = impersonationStack.length > 0
-        ? impersonationStack[impersonationStack.length - 1].user.role
-        : result.user.role;
-  
-      // Redirect based on current role
-      if (lastRole === "SUPER_ADMIN") navigate("/admin");
-      else if (lastRole === "ASM") navigate("/asm");
-      else if (lastRole === "RSM") navigate("/rsm");
-      else if (lastRole === "RM") navigate("/rm");
-      else if (lastRole === "PARTNER") navigate("/partner");
-      else if (lastRole === "CUSTOMER") navigate("/customer");
+
+      const { impersonationStack = [] } = getAuthData();
+      const impersonated =
+        impersonationStack.length > 0
+          ? impersonationStack[impersonationStack.length - 1]?.user?.role
+          : null;
+      const role = impersonated || result?.user?.role;
+      const path = routeForRole(role);
+
+      if (path) {
+        navigate(path, { replace: true });
+      } else {
+        setModalError(
+          `Your account role (${role || 'unknown'}) is not supported for web login. Please contact support.`
+        );
+        setShowErrorModal(true);
+      }
   
     } catch (err) {
       console.error("Login failed:", err);
@@ -345,7 +360,8 @@ const LoginPage = () => {
                   <input
                     id="username"
                     name="username"
-                    type="text"
+                    type="email"
+                    autoComplete="email"
                     value={formData.username}
                     onChange={handleInputChange}
                     className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${errors.username ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-brand-primary'
@@ -367,6 +383,7 @@ const LoginPage = () => {
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
                     value={formData.password}
                     onChange={handleInputChange}
                     className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-brand-primary'
@@ -425,7 +442,9 @@ const LoginPage = () => {
                     'Sign in'
                   )}
                 </button>
-                {error && <p className="mt-2 text-sm text-red-600 text-center">{error}</p>}
+                {reduxLoginError && !showErrorModal && (
+                  <p className="mt-2 text-sm text-red-600 text-center">{reduxLoginError}</p>
+                )}
               </div>
                 </div>
               </form>

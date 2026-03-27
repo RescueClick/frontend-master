@@ -7,8 +7,8 @@ import {
   createAsm,
   createRSM,
   createRm,
-  assignRmToAsm,
-  reassignAllRmsFromAsm,
+  adminDeactivateAsm,
+  adminDeactivateRsm,
   activateAsm,
   deleteAsm,
   fetchAnalyticsdashboard,
@@ -29,11 +29,10 @@ import {
   fetchAdminCustomerPartnersPayout,
   setAdminPayouts,
   activatePartner,
-  reassignCustomersAndDeactivatePartner,
+  adminDeactivatePartner,
   activateRM,
-  assignPartnersToRM,
+  adminDeactivateRM,
   activateRSM,
-  deactivateRSM,
   assignAsmBulkTarget,
   assignBulkTargetAll,
   uploadBanners,
@@ -97,14 +96,14 @@ const initialState = {
     data: null,
   },
   // Assign RM -> ASM action state
-  assignRmToAsm: {
+  adminDeactivateAsm: {
     loading: false,
     error: null,
     success: false,
     data: null,
   },
   // Bulk reassign RMs from old ASM to new ASM (deactivation)
-  reassignAllRmsFromAsm: {
+  adminDeactivateRsm: {
     loading: false,
     error: null,
     success: false,
@@ -368,10 +367,6 @@ const adminSlice = createSlice({
           action.payload?.token && action.payload?.user
         );
         state.login.success = true;
-
-        if (action.payload?.token && action.payload?.user) {
-          saveAuthData(action.payload.token, action.payload.user);
-        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.login.loading = false;
@@ -484,56 +479,143 @@ const adminSlice = createSlice({
 
     // 🔹 Assign RM to ASM
     builder
-      .addCase(assignRmToAsm.pending, (state) => {
-        state.assignRmToAsm.loading = true;
-        state.assignRmToAsm.error = null;
-        state.assignRmToAsm.success = false;
+      .addCase(adminDeactivateAsm.pending, (state, action) => {
+        state.adminDeactivateAsm.loading = true;
+        state.adminDeactivateAsm.error = null;
+        state.adminDeactivateAsm.success = false;
+        const { oldAsmId } = action.meta.arg || {};
+        if (Array.isArray(state.asm.data) && oldAsmId) {
+          state.asm.data = state.asm.data.map((asm) =>
+            String(asm._id) === String(oldAsmId)
+              ? { ...asm, status: "INACTIVE", _optimistic: true }
+              : asm
+          );
+        }
       })
-      .addCase(assignRmToAsm.fulfilled, (state, action) => {
-        state.assignRmToAsm.loading = false;
-        state.assignRmToAsm.data = action.payload;
-        state.assignRmToAsm.success = true;
+      .addCase(adminDeactivateAsm.fulfilled, (state, action) => {
+        state.adminDeactivateAsm.loading = false;
+        state.adminDeactivateAsm.data = action.payload;
+        state.adminDeactivateAsm.success = true;
+        const { oldAsmId } = action.meta.arg || {};
+        if (Array.isArray(state.asm.data) && oldAsmId) {
+          state.asm.data = state.asm.data.map((asm) =>
+            String(asm._id) === String(oldAsmId)
+              ? { ...asm, status: "INACTIVE", _optimistic: false }
+              : asm._optimistic
+                ? { ...asm, _optimistic: false }
+                : asm
+          );
+        }
       })
-      .addCase(assignRmToAsm.rejected, (state, action) => {
-        state.assignRmToAsm.loading = false;
-        state.assignRmToAsm.error = action.payload;
-        state.assignRmToAsm.success = false;
+      .addCase(adminDeactivateAsm.rejected, (state, action) => {
+        state.adminDeactivateAsm.loading = false;
+        state.adminDeactivateAsm.error = action.payload;
+        state.adminDeactivateAsm.success = false;
+        const { oldAsmId } = action.meta.arg || {};
+        if (Array.isArray(state.asm.data) && oldAsmId) {
+          state.asm.data = state.asm.data.map((asm) =>
+            String(asm._id) === String(oldAsmId)
+              ? { ...asm, status: "ACTIVE", _optimistic: false }
+              : asm._optimistic
+                ? { ...asm, _optimistic: false }
+                : asm
+          );
+        }
       });
 
     // 🔹 Bulk reassign all RMs from one ASM to another
     builder
-      .addCase(reassignAllRmsFromAsm.pending, (state) => {
-        state.reassignAllRmsFromAsm.loading = true;
-        state.reassignAllRmsFromAsm.error = null;
-        state.reassignAllRmsFromAsm.success = false;
+      .addCase(adminDeactivateRsm.pending, (state, action) => {
+        state.adminDeactivateRsm.loading = true;
+        state.adminDeactivateRsm.error = null;
+        state.adminDeactivateRsm.success = false;
+        const { rsmId } = action.meta.arg || {};
+        if (Array.isArray(state.rsm.data) && rsmId) {
+          state.rsm.data = state.rsm.data.map((rsm) =>
+            String(rsm._id) === String(rsmId)
+              ? { ...rsm, status: "INACTIVE", _optimistic: true }
+              : rsm
+          );
+        }
       })
-      .addCase(reassignAllRmsFromAsm.fulfilled, (state, action) => {
-        state.reassignAllRmsFromAsm.loading = false;
-        state.reassignAllRmsFromAsm.data = action.payload;
-        state.reassignAllRmsFromAsm.success = true;
+      .addCase(adminDeactivateRsm.fulfilled, (state, action) => {
+        state.adminDeactivateRsm.loading = false;
+        state.adminDeactivateRsm.data = action.payload;
+        state.adminDeactivateRsm.success = true;
+        const { rsmId } = action.meta.arg || {};
+        if (Array.isArray(state.rsm.data) && rsmId) {
+          state.rsm.data = state.rsm.data.map((rsm) =>
+            String(rsm._id) === String(rsmId)
+              ? { ...rsm, status: "INACTIVE", _optimistic: false }
+              : rsm._optimistic
+                ? { ...rsm, _optimistic: false }
+                : rsm
+          );
+        }
       })
-      .addCase(reassignAllRmsFromAsm.rejected, (state, action) => {
-        state.reassignAllRmsFromAsm.loading = false;
-        state.reassignAllRmsFromAsm.error = action.payload;
-        state.reassignAllRmsFromAsm.success = false;
+      .addCase(adminDeactivateRsm.rejected, (state, action) => {
+        state.adminDeactivateRsm.loading = false;
+        state.adminDeactivateRsm.error = action.payload;
+        state.adminDeactivateRsm.success = false;
+        const { rsmId } = action.meta.arg || {};
+        if (Array.isArray(state.rsm.data) && rsmId) {
+          state.rsm.data = state.rsm.data.map((rsm) =>
+            String(rsm._id) === String(rsmId)
+              ? { ...rsm, status: "ACTIVE", _optimistic: false }
+              : rsm._optimistic
+                ? { ...rsm, _optimistic: false }
+                : rsm
+          );
+        }
       });
 
     // 🔹 Activate ASM
     builder
-      .addCase(activateAsm.pending, (state) => {
+      .addCase(activateAsm.pending, (state, action) => {
         state.activateAsm.loading = true;
         state.activateAsm.error = null;
         state.activateAsm.success = false;
+        const arg = action.meta.arg;
+        const asmId = typeof arg === "string" ? arg : arg?.asmId;
+        if (Array.isArray(state.asm.data) && asmId) {
+          state.asm.data = state.asm.data.map((asm) =>
+            String(asm._id) === String(asmId)
+              ? { ...asm, status: "ACTIVE", _optimistic: true }
+              : asm
+          );
+        }
       })
       .addCase(activateAsm.fulfilled, (state, action) => {
         state.activateAsm.loading = false;
         state.activateAsm.data = action.payload;
         state.activateAsm.success = true;
+        const arg = action.meta.arg;
+        const asmId = typeof arg === "string" ? arg : arg?.asmId;
+        if (Array.isArray(state.asm.data) && asmId) {
+          state.asm.data = state.asm.data.map((asm) =>
+            String(asm._id) === String(asmId)
+              ? { ...asm, status: "ACTIVE", _optimistic: false }
+              : asm._optimistic
+                ? { ...asm, _optimistic: false }
+                : asm
+          );
+        }
       })
       .addCase(activateAsm.rejected, (state, action) => {
         state.activateAsm.loading = false;
         state.activateAsm.error = action.payload;
         state.activateAsm.success = false;
+        const arg = action.meta.arg;
+        const asmId = typeof arg === "string" ? arg : arg?.asmId;
+        if (Array.isArray(state.asm.data) && asmId) {
+          state.asm.data = state.asm.data.map((asm) =>
+            String(asm._id) === String(asmId)
+              ? { ...asm, status: "INACTIVE", _optimistic: false }
+              : asm._optimistic
+                ? { ...asm, _optimistic: false }
+                : asm
+          );
+        }
       });
 
     // 🔹 Delete ASM
@@ -945,24 +1027,34 @@ const adminSlice = createSlice({
       })
 
       // Activate Partner
-      .addCase(activatePartner.pending, (state) => {
+      .addCase(activatePartner.pending, (state, action) => {
         state.partner.loading = true;
         state.partner.error = null;
         state.partner.success = false;
+        const partnerId = action.meta.arg;
+        if (Array.isArray(state.partners.data) && partnerId) {
+          state.partners.data = state.partners.data.map((p) =>
+            String(p._id) === String(partnerId)
+              ? { ...p, status: "ACTIVE", _optimistic: true }
+              : p
+          );
+        }
       })
       .addCase(activatePartner.fulfilled, (state, action) => {
         state.partner.loading = false;
         state.partner.data = action.payload;
         state.partner.success = true;
+        const partnerId = action.meta.arg;
         // Update partner in partners list if exists
-        if (state.partners.data && Array.isArray(state.partners.data)) {
+        if (state.partners.data && Array.isArray(state.partners.data) && partnerId) {
           const index = state.partners.data.findIndex(
-            (p) => p._id === action.payload?.partner?._id,
+            (p) => String(p._id) === String(partnerId),
           );
           if (index !== -1) {
             state.partners.data[index] = {
               ...state.partners.data[index],
               status: "ACTIVE",
+              _optimistic: false,
             };
           }
         }
@@ -971,33 +1063,71 @@ const adminSlice = createSlice({
         state.partner.loading = false;
         state.partner.error = action.payload;
         state.partner.success = false;
+        const partnerId = action.meta.arg;
+        if (Array.isArray(state.partners.data) && partnerId) {
+          state.partners.data = state.partners.data.map((p) =>
+            String(p._id) === String(partnerId)
+              ? { ...p, status: "INACTIVE", _optimistic: false }
+              : p._optimistic
+                ? { ...p, _optimistic: false }
+                : p
+          );
+        }
       })
 
       // Reassign Customers and Deactivate Partner
-      .addCase(reassignCustomersAndDeactivatePartner.pending, (state) => {
+      .addCase(adminDeactivatePartner.pending, (state, action) => {
         state.partner.loading = true;
         state.partner.error = null;
         state.partner.success = false;
+        const { oldPartnerId } = action.meta.arg || {};
+        if (Array.isArray(state.partners.data) && oldPartnerId) {
+          state.partners.data = state.partners.data.map((p) =>
+            String(p._id) === String(oldPartnerId)
+              ? { ...p, status: "INACTIVE", _optimistic: true }
+              : p
+          );
+        }
       })
       .addCase(
-        reassignCustomersAndDeactivatePartner.fulfilled,
+        adminDeactivatePartner.fulfilled,
         (state, action) => {
           state.partner.loading = false;
           state.partner.data = action.payload;
           state.partner.success = true;
+          const { oldPartnerId } = action.meta.arg || {};
+          if (Array.isArray(state.partners.data) && oldPartnerId) {
+            state.partners.data = state.partners.data.map((p) =>
+              String(p._id) === String(oldPartnerId)
+                ? { ...p, status: "INACTIVE", _optimistic: false }
+                : p._optimistic
+                  ? { ...p, _optimistic: false }
+                  : p
+            );
+          }
         },
       )
       .addCase(
-        reassignCustomersAndDeactivatePartner.rejected,
+        adminDeactivatePartner.rejected,
         (state, action) => {
           state.partner.loading = false;
           state.partner.error = action.payload;
           state.partner.success = false;
+          const { oldPartnerId } = action.meta.arg || {};
+          if (Array.isArray(state.partners.data) && oldPartnerId) {
+            state.partners.data = state.partners.data.map((p) =>
+              String(p._id) === String(oldPartnerId)
+                ? { ...p, status: "ACTIVE", _optimistic: false }
+                : p._optimistic
+                  ? { ...p, _optimistic: false }
+                  : p
+            );
+          }
         },
       )
 
       // 🔹 Assign Partners to RM ----------------------------------------------
-      .addCase(assignPartnersToRM.pending, (state, action) => {
+      .addCase(adminDeactivateRM.pending, (state, action) => {
         state.partner.loading = true;
         state.partner.error = null;
         state.partner.success = false;
@@ -1013,7 +1143,7 @@ const adminSlice = createSlice({
           );
         }
       })
-      .addCase(assignPartnersToRM.fulfilled, (state, action) => {
+      .addCase(adminDeactivateRM.fulfilled, (state, action) => {
         state.partner.loading = false;
         state.partner.data = action.payload;
         state.partner.success = true;
@@ -1039,7 +1169,7 @@ const adminSlice = createSlice({
           );
         }
       })
-      .addCase(assignPartnersToRM.rejected, (state, action) => {
+      .addCase(adminDeactivateRM.rejected, (state, action) => {
         state.partner.loading = false;
         state.partner.error = action.payload;
         state.partner.success = false;
@@ -1145,38 +1275,50 @@ const adminSlice = createSlice({
       //----------------------------------------------------------------------------------------------------------------------------------------------//
 
       // Activate RSM
-      .addCase(activateRSM.pending, (state) => {
+      .addCase(activateRSM.pending, (state, action) => {
         state.rsm.loading = true;
         state.rsm.error = null;
         state.rsm.success = false;
+        const rsmId = action.meta.arg;
+        if (Array.isArray(state.rsm.data) && rsmId) {
+          state.rsm.data = state.rsm.data.map((rsm) =>
+            String(rsm._id) === String(rsmId)
+              ? { ...rsm, status: "ACTIVE", _optimistic: true }
+              : rsm
+          );
+        }
       })
       .addCase(activateRSM.fulfilled, (state, action) => {
         state.rsm.loading = false;
         state.rsm.data = action.payload;
         state.rsm.success = true;
+        const rsmId = action.meta.arg;
+        if (Array.isArray(state.rsm.data) && rsmId) {
+          state.rsm.data = state.rsm.data.map((rsm) =>
+            String(rsm._id) === String(rsmId)
+              ? { ...rsm, status: "ACTIVE", _optimistic: false }
+              : rsm._optimistic
+                ? { ...rsm, _optimistic: false }
+                : rsm
+          );
+        }
       })
       .addCase(activateRSM.rejected, (state, action) => {
         state.rsm.loading = false;
         state.rsm.error = action.payload;
         state.rsm.success = false;
+        const rsmId = action.meta.arg;
+        if (Array.isArray(state.rsm.data) && rsmId) {
+          state.rsm.data = state.rsm.data.map((rsm) =>
+            String(rsm._id) === String(rsmId)
+              ? { ...rsm, status: "INACTIVE", _optimistic: false }
+              : rsm._optimistic
+                ? { ...rsm, _optimistic: false }
+                : rsm
+          );
+        }
       })
 
-      // Deactivate RSM
-      .addCase(deactivateRSM.pending, (state) => {
-        state.rsm.loading = true;
-        state.rsm.error = null;
-        state.rsm.success = false;
-      })
-      .addCase(deactivateRSM.fulfilled, (state, action) => {
-        state.rsm.loading = false;
-        state.rsm.data = action.payload;
-        state.rsm.success = true;
-      })
-      .addCase(deactivateRSM.rejected, (state, action) => {
-        state.rsm.loading = false;
-        state.rsm.error = action.payload;
-        state.rsm.success = false;
-      })
 
       // Assign ASM Bulk Target
       .addCase(assignAsmBulkTarget.pending, (state) => {

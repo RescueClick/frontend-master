@@ -216,14 +216,19 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="asm" element={<AdiminASM />} />
+        <Route path="rsm" element={<AdminRSM />} />
         <Route path="RSM" element={<AdminRSM />} />
         <Route path="rm" element={<AdminRM />} />
+        <Route path="RM" element={<AdminRM />} />
         <Route path="partner" element={<AdminPartner />} />
+        <Route path="Partner" element={<AdminPartner />} />
         <Route path="customer" element={<AdiminCustomer />} />
         <Route path="target" element={<SetTarget />} />
         <Route path="partner-targets" element={<PartnerTargets />} />
         <Route path="banks" element={<AdiminBanks />} />
+        <Route path="analytics" element={<Analytics />} />
         <Route path="Analytics" element={<Analytics />} />
+        <Route path="rm-partner" element={<RMpartner />} />
         <Route path="RM-partner" element={<RMpartner />} />
         <Route path="delete-requests" element={<DeleteAccountRequests />} />
         <Route path="settings" element={<AdminSettings />} />
@@ -264,6 +269,7 @@ const AppRoutes = () => {
         <Route path="partner-targets" element={<AsmPartnerTargets />} />
         <Route path="settings" element={<PasswordSettings  />} />
         <Route path="EditProfile" element={<EditProfile />} />
+        <Route path="analytics" element={<ASManalytics />} />
         <Route path="ASManalytics" element={<ASManalytics />} />
       </Route>
       </Route>
@@ -298,6 +304,7 @@ const AppRoutes = () => {
         <Route path="Revenue-generated" element={<RevenueGenerated/>} />
         <Route path="add-partner" element={<AddPartnerPage/>}/>
 
+        <Route path="analytics" element={<RManalytics/>}/>
         <Route path="RManalytics" element={<RManalytics/>}/>
         <Route path="Rm-Application" element={<RmApplication/>}/>
         <Route path="partner-targets" element={<RmPartnerTargets />} />

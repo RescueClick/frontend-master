@@ -31,6 +31,22 @@ import {
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
+import MetricCard from "../../../components/shared/MetricCard";
+import { formatCurrency } from "../../../utils/designSystem";
+
+const formatCurrencyFull = (amount) => {
+  const value = Number(amount || 0);
+  return `₹ ${value.toLocaleString("en-IN")}`;
+};
+
+const formatLoanTypeLabel = (loanType) => {
+  if (!loanType) return "Personal Loan";
+  return loanType
+    .toString()
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
 
 
 const colors = {
@@ -119,6 +135,8 @@ const Customers = () => {
 
   const [loanTypeOpen, setLoanTypeOpen] = useState(false);
   const [selectedLoanType, setSelectedLoanType] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
 
 
   const location = useLocation();
@@ -215,6 +233,22 @@ const Customers = () => {
     return bTime - aTime; // newest first
   });
 
+  const totalPages = Math.max(1, Math.ceil(sortedFilteredCustomers.length / rowsPerPage));
+  const paginatedCustomers = sortedFilteredCustomers.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedFilter, selectedLoanType]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const loanTypeOptions = [
     { label: "All", value: "All" },
     { label: "Business Loan", value: "BUSINESS" },
@@ -302,24 +336,41 @@ const Customers = () => {
       title: "Total Customers",
       value: customers.length,
       icon: Users,
+      subtitle: "All assigned customers",
+      onClick: () => navigate("/rm/customers"),
     },
 
     {
       title: "In Process",
       value: InProcessCount(customers),
       icon: TrendingUp,
+      subtitle: "Applications under process",
+      onClick: () => {
+        setSelected("IN_PROCESS");
+        setSelectedFilter("in_process");
+      },
     },
 
     {
       title: "Rejected",
       value: RejectedCount(customers),
       icon: UserPlus,
+      subtitle: "Needs follow-up",
+      onClick: () => {
+        setSelected("REJECTED");
+        setSelectedFilter("rejected");
+      },
     },
 
     {
       title: "Total Disbursed",
       value: DisbursedCount(customers),
       icon: CreditCard,
+      subtitle: "Completed disbursement",
+      onClick: () => {
+        setSelected("DISBURSED");
+        setSelectedFilter("disbursed");
+      },
     },
   ];
 
@@ -398,35 +449,29 @@ loginAsUser(userId, navigate);
 
   return (
     <>
-      <div className="bg-gray-50 min-h-screen text-gray-900">
-        <main className="">
+      <div className="min-h-screen bg-gray-50 text-gray-900">
+        <main className="mx-auto flex max-w-7xl flex-col gap-4 p-3 md:gap-5 md:p-6">
           {/* Stats Cards */}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4 ">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             {stats.map((stat, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl shadow p-3 flex flex-col"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="bg-teal-500 p-3 rounded-lg text-white">
-                    <stat.icon size={24} />
-                  </div>
-                </div>
-
-                <h3 className="text-2xl font-bold">{stat.value}</h3>
-
-                <p className="text-gray-600 font-bold text-sm">{stat.count}</p>
-
-                <p className="text-gray-600 text-sm">{stat.title}</p>
-              </div>
+              <MetricCard
+                key={stat.title}
+                title={stat.title}
+                value={stat.value}
+                icon={stat.icon}
+                subtitle={stat.subtitle}
+                onClick={stat.onClick}
+                colorIndex={index}
+                compact
+              />
             ))}
           </div>
 
           {/* Search & Filter */}
 
-          <div className="bg-white rounded-xl shadow p-3 mb-3">
-            <div className="flex flex-col sm:flex-row gap-4">
+          <div className="mb-2 rounded-xl bg-white p-2 shadow">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               {/* Search */}
 
               <div className="flex-1 relative">
@@ -440,7 +485,7 @@ loginAsUser(userId, navigate);
                   placeholder="Search customers by name or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                  className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-xs focus:ring-2 focus:ring-teal-500"
                 />
               </div>
 
@@ -448,7 +493,7 @@ loginAsUser(userId, navigate);
               <div className="relative">
                 <button
                   onClick={() => setLoanTypeOpen((prev) => !prev)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-lg flex items-center gap-2 transition"
+                  className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-xs text-white transition hover:bg-teal-700"
                   type="button"
                 >
                   <span>{selectedLoanType || "Loan Type"}</span>
@@ -480,7 +525,7 @@ loginAsUser(userId, navigate);
               <div className="relative">
                 <button
                   onClick={() => setOpen(!open)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-lg flex items-center gap-2 transition"
+                  className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-xs text-white transition hover:bg-teal-700"
                 >
                   <Filter size={20} />
 
@@ -520,110 +565,90 @@ loginAsUser(userId, navigate);
 
           {/* Customer Table */}
 
-          <div className="bg-white rounded-xl shadow overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className=" flex justify-between ">
-                <div className="">
-                  {" "}
-                  <h2 className="text-lg font-semibold">Customer List </h2>
+          <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-4 py-3 md:px-5">
+              <div className="flex justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">Customer List</h2>
                 </div>
-                <div className="">
-                  {" "}
-                  <h2 className="flex items-center justify-center text-sm font-semibold bg-teal-600 px-4 py-2 text-white">
-                    {filteredCustomers.length}{" "}
-                  </h2>{" "}
+                <div>
+                  <h2 className="flex items-center justify-center rounded-md bg-teal-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                    {filteredCustomers.length}
+                  </h2>
                 </div>
               </div>
 
-              <p className="text-gray-600 text-sm">
+              <p className="text-xs text-slate-500">
                 Manage and view all customer information
               </p>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className=" bg-teal-500">
+              <table className="w-full table-fixed text-xs md:text-sm">
+                <thead className="sticky top-0 z-10 bg-teal-500">
                   <tr>
-                    <th className="px-6 py-3 text-left font-medium text-white">
+                    <th className="w-[17%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
                       User Name
                     </th>
 
-                    <th className="px-6 py-3 text-left font-medium text-white">
-                      User Id
-                    </th>
-
-                    <th className="px-6 py-3 text-left font-medium text-white">
-                      Contact
-                    </th>
-
-                    <th className="px-6 py-3 text-left font-medium text-white">
+                    <th className="w-[13%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
                       Application Date
                     </th>
 
-                    <th className="px-6 py-3 text-left font-medium text-white">
+                    <th className="w-[19%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
                       Loan Type
                     </th>
 
-                    <th className="px-6 py-3 text-left font-medium text-white">
+                    <th className="w-[15%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
                       Loan Amount
                     </th>
 
-                    <th className="px-6 py-3 text-left font-medium text-white">
+                    <th className="w-[15%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
                       Approval Amount
                     </th>
                     
                  
-                    <th className="px-6 py-3 text-left font-medium text-white">
+                    <th className="w-[10%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
                       Status
                     </th>
 
-                    <th className="px-6 py-3 text-left font-medium text-white">
+                    <th className="w-[8%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
                       Action
                     </th>
                   </tr>
                 </thead>
 
-                <tbody>
-                    {sortedFilteredCustomers.map((customer) => (
+                <tbody className="divide-y divide-slate-100">
+                    {paginatedCustomers.map((customer) => (
                     <tr
                       key={customer.id}
-                      className="border-b border-gray-100 hover:bg-gray-50"
+                      className="align-top transition-colors hover:bg-slate-50/70"
                     >
                       {/* User Name */}
 
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
+                      <td className="px-2 py-2.5 align-top md:px-2.5">
+                        <div className="flex items-start gap-1.5">
                           <div>
-                            <p className="font-medium">
+                            <p className="truncate text-sm font-semibold leading-5 text-slate-900 md:text-sm" title={customer.firstName && customer.lastName
+                                ? `${customer.firstName} ${customer.lastName}`.trim()
+                                : customer.customerName || "N/A"}>
                               {customer.firstName && customer.lastName
                                 ? `${customer.firstName} ${customer.lastName}`.trim()
                                 : customer.customerName || "N/A"}
                             </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* User Id */}
-
-                      <td className="px-6 py-4">
-                        <p className="text-xs text-gray-500">
-                          {customer?.customerEmployeeId}
-                        </p>
-                      </td>
-
-                      {/* Contact */}
-
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            {customer.contact || "N/A"}
+                            <p className="mt-0.5 break-words text-[11px] text-slate-500">
+                              ID: {customer?.customerEmployeeId || "N/A"}
+                            </p>
+                            <p className="break-words text-[11px] text-slate-500">
+                              Contact: {customer.contact || "N/A"}
+                            </p>
                           </div>
                         </div>
                       </td>
 
                       {/* Application Date */}
 
-                      <td className="px-6 py-4 text-gray-600">
+                      <td className="break-words px-2 py-2.5 align-top text-xs text-slate-600 md:px-2.5">
                         {customer.createdAt
                           ? new Date(customer.createdAt).toLocaleDateString()
                           : customer.joinDate || "N/A"}
@@ -631,33 +656,34 @@ loginAsUser(userId, navigate);
 
                       {/* Loan Type */}
 
-                      <td className="px-6 py-4">
+                      <td className="overflow-hidden px-2 py-2.5 align-top md:px-2.5">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(
+                          className={`inline-flex max-w-[170px] whitespace-normal break-all rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4 ${getAccountTypeColor(
                             customer.loanType || "Personal Loan"
                           )}`}
+                          title={formatLoanTypeLabel(customer.loanType)}
                         >
-                          {customer.loanType || "Personal Loan"}
+                          {formatLoanTypeLabel(customer.loanType)}
                         </span>
                       </td>
 
                       {/* Loan Amount */}
 
-                      <td className="px-6 py-4 font-semibold">
-                        ₹ {customer.requestedAmount}
+                      <td className="break-words px-2 py-2.5 align-top text-xs font-semibold text-slate-800 md:px-2.5">
+                        {formatCurrencyFull(customer.requestedAmount || 0)}
                       </td>
 
                       {/* Approval Amount */}
 
-                      <td className="px-6 py-4 font-semibold">
-                        {customer.approvedAmount ? `₹ ${customer.approvedAmount} ` : "-"}
+                      <td className="break-words px-2 py-2.5 align-top text-xs font-semibold text-slate-800 md:px-2.5">
+                        {customer.approvedAmount ? formatCurrencyFull(customer.approvedAmount) : "-"}
                       </td>
 
                       {/* Status */}
 
-                      <td className="px-6 py-4">
+                      <td className="px-2 py-2.5 align-top md:px-2.5">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                          className={`inline-flex max-w-full break-words rounded-full px-2 py-0.5 text-[11px] font-semibold ${getStatusColor(
                             customer.status === "DRAFT" ? "SUBMITTED" : customer.status
                           )}`}
                         >
@@ -667,8 +693,8 @@ loginAsUser(userId, navigate);
 
                       {/* Action */}
 
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                      <td className="px-2 py-2.5 align-top md:px-2.5">
+                        <div className="flex items-center">
                           <button
                             onClick={() => {
                               navigate("/rm/CustomerAppliction", {
@@ -678,10 +704,11 @@ loginAsUser(userId, navigate);
                                 },
                               });
                             }}
-                            className="p-2 rounded hover:bg-gray-100"
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:border-teal-200 hover:bg-teal-50"
                             title="View"
                           >
-                            <Eye size={16} className="text-teal-600" />
+                            <Eye size={13} className="text-teal-600" />
+                            <span className="hidden md:inline">View</span>
                           </button>
                         </div>
                       </td>
@@ -690,6 +717,36 @@ loginAsUser(userId, navigate);
                 </tbody>
               </table>
             </div>
+
+            {sortedFilteredCustomers.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-2.5">
+                <p className="text-xs text-slate-600">
+                  Showing {(currentPage - 1) * rowsPerPage + 1}-
+                  {Math.min(currentPage * rowsPerPage, sortedFilteredCustomers.length)} of {sortedFilteredCustomers.length}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+                  <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                    Page {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
 
             {sortedFilteredCustomers.length === 0 && (
               <div className="py-12 text-center">

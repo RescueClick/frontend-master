@@ -16,11 +16,14 @@ import {
   Shield,
   X,
 } from "lucide-react";
-import Modal from "../../../../components/Modal"; // Assume you have or will create a Modal component
 import axios from "axios";
+import toast from "react-hot-toast";
 import { z } from "zod";
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
+import LoanStepper from "../../../../components/loan/LoanStepper";
+import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
+import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 
 export default function BusinessLoan() {
   const defaultReferralCode = 'PT-D4CTD8B2'
@@ -107,7 +110,7 @@ export default function BusinessLoan() {
   });
 
   const [sameAddress, setSameAddress] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [documentModel, setdocumentModel] = useState(null);
   const [applicationId, setApplicationId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -145,8 +148,40 @@ export default function BusinessLoan() {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      if (documentModel && documentModel.startsWith("blob:")) {
+        URL.revokeObjectURL(documentModel);
+      }
     };
-  }, []);
+  }, [documentModel]);
+
+  const openDocumentPreview = (docValue) => {
+    if (!docValue) return;
+    const url =
+      docValue?.preview
+        ? docValue.preview
+        : docValue instanceof File
+        ? URL.createObjectURL(docValue)
+        : "";
+    if (url) setdocumentModel(url);
+  };
+  const renderPreviewLink = (fieldName) =>
+    formData[fieldName] ? (
+      <button
+        type="button"
+        className="mt-1 text-sm font-medium text-blue-600 underline"
+        onClick={() => openDocumentPreview(formData[fieldName])}
+      >
+        Preview selected file
+      </button>
+    ) : null;
+
+  useEffect(() => {
+    if (successMessage) toast.success(successMessage);
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (error) toast.error(error);
+  }, [error]);
 
   const serializeDraftFormData = (data) => {
     const copy = { ...data };
@@ -608,6 +643,7 @@ function validateForm(formData) {
 
 
 const handleSubmit = async () => {
+  if (loading) return;
   console.log("working");
 
   setLoading(true);
@@ -753,9 +789,9 @@ const handleSubmit = async () => {
     setApplicationId(data.id);
     setSavedApplication(data);
     setSuccessMessage(
-      data.message || "Application saved successfully. You can submit now."
+      data.message || "Application saved successfully. Submitting now."
     );
-    setModalOpen(true);
+    await handleApplyNow(data.id);
   } catch (err) {
     // Handle different error types
     if (axios.isCancel(err)) {
@@ -801,21 +837,24 @@ const handleSubmit = async () => {
   }
 };
 
-  const handleApplyNow = async () => {
-    if (!applicationId) return;
+  const handleApplyNow = async (forcedApplicationId) => {
+    if (loading) return;
+    const targetApplicationId = forcedApplicationId || applicationId;
+    if (!targetApplicationId) return;
     setLoading(true);
     setError("");
     try {
       const { partnerToken } = getAuthData();
       if (!partnerToken) {
-        setModalOpen(false);
+        setSuccessMessage("Application submitted successfully.");
+        resetFields();
         return;
       }
       // Create AbortController for request cancellation
       abortControllerRef.current = new AbortController();
 
       await axios.post(
-        `${backendurl}/partner/applications/${applicationId}/submit`,
+        `${backendurl}/partner/applications/${targetApplicationId}/submit`,
         {},
         {
           headers: {
@@ -825,7 +864,6 @@ const handleSubmit = async () => {
           signal: abortControllerRef.current.signal,
         }
       );
-      setModalOpen(false);
       setSuccessMessage("Application submitted successfully.");
       resetFields();
     } catch (err) {
@@ -963,6 +1001,9 @@ const handleSubmit = async () => {
       <p className="text-red-500 text-sm mt-1">{validationErrors[field]}</p>
     ) : null;
   };
+  const stepErrorCounts = steps.map((_, idx) =>
+    idx <= 4 ? Object.keys(validateBusinessLoanStep(idx, formData)).length : 0
+  );
   
 
 
@@ -971,6 +1012,15 @@ const handleSubmit = async () => {
       className="min-h-screen py-8 px-4"
       style={{ backgroundColor: "#F8FAFC" }}
     >
+      <DocumentPreviewModal
+        url={documentModel}
+        onClose={() => {
+          if (documentModel && documentModel.startsWith("blob:")) {
+            URL.revokeObjectURL(documentModel);
+          }
+          setdocumentModel(null);
+        }}
+      />
       <style>{`
         input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] {
           border-color: #EF4444 !important;
@@ -1033,47 +1083,20 @@ const handleSubmit = async () => {
             </p>
           </div>
 
-          <div className="p-8 space-y-8">
-            <div className="px-8 pt-5 pb-2 bg-slate-50 border-b border-slate-200 -mx-8 mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
-                {steps.map((step, idx) => {
-                  const isActive = idx === currentStep;
-                  const isDone = idx < currentStep;
-                  const isClickable = idx <= maxStep;
-                  return (
-                    <button
-                      key={step}
-                      type="button"
-                      onClick={() => {
-                        if (!isClickable) return;
-                        setShowClientValidation(false);
-                        setError("");
-                        setCurrentStep(idx);
-                      }}
-                      disabled={!isClickable}
-                      className="rounded-lg border px-2 py-2 text-center font-medium transition-colors"
-                      style={{
-                        borderColor: isActive
-                          ? "var(--color-brand-primary)"
-                          : isDone
-                          ? "#22C55E"
-                          : "#CBD5E1",
-                        backgroundColor: isActive ? "#EEF2FF" : "#FFFFFF",
-                        color: isActive ? "#4F46E5" : "#334155",
-                        opacity: isClickable ? 1 : 0.6,
-                        cursor: isClickable ? "pointer" : "not-allowed",
-                      }}
-                      aria-current={isActive ? "step" : undefined}
-                    >
-                      {idx + 1}. {step}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-3 text-xs text-slate-600">
-                Complete step-by-step. Your progress is saved on this device.
-              </p>
-            </div>
+          <div className="p-6 space-y-6">
+            <LoanStepper
+              steps={steps}
+              currentStep={currentStep}
+              maxStep={maxStep}
+              loading={loading}
+              stepErrorCounts={stepErrorCounts}
+              helperText="Complete step-by-step. Your progress is saved on this device."
+              onStepClick={(idx) => {
+                setShowClientValidation(false);
+                setError("");
+                setCurrentStep(idx);
+              }}
+            />
 
             {/* Personal Information */}
             <section hidden={currentStep !== 0} id="loan-business-step-personal">
@@ -1792,17 +1815,20 @@ const handleSubmit = async () => {
                     </span>
                   </label>
                   {formData.lightBillSelected && (
-                    <input
-                      type="file"
-                      name="lightBill"
-                      onChange={handleFileChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                    />
+                    <>
+                      <input
+                        type="file"
+                        name="lightBill"
+                        onChange={handleFileChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+                      {renderPreviewLink("lightBill")}
+                    </>
                   )}
                 </div>
                 <div>
@@ -1828,17 +1854,20 @@ const handleSubmit = async () => {
                     </span>
                   </label>
                   {formData.utilityBillSelected && (
-                    <input
-                      type="file"
-                      name="utilityBill"
-                      onChange={handleFileChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                    />
+                    <>
+                      <input
+                        type="file"
+                        name="utilityBill"
+                        onChange={handleFileChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+                      {renderPreviewLink("utilityBill")}
+                    </>
                   )}
                 </div>
                 <div>
@@ -1864,17 +1893,20 @@ const handleSubmit = async () => {
                     </span>
                   </label>
                   {formData.rentAgreementSelected && (
-                    <input
-                      type="file"
-                      name="rentAgreement"
-                      onChange={handleFileChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                    />
+                    <>
+                      <input
+                        type="file"
+                        name="rentAgreement"
+                        onChange={handleFileChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+                      {renderPreviewLink("rentAgreement")}
+                    </>
                   )}
                 </div>
               </div>
@@ -1893,186 +1925,26 @@ const handleSubmit = async () => {
                 Upload in order: Aadhaar Front, Aadhaar Back, PAN, Applicant Photo.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Aadhar Front */}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Aadhar Front *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      name="aadharFront"
-                      onChange={handleFileChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      required
-                    />
-                      {formData.aadharFront ? "" : renderError("aadharFront")}
-                    {formData.aadharFront && (
-                      <button
-                        type="button"
-                        onClick={() => handleFileRemove("aadharFront")}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-red-100 transition-colors"
-                        style={{ color: "#EF4444" }}
-                        title="Remove file"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                  {formData.aadharFront && (
-                    <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                      <span>✓</span> {formData.aadharFront.name}
-                    </p>
-                  )}
-                </div>
-                {/* Aadhar Back */}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Aadhar Back *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      name="aadharBack"
-                      onChange={handleFileChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      required
-                    />
-                      { formData.aadharBack ? "" : renderError("aadharBack")}
-                    {formData.aadharBack && (
-                      <button
-                        type="button"
-                        onClick={() => handleFileRemove("aadharBack")}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-red-100 transition-colors"
-                        style={{ color: "#EF4444" }}
-                        title="Remove file"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                  {formData.aadharBack && (
-                    <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                      <span>✓</span> {formData.aadharBack.name}
-                    </p>
-                  )}
-                </div>
-                {/* Other Docs */}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Other Docs
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      name="otherDocs"
-                      onChange={handleFileChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                    />
-                    {formData.otherDocs && (
-                      <button
-                        type="button"
-                        onClick={() => handleFileRemove("otherDocs")}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-red-100 transition-colors"
-                        style={{ color: "#EF4444" }}
-                        title="Remove file"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                  {formData.otherDocs && (
-                    <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                      <span>✓</span> {formData.otherDocs.name}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    PAN Card *
-                  </label>
-                  <input
-                    type="file"
-                    name="panCard"
+                {[
+                  { name: "aadharFront", label: "Aadhar Front *", required: true },
+                  { name: "aadharBack", label: "Aadhar Back *", required: true },
+                  { name: "otherDocs", label: "Other Docs", required: false },
+                  { name: "panCard", label: "PAN Card *", required: true },
+                  { name: "selfie", label: "Upload Selfie *", required: true, accept: ".jpg,.jpeg,.png" },
+                ].map((doc) => (
+                  <DocumentUploadCard
+                    key={doc.name}
+                    name={doc.name}
+                    label={doc.label}
+                    file={formData[doc.name]}
+                    accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
+                    required={doc.required}
                     onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
+                    onRemove={handleFileRemove}
+                    error={renderError(doc.name)}
+                    onPreview={() => openDocumentPreview(formData[doc.name])}
                   />
-                   {formData.panCard ? "" : renderError("panCard")}
-                </div>
-                {/* Selfie Upload */}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Upload Selfie *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      name="selfie"
-                      onChange={handleFileChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      accept=".jpg,.jpeg,.png"
-                      required
-                    />
-                    {formData.selfie && (
-                      <button
-                        type="button"
-                        onClick={() => handleFileRemove("selfie")}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-red-100 transition-colors"
-                        style={{ color: "#EF4444" }}
-                        title="Remove file"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    )}
-                     {formData.selfie ? "" : renderError("selfie")}
-
-                  </div>
-                  {formData.selfie && (
-                    <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                      <span>✓</span> {formData.selfie.name}
-                    </p>
-                  )}
-                </div>
+                ))}
               </div>
             </section>
 
@@ -2111,6 +1983,7 @@ const handleSubmit = async () => {
                         required
                       />
                       { formData.coApplicantAadharFront ? "" : renderError("coApplicantAadharFront")}
+                      {renderPreviewLink("coApplicantAadharFront")}
                     </div>
                     <div>
                       <label
@@ -2132,6 +2005,7 @@ const handleSubmit = async () => {
                         required
                       />
                            { formData.coApplicantAadharBack ? "" : renderError("coApplicantAadharBack")}
+                      {renderPreviewLink("coApplicantAadharBack")}
                     </div>
                     <div>
                       <label
@@ -2153,6 +2027,7 @@ const handleSubmit = async () => {
                         required
                       />
                         { formData.coApplicantPan ? "" : renderError("coApplicantPan")}
+                      {renderPreviewLink("coApplicantPan")}
                     </div>
                     <div>
                       <label
@@ -2202,6 +2077,7 @@ const handleSubmit = async () => {
                         required
                       />
                         { formData.coApplicantSelfie ? "" : renderError("coApplicantSelfie")}
+                      {renderPreviewLink("coApplicantSelfie")}
                     </div>
                   </div>
                 </div>
@@ -2406,6 +2282,7 @@ const handleSubmit = async () => {
                     required
                   />
                     {formData.shopAct ? "" : renderError("shopAct")}
+                  {renderPreviewLink("shopAct")}
                 </div>
                 <div>
                   <label
@@ -2427,6 +2304,7 @@ const handleSubmit = async () => {
                     required
                   />
                      { formData.udhyamAadhar ?  "" : renderError("udhyamAadhar")}
+                  {renderPreviewLink("udhyamAadhar")}
                 </div>
                 <div>
                   <label
@@ -2448,6 +2326,7 @@ const handleSubmit = async () => {
                     required
                   />
                     { formData.itr ? "" : renderError("itr")}
+                  {renderPreviewLink("itr")}
                 </div>
                 <div>
                   <label
@@ -2467,6 +2346,7 @@ const handleSubmit = async () => {
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
                   />
+                  {renderPreviewLink("gstDoc")}
                 </div>
                 <div>
                   <label
@@ -2493,6 +2373,7 @@ const handleSubmit = async () => {
                       required
                     />
                        {formData.shopPhoto ? "" : renderError("shopPhoto")}
+                  {renderPreviewLink("shopPhoto")}
                   </div>
                 </div>
                 <div>
@@ -2513,6 +2394,7 @@ const handleSubmit = async () => {
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
                   />
+                  {renderPreviewLink("businessOtherDocs")}
                 </div>
               </div>
             </section>
@@ -2556,6 +2438,7 @@ const handleSubmit = async () => {
                     Upload last 12 months bank statement
                   </p>
                   { formData.bankStatementFile1 ? "" : renderError("bankStatementFile1")}
+                  {renderPreviewLink("bankStatementFile1")}
                 </div>
                 <div>
                   <label
@@ -2575,6 +2458,7 @@ const handleSubmit = async () => {
                     }}
                     accept=".pdf,.jpg,.jpeg,.png"
                   />
+                  {renderPreviewLink("bankStatementFile2")}
                 </div>
               </div>
             </section>
@@ -2846,31 +2730,6 @@ const handleSubmit = async () => {
           </div>
         </div>
       </div>
-      {modalOpen && (
-        <Modal onClose={() => setModalOpen(false)}>
-          <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">
-              Your application has been saved.
-            </h2>
-            <p className="mb-4">Do you want to submit it?</p>
-            {error && <div className="text-red-500 mb-2">{error}</div>}
-            <button
-              className="px-6 py-2 bg-green-600 text-white rounded-lg mr-4"
-              onClick={handleApplyNow}
-              disabled={loading}
-            >
-              {loading ? "Submitting..." : "Apply Now"}
-            </button>
-            <button
-              className="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg"
-              onClick={() => setModalOpen(false)}
-              disabled={loading}
-            >
-              Cancel
-            </button>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

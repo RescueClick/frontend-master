@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Edit, Trash, Plus, X, Calendar, IndianRupee, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -6,26 +6,22 @@ import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import {
   fetchAsms,
   fetchRMs,
-  assignRmToAsm,
-  reassignAllRmsFromAsm,
+  adminDeactivateAsm,
   activateAsm,
   assignAsmBulkTarget,
   deleteAsm,
 } from "../../../feature/thunks/adminThunks";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
-// Import core + React wrapper
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
-// Import the specific icon you need
-import { faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import { loginAsUserThunk } from "../../../feature/thunks/adminThunks";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 
 
 const colors = {
@@ -67,6 +63,26 @@ export default function ASM() {
   const { data: asm, loading, error } = useSelector((state) => state.admin.asm);
   const sortedAsm = sortNewestFirst(Array.isArray(asm) ? asm : [], { dateKeys: ["createdAt"] });
 
+  const asmDeactivateCandidates = useMemo(() => {
+    if (!userToDeactivate || !asm) return [];
+    const term = searchReplacement.trim().toLowerCase();
+    const list = Array.isArray(asm) ? asm : [];
+    return list
+      .filter((u) => u?._id !== userToDeactivate._id && u.status === "ACTIVE")
+      .filter((u) => {
+        const hay = `${u.firstName || ""} ${u.lastName || ""} ${u.phone || ""} ${
+          u.asmCode || ""
+        } ${u.employeeId || ""}`.toLowerCase();
+        return hay.includes(term);
+      })
+      .map((u) => ({
+        id: u._id,
+        name: `${u.firstName || ""} ${u.lastName || ""}`.trim(),
+        meta: [u.asmCode || u.phone, u.employeeId].filter(Boolean).join(" • ") || undefined,
+        statusBadge: u.status,
+      }));
+  }, [asm, userToDeactivate, searchReplacement]);
+
   const navigate = useNavigate();
 
 
@@ -79,6 +95,7 @@ export default function ASM() {
       setShowDeactivateModal(true);
       setSelectedReplacementId(null);
       setSearchReplacement("");
+      setConfirmError("");
       return;
     }
     if (user?.status !== "ACTIVE") {
@@ -428,7 +445,7 @@ const handleLoginAs = (userId) => {
                     <td
                       className="px-2 py-3 align-top cursor-pointer"
                       onClick={() =>
-                        navigate("/admin/Analytics", {
+                        navigate("/admin/analytics", {
                           state: { id: c._id, role: "ASM" },
                         })
                       }
@@ -479,7 +496,7 @@ const handleLoginAs = (userId) => {
                           className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                           title="Open analytics"
                           onClick={() =>
-                            navigate("/admin/Analytics", {
+                            navigate("/admin/analytics", {
                               state: { id: c._id, role: "ASM" },
                             })
                           }
@@ -633,291 +650,99 @@ const handleLoginAs = (userId) => {
         </div>
       )}
 
-      {/* Deactivate & Reassign Modal (UI-only) */}
-      {showDeactivateModal && userToDeactivate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="bg-brand-primary p-6 text-white relative">
-              <button
-                onClick={() => {
-                  setShowDeactivateModal(false);
-                  setUserToDeactivate(null);
-                }}
-                className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
-              >
-                ✕
-              </button>
+      <ReassignmentDeactivateModal
+        isOpen={showDeactivateModal && !!userToDeactivate}
+        title="Deactivate ASM"
+        warningText="When you deactivate an ASM, their responsibilities are reassigned to the replacement ASM you select. RMs and related ownership move to the new ASM."
+        subjectName={`${userToDeactivate?.firstName || ""} ${userToDeactivate?.lastName || ""}`.trim()}
+        subjectMeta={
+          userToDeactivate ? `Current status: ${userToDeactivate.status}` : ""
+        }
+        searchValue={searchReplacement}
+        onSearchChange={setSearchReplacement}
+        searchPlaceholder="Search ASM by name, phone, or code"
+        candidates={asmDeactivateCandidates}
+        selectedId={selectedReplacementId}
+        onSelect={setSelectedReplacementId}
+        errorMessage={confirmError}
+        confirmLoading={confirmBusy}
+        confirmLoadingLabel="Reassigning..."
+        confirmLabel="Confirm & Deactivate"
+        confirmDisabled={!selectedReplacementId || confirmBusy}
+        onCancel={() => {
+          setShowDeactivateModal(false);
+          setUserToDeactivate(null);
+          setSelectedReplacementId(null);
+          setSearchReplacement("");
+          setConfirmError("");
+        }}
+        onConfirm={async () => {
+          setConfirmError("");
+          if (!selectedReplacementId || !userToDeactivate?._id) return;
+          const { adminToken } = getAuthData() || {};
+          const token = adminToken;
+          if (!token) {
+            setConfirmError("Missing auth token");
+            return;
+          }
+          try {
+            setConfirmBusy(true);
+            await dispatch(
+              adminDeactivateAsm({
+                oldAsmId: userToDeactivate._id,
+                newAsmId: selectedReplacementId,
+                token,
+              })
+            ).unwrap();
+            dispatch(fetchRMs(token));
+            dispatch(fetchAsms(token));
+            setShowDeactivateModal(false);
+            setUserToDeactivate(null);
+            setSelectedReplacementId(null);
+            setSearchReplacement("");
+          } catch (err) {
+            const msg =
+              typeof err === "string"
+                ? err
+                : err?.message || "Failed to reassign";
+            setConfirmError(msg);
+          } finally {
+            setConfirmBusy(false);
+          }
+        }}
+      />
 
-              {/* Disclaimer */}
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold">Deactivate ASM</h3>
-
-                {/* Disclaimer */}
-                <div className="flex items-center gap-3 bg-red-50 border-l-4 border-red-500 rounded-md p-3 shadow-sm">
-                  <div className="flex-shrink-0">
-                    <FontAwesomeIcon
-                      icon={faTriangleExclamation}
-                      className="text-red-600 text-lg"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm text-red-700">
-                      <span className="font-semibold">Disclaimer:</span> When
-                      you deactivate an ASM, their responsibilities will be
-                      reassigned to the new ASM you select.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 bg-[#F8FAFC] space-y-4">
-              {/* Summary Card */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-[#111827] text-lg">
-                      {userToDeactivate.firstName} {userToDeactivate.lastName}
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                      Current status: {userToDeactivate.status}
-                    </p>
-                  </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-50 text-red-600">
-                    Will be deactivated
-                  </span>
-                </div>
-              </div>
-
-              {/* Selector */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <input
-                    type="text"
-                    value={searchReplacement}
-                    onChange={(e) => setSearchReplacement(e.target.value)}
-                    placeholder="Search ASM by name, phone, or code"
-                    className="w-60 sm:w-72 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                  />
-                </div>
-
-                {/* Results List */}
-                <div className="max-h-64 overflow-auto divide-y rounded-lg border">
-                  {(() => {
-                    const sourceList = asm || [];
-                    const filtered = sourceList
-                      .filter((u) => u?._id !== userToDeactivate._id && u.status === "ACTIVE" )
-                      .filter((u) => {
-                        const hay = `${u.firstName || ""} ${u.lastName || ""} ${
-                          u.phone || ""
-                        } ${u.asmCode || ""}`.toLowerCase();
-                        return hay.includes(searchReplacement.toLowerCase());
-                      });
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="p-4 text-sm text-gray-500">
-                          No results
-                        </div>
-                      );
-                    }
-                    return filtered.map((u) => (
-                      <label
-                        key={u._id}
-                        className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="replacement"
-                            checked={selectedReplacementId === u._id}
-                            onChange={() => setSelectedReplacementId(u._id)}
-                          />
-                          <div>
-                            <div className="text-sm font-medium text-[#111827]">
-                              {u.firstName} {u.lastName}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              {u.phone || "N/A"}{" "}
-                              {u.employeeId ? `• ${u.employeeId}` : ""}{" "}
-                      
-                            </div>
-                          </div>
-                        </div>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] ${
-                            u.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {u.status}
-                        </span>
-                      </label>
-                    ));
-                  })()}
-                </div>
-
-                {/* Footer Actions */}
-                <div className="flex items-center justify-end gap-3 mt-4">
-                  <button
-                    onClick={() => {
-                      setShowDeactivateModal(false);
-                      setUserToDeactivate(null);
-                      setSelectedReplacementId(null);
-                    }}
-                    className="px-4 py-2 text-sm border rounded-md text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  {confirmError && (
-                    <span className="text-red-600 text-xs mr-auto">
-                      {confirmError}
-                    </span>
-                  )}
-                  <button
-                    onClick={async () => {
-                      setConfirmError("");
-                      if (!selectedReplacementId || !userToDeactivate?._id)
-                        return;
-                      const { adminToken } = getAuthData() || {};
-
-                      let token = adminToken;
-
-                      if (!token) {
-                        setConfirmError("Missing auth token");
-                        return;
-                      }
-                      try {
-                        setConfirmBusy(true);
-                        // Bulk reassign all RMs under old ASM to the selected new ASM
-                        await dispatch(
-                          reassignAllRmsFromAsm({
-                            oldAsmId: userToDeactivate._id,
-                            newAsmId: selectedReplacementId,
-                            token,
-                          })
-                        ).unwrap();
-                        // Refresh lists
-                        dispatch(fetchRMs(token));
-                        dispatch(fetchAsms(token));
-                        toast.success("ASM deactivated and responsibilities reassigned");
-                        setShowDeactivateModal(false);
-                        setUserToDeactivate(null);
-                        setSelectedReplacementId(null);
-                      } catch (err) {
-                        const msg =
-                          typeof err === "string"
-                            ? err
-                            : err?.message || "Failed to reassign";
-                        setConfirmError(msg);
-                        toast.error(msg);
-                      } finally {
-                        setConfirmBusy(false);
-                      }
-                    }}
-                    disabled={!selectedReplacementId || confirmBusy}
-                    className={`px-4 py-2 text-sm rounded-md text-white ${
-                      selectedReplacementId && !confirmBusy
-                        ? "bg-brand-primary hover:opacity-90"
-                        : "bg-gray-300 cursor-not-allowed"
-                    }`}
-                  >
-                    {confirmBusy ? "Reassigning..." : "Confirm & Deactivate"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Activate Confirmation Modal */}
-      {showActivateModal && userToActivate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-brand-primary p-6 text-white relative">
-              <button
-                onClick={() => {
-                  setShowActivateModal(false);
-                  setUserToActivate(null);
-                }}
-                className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
-              >
-                ✕
-              </button>
-              <h3 className="text-xl font-bold">Activate ASM</h3>
-            </div>
-
-
-
-
-            <div className="p-6 bg-[#F8FAFC] space-y-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p className="text-sm text-[#111827]">Are you sure?</p>
-              </div>
-              <div className="flex items-center justify-end gap-3 mt-2">
-                <button
-                  onClick={() => {
-                    setShowActivateModal(false);
-                    setUserToActivate(null);
-                  }}
-                  className="px-4 py-2 text-sm border rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    const { adminToken } = getAuthData() || {};
-
-                    let token = adminToken;
-
-                    if (!token || !userToActivate?._id) return;
-                    try {
-                      setConfirmBusy(true);
-                      await dispatch(
-                        activateAsm({ asmId: userToActivate._id, token })
-                      ).unwrap();
-                      dispatch(fetchAsms(token));
-                      toast.success("ASM activated successfully");
-                      setShowActivateModal(false);
-                      setUserToActivate(null);
-                    } catch (err) {
-                      const msg =
-                        typeof err === "string"
-                          ? err
-                          : err?.message || "Failed to activate ASM";
-                      toast.error(msg);
-                      console.error(err);
-                    } finally {
-                      setConfirmBusy(false);
-                    }
-                  }}
-                  disabled={confirmBusy}
-                  className={`px-4 py-2 text-sm rounded-md text-white ${
-                    !confirmBusy
-                      ? "bg-brand-primary hover:opacity-90"
-                      : "bg-gray-300 cursor-not-allowed"
-                  }`}
-                >
-                  {confirmBusy ? "Activating..." : "OK"}
-                </button>
-              </div>
-            </div>
-
-
-
-            
-          </div>
-        </div>
-      )}
+      <ActivationConfirmModal
+        isOpen={showActivateModal && !!userToActivate}
+        title="Activate ASM"
+        message="Are you sure you want to activate"
+        subjectName={`${userToActivate?.firstName || ""} ${userToActivate?.lastName || ""}`.trim()}
+        confirmLabel={confirmBusy ? "Activating..." : "Activate"}
+        confirmLoading={confirmBusy}
+        onCancel={() => {
+          setShowActivateModal(false);
+          setUserToActivate(null);
+        }}
+        onConfirm={async () => {
+          const { adminToken } = getAuthData() || {};
+          const token = adminToken;
+          if (!token || !userToActivate?._id) return;
+          try {
+            setConfirmBusy(true);
+            await dispatch(activateAsm({ asmId: userToActivate._id, token })).unwrap();
+            dispatch(fetchAsms(token));
+            setShowActivateModal(false);
+            setUserToActivate(null);
+          } catch (err) {
+            const msg =
+              typeof err === "string"
+                ? err
+                : err?.message || "Failed to activate ASM";
+          } finally {
+            setConfirmBusy(false);
+          }
+        }}
+      />
     </>
   );
 }
