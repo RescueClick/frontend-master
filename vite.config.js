@@ -13,7 +13,7 @@ export default defineConfig({
     // Socket.IO: browser requests same-origin /socket.io → proxied to API (avoids CORS on localhost)
     proxy: {
       "/socket.io": {
-        target: "https://trustlinefintech.com",
+        target: "https://dhansourcecapital.com",
         changeOrigin: true,
         secure: true,
         ws: true,
