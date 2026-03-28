@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Menu, X, ChevronDown, Phone, Mail, Clock } from "lucide-react";
+import { Menu, X, ChevronDown, Phone, Mail, Clock, LayoutDashboard } from "lucide-react";
 import { FaPhoneAlt, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
 import { FaFacebookF, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { brandLogo, COMPANY_NAME, COMPANY_NAME_LEGAL, COMPANY_TAGLINE, CONTACT_EMAIL } from "../config/branding";
+import { getSessionDashboardBasePath } from "../utils/sessionDashboardPath";
 
 
 const MainLayout = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const sessionDashboardPath = getSessionDashboardBasePath();
 
 
 
@@ -145,15 +147,25 @@ const MainLayout = () => {
 
 
 
-                {/* Login */}
-                <button
-                  className="cursor-pointer hidden lg:inline-flex items-center px-4 py-2 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white font-medium rounded-full hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
-                  onClick={() => {
-                    navigate("/LoginPage");
-                  }}
-                >
-                  <h1>Login</h1>
-                </button>
+                {sessionDashboardPath ? (
+                  <button
+                    type="button"
+                    className="cursor-pointer hidden lg:inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white font-medium rounded-full hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                    onClick={() => navigate(sessionDashboardPath)}
+                  >
+                    <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
+                    <span>My dashboard</span>
+                  </button>
+                ) : (
+                  <button
+                    className="cursor-pointer hidden lg:inline-flex items-center px-4 py-2 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white font-medium rounded-full hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                    onClick={() => {
+                      navigate("/LoginPage");
+                    }}
+                  >
+                    <h1>Login</h1>
+                  </button>
+                )}
 
                 {/* Mobile menu trigger */}
                 <button
@@ -240,16 +252,30 @@ const MainLayout = () => {
               >
                 Become partner
               </button>
-              <button
-                type="button"
-                className="flex w-full min-h-[48px] items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-hover px-4 text-sm font-semibold text-white shadow-md shadow-brand-primary/20 transition hover:shadow-lg"
-                onClick={() => {
-                  navigate("/LoginPage");
-                  toggleMenu();
-                }}
-              >
-                Login
-              </button>
+              {sessionDashboardPath ? (
+                <button
+                  type="button"
+                  className="flex w-full min-h-[48px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-hover px-4 text-sm font-semibold text-white shadow-md shadow-brand-primary/20 transition hover:shadow-lg"
+                  onClick={() => {
+                    navigate(sessionDashboardPath);
+                    toggleMenu();
+                  }}
+                >
+                  <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
+                  My dashboard
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="flex w-full min-h-[48px] items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-hover px-4 text-sm font-semibold text-white shadow-md shadow-brand-primary/20 transition hover:shadow-lg"
+                  onClick={() => {
+                    navigate("/LoginPage");
+                    toggleMenu();
+                  }}
+                >
+                  Login
+                </button>
+              )}
               <a
                 href="tel:+918766681450"
                 className="flex items-center justify-center gap-2 pt-1 text-xs font-medium text-slate-500 transition hover:text-brand-primary"

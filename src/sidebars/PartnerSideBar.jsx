@@ -149,7 +149,7 @@ const PartnerSideBar = () => {
               {/* Notifications */}
               <NotificationBell />
 
-              {/* Profile — opens slide-out panel on the right */}
+              {/* Profile — opens centered popup */}
               <div className="relative">
                 <button
                   type="button"
@@ -185,18 +185,28 @@ const PartnerSideBar = () => {
         </main>
       </div>
 
-      {/* Profile slide-out panel (right) */}
+      {/* Profile modal (centered popup) */}
       {profileOpen && (
-        <>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="partner-profile-modal-title"
+        >
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/50"
+            className="absolute inset-0 bg-black/50"
             aria-label="Close profile"
             onClick={() => setProfileOpen(false)}
           />
-          <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[min(100vw,700px)] flex-col overflow-y-auto bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
-              <h3 className="text-lg font-semibold text-gray-800">Profile</h3>
+          <div className="relative z-10 flex max-h-[min(90vh,900px)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+              <h3
+                id="partner-profile-modal-title"
+                className="text-lg font-semibold text-gray-800"
+              >
+                Partner profile
+              </h3>
               <button
                 type="button"
                 onClick={() => setProfileOpen(false)}
@@ -206,9 +216,11 @@ const PartnerSideBar = () => {
                 <X size={20} className="text-gray-600" />
               </button>
             </div>
-            <PartnerProfile />
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
+              <PartnerProfile inModal />
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

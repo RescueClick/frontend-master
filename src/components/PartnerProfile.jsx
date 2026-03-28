@@ -26,7 +26,7 @@ import axios from "axios"
 
 
 
-const PartnerProfile = () => {
+const PartnerProfile = ({ inModal = false }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState("password");
   const [profileImage, setProfileImage] = useState(null);
@@ -111,8 +111,8 @@ const PartnerProfile = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className=" w-full ">
+    <div className={inModal ? "bg-transparent" : "min-h-screen bg-slate-50"}>
+      <div className="w-full">
         {/* Profile Content (always visible) */}
 
         <div className="bg-white rounded-xl shadow-2xl border border-gray-200">

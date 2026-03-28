@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Send, Phone, Mail, MessageSquare, User, CheckCircle } from "lucide-react";
 import { backendurl } from "../feature/urldata";
+import { normalizeMobileDigits } from "../utils/phoneNormalize";
 import { COMPANY_NAME, CONTACT_EMAIL } from "../config/branding";
 
 const Contact = () => {
@@ -16,7 +17,9 @@ const Contact = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const next =
+      name === "phone" ? normalizeMobileDigits(value) : value;
+    setFormData((prev) => ({ ...prev, [name]: next }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -30,10 +33,11 @@ const Contact = () => {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
-    if (!formData.phone.trim()) {
+    const phoneTen = normalizeMobileDigits(formData.phone);
+    if (!phoneTen) {
       newErrors.phone = "Phone number is required";
-    } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ""))) {
-      newErrors.phone = "Please enter a valid 10-digit phone number";
+    } else if (!/^\d{10}$/.test(phoneTen)) {
+      newErrors.phone = "Enter exactly 10 digits (with or without +91)";
     }
     if (!formData.queries.trim()) newErrors.queries = "Please tell us about your queries";
     return newErrors;
@@ -50,7 +54,7 @@ const Contact = () => {
           body: JSON.stringify({
             name: formData.name,
             email: formData.email,
-            phone: formData.phone,
+            phone: normalizeMobileDigits(formData.phone),
             message: formData.queries,
           }),
         });
@@ -191,7 +195,7 @@ const Contact = () => {
                     value={formData.phone}
                     onChange={handleChange}
                     className={inputClass("phone")}
-                    placeholder="10-digit mobile number"
+                    placeholder="10-digit mobile or +91…"
                   />
                   {errors.phone && <p className="mt-1.5 text-sm text-red-600">{errors.phone}</p>}
                 </div>

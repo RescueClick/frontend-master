@@ -3,6 +3,7 @@ import { CheckCircle, AlertCircle, Building2, User, Phone, CreditCard, Hash, Edi
 import axios from 'axios';
 import { backendurl } from '../../../feature/urldata';
 import { getAuthData } from '../../../utils/localStorage';
+import { normalizeMobileDigits } from '../../../utils/phoneNormalize';
 
 const KYCDetails = () => {
   const [formData, setFormData] = useState({
@@ -110,10 +111,11 @@ const KYCDetails = () => {
       newErrors.accountHolderName = 'Account holder name is required';
     }
 
-    if (!formData.mobileNumber.trim()) {
+    const mobileTen = normalizeMobileDigits(formData.mobileNumber);
+    if (!mobileTen) {
       newErrors.mobileNumber = 'Mobile number is required';
-    } else if (!/^\d{10}$/.test(formData.mobileNumber)) {
-      newErrors.mobileNumber = 'Mobile number must be 10 digits';
+    } else if (!/^\d{10}$/.test(mobileTen)) {
+      newErrors.mobileNumber = 'Enter exactly 10 digits (with or without +91)';
     }
 
     if (!formData.accountNumber.trim()) {
@@ -158,7 +160,7 @@ const KYCDetails = () => {
         accountHolderName: formData.accountHolderName.trim(),
         accountNumber: formData.accountNumber.trim(),
         ifscCode: formData.ifscCode.trim().toUpperCase(),
-        registeredMobile: formData.mobileNumber.trim(),
+        registeredMobile: normalizeMobileDigits(formData.mobileNumber),
       };
 
       await axios.patch(
@@ -462,12 +464,14 @@ const KYCDetails = () => {
                 <input
                   type="tel"
                   value={formData.mobileNumber}
-                  onChange={(e) => handleInputChange('mobileNumber', e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) =>
+                    handleInputChange('mobileNumber', normalizeMobileDigits(e.target.value))
+                  }
                   maxLength="10"
                   className={`w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors text-sm sm:text-base ${
                     errors.mobileNumber ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="Enter 10-digit mobile number"
+                  placeholder="10-digit mobile or +91…"
                 />
                 {errors.mobileNumber && (
                   <p className="mt-1 text-xs sm:text-sm text-red-600 flex items-center">

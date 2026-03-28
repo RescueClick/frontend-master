@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { backendurl } from "../feature/urldata";
 import { COMPANY_NAME, SUPPORT_EMAIL } from "../config/branding";
 import { getAuthData } from "../utils/localStorage";
+import { normalizeMobileDigits } from "../utils/phoneNormalize";
 
 const DeleteAccount = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +18,8 @@ const DeleteAccount = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const next = name === "phone" ? normalizeMobileDigits(value) : value;
+    setFormData((prev) => ({ ...prev, [name]: next }));
   };
 
   const handleSubmit = async (e) => {
@@ -62,14 +64,14 @@ const DeleteAccount = () => {
           body: JSON.stringify({
             name: formData.name,
             email: formData.email,
-            phone: formData.phone,
+            phone: normalizeMobileDigits(formData.phone),
             subject: "Delete Account Request",
             message: [
               `User has requested to permanently delete their ${COMPANY_NAME} account.`,
               "",
               `Partner / Employee ID: ${formData.partnerId || "-"}`,
               `Registered Email: ${formData.email}`,
-              `Registered Mobile: ${formData.phone}`,
+              `Registered Mobile: ${normalizeMobileDigits(formData.phone)}`,
               "",
               "Reason for deletion:",
               formData.reason || "-",
@@ -204,7 +206,7 @@ const DeleteAccount = () => {
                     onChange={handleChange}
                     required
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="10-digit mobile number"
+                    placeholder="10-digit mobile or +91…"
                   />
                 </div>
               </div>

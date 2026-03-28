@@ -18,6 +18,7 @@ import {
   Check,
 } from "lucide-react";
 import { signupPartner } from "../feature/thunks/partnerThunks";
+import { normalizeMobileDigits } from "../utils/phoneNormalize";
 import { useDispatch } from "react-redux";
 import {
   brandLogo,
@@ -130,7 +131,7 @@ const PartnerRegistrationForm = () => {
     if (type === "file") {
       nextValue = files?.[0] ?? null;
     } else if (name === "phone") {
-      nextValue = value.replace(/\D/g, "").slice(0, 10);
+      nextValue = normalizeMobileDigits(value);
     } else if (name === "aadharNumber") {
       nextValue = value.replace(/\D/g, "").slice(0, 12);
     } else if (name === "pincode") {
@@ -182,8 +183,8 @@ const PartnerRegistrationForm = () => {
       err.lastName = "Enter at least 2 characters";
 
     if (!formData.phone) err.phone = "Mobile number is required";
-    else if (!/^[6-9]\d{9}$/.test(formData.phone))
-      err.phone = "Enter a valid 10-digit Indian mobile number";
+    else if (!/^\d{10}$/.test(formData.phone))
+      err.phone = "Enter exactly 10 digits (with or without +91)";
 
     if (!formData.email.trim()) err.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))
@@ -284,11 +285,13 @@ const PartnerRegistrationForm = () => {
       return;
     }
 
+    const phoneTen = normalizeMobileDigits(formData.phone);
+
     const newFormData = {
       firstName: formData.firstName,
       middleName: formData.middleName || null,
       lastName: formData.lastName || null,
-      phone: formData.phone,
+      phone: phoneTen,
       email: formData.email,
       dob: formData.dob || null,
       aadharNumber: formData.aadharNumber,
@@ -630,7 +633,7 @@ const PartnerRegistrationForm = () => {
                         inputMode="numeric"
                         value={formData.phone}
                         onChange={handleChange}
-                        placeholder="10-digit mobile number"
+                        placeholder="10-digit mobile or +91…"
                         className={fieldClass("phone", fieldErrors)}
                         autoComplete="tel"
                       />

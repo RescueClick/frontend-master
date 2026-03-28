@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Eye, Search, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 import { fetchRMs } from "../../../feature/thunks/adminThunks";
 import { useDispatch, useSelector } from "react-redux";
@@ -104,6 +105,7 @@ export default function RMpartner() {
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [partnerToReject, setPartnerToReject] = useState(null);
+  const [assignSubmitting, setAssignSubmitting] = useState(false);
 
   const dispatch = useDispatch();
   const { loading, error, data } = useSelector(
@@ -114,34 +116,10 @@ export default function RMpartner() {
   );
 
   const { data: rms } = useSelector((state) => state.admin.rm);
-  
+
   const isRejecting = rejectPartnerState.loading;
-  
-  // Optimistic update: Filter out rejected partner immediately when deletion is successful
-  const displayData = data?.filter(
-    (partner) => {
-      // If rejection was successful and this is the rejected partner, hide it
-      if (rejectPartnerState.success && partnerToReject && partner._id === partnerToReject._id) {
-        return false;
-      }
-      return true;
-    }
-  ) || data;
-  
-  // Close modal when rejection is successful
-  useEffect(() => {
-    if (rejectPartnerState.success && rejectModalOpen) {
-      // Small delay to show success state
-      const timer = setTimeout(() => {
-        setRejectModalOpen(false);
-        setPartnerToReject(null);
-        // Refetch to ensure data is in sync
-        dispatch(getUnassignedPartners());
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [rejectPartnerState.success, rejectModalOpen, dispatch]);
+
+  const displayData = data || [];
 
   useEffect(() => {
     const { adminToken } = getAuthData() || {};
@@ -156,18 +134,61 @@ export default function RMpartner() {
 
   const handleRejectPartner = async () => {
     if (!partnerToReject || isRejecting) return;
-    
+
     try {
-      const result = await dispatch(rejectPartner(partnerToReject._id)).unwrap();
-      
-      // Show success message
-      alert("Partner request rejected and deleted successfully");
-      
-      // Modal will close automatically via useEffect when success state changes
-      // Refetch will happen in useEffect as well
-    } catch (error) {
-      console.error("Reject partner error:", error);
-      alert(error || "Failed to reject partner. Please try again.");
+      await toast.promise(
+        dispatch(rejectPartner(partnerToReject._id)).unwrap(),
+        {
+          loading: "Removing partner request…",
+          success: (res) =>
+            (res && typeof res === "object" && res.message) ||
+            "Partner request rejected and removed successfully.",
+          error: (err) =>
+            typeof err === "string"
+              ? err
+              : "Failed to reject partner. Please try again.",
+        }
+      );
+      setRejectModalOpen(false);
+      setPartnerToReject(null);
+      dispatch(getUnassignedPartners());
+    } catch {
+      /* toast.promise already surfaced the error */
+    }
+  };
+
+  const handleConfirmAssignRm = async () => {
+    if (!partnerToAssign || !selectedRm || assignSubmitting) return;
+
+    setAssignSubmitting(true);
+    try {
+      await toast.promise(
+        dispatch(
+          assignPartnerToRm({
+            partnerId: partnerToAssign._id,
+            rmId: selectedRm._id,
+          })
+        ).unwrap(),
+        {
+          loading: "Assigning partner to RM…",
+          success: (res) =>
+            (res && typeof res === "object" && res.message) ||
+            "Partner assigned to RM successfully.",
+          error: (err) =>
+            typeof err === "string"
+              ? err
+              : "Failed to assign partner to RM. Please try again.",
+        }
+      );
+      dispatch(getUnassignedPartners());
+      setShowAssignModal(false);
+      setPartnerToAssign(null);
+      setSelectedRm(null);
+      setRmSearch("");
+    } catch {
+      /* toast.promise already surfaced the error */
+    } finally {
+      setAssignSubmitting(false);
     }
   };
 
@@ -303,26 +324,20 @@ export default function RMpartner() {
                   Cancel
                 </button>
                 <button
-                  className="px-4 py-2 text-sm rounded-md text-white disabled:opacity-50"
+                  type="button"
+                  className="px-4 py-2 text-sm rounded-md text-white disabled:opacity-50 inline-flex items-center justify-center gap-2 min-w-[10rem]"
                   style={{ background: colors.primary }}
-                  disabled={!selectedRm}
-                  onClick={() => {
-                  
-                    if (selectedRm) {
-                      dispatch(
-                        assignPartnerToRm({
-                          partnerId: partnerToAssign._id,
-                          rmId: selectedRm._id,
-                        })
-                      );
-                    }
-                    setShowAssignModal(false);
-                    setPartnerToAssign(null);
-                    setSelectedRm(null);
-                    setRmSearch("");
-                  }}
+                  disabled={!selectedRm || assignSubmitting}
+                  onClick={handleConfirmAssignRm}
                 >
-                  Confirm & Assign RM
+                  {assignSubmitting ? (
+                    <>
+                      <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
+                      Assigning…
+                    </>
+                  ) : (
+                    "Confirm & Assign RM"
+                  )}
                 </button>
               </div>
             </div>
@@ -395,7 +410,9 @@ export default function RMpartner() {
       {handleModal.modalStatus && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans"
-          onClick={() => setShowPartnerModal(false)}
+          onClick={() =>
+            setHandleModal({ modalStatus: false, partnerData: null })
+          }
         >
           <div
             className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl p-6 relative overflow-y-auto max-h-[90vh]"

@@ -65,7 +65,7 @@ const AddRMPage = () => {
 
   const VALIDATION_PATTERNS = {
     name: /^[A-Za-z][A-Za-z\s'-]{1,49}$/,
-    phone: /^[6-9]\d{9}$/,
+    phone: /^\d{10}$/,
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/,
   };
@@ -156,7 +156,7 @@ const AddRMPage = () => {
     if (!formData.phone.trim()) {
       newErrors.phone = "Phone is required";
     } else if (!VALIDATION_PATTERNS.phone.test(formData.phone.trim())) {
-      newErrors.phone = "Enter a valid 10-digit phone number";
+      newErrors.phone = "Enter exactly 10 digits (with or without +91)";
     }
 
     if (!formData.email.trim()) {
@@ -225,7 +225,8 @@ const AddRMPage = () => {
     const { name, value } = e.target;
     let nextValue = value;
     if (name === "phone") {
-      nextValue = value.replace(/\D/g, "").slice(0, 10);
+      const d = value.replace(/\D/g, "");
+      nextValue = d.length > 10 ? d.slice(-10) : d.slice(0, 10);
     }
     if (name === "email") {
       nextValue = value.trim().toLowerCase();
@@ -264,10 +265,14 @@ const handleSubmit = async (e) => {
     return;
   }
 
+  const phoneDigits = formData.phone.replace(/\D/g, "");
+  const phoneTen =
+    phoneDigits.length > 10 ? phoneDigits.slice(-10) : phoneDigits;
+
   const requestData = {
     firstName: formData.firstName,
     lastName: formData.lastName,
-    phone: formData.phone,
+    phone: phoneTen,
     region: formData.region,
     dob: formData.dob,
     email: formData.email,
