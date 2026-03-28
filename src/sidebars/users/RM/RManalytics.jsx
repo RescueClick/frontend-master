@@ -87,13 +87,40 @@ const RManalytics = () => {
     setKpisError(null);
     dispatch(fetchAnalyticsKpis({ id, start, end }))
       .unwrap()
-      .then((res) => setKpis(res?.data?.kpis || null))
+      .then((res) => setKpis(res?.kpis ?? res?.data?.kpis ?? null))
       .catch((e) => setKpisError(typeof e === "string" ? e : "Failed to load KPI analytics"))
       .finally(() => setKpisLoading(false));
   }, [id, filters, dispatch]);
 
   // Process analytics data using universal parser
   const parsedData = useMemo(() => parseAnalyticsData(data, "PARTNER"), [data]);
+
+  const pageSubtitle = useMemo(() => {
+    const nav = location.state || {};
+    const empId = parsedData.profile?.employeeId;
+    const idLabel =
+      empId && empId !== "N/A"
+        ? empId
+        : id
+        ? String(id).length > 12
+          ? `…${String(id).slice(-8)}`
+          : String(id)
+        : "";
+    const detail = nav.detail || "Partner";
+    const nm =
+      nav.name ||
+      (parsedData.profile?.name && parsedData.profile.name !== "N/A"
+        ? parsedData.profile.name
+        : "");
+    const parts = [
+      idLabel ? `ID: ${idLabel}` : null,
+      detail || null,
+      nm || null,
+    ].filter(Boolean);
+    return parts.length
+      ? parts.join(" · ")
+      : "RM view (partner performance and monthly history)";
+  }, [location.state, id, parsedData]);
   
   // Format currency helper
   const formatCurrencyHelper = useCallback((value) => {
@@ -139,7 +166,7 @@ const RManalytics = () => {
         <div className="mb-6">
           <PageHeader
             title="Analytics"
-            subtitle="RM view (partner performance and monthly history)"
+            subtitle={pageSubtitle}
             right={
               <button
                 type="button"

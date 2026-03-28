@@ -24,6 +24,8 @@ import {
   Activity,
   CheckCircle,
 } from "lucide-react";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+
 const RevenueGenerated = () => {
 
      const leadsData = [
@@ -61,15 +63,6 @@ const RevenueGenerated = () => {
     },
   ];
 
-  
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case "disburse":
-        return "text-green-700 bg-green-100 border-green-200";
-      case "in process":
-        return "text-blue-700 bg-blue-100 border-blue-200";
-    }
-  };
   return (
     <>
       <div className="lg:col-span-1 bg-white rounded-2xl shadow-md border border-gray-200 p-6">
@@ -112,13 +105,7 @@ const RevenueGenerated = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                          lead.status
-                        )}`}
-                      >
-                        {lead.status}
-                      </span>
+                      <LoanStatusBadge status={lead.status} />
                     </div>
                   </div>
                   <div className="flex items-center justify-between">

@@ -27,6 +27,9 @@ import {
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { matchesMonthYear } from "../../../utils/dateFilter";
 import { matchesSearchTerm, matchesStatusFilter } from "../../../utils/tableFilter";
+import { loanTypeToTableShort, payoutLoanTypePillClass } from "../../../utils/loanTypeShort";
+import PayoutStatusBadge from "../../../components/shared/PayoutStatusBadge";
+import AppAntTable from "../../../components/shared/AppAntTable";
 
 const AsmPendingPayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -146,35 +149,6 @@ const AsmPendingPayout = () => {
     }
   };
 
-  // Loan type color
-  const getAccountTypeColor = (loanType) => {
-    switch (loanType) {
-      case "HOME_LOAN_SALARIED":
-      case "HOME_LOAN_SELF_EMPLOYED":
-        return "bg-blue-100 text-blue-700";
-      case "BUSINESS":
-        return "bg-green-100 text-green-700";
-      case "PERSONAL":
-        return "bg-yellow-100 text-yellow-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  // Status color
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "PENDING":
-        return "bg-yellow-100 text-yellow-700";
-      case "REJECTED":
-        return "bg-red-100 text-red-700";
-      case "DONE":
-        return "bg-green-100 text-green-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
-
   const formatCurrency = (amount) => {
     if (!amount) return "₹0";
     return `₹${Number(amount).toLocaleString("en-IN", {
@@ -182,6 +156,114 @@ const AsmPendingPayout = () => {
       maximumFractionDigits: 2,
     })}`;
   };
+
+  const payoutColumns = useMemo(
+    () => [
+      {
+        title: "User Name",
+        key: "customerName",
+        render: (_, r) => <span className="font-medium">{r.customerName}</span>,
+      },
+      {
+        title: "User Id",
+        key: "eid",
+        render: (_, r) => (
+          <span className="text-xs text-gray-500">#{r.customerEmployeeId || "—"}</span>
+        ),
+      },
+      {
+        title: "Contact",
+        key: "contact",
+        render: (_, r) => r.contact || "—",
+      },
+      {
+        title: "Application Date",
+        key: "ad",
+        render: (_, r) =>
+          r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN") : "—",
+      },
+      {
+        title: "Loan Type",
+        key: "lt",
+        render: (_, r) => (
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium ${payoutLoanTypePillClass(
+              r.loanType
+            )}`}
+          >
+            {loanTypeToTableShort(r.loanType)}
+          </span>
+        ),
+      },
+      {
+        title: "Loan Amount",
+        key: "lamt",
+        render: (_, r) => (
+          <span className="font-semibold">
+            {r.requestedAmount
+              ? `₹${r?.requestedAmount.toLocaleString("en-IN")}`
+              : "—"}
+          </span>
+        ),
+      },
+      {
+        title: "Approval Amount",
+        key: "appr",
+        render: (_, r) => (
+          <span className="font-semibold">
+            {r.approvedAmount
+              ? `₹${r.approvedAmount.toLocaleString("en-IN")}`
+              : "—"}
+          </span>
+        ),
+      },
+      {
+        title: "Proposed Payout",
+        key: "prop",
+        render: (_, r) => (
+          <span className="font-semibold">
+            {r.payoutAmount
+              ? `₹${Number(r.payoutAmount).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`
+              : "—"}
+          </span>
+        ),
+      },
+      {
+        title: "Status",
+        key: "st",
+        render: (_, r) => (
+          <PayoutStatusBadge status={r.payOutStatus || "PENDING"} />
+        ),
+      },
+      {
+        title: "Action",
+        key: "act",
+        render: (_, customer) => (
+          <button
+            type="button"
+            onClick={() => {
+              setPayoutData({
+                applicationId: "",
+                partnerId: "",
+                approvalAmount: customer.approvedAmount || "",
+                payoutPercentage: "",
+                totalPayout: "",
+                payOutStatus: "PENDING",
+              });
+              setCustomerID(customer.customerId);
+            }}
+            className="px-4 py-2 bg-brand-primary hover:bg-[#0f9b82] text-white text-xs font-semibold rounded-lg transition-all duration-200"
+          >
+            Set Payout
+          </button>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <>
@@ -454,118 +536,24 @@ const AsmPendingPayout = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-lg shadow-sm">
-          <table className="w-full border-collapse bg-white text-sm">
-            <thead style={{ background: "var(--color-brand-primary)", color: "white" }}>
-              <tr>
-                <th className="px-2 py-4 text-left">User Name</th>
-                <th className="px-2 py-4 text-left">User Id</th>
-                <th className="px-2 py-4 text-left">Contact</th>
-                <th className="px-2 py-4 text-left">Application Date</th>
-                <th className="px-2 py-4 text-left">Loan Type</th>
-                <th className="px-2 py-4 text-left">Loan Amount</th>
-                <th className="px-2 py-4 text-left">Approval Amount</th>
-                <th className="px-2 py-4 text-left">Proposed Payout</th>
-                <th className="px-2 py-4 text-left">Status</th>
-                <th className="px-2 py-4 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={9} className="text-center py-4">
-                    Loading...
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={9} className="text-center py-4 text-red-600">
-                    {error}
-                  </td>
-                </tr>
-              ) : filteredRows.length > 0 ? (
-                filteredRows.map((customer) => (
-                  <tr
-                    key={customer.customerId || customer.applicationId}
-                    className="border-b hover:bg-gray-50"
-                  >
-                    <td className="px-2 py-3 align-top">
-                      <span className="font-medium">{customer.customerName}</span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="text-xs text-gray-500">
-                        #{customer.customerEmployeeId || "—"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">{customer.contact || "—"}</td>
-                    <td className="px-2 py-3 align-middle">
-                      {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString("en-IN") : "—"}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(
-                          customer.loanType
-                        )}`}
-                      >
-                        {customer.loanType || "—"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle font-semibold">
-                      {customer.requestedAmount
-                        ? `₹${customer?.requestedAmount.toLocaleString("en-IN")}`
-                        : "—"}
-                    </td>
-                    <td className="px-2 py-3 align-middle font-semibold">
-                      {customer.approvedAmount
-                        ? `₹${customer.approvedAmount.toLocaleString("en-IN")}`
-                        : "—"}
-                    </td>
-                    <td className="px-2 py-3 align-middle font-semibold">
-                      {customer.payoutAmount
-                        ? formatCurrency(customer.payoutAmount)
-                        : "—"}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                          customer.payOutStatus
-                        )}`}
-                      >
-                        {customer.payOutStatus || "PENDING"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPayoutData({
-                            applicationId: "",
-                            partnerId: "",
-                            approvalAmount:
-                              customer.approvedAmount || "",
-                            payoutPercentage: "",
-                            totalPayout: "",
-                            payOutStatus: "PENDING",
-                          });
-                          setCustomerID(customer.customerId);
-                        }}
-                        className="px-4 py-2 bg-brand-primary hover:bg-[#0f9b82] text-white text-xs font-semibold rounded-lg transition-all duration-200"
-                      >
-                        Set Payout
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={9} className="text-center py-4 text-gray-500">
-                    No pending payouts found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <AppAntTable
+          rowKey={(r) =>
+            `${r.customerId ?? ""}-${r.applicationId ?? ""}-${r.customerEmployeeId ?? ""}`
+          }
+          columns={payoutColumns}
+          dataSource={error ? [] : filteredRows}
+          loading={loading}
+          size="small"
+          locale={{
+            emptyText: error ? (
+              <div className="py-8 text-center text-red-600">{error}</div>
+            ) : (
+              <div className="py-8 text-center text-gray-500">
+                No pending payouts found
+              </div>
+            ),
+          }}
+        />
       </div>
     </>
   );

@@ -3,6 +3,16 @@ import { Search, Award, TrendingUp, Target, CheckCircle, ArrowLeft, IndianRupee,
 import { fetchIncentives, payIncentive } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import AppAntTable from "../../../components/shared/AppAntTable";
+
+const fmtInr0 = (amount) => {
+  if (!amount) return "₹0";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 const colors = {
   primary: "var(--color-brand-primary)",
@@ -73,6 +83,97 @@ const AsmEligibleIncentive = () => {
     setPercentValue("");
     setFixedValue("");
   };
+
+  const eligibleAsmColumns = [
+    {
+      title: "Partner",
+      key: "p",
+      render: (_, incentive) => (
+        <div>
+          <p className="font-medium">{incentive.partnerName}</p>
+          <p className="text-xs text-gray-500">{incentive.partnerEmployeeId}</p>
+        </div>
+      ),
+    },
+    {
+      title: "File Target",
+      key: "ft",
+      render: (_, incentive) => {
+        const fileTarget = incentive.fileCountTarget ?? 4;
+        return <span className="font-semibold">{fileTarget} files</span>;
+      },
+    },
+    {
+      title: "Files Achieved",
+      key: "fa",
+      render: (_, incentive) => {
+        const fileTarget = incentive.fileCountTarget ?? 4;
+        const filesAchieved =
+          incentive.achievedFileCount ?? incentive.disbursedCount ?? 0;
+        return (
+          <span className="font-semibold text-green-600">
+            {filesAchieved} / {fileTarget}
+          </span>
+        );
+      },
+    },
+    {
+      title: "Disbursement Target",
+      key: "dt",
+      render: (_, incentive) => {
+        const disbursementTarget = incentive.disbursementTarget ?? 2000000;
+        return <span className="font-semibold">{fmtInr0(disbursementTarget)}</span>;
+      },
+    },
+    {
+      title: "Disbursement Achieved",
+      key: "da",
+      render: (_, incentive) => {
+        const disbursementAchieved =
+          incentive.achievedDisbursement ?? incentive.totalAchieved ?? 0;
+        return (
+          <span className="font-semibold text-green-600">
+            {fmtInr0(disbursementAchieved)}
+          </span>
+        );
+      },
+    },
+    {
+      title: "Eligible",
+      key: "el",
+      render: () => (
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          Eligible
+        </span>
+      ),
+    },
+    {
+      title: "Incentive Amount",
+      key: "amt",
+      render: (_, incentive) => {
+        const proposedAmount =
+          incentive.proposedAmount || incentive.incentiveAmount || 0;
+        return (
+          <span className="font-semibold">
+            {proposedAmount ? fmtInr0(proposedAmount) : "—"}
+          </span>
+        );
+      },
+    },
+    {
+      title: "Action",
+      key: "act",
+      render: (_, incentive) => (
+        <button
+          type="button"
+          className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
+          onClick={() => handleOpenModal(incentive)}
+        >
+          Set Incentive
+        </button>
+      ),
+    },
+  ];
 
   const handleSaveIncentive = async () => {
     if (!selectedPartner) return;
@@ -191,95 +292,20 @@ const AsmEligibleIncentive = () => {
         </div>
       </div>
 
-      {/* Incentives Table */}
-      <div className="overflow-x-auto rounded-lg shadow-sm">
-        <table className="w-full border-collapse bg-white text-sm">
-          <thead style={{ background: colors.primary, color: "white" }}>
-            <tr>
-              <th className="px-2 py-4 text-left">Partner</th>
-              <th className="px-2 py-4 text-left">File Target</th>
-              <th className="px-2 py-4 text-left">Files Achieved</th>
-              <th className="px-2 py-4 text-left">Disbursement Target</th>
-              <th className="px-2 py-4 text-left">Disbursement Achieved</th>
-              <th className="px-2 py-4 text-left">Eligible</th>
-              <th className="px-2 py-4 text-left">Incentive Amount</th>
-              <th className="px-2 py-4 text-left">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="6" className="text-center py-4">
-                  Loading incentives...
-                </td>
-              </tr>
-            ) : filteredIncentives.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="text-center py-4">
-                  No eligible incentives found
-                </td>
-              </tr>
-            ) : (
-              filteredIncentives.map((incentive) => {
-                const fileTarget = incentive.fileCountTarget ?? 4;
-                const disbursementTarget = incentive.disbursementTarget ?? 2000000;
-                const filesAchieved =
-                  incentive.achievedFileCount ?? incentive.disbursedCount ?? 0;
-                const disbursementAchieved =
-                  incentive.achievedDisbursement ?? incentive.totalAchieved ?? 0;
-                const proposedAmount =
-                  incentive.proposedAmount || incentive.incentiveAmount || 0;
-
-                return (
-                  <tr key={incentive.partnerId} className="border-b hover:bg-gray-50">
-                    <td className="px-2 py-3 align-top">
-                      <div>
-                        <p className="font-medium">{incentive.partnerName}</p>
-                        <p className="text-xs text-gray-500">{incentive.partnerEmployeeId}</p>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="font-semibold">{fileTarget} files</span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="font-semibold text-green-600">
-                        {filesAchieved} / {fileTarget}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle font-semibold">
-                      {formatCurrency(disbursementTarget)}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="font-semibold text-green-600">
-                        {formatCurrency(disbursementAchieved)}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Eligible
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle font-semibold">
-                      {proposedAmount
-                        ? formatCurrency(proposedAmount)
-                        : "—"}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <button
-                        type="button"
-                        className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
-                        onClick={() => handleOpenModal(incentive)}
-                      >
-                        Set Incentive
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <AppAntTable
+        rowKey={(r) => String(r.partnerId ?? r.partnerEmployeeId ?? "")}
+        columns={eligibleAsmColumns}
+        dataSource={filteredIncentives}
+        loading={loading}
+        size="small"
+        locale={{
+          emptyText: (
+            <div className="py-8 text-center text-gray-500">
+              No eligible incentives found
+            </div>
+          ),
+        }}
+      />
 
       {/* ASM Incentive Proposal Modal */}
       {selectedPartner && (

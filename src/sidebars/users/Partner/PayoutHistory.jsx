@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { ArrowLeft, Search, Calendar, IndianRupee } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -6,6 +6,8 @@ import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
 import { matchesSearchTerm } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import AppAntTable from "../../../components/shared/AppAntTable";
 
 const PayoutHistory = () => {
   const navigate = useNavigate();
@@ -76,6 +78,55 @@ const PayoutHistory = () => {
   const sortedFiltered = sortNewestFirst(filtered, { dateKeys: ["createdAt"] });
 
   const totalPaid = sortedFiltered.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+  const payoutHistoryColumns = useMemo(
+    () => [
+      {
+        title: "Date",
+        key: "dt",
+        render: (_, row) =>
+          row.createdAt
+            ? new Date(row.createdAt).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
+            : "-",
+      },
+      {
+        title: "Application No",
+        key: "app",
+        render: (_, row) => row.application?.appNo || "-",
+      },
+      {
+        title: "Loan Type",
+        key: "lt",
+        render: (_, row) => loanTypeToTableShort(row.application?.loanType),
+      },
+      {
+        title: "Approved Amount",
+        key: "appr",
+        render: (_, row) => formatCurrency(row.application?.approvedLoanAmount || 0),
+      },
+      {
+        title: "Payout Amount",
+        key: "amt",
+        render: (_, row) => (
+          <span className="font-semibold">{formatCurrency(row.amount || 0)}</span>
+        ),
+      },
+      {
+        title: "Status",
+        key: "st",
+        render: (_, row) => (
+          <span className="inline-flex px-2 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+            {row.status || "DONE"}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -168,69 +219,22 @@ const PayoutHistory = () => {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg shadow-sm bg-white">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-slate-800 text-white">
-              <tr>
-                <th className="px-3 py-3 text-left">Date</th>
-                <th className="px-3 py-3 text-left">Application No</th>
-                <th className="px-3 py-3 text-left">Loan Type</th>
-                <th className="px-3 py-3 text-left">Approved Amount</th>
-                <th className="px-3 py-3 text-left">Payout Amount</th>
-                <th className="px-3 py-3 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-4">
-                    Loading payouts...
-                  </td>
-                </tr>
-              ) : sortedFiltered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-4 text-gray-500">
-                    No payout data found for this filter.
-                  </td>
-                </tr>
-              ) : (
-                sortedFiltered.map((row, idx) => (
-                  <tr key={idx} className="border-b hover:bg-gray-50">
-                    <td className="px-3 py-3 align-middle text-xs">
-                      {row.createdAt
-                        ? new Date(row.createdAt).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "-"}
-                    </td>
-                    <td className="px-3 py-3 align-middle text-xs">
-                      {row.application?.appNo || "-"}
-                    </td>
-                    <td className="px-3 py-3 align-middle text-xs">
-                      {row.application?.loanType || "-"}
-                    </td>
-                    <td className="px-3 py-3 align-middle text-xs">
-                      {formatCurrency(
-                        row.application?.approvedLoanAmount || 0
-                      )}
-                    </td>
-                    <td className="px-3 py-3 align-middle font-semibold">
-                      {formatCurrency(row.amount || 0)}
-                    </td>
-                    <td className="px-3 py-3 align-middle text-xs">
-                      <span className="inline-flex px-2 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                        {row.status || "DONE"}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <AppAntTable
+          rowKey={(row, idx) =>
+            String(row?._id ?? row?.application?._id ?? row?.application?.appNo ?? idx)
+          }
+          columns={payoutHistoryColumns}
+          dataSource={sortedFiltered}
+          loading={loading}
+          size="small"
+          locale={{
+            emptyText: (
+              <div className="py-8 text-center text-gray-500">
+                No payout data found for this filter.
+              </div>
+            ),
+          }}
+        />
       </div>
     </div>
   );

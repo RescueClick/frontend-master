@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Search,
   Filter,
@@ -9,6 +9,7 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  Download,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -16,7 +17,12 @@ import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
 import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
-import { getLoanStatusBadgeClass, getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import { getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
+import toast from "react-hot-toast";
+import { downloadXlsx } from "../../../utils/downloadXlsx";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 const Application = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -102,24 +108,6 @@ const Application = () => {
     });
   };
 
-  // Convert loan type to shortcut
-  const getLoanTypeShortcut = (loanType) => {
-    if (!loanType) return "—";
-    const type = loanType.toUpperCase();
-    switch (type) {
-      case "HOME_LOAN_SALARIED":
-        return "HLS";
-      case "HOME_LOAN_SELF_EMPLOYED":
-        return "HLB";
-      case "PERSONAL_LOAN":
-        return "PL";
-      case "BUSINESS_LOAN":
-        return "BL";
-      default:
-        return loanType; // Return original if no match
-    }
-  };
-
   const filteredApplications = applications.filter((application) => {
     const matchesSearch = matchesSearchTerm(searchTerm, [
       application.customerName,
@@ -136,6 +124,26 @@ const Application = () => {
   const sortedFilteredApplications = sortNewestFirst(filteredApplications, {
     dateKeys: ["dateSubmitted"],
   });
+
+  const handleExport = useCallback(() => {
+    const rows = sortedFilteredApplications.map((a) => ({
+      "App ID": a.id || "",
+      "Customer Name": a.customerName || "",
+      Contact: a.contact || "",
+      "Date Submitted": a.dateSubmitted
+        ? formatDate(a.dateSubmitted)
+        : "",
+      "Loan Type": loanTypeToTableShort(a.loanType),
+      "Loan Amount": a.loanAmount || "",
+      "Approval Amount": a.approvalAmount || "",
+      Disbursed: a.disbursedAmount ?? "",
+      Payout: a.payoutAmount ?? "",
+      Status: getLoanStatusLabel(a.status) || String(a.status || ""),
+    }));
+    if (!downloadXlsx(rows, "partner-applications.xlsx", "Applications")) {
+      toast.error("No rows to export");
+    }
+  }, [sortedFilteredApplications]);
 
   const summaryStats = {
     total: applications.length,
@@ -155,6 +163,179 @@ const Application = () => {
         customer.status.toUpperCase() === status.toUpperCase()
     ).length;
   }
+
+  const desktopColumns = useMemo(
+    () => [
+      {
+        title: "Name",
+        key: "name",
+        render: (_, application) => (
+          <div className="flex items-center min-w-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs mr-2 flex-shrink-0">
+              {application.customerName
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
+            </div>
+            <div
+              className="text-xs font-medium truncate"
+              style={{ color: "#111827" }}
+              title={application.customerName}
+            >
+              {application.customerName}
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: "App ID",
+        dataIndex: "id",
+        key: "id",
+        render: (v) => (
+          <div className="font-mono text-xs font-medium" style={{ color: "#111827" }}>
+            {v}
+          </div>
+        ),
+      },
+      {
+        title: "Contact",
+        dataIndex: "contact",
+        key: "contact",
+        render: (v) => (
+          <div className="text-xs text-gray-600 whitespace-nowrap">{v}</div>
+        ),
+      },
+      {
+        title: "Date",
+        key: "date",
+        render: (_, application) => (
+          <div className="text-xs text-gray-600 whitespace-nowrap">
+            {formatDate(application.dateSubmitted)}
+          </div>
+        ),
+      },
+      {
+        title: "Type",
+        key: "type",
+        align: "center",
+        render: (_, application) => (
+          <span className="inline-flex px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-semibold">
+            {loanTypeToTableShort(application.loanType)}
+          </span>
+        ),
+      },
+      {
+        title: "Loan Amt",
+        key: "loan",
+        align: "right",
+        render: (_, application) => (
+          <div
+            className="text-xs font-medium whitespace-nowrap"
+            style={{ color: "#111827" }}
+          >
+            {application.loanAmount}
+          </div>
+        ),
+      },
+      {
+        title: "Approved",
+        key: "appr",
+        align: "right",
+        render: (_, application) => (
+          <div
+            className="text-xs font-medium whitespace-nowrap"
+            style={{ color: "#111827" }}
+          >
+            {application.approvalAmount}
+          </div>
+        ),
+      },
+      {
+        title: "Disbursed",
+        key: "disb",
+        align: "right",
+        render: (_, application) => (
+          <div
+            className="text-xs font-medium whitespace-nowrap"
+            style={{
+              color: application.disbursedAmount > 0 ? "#10B981" : "#9CA3AF",
+            }}
+          >
+            {application.disbursedAmount > 0
+              ? `₹${application.disbursedAmount.toLocaleString("en-IN")}`
+              : "—"}
+          </div>
+        ),
+      },
+      {
+        title: "Payout",
+        key: "payout",
+        align: "right",
+        render: (_, application) => (
+          <div className="text-xs font-semibold whitespace-nowrap" style={{ color: "#7C3AED" }}>
+            ₹{" "}
+            {application.payoutAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+          </div>
+        ),
+      },
+      {
+        title: "Status",
+        key: "status",
+        align: "center",
+        render: (_, application) => (
+          <LoanStatusBadge status={application.status} className="whitespace-nowrap" />
+        ),
+      },
+      {
+        title: "Remarks",
+        key: "remarks",
+        align: "center",
+        render: (_, application) => (
+          <button
+            type="button"
+            className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs"
+            style={{ backgroundColor: "orange" }}
+            title="View Remarks"
+            onClick={() => {
+              const lastRemark = application.stageHistory?.length
+                ? application.stageHistory[application.stageHistory.length - 1].note
+                : "No remarks available";
+              setSelectedRemark(lastRemark);
+              setOpen(true);
+            }}
+          >
+            View
+          </button>
+        ),
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        align: "center",
+        render: (_, application) => (
+          <div className="flex items-center justify-center gap-1">
+            {application.applicationId && application.customerId && (
+              <button
+                type="button"
+                className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs flex items-center gap-1"
+                style={{ backgroundColor: "var(--color-brand-primary)" }}
+                title="Upload Documents"
+                onClick={() => {
+                  navigate(
+                    `/partner/complete-application?applicationId=${application.applicationId}&customerId=${application.customerId}`
+                  );
+                }}
+              >
+                <Eye size={12} />
+                Docs
+              </button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [navigate]
+  );
 
   return (
     <>
@@ -177,8 +358,8 @@ const Application = () => {
         </div>
       )}
 
-      <div className="min-h-screen px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "#F8FAFC" }}>
-        <div className="mx-auto max-w-7xl py-4 sm:py-8">
+      <div className="app-list-page min-h-screen">
+        <div className="mx-auto max-w-7xl py-3 sm:py-4 md:py-5">
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
             <div>
@@ -309,166 +490,25 @@ const Application = () => {
                   <option value="DISBURSED">Disbursed</option>
                 </select>
               </div>
+              <button
+                type="button"
+                onClick={handleExport}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 lg:w-auto"
+              >
+                <Download size={18} />
+                Export
+              </button>
             </div>
           </div>
 
-          {/* Applications Table - Desktop */}
-          <div className="hidden lg:block overflow-x-auto rounded-lg shadow-sm">
-            <table className="w-full border-collapse bg-white text-sm">
-              <thead style={{ background: "var(--color-brand-primary)", color: "white" }}>
-                <tr>
-                  <th className="px-2 py-4 text-left">Name</th>
-                  <th className="px-2 py-4 text-left">App ID</th>
-                  <th className="px-2 py-4 text-left">Contact</th>
-                  <th className="px-2 py-4 text-left">Date</th>
-                  <th className="px-2 py-4 text-center">Type</th>
-                  <th className="px-2 py-4 text-right">Loan Amt</th>
-                  <th className="px-2 py-4 text-right">Approved</th>
-                  <th className="px-2 py-4 text-right">Disbursed</th>
-                  <th className="px-2 py-4 text-right">Payout</th>
-                  <th className="px-2 py-4 text-center">Status</th>
-                  <th className="px-2 py-4 text-center">Remarks</th>
-                  <th className="px-2 py-4 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedFilteredApplications.map((application) => (
-                  <tr
-                    key={application.id}
-                    className="border-b hover:bg-gray-50"
-                  >
-                    <td className="px-2 py-3 align-top">
-                      <div className="flex items-center min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs mr-2 flex-shrink-0">
-                          {application.customerName
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </div>
-                        <div
-                          className="text-xs font-medium truncate"
-                          style={{ color: "#111827" }}
-                          title={application.customerName}
-                        >
-                          {application.customerName}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div
-                        className="font-mono text-xs font-medium"
-                        style={{ color: "#111827" }}
-                      >
-                        {application.id}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="text-xs text-gray-600 whitespace-nowrap">
-                        {application.contact}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="text-xs text-gray-600 whitespace-nowrap">
-                        {formatDate(application.dateSubmitted)}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex justify-center">
-                        <span className="inline-flex px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-semibold">
-                          {getLoanTypeShortcut(application.loanType)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div
-                        className="text-xs font-medium text-right whitespace-nowrap"
-                        style={{ color: "#111827" }}
-                      >
-                        {application.loanAmount}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div
-                        className="text-xs font-medium text-right whitespace-nowrap"
-                        style={{ color: "#111827" }}
-                      >
-                        {application.approvalAmount}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div
-                        className="text-xs font-medium text-right whitespace-nowrap"
-                        style={{ color: application.disbursedAmount > 0 ? "#10B981" : "#9CA3AF" }}
-                      >
-                        {application.disbursedAmount > 0
-                          ? `₹${application.disbursedAmount.toLocaleString("en-IN")}`
-                          : "—"}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div
-                        className="text-xs font-semibold text-right whitespace-nowrap"
-                        style={{ color: "#7C3AED" }}
-                      >
-                        ₹ {application.payoutAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex justify-center">
-                        <span
-                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getLoanStatusBadgeClass(
-                            application.status
-                          )}`}
-                        >
-                          {getLoanStatusLabel(application.status)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center justify-center">
-                        <button
-                          className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs"
-                          style={{ backgroundColor: "orange" }}
-                          title="View Remarks"
-                          onClick={() => {
-                            const lastRemark = application.stageHistory
-                              ?.length
-                              ? application.stageHistory[
-                                  application.stageHistory.length - 1
-                                ].note
-                              : "No remarks available";
-
-                            setSelectedRemark(lastRemark);
-                            setOpen(true);
-                          }}
-                        >
-                          View
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center justify-center gap-1">
-                        {application.applicationId && application.customerId && (
-                          <button
-                            className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs flex items-center gap-1"
-                            style={{ backgroundColor: "var(--color-brand-primary)" }}
-                            title="Upload Documents"
-                            onClick={() => {
-                              navigate(
-                                `/partner/complete-application?applicationId=${application.applicationId}&customerId=${application.customerId}`
-                              );
-                            }}
-                          >
-                            <Eye size={12} />
-                            Docs
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="app-list-page__table-wrap hidden lg:block">
+            <AppAntTable
+              rowKey={(row) => String(row.applicationId || row.id)}
+              columns={desktopColumns}
+              dataSource={sortedFilteredApplications}
+              loading={loading}
+              size="small"
+            />
           </div>
 
           {/* Applications Cards - Mobile & Tablet */}
@@ -493,13 +533,7 @@ const Application = () => {
                       </div>
                     </div>
                   </div>
-                  <span
-                    className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getLoanStatusBadgeClass(
-                      application.status
-                    )}`}
-                  >
-                    {getLoanStatusLabel(application.status)}
-                  </span>
+                  <LoanStatusBadge status={application.status} />
                 </div>
 
                 {/* Details Grid */}
@@ -518,7 +552,7 @@ const Application = () => {
                     <div className="text-gray-500 text-xs mb-1">Loan Type</div>
                     <div className="font-medium">
                       <span className="inline-flex px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
-                        {getLoanTypeShortcut(application.loanType)}
+                        {loanTypeToTableShort(application.loanType)}
                       </span>
                     </div>
                   </div>

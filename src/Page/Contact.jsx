@@ -228,7 +228,7 @@ const Contact = () => {
                   {[
                     { t: "Digital-first", d: "Apply and track progress without repeated branch visits." },
                     { t: "Expert guidance", d: "Structured support for customers and channel partners." },
-                    { t: "Wide lender network", d: "Options across banks and NBFCs on one platform." },
+                    { t: "Wide lender network", d: "Options across banks and lenders on one platform." },
                     { t: "Pan-India", d: "Serving users and partners across regions." },
                   ].map((item) => (
                     <li key={item.t} className="flex gap-3">

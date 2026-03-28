@@ -14,6 +14,7 @@ import {
   Trash2,
   IndianRupee,
   Award,
+  Link2,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -67,6 +68,12 @@ const AdminSideBar = () => {
     { name: "RM", icon: Users, path: "/admin/rm" },
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
     { name: "Customer", icon: Users, path: "/admin/customer" },
+    {
+      name: "Public loan referral",
+      icon: Link2,
+      path: "/admin/public-loan-referral",
+      highlight: true,
+    },
     // highlight payout / incentives / target / add bank
     { name: "Payout", icon: IndianRupee, path: "/admin/payout", highlight: true },
     { name: "Incentives", icon: Award, path: "/admin/incentives", highlight: true },

@@ -1,6 +1,6 @@
 //updTED CODE
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   User,
   Phone,
@@ -21,15 +21,20 @@ import toast from "react-hot-toast";
 import { z } from "zod";
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
+import {
+  fetchPublicDefaultPartnerReferralCode,
+  PUBLIC_LOAN_REFERRAL_FALLBACK,
+} from "../../../../feature/publicLoanReferral";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 
-export default function BusinessLoan() {
-  const defaultReferralCode = 'PT-D4CTD8B2'
- 
+export default function BusinessLoan({ embed = false } = {}) {
   const { partnerToken } = getAuthData();
   const isPartnerLoggedIn = Boolean(partnerToken);
+  const [defaultReferralCode, setDefaultReferralCode] = useState(
+    PUBLIC_LOAN_REFERRAL_FALLBACK
+  );
 
   const [formData, setFormData] = useState({
     // Personal Information
@@ -119,7 +124,9 @@ export default function BusinessLoan() {
   const [savedApplication, setSavedApplication] = useState(null);
   const abortControllerRef = useRef(null);
 
-  const loanDraftStorageKey = "trustline.businessLoanDraft.v1";
+  const loanDraftStorageKey = embed
+    ? "trustline.businessLoanDraft.embed.v1"
+    : "trustline.businessLoanDraft.v1";
   const steps = [
     "Personal",
     "Address",
@@ -133,14 +140,34 @@ export default function BusinessLoan() {
   const [touchedFields, setTouchedFields] = useState({});
   const [showClientValidation, setShowClientValidation] = useState(false);
 
-  const stepFirstFieldName = [
-    "firstName",
-    "currentAddress",
-    "loanAmount",
-    "aadharFront",
-    "reference1Name",
-    "partnerReferralCode",
-  ];
+  const stepFirstFieldName = useMemo(
+    () => [
+      "firstName",
+      "currentAddress",
+      "loanAmount",
+      "aadharFront",
+      "reference1Name",
+      isPartnerLoggedIn ? "reference2Contact" : "partnerReferralCode",
+    ],
+    [isPartnerLoggedIn]
+  );
+
+  useEffect(() => {
+    if (isPartnerLoggedIn) return;
+    let cancelled = false;
+    fetchPublicDefaultPartnerReferralCode().then((code) => {
+      if (cancelled) return;
+      setDefaultReferralCode(code);
+      setFormData((prev) => {
+        const existing = String(prev.partnerReferralCode ?? "").trim();
+        if (existing) return prev;
+        return { ...prev, partnerReferralCode: code };
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isPartnerLoggedIn]);
 
   // Cleanup function to cancel pending requests
   useEffect(() => {
@@ -720,6 +747,7 @@ const handleSubmit = async () => {
     const docsQueue = [
       { file: formData.aadharFront, type: "AADHAR_FRONT" },
       { file: formData.aadharBack, type: "AADHAR_BACK" },
+      { file: formData.otherDocs, type: "OTHER_DOCS" },
       { file: formData.panCard, type: "PAN" },
       { file: applicantPhoto, type: "PHOTO" },
       { file: formData.addressProof, type: "ADDRESS_PROOF" },
@@ -1009,8 +1037,12 @@ const handleSubmit = async () => {
 
   return (
     <div
-      className="min-h-screen py-8 px-4"
-      style={{ backgroundColor: "#F8FAFC" }}
+      className={
+        embed
+          ? "py-4 px-0 sm:px-2"
+          : "min-h-screen py-8 px-4"
+      }
+      style={{ backgroundColor: embed ? "transparent" : "#F8FAFC" }}
     >
       <DocumentPreviewModal
         url={documentModel}
@@ -2602,37 +2634,41 @@ const handleSubmit = async () => {
               </div>
             </section>
 
-            {/* Partner Referral */}
+            {/* Partner Referral — public applicants only; section kept for step anchor */}
             <section hidden={currentStep !== 5} id="loan-business-step-review">
-              <h2
-                className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                style={{ color: "#111827" }}
-              >
-                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Partner Referral
-              </h2>
-              <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
+              {!isPartnerLoggedIn && (
+                <>
+                  <h2
+                    className="text-2xl font-semibold mb-6 flex items-center gap-3"
                     style={{ color: "#111827" }}
                   >
-                    Partner Referral Code (optional) - use {defaultReferralCode} if you don't have a partner code
-                  </label>
-                  <input
-                    type="text"
-                    name="partnerReferralCode"
-                    value={formData.partnerReferralCode}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    placeholder="Enter partner code"
-                  />
-                </div>
-              </div>
+                    <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
+                    Partner Referral
+                  </h2>
+                  <div className="grid grid-cols-1 gap-6">
+                    <div>
+                      <label
+                        className="block text-sm font-medium mb-2"
+                        style={{ color: "#111827" }}
+                      >
+                        Partner Referral Code (optional) - use {defaultReferralCode} if you don&apos;t have a partner code
+                      </label>
+                      <input
+                        type="text"
+                        name="partnerReferralCode"
+                        value={formData.partnerReferralCode}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        placeholder="Enter partner code"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </section>
 
             {/* Submit + Wizard Navigation */}

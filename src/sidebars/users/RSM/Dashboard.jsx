@@ -18,7 +18,6 @@ import {
   PieChart,
   ArrowUp,
   ArrowDown,
-  Eye,
   FileText,
   Target,
   Activity,
@@ -34,6 +33,10 @@ import { useRealtimeData } from "../../../utils/useRealtimeData";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 import MetricCard from "../../../components/shared/MetricCard";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
+import { getLoanStatusBadgeClass } from "../../../utils/loanStatus";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -41,7 +44,14 @@ const Dashboard = () => {
 
   const openRmAnalytics = useCallback((rm) => {
     if (!rm?.id) return;
-    navigate("/rsm/analytics", { state: { id: rm.id, role: "RM" } });
+    navigate("/rsm/analytics", {
+      state: {
+        id: rm.id,
+        role: "RM",
+        name: rm.name || "",
+        detail: "Relationship Manager",
+      },
+    });
   }, [navigate]);
 
   const dispatch = useDispatch();
@@ -105,21 +115,6 @@ const Dashboard = () => {
     } else {
       // For amounts less than 1K
       return `₹ ${amount}`;
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case "disburse":
-      case "disbursed":
-        return "text-green-700 bg-green-100 border-green-200";
-      case "in process":
-      case "under review":
-        return "text-blue-700 bg-blue-100 border-blue-200";
-      case "approved":
-        return "text-purple-700 bg-purple-100 border-purple-200";
-      default:
-        return "text-gray-700 bg-gray-100 border-gray-200";
     }
   };
 
@@ -423,13 +418,7 @@ const Dashboard = () => {
                 data.topPerformers.map((rm, index) => (
                   <div
                     key={rm.id || index}
-                    className="p-4 border rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => openRmAnalytics(rm)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") openRmAnalytics(rm);
-                    }}
+                    className="p-4 border rounded-xl transition-colors"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
@@ -448,23 +437,12 @@ const Dashboard = () => {
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-brand-primary/5 hover:text-brand-primary"
-                          title="Open RM analytics"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openRmAnalytics(rm);
-                          }}
+                          className="text-[11px] font-medium text-slate-600 hover:text-brand-primary hover:underline"
+                          onClick={() => openRmAnalytics(rm)}
                         >
-                          <Eye size={14} className="text-brand-primary" />
-                          View
+                          Analytics
                         </button>
-                        <span
-                          className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                            "disbursed"
-                          )}`}
-                        >
-                          Active
-                        </span>
+                        <EntityStatusBadge status="ACTIVE" />
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
@@ -529,18 +507,12 @@ const Dashboard = () => {
                             {app.appNo || "N/A"}
                           </p>
                           <p className="text-xs text-gray-400">
-                            {app.loanType || "N/A"}
+                            {loanTypeToTableShort(app.loanType)}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                            app.status
-                          )}`}
-                        >
-                          {app.status || "Pending"}
-                        </span>
+                        <LoanStatusBadge status={app.status || "SUBMITTED"} />
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
@@ -573,8 +545,8 @@ const Dashboard = () => {
                         In Process
                       </span>
                       <span
-                        className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                          "in process"
+                        className={`inline-flex items-center justify-center px-2.5 py-1 text-xs font-semibold rounded-md border border-black/[0.06] shadow-sm ${getLoanStatusBadgeClass(
+                          "UNDER_REVIEW"
                         )}`}
                       >
                         {data?.totals?.inProcessApplications || 0}
@@ -587,8 +559,8 @@ const Dashboard = () => {
                         Disbursed
                       </span>
                       <span
-                        className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                          "disbursed"
+                        className={`inline-flex items-center justify-center px-2.5 py-1 text-xs font-semibold rounded-md border border-black/[0.06] shadow-sm ${getLoanStatusBadgeClass(
+                          "DISBURSED"
                         )}`}
                       >
                         {data?.totals?.disbursedApplications || 0}

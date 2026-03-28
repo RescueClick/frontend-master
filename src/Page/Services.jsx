@@ -71,7 +71,7 @@ const Services = () => {
         "Competitive rates",
         "Quick processing",
         "Cash-flow aligned tenure",
-        "NBFC & bank options",
+        "Bank & lender options",
       ],
       link: "/partner/application/business-loan",
       accentBar: "from-slate-700 via-teal-800 to-brand-primary",

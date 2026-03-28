@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { getAuthData } from "../../../utils/localStorage";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 import {
   createBank,
   deleteBank,
@@ -236,7 +237,7 @@ const Banks = () => {
                         required
                         autoComplete="organization"
                         className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                        placeholder="e.g. HDFC Bank, Axis NBFC"
+                        placeholder="e.g. HDFC Bank, ICICI Bank"
                       />
                     </label>
 
@@ -553,7 +554,7 @@ const Banks = () => {
 
                         <div className="mt-auto pt-2 border-t border-dashed border-gray-200 flex items-center justify-between gap-2">
                           <span className="px-2 py-1 text-[10px] font-semibold rounded-md bg-emerald-100 text-emerald-700 truncate max-w-[55%]">
-                            {b.loanType || "N/A"}
+                            {loanTypeToTableShort(b.loanType)}
                           </span>
                           <a
                             href={b.portalLink || "#"}

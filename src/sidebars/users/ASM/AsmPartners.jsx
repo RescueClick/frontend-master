@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { Eye, Search } from "lucide-react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { Search, Download } from "lucide-react";
 import {
   activatePartner,
   fetchAsmPartners,
@@ -13,6 +13,10 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
+import toast from "react-hot-toast";
+import { downloadXlsx } from "../../../utils/downloadXlsx";
 
 
 
@@ -34,8 +38,6 @@ export default function AsmPartner() {
   const [replacementSearch, setReplacementSearch] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [customerToView, setCustomerToView] = useState(null);
   const [Partners, setPartners] = useState([]);
   console.log("Partners", Partners)
 
@@ -77,15 +79,31 @@ export default function AsmPartner() {
 
   const sortedFilteredCustomers = sortNewestFirst(filteredCustomers, { dateKeys: ["createdAt"] });
 
-  const handleViewCustomer = (customer) => {
-    setCustomerToView(customer);
-    setShowViewModal(true);
-  };
+  const handleExport = useCallback(() => {
+    const rows = sortedFilteredCustomers.map((c) => ({
+      Name: c.name || "",
+      "Employee ID": c.employeeId || "",
+      Phone: c.phone || "",
+      Email: c.email || "",
+      Status: c.activation || "",
+      "RM Name": c.assignTo?.rmName || "",
+      "Created On": c.createdOn || "",
+    }));
+    if (!downloadXlsx(rows, "asm-partners.xlsx", "Partners")) {
+      toast.error("No rows to export");
+    }
+  }, [sortedFilteredCustomers]);
+
 
   const openPartnerAnalytics = (c) => {
     if (!c?.id) return;
     navigate("/asm/analytics", {
-      state: { id: c.id, role: "PARTNER" },
+      state: {
+        id: c.id,
+        role: "PARTNER",
+        name: c.name || "",
+        detail: "Partner",
+      },
     });
   };
 
@@ -224,295 +242,138 @@ const handleLoginAs = (userId) => {
 loginAsUser(userId, navigate);
 };
 
-  
-  return (
-    <>
-      <div className="min-h-screen" style={{ background: colors.background }}>
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Partners</h2>
-              <p className="text-gray-600 mt-1">
-                Total {filteredCustomers?.length || 0} records found
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  type="text"
-                  className="border border-gray-300 rounded-lg pl-10 pr-4 py-3 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                  placeholder="Search by name, phone, or ID"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto rounded-lg shadow-sm">
-            <table className="w-full border-collapse bg-white text-sm">
-              <thead style={{ background: colors.primary, color: "white" }}>
-                <tr>
-                  <th className="px-2 py-4 text-left">User Name</th>
-                  <th className="px-2 py-4 text-left">User ID</th>
-                  <th className="px-2 py-4 text-left">Contact</th>
-                  <th className="px-2 py-4 text-left">Create on</th>
-                  <th className="px-2 py-4 text-left">Login as</th>
-                  <th className="px-2 py-4 text-left">Activation</th>
-                  <th className="px-2 py-4 text-left">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCustomers.length > 0 ? (
-                  sortedFilteredCustomers.map((c) => (
-                    <tr key={c.id} className="border-b hover:bg-gray-50">
-                      <td
-                        className="px-2 py-3 align-top cursor-pointer hover:text-brand-primary"
-                        onClick={() => openPartnerAnalytics(c)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <img src={c?.profilePic} alt="profile" className="w-8 h-8 rounded-full border border-gray-300" />
-                          <span className="font-semibold text-sm">
-                            {c.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-3 align-middle">{c.employeeId}</td>
-                      <td className="px-2 py-3 align-middle">
-                        <span className="text-sm font-medium">
-                          {c.phone}
-                        </span>
-                      </td>
-                      <td className="px-2 py-3 align-middle">
-                        {formatDate(c.createdOn)}
-                      </td>
-                      <td className="px-2 py-3 align-middle">
-                        <button
-                          className="px-2 py-1 border rounded text-xs"
-                          style={{
-                            borderColor: colors.secondary,
-                            color: colors.secondary,
-                          }}
-                          onClick={() => handleLoginAs(c.id)}
-                        >
-                          Login
-                        </button>
-                      </td>
-                      <td className="px-2 py-3 align-middle">
-                        <div
-                          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
-                            c.activation === "ACTIVE"
-                              ? "bg-blue-500"
-                              : "bg-gray-300"
-                          }`}
-                          onClick={() => {
-                            if (c.activation === "ACTIVE") {
-                              toggleActivation(c);
-                            } else {
-                              setPartnerToActivate(c);
-                            }
-                          }}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                              c.activation === "ACTIVE"
-                                ? "translate-x-6"
-                                : "translate-x-0"
-                            }`}
-                          ></div>
-                        </div>
-                      </td>
-                      <td className="px-2 py-3 align-middle">
-                        <div className="flex items-center gap-2 h-full">
-                          <button
-                            type="button"
-                            className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-                            title="Open partner analytics"
-                            onClick={() => openPartnerAnalytics(c)}
-                          >
-                            <Eye size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
-                            onClick={() => handleViewCustomer(c)}
-                          >
-                            Details
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="text-center py-4">
-                      No partners found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+  const asmPartnerColumns = [
+    {
+      title: "User name",
+      key: "name",
+      render: (_, c) => (
+        <div className="flex items-center gap-3 align-top">
+          <img
+            src={c?.profilePic}
+            alt=""
+            className="h-8 w-8 rounded-full border border-gray-300"
+          />
+          <span className="text-sm font-semibold text-gray-900">{c.name}</span>
         </div>
-      </div>
-
-      {/* View Partner Details Modal */}
-      {showViewModal && customerToView && (
+      ),
+    },
+    { title: "User ID", dataIndex: "employeeId", key: "employeeId" },
+    {
+      title: "Contact",
+      key: "phone",
+      render: (_, c) => (
+        <span className="text-sm font-medium">{c.phone}</span>
+      ),
+    },
+    {
+      title: "Created on",
+      key: "createdOn",
+      render: (_, c) => formatDate(c.createdOn),
+    },
+    {
+      title: "Login as",
+      key: "login",
+      render: (_, c) => (
+        <button
+          type="button"
+          className="rounded border px-2 py-1 text-xs"
+          style={{ borderColor: colors.secondary, color: colors.secondary }}
+          onClick={() => handleLoginAs(c.id)}
+        >
+          Login
+        </button>
+      ),
+    },
+    {
+      title: "Activation",
+      key: "activation",
+      render: (_, c) => (
         <div
-          className="fixed inset-0 bg-black/25 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowViewModal(false)}
+          role="button"
+          tabIndex={0}
+          className={`flex h-6 w-12 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ${
+            c.activation === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
+          }`}
+          onClick={() => {
+            if (c.activation === "ACTIVE") {
+              toggleActivation(c);
+            } else {
+              setPartnerToActivate(c);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (c.activation === "ACTIVE") toggleActivation(c);
+              else setPartnerToActivate(c);
+            }
+          }}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="p-6 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl">
-              <div className="flex items-start justify-between">
-                <h3 className="text-xl font-semibold">Partner Details</h3>
-                <button
-                  className="text-white/80 hover:text-white rounded-full p-2"
-                  onClick={() => setShowViewModal(false)}
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 bg-[#F8FAFC] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-                  <h4 className="font-semibold text-[#111827] mb-4 text-base">
-                    Personal Information
-                  </h4>
-                  <div className="space-y-3">
-                    <p>
-                      <strong className="text-gray-700">Name:</strong>{" "}
-                      <span className="text-gray-900">
-                        {customerToView.name}
-                      </span>
-                    </p>
-                    <p>
-                      <strong className="text-gray-700">Email:</strong>{" "}
-                      <span className="text-gray-900">
-                        {customerToView.email}
-                      </span>
-                    </p>
-                    <p>
-                      <strong className="text-gray-700">Phone:</strong>{" "}
-                      <span className="text-gray-900">
-                        {customerToView.phone}
-                      </span>
-                    </p>
-                    <p>
-                      <strong className="text-gray-700">Created On:</strong>{" "}
-                      <span className="text-gray-900">
-                        {formatDate(customerToView.createdOn)}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-                  <h4 className="font-semibold text-[#111827] mb-4 text-base">
-                    Account Information
-                  </h4>
-                  <div className="space-y-3">
-                    <p>
-                      <strong className="text-gray-700">Partner ID:</strong>{" "}
-                      <span className="text-gray-900 font-mono">
-                        {customerToView.employeeId                        }
-                      </span>
-                    </p>
-                    <p>
-                      <strong className="text-gray-700">Payment Status:</strong>
-                      <span
-                        className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          customerToView.paymentStatus === "completed"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {customerToView.paymentStatus.toUpperCase()}
-                      </span>
-                    </p>
-                    <p>
-                      <strong className="text-gray-700">Status:</strong>
-                      <span
-                        className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          customerToView.activation
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {customerToView.activation ? "ACTIVE" : "INACTIVE"}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 md:col-span-2">
-                  <h4 className="font-semibold text-[#111827] mb-4 text-base">
-                    Assignment Information
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p>
-                        <strong className="text-gray-700">ASM:</strong>
-                        <span className="text-gray-900 ml-1">
-                          {customerToView.assignTo.asmName || "Not Assigned"}
-                        </span>
-                      </p>
-                  
-                
-                      <p className="mt-2">
-                        <strong className="text-gray-700">RM:</strong>
-                        <span className="text-gray-900 ml-1">
-                          {customerToView.assignTo.rmName || "Not Assigned"}
-                        </span>
-                      </p>
-                   
-                    </div>
-
-                    <div>
-                    <p>
-                        <strong className="text-gray-700">ASM Employee Id</strong>
-                        <span className="text-gray-900 ml-1">
-                          {customerToView.assignTo.asmEmployeeId || "Not Assigned"}
-                        </span>
-                      </p>
-                      <p className="mt-2">
-                        <strong className="text-gray-700">Rm Employee Id</strong>
-                        <span className="text-gray-900 ml-1">
-                          {customerToView.assignTo.rmEmployeeId || "Not Assigned"}
-                        </span>
-                      </p>
-                 
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end mt-6">
-                <button
-                  className="px-6 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
-                  onClick={() => setShowViewModal(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
+            className={`h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+              c.activation === "ACTIVE" ? "translate-x-6" : "translate-x-0"
+            }`}
+          />
         </div>
-      )}
+      ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      render: (_, c) => (
+        <div className="flex h-full flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+            onClick={() => openPartnerAnalytics(c)}
+          >
+            Analytics
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <DashboardTablePage
+        title="Partners"
+        subtitle={`Total ${filteredCustomers?.length || 0} records found`}
+        headerRight={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="relative">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                className="w-72 max-w-[80vw] rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-primary sm:w-80 sm:py-2.5"
+                placeholder="Search by name, phone, or ID"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              <Download size={16} />
+              Export
+            </button>
+          </div>
+        }
+      >
+        <AppAntTable
+          columns={asmPartnerColumns}
+          dataSource={sortedFilteredCustomers}
+          rowKey="id"
+          loading={loading}
+          locale={{ emptyText: "No partners found" }}
+        />
+      </DashboardTablePage>
+
 
       <ReassignmentDeactivateModal
         isOpen={modalOpen}

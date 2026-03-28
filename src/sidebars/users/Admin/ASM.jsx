@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Eye, Edit, Trash, Plus, X, Calendar, IndianRupee, Download } from "lucide-react";
+import { Edit, Trash, Plus, X, Calendar, IndianRupee, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
@@ -22,6 +22,8 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
 
 const colors = {
@@ -36,7 +38,6 @@ const colors = {
 
 export default function ASM() {
   const dispatch = useDispatch();
-  const [selectedUser, setSelectedUser] = useState(null);
   const [regionQuery, setRegionQuery] = useState("");
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [userToDeactivate, setUserToDeactivate] = useState(null);
@@ -62,6 +63,17 @@ export default function ASM() {
   // 🔹 Fix: Access the correct state structure from adminSlice
   const { data: asm, loading, error } = useSelector((state) => state.admin.asm);
   const sortedAsm = sortNewestFirst(Array.isArray(asm) ? asm : [], { dateKeys: ["createdAt"] });
+
+  const displayAsm = useMemo(() => {
+    const q = regionQuery.trim().toLowerCase();
+    if (!q) return sortedAsm;
+    return sortedAsm.filter((c) => {
+      const name = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
+      const id = (c.employeeId || "").toLowerCase();
+      const code = (c.asmCode || "").toLowerCase();
+      return name.includes(q) || id.includes(q) || code.includes(q);
+    });
+  }, [sortedAsm, regionQuery]);
 
   const asmDeactivateCandidates = useMemo(() => {
     if (!userToDeactivate || !asm) return [];
@@ -264,6 +276,98 @@ const handleLoginAs = (userId) => {
     }
   };
 
+  const asmColumns = [
+    {
+      title: "User Name",
+      key: "name",
+      render: (_, c) => (
+        <span className="text-sm font-medium text-gray-900">
+          {c.firstName} {c.lastName}
+        </span>
+      ),
+    },
+    { title: "User ID", dataIndex: "employeeId", key: "eid" },
+    {
+      title: "Contact",
+      dataIndex: "phone",
+      key: "phone",
+      render: (v) => <span className="text-sm font-medium">{v || "N/A"}</span>,
+    },
+    {
+      title: "Created On",
+      dataIndex: "createdAt",
+      key: "created",
+      render: (v) => new Date(v).toLocaleDateString(),
+    },
+    {
+      title: "Login as",
+      key: "login",
+      render: (_, c) => (
+        <button
+          type="button"
+          className="px-2 py-1 border rounded text-xs"
+          style={{
+            borderColor: colors.secondary,
+            color: colors.secondary,
+          }}
+          onClick={() => handleLoginAs(c._id)}
+        >
+          Login
+        </button>
+      ),
+    },
+    {
+      title: "Status",
+      key: "status",
+      render: (_, c) => (
+        <div
+          onClick={() => toggleActivation(c)}
+          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
+            c.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
+          }`}
+        >
+          <div
+            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
+              c.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"
+            }`}
+          />
+        </div>
+      ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      render: (_, c) => (
+        <div className="flex h-full flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+            onClick={() =>
+              navigate("/admin/analytics", {
+                state: {
+                  id: c._id,
+                  role: "ASM",
+                  name: `${c.firstName || ""} ${c.lastName || ""}`.trim(),
+                  detail: "Area Sales Manager",
+                },
+              })
+            }
+          >
+            Analytics
+          </button>
+          {c.status !== "ACTIVE" && (
+            <button
+              type="button"
+              className="cursor-pointer p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
+              onClick={() => handleDeleteAsm(c._id)}
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <>
@@ -375,17 +479,11 @@ const handleLoginAs = (userId) => {
 
       
 
-      <div
-        className="p-2"
-        style={{ background: colors.background, color: colors.text }}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h2 className="text-lg font-medium">Area Sales Manager</h2>
-            <p className="text-xs">Total {asm?.length || 0} records found</p>
-          </div>
-
-          <div className="flex items-center gap-2">
+      <DashboardTablePage
+        title="Area Sales Manager"
+        subtitle={`Total ${displayAsm?.length || 0} records found`}
+        headerRight={
+          <>
             <input
               type="text"
               value={regionQuery}
@@ -393,262 +491,29 @@ const handleLoginAs = (userId) => {
               placeholder="Search by name "
               className="w-48 sm:w-64 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
-
-             {/* <button
-                className="bg-brand-primary text-white px-4 ml-2 py-2 rounded-lg hover:bg-brand-primary-hover transition"
-                onClick={() => setIsModalOpen(true)}
-              >
-                Set Target
-              </button> */}
-
-            <button 
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            onClick={()=>{handleExport()}}
+            <button
+              type="button"
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              onClick={() => {
+                handleExport();
+              }}
             >
               <Download size={16} className="inline mr-2" />
               Export
             </button>
-          </div>
-        </div>
-
-        {/*  Add error handling */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg shadow-sm">
-          <table className="w-full border-collapse bg-white text-sm">
-            <thead style={{ background: colors.primary, color: "white" }}>
-              <tr>
-                <th className="px-2 py-4 text-left">User Name</th>
-                <th className="px-2 py-4 text-left">User ID</th>
-                <th className="px-2 py-4 text-left">Contact</th>
-                <th className="px-2 py-4 text-left">Created On</th>
-                <th className="px-2 py-4 text-left">Login as</th>
-                <th className="px-2 py-4 text-left">Status</th>
-                <th className="px-2 py-4 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loadingState ? (
-                <tr>
-                  <td colSpan="7" className="text-center py-4">
-                    Loading...
-                  </td>
-                </tr>
-              ) : sortedAsm.length > 0 ? (
-                sortedAsm.map((c) => (
-                  <tr key={c._id} className="border-b hover:bg-gray-50">
-                    <td
-                      className="px-2 py-3 align-top cursor-pointer"
-                      onClick={() =>
-                        navigate("/admin/analytics", {
-                          state: { id: c._id, role: "ASM" },
-                        })
-                      }
-                    >
-                      {c.firstName} {c.lastName}
-                    </td>
-                    <td className="px-2 py-3 align-middle">{c.employeeId}</td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="text-sm font-medium">
-                        {c.phone || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      {new Date(c.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <button
-                        className="px-2 py-1 border rounded text-xs"
-                        style={{
-                          borderColor: colors.secondary,
-                          color: colors.secondary,
-                        }}
-                        onClick={() => handleLoginAs(c._id)}
-                      >
-                        Login
-                      </button>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div
-                        onClick={() => toggleActivation(c)}
-                        className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
-                          c.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
-                        }`}
-                      >
-                        <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                            c.status === "ACTIVE"
-                              ? "translate-x-6"
-                              : "translate-x-0"
-                          }`}
-                        ></div>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center gap-2 h-full flex-wrap">
-                        <button
-                          type="button"
-                          className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-                          title="Open analytics"
-                          onClick={() =>
-                            navigate("/admin/analytics", {
-                              state: { id: c._id, role: "ASM" },
-                            })
-                          }
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
-                          onClick={() => setSelectedUser(c)}
-                        >
-                          Details
-                        </button>
-                        {c.status !== "ACTIVE" && (
-                          <button
-                            className="cursor-pointer p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
-                            onClick={() => handleDeleteAsm(c._id)}
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7" className="text-center py-4">
-                    No ASM records found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Modal */}
-      {selectedUser && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header with gradient */}
-            <div className="bg-brand-primary p-6 text-white relative">
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200"
-              >
-                ✕
-              </button>
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                  <span className="text-lg font-bold text-white">
-                    {selectedUser.firstName?.charAt(0)}
-                    {selectedUser.lastName?.charAt(0)}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">ASM Details</h3>
-                  <p className="text-white/90 text-sm">
-                    {selectedUser.asmCode}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 bg-[#F8FAFC] space-y-4">
-              {/* Name + Role */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-[#111827] text-lg">
-                      {selectedUser.firstName} {selectedUser.lastName}
-                    </h4>
-                    <p className="text-gray-600 text-sm capitalize">
-                      {selectedUser.role}
-                    </p>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      selectedUser.status === "ACTIVE"
-                        ? "bg-brand-primary/10 text-brand-primary"
-                        : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {selectedUser.status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Contact Info */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h5 className="font-semibold text-[#111827] mb-3 flex items-center">
-                  <div className="w-2 h-2 bg-[#F59E0B] rounded-full mr-2"></div>
-                  Contact Information
-                </h5>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-gray-500">Phone</p>
-                    <p className="text-[#111827] font-medium">
-                      {selectedUser.phone}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="text-[#111827] font-medium text-sm">
-                      {selectedUser.email}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* System Info */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h5 className="font-semibold text-[#111827] mb-3 flex items-center">
-                  <div className="w-2 h-2 bg-brand-primary rounded-full mr-2"></div>
-                  System Information
-                </h5>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-gray-500 text-xs">Employee Id.</p>
-                    <p className="text-[#111827] font-mono text-xs bg-gray-50 px-2 py-1 rounded">
-                      {selectedUser.employeeId}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-xs">ASM Code</p>
-                    <p className="text-[#111827] font-semibold">
-                      {selectedUser.asmCode}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-xs">Created</p>
-                    <p className="text-[#111827]">
-                      {new Date(selectedUser.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-xs">Updated</p>
-                    <p className="text-[#111827]">
-                      {new Date(selectedUser.updatedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        error={error}
+      >
+        <AppAntTable
+          rowKey="_id"
+          columns={asmColumns}
+          dataSource={displayAsm}
+          loading={loading || loadingState}
+          size="small"
+          locale={{ emptyText: "No ASM records found" }}
+        />
+      </DashboardTablePage>
 
       <ReassignmentDeactivateModal
         isOpen={showDeactivateModal && !!userToDeactivate}

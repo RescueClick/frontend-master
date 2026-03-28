@@ -5,6 +5,7 @@ import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 import { useNavigate } from "react-router-dom";
 import NotificationBell from "../../../components/NotificationBell";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 
 const Customer = () => {
@@ -198,7 +199,7 @@ const Customer = () => {
                 <div className="p-2 sm:p-3 bg-green-50 rounded-lg">
                   <p className="text-xs text-gray-600">Loan Type</p>
                   <p className="text-sm sm:text-base font-semibold">
-                    {app.loanType}
+                    {loanTypeToTableShort(app.loanType)}
                   </p>
                 </div>
                 <div className="p-2 sm:p-3 bg-blue-50 rounded-lg">

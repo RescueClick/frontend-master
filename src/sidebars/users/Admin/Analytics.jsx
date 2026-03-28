@@ -159,7 +159,7 @@ const Analytics = () => {
     setKpisError(null);
     dispatch(fetchAnalyticsKpis({ id: ID, start, end }))
       .unwrap()
-      .then((res) => setKpis(res?.data?.kpis || null))
+      .then((res) => setKpis(res?.kpis ?? res?.data?.kpis ?? null))
       .catch((e) => setKpisError(typeof e === "string" ? e : "Failed to load KPI analytics"))
       .finally(() => setKpisLoading(false));
   }, [ID, filters, dispatch]);
@@ -193,6 +193,31 @@ const Analytics = () => {
       reportingChain: parsed.profile.reportingChain || [],
     };
   }, [Analyticsdashboard, role]);
+
+  const pageSubtitle = useMemo(() => {
+    const nav = location?.state || {};
+    const empId = analyticsData?.employeeId;
+    const idLabel =
+      empId && empId !== "N/A"
+        ? empId
+        : ID
+        ? String(ID).length > 12
+          ? `…${String(ID).slice(-8)}`
+          : String(ID)
+        : "";
+    const detail =
+      nav.detail ||
+      (typeof analyticsData?.role === "string" ? analyticsData.role : role);
+    const nm = nav.name || analyticsData?.userName || "";
+    const parts = [
+      idLabel ? `ID: ${idLabel}` : null,
+      detail || null,
+      nm || null,
+    ].filter(Boolean);
+    return parts.length
+      ? parts.join(" · ")
+      : "Performance, targets, and monthly history";
+  }, [location?.state, ID, analyticsData, role]);
 
   // Navigate to RM page
   const handleNavigateToRM = useCallback(() => {
@@ -258,7 +283,7 @@ const Analytics = () => {
         <div className="mb-6">
           <PageHeader
             title="Analytics"
-            subtitle="Performance, targets, and monthly history"
+            subtitle={pageSubtitle}
             right={
               <button
                 type="button"

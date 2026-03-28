@@ -1,8 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Search, Award, TrendingUp, Target, Clock, ArrowLeft, IndianRupee } from "lucide-react";
 import { fetchIncentives } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import AppAntTable from "../../../components/shared/AppAntTable";
+
+const fmtInr0 = (amount) => {
+  if (!amount) return "₹0";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 const colors = {
   primary: "var(--color-brand-primary)",
@@ -34,15 +44,6 @@ const AsmPendingIncentive = () => {
     dispatch(fetchIncentives({ year, month }));
   }, [dispatch, year, month]);
 
-  const formatCurrency = (amount) => {
-    if (!amount) return "₹0";
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   const incentives = Array.isArray(data) ? data : [];
   
   // Only show NOT eligible partners in Pending
@@ -61,6 +62,107 @@ const AsmPendingIncentive = () => {
   const pendingCount = filteredIncentives.filter(
     (i) => !i.eligibleForIncentive
   ).length;
+
+  const pendingIncentiveColumns = useMemo(
+    () => [
+      {
+        title: "Partner",
+        key: "p",
+        render: (_, incentive) => (
+          <div>
+            <p className="font-medium">{incentive.partnerName}</p>
+            <p className="text-xs text-gray-500">{incentive.partnerEmployeeId}</p>
+          </div>
+        ),
+      },
+      {
+        title: "File Target",
+        key: "ft",
+        render: (_, incentive) => {
+          const fileTarget = incentive.fileCountTarget ?? 4;
+          return (
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">{fileTarget} files</span>
+              {incentive.fileTargetMet ? (
+                <span className="text-xs text-green-600">✓</span>
+              ) : (
+                <span className="text-xs text-orange-600">✗</span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        title: "Files Achieved",
+        key: "fa",
+        render: (_, incentive) => {
+          const fileTarget = incentive.fileCountTarget ?? 4;
+          const filesAchieved =
+            incentive.achievedFileCount ?? incentive.disbursedCount ?? 0;
+          return (
+            <span
+              className={`font-semibold ${incentive.fileTargetMet ? "text-green-600" : "text-orange-600"}`}
+            >
+              {filesAchieved} / {fileTarget}
+            </span>
+          );
+        },
+      },
+      {
+        title: "Disbursement Target",
+        key: "dt",
+        render: (_, incentive) => {
+          const disbursementTarget = incentive.disbursementTarget ?? 2000000;
+          return (
+            <span className="font-semibold">{fmtInr0(disbursementTarget)}</span>
+          );
+        },
+      },
+      {
+        title: "Disbursement Achieved",
+        key: "da",
+        render: (_, incentive) => {
+          const disbursementAchieved =
+            incentive.achievedDisbursement ?? incentive.totalAchieved ?? 0;
+          return (
+            <div className="flex items-center gap-2">
+              <span
+                className={`font-semibold ${incentive.disbursementTargetMet ? "text-green-600" : "text-orange-600"}`}
+              >
+                {fmtInr0(disbursementAchieved)}
+              </span>
+              {incentive.disbursementTargetMet ? (
+                <span className="text-xs text-green-600">✓</span>
+              ) : (
+                <span className="text-xs text-orange-600">✗</span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        title: "Status",
+        key: "st",
+        render: (_, incentive) => (
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium ${
+              incentive.eligibleForIncentive
+                ? "bg-green-100 text-green-800"
+                : "bg-yellow-100 text-yellow-800"
+            }`}
+          >
+            {incentive.eligibleForIncentive ? "Eligible (Exceeded)" : "Pending"}
+          </span>
+        ),
+      },
+      {
+        title: "Action",
+        key: "act",
+        render: () => <span className="text-xs text-gray-400">—</span>,
+      },
+    ],
+    []
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -137,99 +239,20 @@ const AsmPendingIncentive = () => {
         </div>
       </div>
 
-      {/* Incentives Table */}
-      <div className="overflow-x-auto rounded-lg shadow-sm">
-        <table className="w-full border-collapse bg-white text-sm">
-          <thead style={{ background: colors.primary, color: "white" }}>
-            <tr>
-              <th className="px-2 py-4 text-left">Partner</th>
-              <th className="px-2 py-4 text-left">File Target</th>
-              <th className="px-2 py-4 text-left">Files Achieved</th>
-              <th className="px-2 py-4 text-left">Disbursement Target</th>
-              <th className="px-2 py-4 text-left">Disbursement Achieved</th>
-              <th className="px-2 py-4 text-left">Status</th>
-              <th className="px-2 py-4 text-left">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="7" className="text-center py-4">
-                  Loading incentives...
-                </td>
-              </tr>
-            ) : filteredIncentives.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="text-center py-4">
-                  No pending incentives found
-                </td>
-              </tr>
-            ) : (
-              filteredIncentives.map((incentive) => {
-                const fileTarget = incentive.fileCountTarget ?? 4;
-                const disbursementTarget = incentive.disbursementTarget ?? 2000000;
-                const filesAchieved =
-                  incentive.achievedFileCount ?? incentive.disbursedCount ?? 0;
-                const disbursementAchieved =
-                  incentive.achievedDisbursement ?? incentive.totalAchieved ?? 0;
-                
-                return (
-                  <tr key={incentive.partnerId} className="border-b hover:bg-gray-50">
-                    <td className="px-2 py-3 align-top">
-                      <div>
-                        <p className="font-medium">{incentive.partnerName}</p>
-                        <p className="text-xs text-gray-500">{incentive.partnerEmployeeId}</p>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{fileTarget} files</span>
-                        {incentive.fileTargetMet ? (
-                          <span className="text-xs text-green-600">✓</span>
-                        ) : (
-                          <span className="text-xs text-orange-600">✗</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className={`font-semibold ${incentive.fileTargetMet ? 'text-green-600' : 'text-orange-600'}`}>
-                        {filesAchieved} / {fileTarget}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle font-semibold">{formatCurrency(disbursementTarget)}</td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center gap-2">
-                        <span className={`font-semibold ${incentive.disbursementTargetMet ? 'text-green-600' : 'text-orange-600'}`}>
-                          {formatCurrency(disbursementAchieved)}
-                        </span>
-                        {incentive.disbursementTargetMet ? (
-                          <span className="text-xs text-green-600">✓</span>
-                        ) : (
-                          <span className="text-xs text-orange-600">✗</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          incentive.eligibleForIncentive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {incentive.eligibleForIncentive ? "Eligible (Exceeded)" : "Pending"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="text-xs text-gray-400">—</span>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <AppAntTable
+        rowKey={(r) => String(r.partnerId ?? r.partnerEmployeeId ?? "")}
+        columns={pendingIncentiveColumns}
+        dataSource={filteredIncentives}
+        loading={loading}
+        size="small"
+        locale={{
+          emptyText: (
+            <div className="py-8 text-center text-gray-500">
+              No pending incentives found
+            </div>
+          ),
+        }}
+      />
     </div>
   );
 };

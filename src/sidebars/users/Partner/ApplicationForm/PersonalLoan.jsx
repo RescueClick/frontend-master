@@ -20,16 +20,22 @@ import toast from "react-hot-toast";
 
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
+import {
+  fetchPublicDefaultPartnerReferralCode,
+  PUBLIC_LOAN_REFERRAL_FALLBACK,
+} from "../../../../feature/publicLoanReferral";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 
-export default function PersonalLoan() {
+export default function PersonalLoan({ embed = false } = {}) {
   const [documentModel, setdocumentModel] = useState(null);
 
-  const defaultReferralCode = 'PT-D4CTD8B2'
   const { partnerToken } = getAuthData();
   const isPartnerLoggedIn = Boolean(partnerToken);
+  const [defaultReferralCode, setDefaultReferralCode] = useState(
+    PUBLIC_LOAN_REFERRAL_FALLBACK
+  );
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -130,16 +136,38 @@ export default function PersonalLoan() {
     "loan-references-step",
     "loan-review-step",
   ];
-  const loanDraftStorageKey = "personalLoanDraft_v1";
+  const loanDraftStorageKey = embed
+    ? "personalLoanDraft_embed_v1"
+    : "personalLoanDraft_v1";
 
-  const stepFirstFieldName = [
-    "firstName",
-    "currentAddress",
-    "loanAmount",
-    "aadharFront",
-    "reference1Name",
-    "partnerReferralCode",
-  ];
+  const stepFirstFieldName = useMemo(
+    () => [
+      "firstName",
+      "currentAddress",
+      "loanAmount",
+      "aadharFront",
+      "reference1Name",
+      isPartnerLoggedIn ? "password" : "partnerReferralCode",
+    ],
+    [isPartnerLoggedIn]
+  );
+
+  useEffect(() => {
+    if (isPartnerLoggedIn) return;
+    let cancelled = false;
+    fetchPublicDefaultPartnerReferralCode().then((code) => {
+      if (cancelled) return;
+      setDefaultReferralCode(code);
+      setFormData((prev) => {
+        const existing = String(prev.partnerReferralCode ?? "").trim();
+        if (existing) return prev;
+        return { ...prev, partnerReferralCode: code };
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isPartnerLoggedIn]);
 
   const abortControllerRef = useRef(null);
 
@@ -491,7 +519,7 @@ export default function PersonalLoan() {
       "permanentStability",
       "permanentAddressPinCode",
     ],
-    // 2: Loan & Employment
+    // 2: Loan & Employment (text/details only — files on Documents step)
     [
       "loanAmount",
       "companyName",
@@ -501,11 +529,6 @@ export default function PersonalLoan() {
       "totalExperience",
       "currentExperience",
       "salaryInHand",
-      "companyIdCard",
-      "salarySlip1",
-      "salarySlip2",
-      "salarySlip3",
-      "form16_26as",
     ],
     // 3: Documents
     [
@@ -514,6 +537,11 @@ export default function PersonalLoan() {
       "panCard",
       "passportPhoto",
       "selfie",
+      "companyIdCard",
+      "salarySlip1",
+      "salarySlip2",
+      "salarySlip3",
+      "form16_26as",
       "bankStatement1",
       "bankStatement2",
       "newAddressProofs",
@@ -965,8 +993,12 @@ export default function PersonalLoan() {
       />
 
       <div
-        className="min-h-screen py-8 px-0 sm:px-4"
-        style={{ backgroundColor: "#F8FAFC" }}
+        className={
+          embed
+            ? "py-4 px-0 sm:px-2"
+            : "min-h-screen py-8 px-0 sm:px-4"
+        }
+        style={{ backgroundColor: embed ? "transparent" : "#F8FAFC" }}
       >
         <div className="max-w-4xl mx-auto">
           {successMessage && (
@@ -1719,6 +1751,422 @@ export default function PersonalLoan() {
                 </div>
               </section>
 
+              <section hidden={currentStep !== 3}>
+                <h2
+                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
+                  style={{ color: "#111827" }}
+                >
+                  <Briefcase className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
+                  4.2 Employment & income documents
+                </h2>
+                <p className="text-sm text-slate-600 mb-4">
+                  Company ID, salary slips, and Form 16 / 26AS (if applicable).
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Company ID Card *
+                    </label>
+                    <div className="relative flex items-center gap-2">
+                      <input
+                        type="file"
+                        name="companyIdCard"
+                        onChange={handleFileChange}
+                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        required
+                      />
+                      {formData.companyIdCard ? "" : renderError("companyIdCard")}
+
+                      {formData.companyIdCard && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setdocumentModel(
+                                formData.companyIdCard.preview
+                                  ? formData.companyIdCard.preview
+                                  : formData.companyIdCard instanceof File
+                                    ? URL.createObjectURL(formData.companyIdCard)
+                                    : ""
+                              )
+                            }
+                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
+                            style={{ color: "#2563EB" }}
+                            title="View file"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-5 h-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleFileRemove("companyIdCard")}
+                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
+                            style={{ color: "#EF4444" }}
+                            title="Remove file"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {formData.companyIdCard && (
+                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
+                        <span>✓</span> {formData.companyIdCard.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Salary Slip 1 *
+                    </label>
+                    <div className="relative flex items-center gap-2">
+                      <input
+                        type="file"
+                        name="salarySlip1"
+                        onChange={handleFileChange}
+                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        required
+                      />
+                      {formData.salarySlip1 ? "" : renderError("salarySlip1")}
+
+                      {formData.salarySlip1 && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setdocumentModel(
+                                formData.salarySlip1.preview
+                                  ? formData.salarySlip1.preview
+                                  : formData.salarySlip1 instanceof File
+                                    ? URL.createObjectURL(formData.salarySlip1)
+                                    : ""
+                              )
+                            }
+                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
+                            style={{ color: "#2563EB" }}
+                            title="View file"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-5 h-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleFileRemove("salarySlip1")}
+                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
+                            style={{ color: "#EF4444" }}
+                            title="Remove file"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {formData.salarySlip1 && (
+                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
+                        <span>✓</span> {formData.salarySlip1.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Salary Slip 2 *
+                    </label>
+                    <div className="relative flex items-center gap-2">
+                      <input
+                        type="file"
+                        name="salarySlip2"
+                        onChange={handleFileChange}
+                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        required
+                      />
+                      {formData.salarySlip2 ? "" : renderError("salarySlip2")}
+                      {formData.salarySlip2 && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setdocumentModel(
+                                formData.salarySlip2.preview
+                                  ? formData.salarySlip2.preview
+                                  : formData.salarySlip2 instanceof File
+                                    ? URL.createObjectURL(formData.salarySlip2)
+                                    : ""
+                              )
+                            }
+                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
+                            style={{ color: "#2563EB" }}
+                            title="View file"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-5 h-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleFileRemove("salarySlip2")}
+                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
+                            style={{ color: "#EF4444" }}
+                            title="Remove file"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {formData.salarySlip2 && (
+                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
+                        <span>✓</span> {formData.salarySlip2.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Salary Slip 3 *
+                    </label>
+                    <div className="relative flex items-center gap-2">
+                      <input
+                        type="file"
+                        name="salarySlip3"
+                        onChange={handleFileChange}
+                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        required
+                      />
+                      {formData.salarySlip3 ? "" : renderError("salarySlip3")}
+
+                      {formData.salarySlip3 && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setdocumentModel(
+                                formData.salarySlip3.preview
+                                  ? formData.salarySlip3.preview
+                                  : formData.salarySlip3 instanceof File
+                                    ? URL.createObjectURL(formData.salarySlip3)
+                                    : ""
+                              )
+                            }
+                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
+                            style={{ color: "#2563EB" }}
+                            title="View file"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-5 h-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleFileRemove("salarySlip3")}
+                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
+                            style={{ color: "#EF4444" }}
+                            title="Remove file"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {formData.salarySlip3 && (
+                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
+                        <span>✓</span> {formData.salarySlip3.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Form 16 / 26AS
+                    </label>
+                    <div className="relative flex items-center gap-2">
+                      <input
+                        type="file"
+                        name="form16_26as"
+                        onChange={handleFileChange}
+                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+
+                      {formData.form16_26as && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setdocumentModel(
+                                formData.form16_26as.preview
+                                  ? formData.form16_26as.preview
+                                  : formData.form16_26as instanceof File
+                                    ? URL.createObjectURL(formData.form16_26as)
+                                    : ""
+                              )
+                            }
+                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
+                            style={{ color: "#2563EB" }}
+                            title="View file"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-5 h-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleFileRemove("form16_26as")}
+                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
+                            style={{ color: "#EF4444" }}
+                            title="Remove file"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {formData.form16_26as && (
+                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
+                        <span>✓</span> {formData.form16_26as.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </section>
+
               {/* Employment Information */}
               <section hidden={currentStep !== 2}>
                 <h2
@@ -1893,433 +2341,6 @@ export default function PersonalLoan() {
                     />
                     {renderError("salaryInHand")}
                   </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Company ID Card *
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      {/* File Input */}
-                      <input
-                        type="file"
-                        name="companyIdCard"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-                      {formData.companyIdCard ? "" : renderError("companyIdCard")}
-
-                      {/* Action Buttons */}
-                      {formData.companyIdCard && (
-                        <div className="flex items-center gap-1">
-                          {/* View Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.companyIdCard.preview
-                                  ? formData.companyIdCard.preview
-                                  : formData.companyIdCard instanceof File
-                                    ? URL.createObjectURL(formData.companyIdCard)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          {/* Remove Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("companyIdCard")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* File Name */}
-                    {formData.companyIdCard && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.companyIdCard.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Salary Slip 1 *
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      {/* File Input */}
-                      <input
-                        type="file"
-                        name="salarySlip1"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-                      { formData.salarySlip1 ? "" : renderError("salarySlip1")}
-
-                      {/* Action Buttons */}
-                      {formData.salarySlip1 && (
-                        <div className="flex items-center gap-1">
-                          {/* View Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.salarySlip1.preview
-                                  ? formData.salarySlip1.preview
-                                  : formData.salarySlip1 instanceof File
-                                    ? URL.createObjectURL(formData.salarySlip1)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          {/* Remove Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("salarySlip1")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* File Name */}
-                    {formData.salarySlip1 && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.salarySlip1.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Salary Slip 2 *
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      {/* File Input */}
-                      <input
-                        type="file"
-                        name="salarySlip2"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-                        { formData.salarySlip2 ? "" : renderError("salarySlip2")}
-                      {/* Action Buttons */}
-                      {formData.salarySlip2 && (
-                        <div className="flex items-center gap-1">
-                          {/* View Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.salarySlip2.preview
-                                  ? formData.salarySlip2.preview
-                                  : formData.salarySlip2 instanceof File
-                                    ? URL.createObjectURL(formData.salarySlip2)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          {/* Remove Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("salarySlip2")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* File Name */}
-                    {formData.salarySlip2 && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.salarySlip2.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Salary Slip 3 *
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      {/* File Input */}
-                      <input
-                        type="file"
-                        name="salarySlip3"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-                     { formData.salarySlip3 ? "" : renderError("salarySlip3")}
-
-                      {/* Action Buttons */}
-                      {formData.salarySlip3 && (
-                        <div className="flex items-center gap-1">
-                          {/* View Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.salarySlip3.preview
-                                  ? formData.salarySlip3.preview
-                                  : formData.salarySlip3 instanceof File
-                                    ? URL.createObjectURL(formData.salarySlip3)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          {/* Remove Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("salarySlip3")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* File Name */}
-                    {formData.salarySlip3 && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.salarySlip3.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Form 16 / 26AS
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      {/* File Input */}
-                      <input
-                        type="file"
-                        name="form16_26as"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-
-                      {/* Action Buttons */}
-                      {formData.form16_26as && (
-                        <div className="flex items-center gap-1">
-                          {/* View Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.form16_26as.preview
-                                  ? formData.form16_26as.preview
-                                  : formData.form16_26as instanceof File
-                                    ? URL.createObjectURL(formData.form16_26as)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          {/* Remove Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("form16_26as")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* File Name */}
-                    {formData.form16_26as && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.form16_26as.name}
-                      </p>
-                    )}
-                  </div>
                 </div>
               </section>
 
@@ -2330,7 +2351,7 @@ export default function PersonalLoan() {
                   style={{ color: "#111827" }}
                 >
                   <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  4.2 Bank Statements
+                  4.3 Bank Statements
                 </h2>
                 <p className="text-sm text-slate-600 mb-4">
                   Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
@@ -2511,7 +2532,7 @@ export default function PersonalLoan() {
               <section hidden={currentStep !== 3}>
                 <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-gray-900">
                   <FileText className="w-6 h-6 text-teal-500" />
-                  4.3 Address Proof Document
+                  4.4 Address Proof Document
                 </h2>
 
                 <label className="block text-sm font-medium mb-2 text-gray-900">
@@ -2779,38 +2800,40 @@ export default function PersonalLoan() {
                 </div>
               </section>
 
-              {/* Partner Referral */}
-              <section hidden={currentStep !== 5}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Partner Referral
-                </h2>
-                <div className="grid grid-cols-1 gap-6">
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Partner Referral Code (optional) - use {defaultReferralCode} if you don't have a partner code
-                    </label>
-                    <input
-                      type="text"
-                      name="partnerReferralCode"
-                      value={formData.partnerReferralCode}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      placeholder="Enter partner code"
-                    />
+              {/* Partner Referral — public applicants only (e.g. from home); hidden in partner dashboard */}
+              {!isPartnerLoggedIn && (
+                <section hidden={currentStep !== 5}>
+                  <h2
+                    className="text-2xl font-semibold mb-6 flex items-center gap-3"
+                    style={{ color: "#111827" }}
+                  >
+                    <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
+                    Partner Referral
+                  </h2>
+                  <div className="grid grid-cols-1 gap-6">
+                    <div>
+                      <label
+                        className="block text-sm font-medium mb-2"
+                        style={{ color: "#111827" }}
+                      >
+                        Partner Referral Code (optional) - use {defaultReferralCode} if you don&apos;t have a partner code
+                      </label>
+                      <input
+                        type="text"
+                        name="partnerReferralCode"
+                        value={formData.partnerReferralCode}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        placeholder="Enter partner code"
+                      />
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              )}
 
             {/* Submit + Wizard Navigation */}
             <div className="pt-8">

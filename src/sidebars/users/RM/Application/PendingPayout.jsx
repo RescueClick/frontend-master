@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Eye,
   ArrowLeft,
@@ -25,6 +25,9 @@ import {
   fetchRmCustomersPayOutPending,
   setPayouts,
 } from "../../../../feature/thunks/rmThunks";
+import PayoutStatusBadge from "../../../../components/shared/PayoutStatusBadge";
+import { loanTypeToTableShort, payoutLoanTypePillClass } from "../../../../utils/loanTypeShort";
+import AppAntTable from "../../../../components/shared/AppAntTable";
 
 const PendingPayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -126,34 +129,6 @@ const PendingPayout = () => {
     },
   ];
 
-  // Loan type color
-  const getAccountTypeColor = (loanType) => {
-    switch (loanType) {
-      case "Home Loan":
-        return "bg-blue-100 text-blue-700";
-      case "Business Loan":
-        return "bg-green-100 text-green-700";
-      case "Personal Loan":
-        return "bg-yellow-100 text-yellow-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  // Status color
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-700";
-      case "Rejected":
-        return "bg-red-100 text-red-700";
-      case "Done":
-        return "bg-green-100 text-green-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
-
   // ✅ Filtering
   const filteredCustomers = customers.filter((customer) => {
     const matchesSearch = customer.name
@@ -164,6 +139,82 @@ const PendingPayout = () => {
       customer.status.toLowerCase() === selectedFilter.toLowerCase();
     return matchesSearch && matchesFilter;
   });
+
+  const pendingRmColumns = useMemo(
+    () => [
+      {
+        title: "User Name",
+        key: "nm",
+        render: (_, r) => <span className="font-medium">{r.customerName}</span>,
+      },
+      {
+        title: "User Id",
+        key: "eid",
+        render: (_, r) => (
+          <span className="text-xs text-gray-500">#{r.customerEmployeeId}</span>
+        ),
+      },
+      {
+        title: "Contact",
+        key: "ct",
+        render: (_, r) => r.contact,
+      },
+      {
+        title: "Application Date",
+        key: "dt",
+        render: (_, r) => new Date(r.createdAt).toLocaleDateString("en-IN"),
+      },
+      {
+        title: "Loan Type",
+        key: "lt",
+        render: (_, r) => (
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium ${payoutLoanTypePillClass(
+              r.loanType
+            )}`}
+          >
+            {loanTypeToTableShort(r.loanType)}
+          </span>
+        ),
+      },
+      {
+        title: "Loan Amount",
+        key: "lamt",
+        render: (_, r) => (
+          <span className="font-semibold">
+            {r.requestedAmount
+              ? `₹${r?.requestedAmount.toLocaleString("en-IN")}`
+              : "—"}
+          </span>
+        ),
+      },
+      {
+        title: "Approval Amount",
+        key: "appr",
+        render: (_, r) => (
+          <span className="font-semibold">
+            {r.approvedAmount
+              ? `₹${r.approvedAmount.toLocaleString("en-IN")}`
+              : "—"}
+          </span>
+        ),
+      },
+      {
+        title: "Payout",
+        key: "payout",
+        render: (_, r) => (
+          <button
+            type="button"
+            className="cursor-pointer border-0 bg-transparent p-0"
+            onClick={() => setCustomerID(r.customerId)}
+          >
+            <PayoutStatusBadge status={r.payOutStatus} />
+          </button>
+        ),
+      },
+    ],
+    []
+  );
 
   const handleSavePayout = async (applicationId, partnerId, payoutPercent, note) => {
     try {
@@ -505,75 +556,20 @@ const PendingPayout = () => {
           </p>
         </div>
 
-        <div className="overflow-x-auto rounded-lg shadow-sm">
-          <table className="w-full border-collapse bg-white text-sm">
-            <thead style={{ background: "var(--color-brand-primary)", color: "white" }}>
-              <tr>
-                <th className="px-2 py-4 text-left">User Name</th>
-                <th className="px-2 py-4 text-left">User Id</th>
-                <th className="px-2 py-4 text-left">Contact</th>
-                <th className="px-2 py-4 text-left">Application Date</th>
-                <th className="px-2 py-4 text-left">Loan Type</th>
-                <th className="px-2 py-4 text-left">Loan Amount</th>
-                <th className="px-2 py-4 text-left">Approval Amount</th>
-                <th className="px-2 py-4 text-left">Payout</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((customer) => (
-                <tr
-                  key={customer.customerID}
-                  className="border-b hover:bg-gray-50"
-                >
-                  <td className="px-2 py-3 align-top">
-                    <span className="font-medium">{customer.customerName}</span>
-                  </td>
-                  <td className="px-2 py-3 align-middle">
-                    <span className="text-xs text-gray-500">
-                      #{customer.customerEmployeeId}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 align-middle">{customer.contact}</td>
-                  <td className="px-2 py-3 align-middle">
-                    {new Date(customer.createdAt).toLocaleDateString("en-IN")}
-                  </td>
-                  <td className="px-2 py-3 align-middle">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(
-                        customer.loanType
-                      )}`}
-                    >
-                      {customer.loanType}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 align-middle font-semibold">
-                    {customer.requestedAmount
-                      ? `₹${customer?.requestedAmount.toLocaleString("en-IN")}`
-                      : "—"}
-                  </td>
-                  <td className="px-2 py-3 align-middle font-semibold">
-                    {customer.approvedAmount
-                      ? `₹${customer.approvedAmount.toLocaleString("en-IN")}`
-                      : "—"}
-                  </td>
-                  <td className="px-2 py-3 align-middle">
-                    <button
-                      type="button"
-                      className={`px-3 py-1 text-xs font-medium cursor-pointer ${getStatusColor(
-                        customer.payOutStatus
-                      )}`}
-                      onClick={() => {
-                        setCustomerID(customer.customerId);
-                      }}
-                    >
-                      {customer.payOutStatus}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <AppAntTable
+          rowKey={(r) => String(r.customerID ?? r.customerId ?? r.customerEmployeeId ?? "")}
+          columns={pendingRmColumns}
+          dataSource={Array.isArray(data) ? data : []}
+          loading={loading}
+          size="small"
+          locale={{
+            emptyText: (
+              <div className="py-8 text-center text-gray-500">
+                {error || "No records"}
+              </div>
+            ),
+          }}
+        />
       </div>
     </>
   );

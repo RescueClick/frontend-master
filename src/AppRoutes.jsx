@@ -59,6 +59,7 @@ import AdminEligibleIncentive from "./sidebars/users/Admin/AdminEligibleIncentiv
 import AdminDoneIncentive from "./sidebars/users/Admin/AdminDoneIncentive";
 import AdminPendingIncentive from "./sidebars/users/Admin/AdminPendingIncentive";
 import AdminSettings from "./sidebars/users/Admin/AdminSettings";
+import AdminPublicLoanReferral from "./sidebars/users/Admin/AdminPublicLoanReferral";
 
 // Import ASM user pages
 import AsmDashboard from "./sidebars/users/ASM/Dashboard";
@@ -222,6 +223,7 @@ const AppRoutes = () => {
         <Route path="RM" element={<AdminRM />} />
         <Route path="partner" element={<AdminPartner />} />
         <Route path="Partner" element={<AdminPartner />} />
+        <Route path="public-loan-referral" element={<AdminPublicLoanReferral />} />
         <Route path="customer" element={<AdiminCustomer />} />
         <Route path="target" element={<SetTarget />} />
         <Route path="partner-targets" element={<PartnerTargets />} />

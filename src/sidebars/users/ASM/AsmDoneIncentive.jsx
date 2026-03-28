@@ -3,6 +3,16 @@ import { Search, Award, TrendingUp, Target, CheckCircle, ArrowLeft, IndianRupee 
 import { fetchIncentives } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import AppAntTable from "../../../components/shared/AppAntTable";
+
+const fmtInr0 = (amount) => {
+  if (!amount) return "₹0";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 const colors = {
   primary: "var(--color-brand-primary)",
@@ -57,6 +67,94 @@ const AsmDoneIncentive = () => {
       incentive.partnerEmployeeId?.toLowerCase().includes(term)
     );
   });
+
+  const doneAsmColumns = [
+    {
+      title: "Partner",
+      key: "p",
+      render: (_, incentive) => (
+        <div>
+          <p className="font-medium">{incentive.partnerName}</p>
+          <p className="text-xs text-gray-500">{incentive.partnerEmployeeId}</p>
+        </div>
+      ),
+    },
+    {
+      title: "File Target",
+      key: "ft",
+      render: (_, incentive) => {
+        const fileTarget = incentive.fileCountTarget || 4;
+        return <span className="font-semibold">{fileTarget} files</span>;
+      },
+    },
+    {
+      title: "Files Achieved",
+      key: "fa",
+      render: (_, incentive) => {
+        const fileTarget = incentive.fileCountTarget || 4;
+        const filesAchieved =
+          incentive.achievedFileCount || incentive.disbursedCount || 0;
+        return (
+          <span className="font-semibold text-green-600">
+            {filesAchieved} / {fileTarget} ✓
+          </span>
+        );
+      },
+    },
+    {
+      title: "Disbursement Target",
+      key: "dt",
+      render: (_, incentive) => {
+        const disbursementTarget = incentive.disbursementTarget || 2000000;
+        return (
+          <span className="font-semibold">{fmtInr0(disbursementTarget)}</span>
+        );
+      },
+    },
+    {
+      title: "Disbursement Achieved",
+      key: "da",
+      render: (_, incentive) => {
+        const disbursementAchieved =
+          incentive.achievedDisbursement || incentive.totalAchieved || 0;
+        return (
+          <span className="font-semibold text-green-600">
+            {fmtInr0(disbursementAchieved)} ✓
+          </span>
+        );
+      },
+    },
+    {
+      title: "Incentive",
+      key: "inc",
+      render: (_, incentive) => {
+        const incentiveAmount = incentive.incentiveAmount || 0;
+        return incentiveAmount > 0 ? (
+          <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            ₹{incentiveAmount.toLocaleString("en-IN")}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-500">Target Met</span>
+        );
+      },
+    },
+    {
+      title: "Status",
+      key: "st",
+      render: () => (
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          Done
+        </span>
+      ),
+    },
+    {
+      title: "Action",
+      key: "act",
+      render: () => (
+        <span className="text-xs text-gray-500">View Only</span>
+      ),
+    },
+  ];
 
   // ASM cannot change status here; this screen is view-only for done incentives
 
@@ -135,89 +233,20 @@ const AsmDoneIncentive = () => {
         </div>
       </div>
 
-      {/* Incentives Table */}
-      <div className="overflow-x-auto rounded-lg shadow-sm">
-        <table className="w-full border-collapse bg-white text-sm">
-          <thead style={{ background: colors.primary, color: "white" }}>
-            <tr>
-              <th className="px-2 py-4 text-left">Partner</th>
-              <th className="px-2 py-4 text-left">File Target</th>
-              <th className="px-2 py-4 text-left">Files Achieved</th>
-              <th className="px-2 py-4 text-left">Disbursement Target</th>
-              <th className="px-2 py-4 text-left">Disbursement Achieved</th>
-              <th className="px-2 py-4 text-left">Incentive</th>
-              <th className="px-2 py-4 text-left">Status</th>
-              <th className="px-2 py-4 text-left">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="8" className="text-center py-4">
-                  Loading incentives...
-                </td>
-              </tr>
-            ) : filteredIncentives.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="text-center py-4">
-                  No done incentives found
-                </td>
-              </tr>
-            ) : (
-              filteredIncentives.map((incentive) => {
-                const fileTarget = incentive.fileCountTarget || 4;
-                const disbursementTarget = incentive.disbursementTarget || 2000000;
-                const filesAchieved = incentive.achievedFileCount || incentive.disbursedCount || 0;
-                const disbursementAchieved = incentive.achievedDisbursement || incentive.totalAchieved || 0;
-                const incentiveAmount = incentive.incentiveAmount || 0;
-                const incentiveLevel = incentive.incentiveLevel || "BASIC";
-                
-                return (
-                  <tr key={incentive.partnerId} className="border-b hover:bg-gray-50">
-                    <td className="px-2 py-3 align-top">
-                      <div>
-                        <p className="font-medium">{incentive.partnerName}</p>
-                        <p className="text-xs text-gray-500">{incentive.partnerEmployeeId}</p>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="font-semibold">{fileTarget} files</span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="font-semibold text-green-600">
-                        {filesAchieved} / {fileTarget} ✓
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle font-semibold">{formatCurrency(disbursementTarget)}</td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="font-semibold text-green-600">
-                        {formatCurrency(disbursementAchieved)} ✓
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      {incentiveAmount > 0 ? (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          ₹{incentiveAmount.toLocaleString("en-IN")}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-500">Target Met</span>
-                      )}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Done
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle text-xs text-gray-500">
-                      View Only
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <AppAntTable
+        rowKey={(r) => String(r.partnerId ?? r.partnerEmployeeId ?? "")}
+        columns={doneAsmColumns}
+        dataSource={filteredIncentives}
+        loading={loading}
+        size="small"
+        locale={{
+          emptyText: (
+            <div className="py-8 text-center text-gray-500">
+              No done incentives found
+            </div>
+          ),
+        }}
+      />
 
     </div>
   );

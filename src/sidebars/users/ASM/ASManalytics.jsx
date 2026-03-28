@@ -101,13 +101,40 @@ const ASManalytics = () => {
     setKpisError(null);
     dispatch(fetchAnalyticsKpis({ id, start, end }))
       .unwrap()
-      .then((res) => setKpis(res?.data?.kpis || null))
+      .then((res) => setKpis(res?.kpis ?? res?.data?.kpis ?? null))
       .catch((e) => setKpisError(typeof e === "string" ? e : "Failed to load KPI analytics"))
       .finally(() => setKpisLoading(false));
   }, [id, filters, dispatch]);
 
   // Process analytics data using universal parser
   const parsedData = useMemo(() => parseAnalyticsData(data, "RSM"), [data]);
+
+  const pageSubtitle = useMemo(() => {
+    const nav = location.state || {};
+    const empId = parsedData.profile?.employeeId;
+    const idLabel =
+      empId && empId !== "N/A"
+        ? empId
+        : id
+        ? String(id).length > 12
+          ? `…${String(id).slice(-8)}`
+          : String(id)
+        : "";
+    const detail = nav.detail || "Regional Sales Manager";
+    const nm =
+      nav.name ||
+      (parsedData.profile?.name && parsedData.profile.name !== "N/A"
+        ? parsedData.profile.name
+        : "");
+    const parts = [
+      idLabel ? `ID: ${idLabel}` : null,
+      detail || null,
+      nm || null,
+    ].filter(Boolean);
+    return parts.length
+      ? parts.join(" · ")
+      : "ASM view (RSM performance and monthly history)";
+  }, [location.state, id, parsedData]);
   
   const analyticsData = useMemo(() => {
     return {
@@ -182,7 +209,7 @@ const ASManalytics = () => {
         <div className="mb-6">
           <PageHeader
             title="Analytics"
-            subtitle="ASM view (RSM performance and monthly history)"
+            subtitle={pageSubtitle}
             right={
               <button
                 type="button"

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Search, Filter, Eye, Users, Phone } from "lucide-react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Search, Filter, Eye, Users, Phone, Download } from "lucide-react";
 import { fetchAsmCustomers } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
@@ -7,7 +7,13 @@ import { useRealtimeData } from "../../../utils/useRealtimeData";
 import axios from "axios"
 import { useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
-import { getLoanStatusBadgeClass, getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
+import { getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
+import toast from "react-hot-toast";
+import { downloadXlsx } from "../../../utils/downloadXlsx";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 
 
@@ -44,7 +50,8 @@ const Customer = () => {
           loanAmount: c.loanAmount || 0,
           disburseAmount: c.disburseAmount || 0,
           status: c.status, // comes as "DISBURSED"
-          customerId: c.customerId
+          customerId: c.customerId,
+          _asmRow: c,
         }))
       : [];
   }, [data]);
@@ -74,15 +81,21 @@ const Customer = () => {
     });
   }, [customers, searchTerm, filterStatus]);
 
-
-  const colors = {
-    primary: "var(--color-brand-primary)",
-    secondary: "#1E3A8A",
-    background: "#F8FAFC",
-    accent: "#F59E0B",
-    text: "#111827",
-  };
-
+  const handleExport = useCallback(() => {
+    const rows = filteredCustomers.map((c) => ({
+      Name: c.name || "",
+      "Employee ID": c.id || "",
+      Phone: c.phone || "",
+      "Application Date": c.applicationDate || "",
+      "Loan Type": loanTypeToTableShort(c.loanType),
+      "Loan Amount": c.loanAmount ?? "",
+      "Disburse Amount": c.disburseAmount ?? "",
+      Status: getLoanStatusLabel(c.status) || String(c.status || ""),
+    }));
+    if (!downloadXlsx(rows, "asm-customers.xlsx", "Customers")) {
+      toast.error("No rows to export");
+    }
+  }, [filteredCustomers]);
 
     // Format date
     const formatDate = (dateString) => {
@@ -127,6 +140,79 @@ const Customer = () => {
   loginAsUser(userId, navigate);
   };
 
+  const columns = useMemo(
+    () => [
+      { title: "User Name", dataIndex: "name", key: "name" },
+      {
+        title: "User ID",
+        dataIndex: "id",
+        key: "id",
+        render: (v) => v || "N/A",
+      },
+      {
+        title: "Contact",
+        key: "contact",
+        render: (_, row) => (
+          <div className="flex items-center gap-2 text-gray-600">
+            <Phone size={14} /> {row.phone}
+          </div>
+        ),
+      },
+      { title: "Application Date", dataIndex: "applicationDate", key: "ad" },
+      {
+        title: "Loan Type",
+        dataIndex: "loanType",
+        key: "lt",
+        render: (v) => loanTypeToTableShort(v),
+      },
+      {
+        title: "Loan",
+        dataIndex: "loanAmount",
+        key: "la",
+        render: (v) => <span className="font-semibold">{v}</span>,
+      },
+      {
+        title: "Disburse",
+        dataIndex: "disburseAmount",
+        key: "da",
+        render: (v) => <span className="font-semibold">{v}</span>,
+      },
+      {
+        title: "Login As",
+        key: "login",
+        render: (_, row) => (
+          <button
+            type="button"
+            className="px-2 py-1 border border-[#1E3A8A] text-[#1E3A8A] text-sm font-medium cursor-pointer rounded"
+            onClick={() => loginAsUser(row.customerId, navigate)}
+          >
+            Login
+          </button>
+        ),
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        render: (s) => <LoanStatusBadge status={s} />,
+      },
+      {
+        title: "Action",
+        key: "action",
+        width: 72,
+        render: (_, row) => (
+          <button
+            type="button"
+            className="p-2 hover:bg-gray-100 rounded"
+            onClick={() => setModel(row._asmRow)}
+          >
+            <Eye size={16} />
+          </button>
+        ),
+      },
+    ],
+    [navigate]
+  );
 
   return (
 
@@ -246,7 +332,9 @@ const Customer = () => {
 
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
               <p className="text-xs text-gray-500">Loan Type</p>
-              <p className="font-medium text-gray-800">{model.loanType}</p>
+              <p className="font-medium text-gray-800">
+                {loanTypeToTableShort(model.loanType)}
+              </p>
             </div>
 
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
@@ -274,139 +362,76 @@ const Customer = () => {
 
 
     
-<div className="min-h-screen bg-slate-50 p-2">
-      {/* Page Header */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
-        {/* <p className="text-gray-600 mt-1">Manage your customer database</p> */}
-      </div>
-
-      {/* Search + Filter */}
-      <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search
-              size={20}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Search by name, ID, or phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
-
-          <div className="relative">
-            <Filter
-              size={20}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="pl-10 pr-8 py-3 border border-gray-200 rounded-xl bg-white min-w-[160px]"
+<DashboardTablePage
+      title="Customers"
+      subtitle={`${filteredCustomers.length} record${filteredCustomers.length !== 1 ? "s" : ""} found`}
+      toolbar={
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row">
+            <div className="relative flex-1">
+              <Search
+                size={20}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                placeholder="Search by name, ID, or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-emerald-100 md:py-3"
+              />
+            </div>
+            <div className="relative">
+              <Filter
+                size={20}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="min-w-[160px] rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-8 text-sm md:py-3"
+              >
+                <option value="All">All Status</option>
+                <option value="SUBMITTED">Submitted</option>
+                <option value="DOC_INCOMPLETE">Document Incomplete</option>
+                <option value="DOC_COMPLETE">Document Complete</option>
+                <option value="DOC_SUBMITTED">Document Submitted</option>
+                <option value="UNDER_REVIEW">Under Review</option>
+                <option value="APPROVED">Approved</option>
+                <option value="AGREEMENT">Agreement</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="DISBURSED">Disbursed</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 md:py-3"
             >
-              <option value="All">All Status</option>
-              <option value="SUBMITTED">Submitted</option>
-              <option value="DOC_INCOMPLETE">Document Incomplete</option>
-              <option value="DOC_COMPLETE">Document Complete</option>
-              <option value="DOC_SUBMITTED">Document Submitted</option>
-              <option value="UNDER_REVIEW">Under Review</option>
-              <option value="APPROVED">Approved</option>
-              <option value="AGREEMENT">Agreement</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="DISBURSED">Disbursed</option>
-            </select>
+              <Download size={18} />
+              Export
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* Customer Table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-100">
-              <tr style={{backgroundColor: "rgb(18, 185, 156)"}} className="text-white">
-                <th className="px-2 py-3 text-left ">User Name</th>
-                <th className="px-2 py-3 text-left">User ID</th>
-                <th className="px-2 py-3 text-left">Contact</th>
-                <th className="px-2 py-3 text-left">Application Date</th>
-                <th className="px-2 py-3 text-left">Loan Type</th>
-                <th className="px-2 py-3 text-left">Loan </th>
-                <th className="px-2 py-3 text-left">Disburse</th>
-                <th className="px-2 py-3 text-left">Login As</th>
-                <th className="px-2 py-3 text-left">Status</th>
-                <th className="px-2 py-3 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCustomers.map((customer,index) => (
-                <tr key={customer.id} className="border-b hover:bg-gray-50">
-                  <td className="px-2 py-4 font-medium">{customer.name}</td>
-                  <td className="px-2 py-4 text-gray-600">
-                    {customer.id ? customer.id : "N/A"}
-                  </td>
-                  <td className="px-2 py-4">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Phone size={14} /> {customer.phone}
-                    </div>
-                  </td>
-                  <td className="px-2 py-4 text-gray-600">
-                    {customer.applicationDate}
-                  </td>
-                  <td className="px-2 py-4">{customer.loanType}</td>
-                  <td className="px-2 py-4 font-semibold">
-                    {customer.loanAmount}
-                  </td>
-                  <td className="px-2 py-4 font-semibold">
-                    {customer.disburseAmount}
-                  </td>
-                  <td className="px-2 py-4 font-semibold">
-                  <button className="px-2 py-1 border border-[#1E3A8A] text-[#1E3A8A] text-sm transition-colors font-medium cursor-pointer"
-                          onClick={()=> handleLoginAs(customer?.customerId)}
-                          >
-                            Login
-                          </button>
-                  </td>
-                  
-                  <td className="px-2 py-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium border ${getLoanStatusBadgeClass(
-                        customer.status
-                      )}`}
-                    >
-                      {getLoanStatusLabel(customer.status)}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4">
-                    <button className="p-2 hover:bg-gray-100 rounded"
-                    onClick={()=>{setModel(data[index])}}
-                    >
-                      <Eye size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredCustomers.length === 0 && (
-          <div className="text-center py-12">
-            <Users size={48} className="mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              No customers found
-            </h3>
-            <p className="text-gray-600">
-              Try adjusting your search or filters.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
+      }
+    >
+      <AppAntTable
+        rowKey={(row) =>
+          `${row.id ?? "row"}-${row.applicationDateRaw ?? ""}-${row.customerId ?? ""}`
+        }
+        columns={columns}
+        dataSource={filteredCustomers}
+        locale={{
+          emptyText: (
+            <div className="text-center py-12">
+              <Users size={48} className="mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900">No customers found</h3>
+              <p className="text-gray-600">Try adjusting your search or filters.</p>
+            </div>
+          ),
+        }}
+      />
+    </DashboardTablePage>
 
 
     </>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Eye, Download, Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   activatePartner,
@@ -16,6 +16,8 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
 
 const colors = {
@@ -63,8 +65,6 @@ export default function PartnerTable() {
 
   const { loading, error, data } = useSelector((state) => state.admin.partners);
 
-  const [PartnerData, setPartnerData] = useState(null);
-  // Modal state
   const [modalOpen, setModalOpen] = useState(false);
 
   const [selectedPartner, setSelectedPartner] = useState(null);
@@ -269,149 +269,117 @@ const handleLoginAs = (userId) => {
 loginAsUser(userId, navigate);
 };
 
+  const openPartnerAnalytics = (p) => {
+    navigate("/admin/analytics", {
+      state: {
+        id: p._id,
+        role: "PARTNER",
+        name: `${p.firstName || ""} ${p.middleName || ""} ${p.lastName || ""}`.replace(/\s+/g, " ").trim(),
+        detail: "Partner",
+      },
+    });
+  };
+
+  const partnerColumns = [
+    {
+      title: "User name",
+      key: "name",
+      render: (_, p) => (
+        <span className="align-top text-sm font-semibold text-gray-900">
+          {p.firstName} {p.lastName}
+        </span>
+      ),
+    },
+    {
+      title: "User ID",
+      key: "employeeId",
+      render: (_, p) => (
+        <span className="font-medium">{p.employeeId || p._id}</span>
+      ),
+    },
+    {
+      title: "Contact",
+      key: "phone",
+      render: (_, p) => <div className="text-sm">{p.phone}</div>,
+    },
+    {
+      title: "Created on",
+      key: "createdAt",
+      render: (_, p) =>
+        p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "—",
+    },
+    {
+      title: "RM name",
+      key: "rmName",
+      render: (_, p) => p.rmName || "—",
+    },
+    {
+      title: "Login as",
+      key: "login",
+      render: (_, p) => (
+        <button
+          type="button"
+          className="rounded border px-2 py-1 text-xs"
+          style={{ borderColor: colors.secondary, color: colors.secondary }}
+          onClick={() => handleLoginAs(p._id)}
+        >
+          Login
+        </button>
+      ),
+    },
+    {
+      title: "Activation",
+      key: "activation",
+      render: (_, p) => (
+        <div
+          role="button"
+          tabIndex={0}
+          className={`flex h-6 w-12 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ${
+            p.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
+          }`}
+          onClick={() => {
+            if (p.status === "ACTIVE") {
+              toggleActivation(p);
+            } else {
+              setPartneractiveModel(p._id);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (p.status === "ACTIVE") toggleActivation(p);
+              else setPartneractiveModel(p._id);
+            }
+          }}
+        >
+          <div
+            className={`h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+              p.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"
+            }`}
+          />
+        </div>
+      ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      render: (_, p) => (
+        <div className="flex h-full flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+            onClick={() => openPartnerAnalytics(p)}
+          >
+            Analytics
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <>
-      {PartnerData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Overlay */}
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setPartnerData(null)}
-          ></div>
-
-          {/* Modal content */}
-          <div className="relative bg-white rounded-2xl shadow-2xl w-11/12 max-w-6xl overflow-y-auto max-h-[90vh] p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-2">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Partner Details
-              </h2>
-              <button
-                onClick={() => setPartnerData(null)}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Three-column layout */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Column 1 - Personal Info */}
-              <div className="bg-[#F8FAFC] rounded-xl p-4 shadow-sm flex flex-col gap-3 text-sm">
-                <h3 className="font-semibold text-gray-700 border-b border-gray-300 pb-1 mb-2">
-                  Personal Info
-                </h3>
-                {[
-                  [
-                    "Full Name",
-                    `${PartnerData.firstName} ${PartnerData.middleName || ""} ${
-                      PartnerData.lastName
-                    }`,
-                  ],
-                  [
-                    "DOB",
-                    PartnerData.dob
-                      ? new Date(PartnerData.dob).toLocaleDateString()
-                      : "-",
-                  ],
-                  ["Phone", PartnerData.phone],
-                  ["Email", PartnerData.email],
-                  ["Region", PartnerData.region],
-                  [
-                    "Address",
-                    `${PartnerData.address} (${PartnerData.landmark})`,
-                  ],
-                  ["Pincode", PartnerData.pincode],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex justify-between border-b border-gray-200 last:border-b-0 py-0.5"
-                  >
-                    <span className="text-gray-500">{label}</span>
-                    <span className="text-gray-800 font-semibold">{value}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Column 2 - Employment & Bank Info */}
-              <div className="bg-[#F8FAFC] rounded-xl p-4 shadow-sm flex flex-col gap-3 text-sm">
-                <h3 className="font-semibold text-gray-700 border-b border-gray-300 pb-1 mb-2">
-                  Employment & Bank Info
-                </h3>
-                {[
-                  ["Employee ID", PartnerData.employeeId],
-                  ["Partner Code", PartnerData.partnerCode],
-                  ["RM", `${PartnerData.rmName} (${PartnerData.rmEmployeeId})`],
-                  [
-                    "ASM",
-                    `${PartnerData.asmName} (${PartnerData.asmEmployeeId})`,
-                  ],
-                  ["Employment Type", PartnerData.employmentType],
-                  [
-                    "Bank",
-                    `${PartnerData.bankName} | ${PartnerData.accountNumber} | ${PartnerData.ifscCode}`,
-                  ],
-                  ["Home Type", PartnerData.homeType],
-                  [
-                    "Address Stability",
-                    `${PartnerData.addressStability} years`,
-                  ],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex justify-between border-b border-gray-200 last:border-b-0 py-0.5"
-                  >
-                    <span className="text-gray-500">{label}</span>
-                    <span className="text-gray-800 font-semibold">{value}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Column 3 - Status & Codes */}
-              <div className="bg-[#F8FAFC] rounded-xl p-4 shadow-sm flex flex-col gap-3 text-sm">
-                <h3 className="font-semibold text-gray-700 border-b border-gray-300 pb-1 mb-2">
-                  Status & Codes
-                </h3>
-                {[
-                  ["Role", PartnerData.role],
-                  ["Status", PartnerData.status],
-                  ["PAN", PartnerData.panNumber],
-                  ["Aadhar", PartnerData.aadharNumber],
-                  ["Created At", new Date(PartnerData.createdAt).toLocaleDateString()],
-                  ["Updated At", new Date(PartnerData.updatedAt).toLocaleDateString()],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex justify-between border-b border-gray-200 last:border-b-0 py-0.5"
-                  >
-                    <span className="text-gray-500">{label}</span>
-                    <span className="text-gray-800 font-semibold">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4">
-              <button
-                onClick={() => setPartnerData(null)}
-                className="px-5 py-2 rounded-lg text-white font-semibold hover:opacity-90 transition-colors"
-                style={{ backgroundColor: colors.primary }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div
-        className="p-2"
-        style={{ background: colors.background, color: colors.text }}
-      >
-        {/* Modal for Partner Deactivation */}
-
+      <div style={{ background: colors.background, color: colors.text }}>
       <ReassignmentDeactivateModal
         isOpen={modalOpen}
         title="Suspend Partner"
@@ -456,18 +424,13 @@ loginAsUser(userId, navigate);
           onConfirm={handlePartneractive}
         />
 
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
-            {/* Left side - Text */}
-            <div>
-              <h2 className="text-lg font-medium mb-2">Partner</h2>
-              <p className="text-xs mb-3">
-                {loading ? "Loading..." : `Total ${data.length} records found`}
-              </p>
-            </div>
-
-            {/* Right side - Export button */}
-            <div className="flex items-center gap-2">
+        <DashboardTablePage
+          title="Partner"
+          subtitle={
+            loading ? "Loading..." : `Total ${data.length} records found`
+          }
+          headerRight={
+            <>
               <div className="relative">
                 <Search
                   size={16}
@@ -481,8 +444,8 @@ loginAsUser(userId, navigate);
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-
               <button
+                type="button"
                 className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center"
                 onClick={() => {
                   handleExport();
@@ -491,131 +454,17 @@ loginAsUser(userId, navigate);
                 <Download size={16} className="mr-2" />
                 Export
               </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto rounded-lg shadow-sm">
-          <table className="w-full border-collapse bg-white text-sm">
-            <thead style={{ background: colors.primary, color: "white" }}>
-              <tr>
-                <th className="px-2 py-4 text-left">User Name</th>
-                <th className="px-2 py-4 text-left">User ID</th>
-                <th className="px-2 py-4 text-left">Contact</th>
-                <th className="px-2 py-4 text-left">Created on</th>
-                <th className="px-2 py-4 text-left">RM Name</th>
-                <th className="px-2 py-4 text-left">Login As</th>
-                <th className="px-2 py-4 text-left">Activation</th>
-                <th className="px-2 py-4 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-4">
-                    Loading...
-                  </td>
-                </tr>
-              ) : data.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-4">
-                    No partners found.
-                  </td>
-                </tr>
-              ) : (
-                sortedFilteredPartners.map((p) => (
-                  <tr key={p._id} className="border-b hover:bg-gray-50">
-                    <td
-                      className="px-2 py-3 align-top"
-                      onClick={() =>
-                        navigate("/admin/analytics", {
-                          state: { id: p._id, role: "Partner" },
-                        })
-                      }
-                    >
-                      <div>
-                        <span className="font-semibold"></span> {p.firstName}{" "}
-                        {p.lastName}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 font-medium align-middle">
-                      {p.employeeId || p._id}
-                    </td>
-                    <td className="px-2 py-3 align-top">
-                      <div>{p.phone}</div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      {p.createdAt
-                        ? new Date(p.createdAt).toLocaleDateString()
-                        : "-"}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      {p.rmName || "-"}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                    <button
-                        className="px-2 py-1 border rounded text-xs"
-                        style={{
-                          borderColor: colors.secondary,
-                          color: colors.secondary,
-                        }}
-                        onClick={()=> handleLoginAs(p._id)}
-                      >
-                        Login
-                      </button>                    </td>
-
-                    <td className="px-2 py-3 align-middle">
-                      <div
-                        className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
-                          p.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
-                        }`}
-                        onClick={() => {
-                          if (p.status === "ACTIVE") {
-                            toggleActivation(p);
-                          } else {
-                            setPartneractiveModel(p._id);
-                          }
-                        }}
-                      >
-                        <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                            p.status === "ACTIVE"
-                              ? "translate-x-6"
-                              : "translate-x-0"
-                          }`}
-                        ></div>
-                      </div>
-                    </td>
-
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center gap-2 h-full">
-                        <button
-                          type="button"
-                          className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-                          title="Open analytics"
-                          onClick={() =>
-                            navigate("/admin/analytics", {
-                              state: { id: p._id, role: "Partner" },
-                            })
-                          }
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
-                          onClick={() => setPartnerData(p)}
-                        >
-                          Details
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+            </>
+          }
+        >
+          <AppAntTable
+            columns={partnerColumns}
+            dataSource={sortedFilteredPartners}
+            rowKey="_id"
+            loading={loading}
+            locale={{ emptyText: "No partners found." }}
+          />
+        </DashboardTablePage>
       </div>
     </>
   );

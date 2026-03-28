@@ -4,6 +4,7 @@ import axios from "axios";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 const COLORS = {
   primary: "var(--color-brand-primary)",
@@ -214,7 +215,7 @@ const Leads = () => {
                   {lead.phone}
                 </p>
                 <p className="text-xs text-gray-500">
-                  Loan: {lead.loanType}, Requested: {lead.requestedAmount},
+                  Loan: {loanTypeToTableShort(lead.loanType)}, Requested: {lead.requestedAmount},
                   Approved: {lead.approvedAmount}
                 </p>
                 <p className="text-xs text-gray-500">

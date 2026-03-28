@@ -1,17 +1,17 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { Search, Filter, Eye, Users, Phone, FileText } from "lucide-react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { Search, Filter, Eye, Phone, FileText, Download } from "lucide-react";
 import { fetchRsmApplications } from "../../../feature/thunks/rsmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
-import { getLoanStatusBadgeClass, getLoanStatusLabel } from "../../../utils/loanStatus";
-
-const colors = {
-  primary: "var(--color-brand-primary)",
-  secondary: "#1E3A8A",
-  background: "#F8FAFC",
-};
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import toast from "react-hot-toast";
+import { getLoanStatusLabel } from "../../../utils/loanStatus";
+import { downloadXlsx } from "../../../utils/downloadXlsx";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 export default function RsmApplications() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -93,6 +93,28 @@ export default function RsmApplications() {
     return sortNewestFirst(filtered, { dateKeys: ["applicationDateRaw"] });
   }, [applications, searchTerm, filterStatus]);
 
+  const handleExport = useCallback(() => {
+    const rows = filteredApplications.map((app) => ({
+      "App No": app.appNo || "",
+      Customer: app.customerName || "",
+      "Customer ID": app.customerId || "",
+      Phone: app.customerPhone || "",
+      Email: app.customerEmail || "",
+      "RM Name": app.rmName || "",
+      "RM Employee ID": app.rmEmployeeId || "",
+      Partner: app.partnerName || "",
+      "Application Date": app.applicationDate || "",
+      "Loan Type": app.loanType || "",
+      "Loan Amount": app.loanAmount ?? "",
+      "Approved Amount": app.approvedLoanAmount ?? "",
+      Payout: app.payoutAmount ?? "",
+      Status: getLoanStatusLabel(app.status) || String(app.status || ""),
+    }));
+    if (!downloadXlsx(rows, "rsm-applications.xlsx", "Applications")) {
+      toast.error("No rows to export");
+    }
+  }, [filteredApplications]);
+
   const formatCurrency = (amount) => {
     if (!amount) return "₹0";
     return new Intl.NumberFormat("en-IN", {
@@ -102,178 +124,186 @@ export default function RsmApplications() {
     }).format(amount);
   };
 
+  const columns = useMemo(
+    () => [
+      {
+        title: "App No",
+        dataIndex: "appNo",
+        key: "appNo",
+        render: (v) => v || "N/A",
+      },
+      {
+        title: "Customer",
+        key: "customer",
+        render: (_, app) => (
+          <div>
+            <p className="font-medium text-gray-900">{app.customerName}</p>
+            <p className="text-xs text-gray-500">{app.customerId}</p>
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <Phone size={12} /> {app.customerPhone}
+            </p>
+          </div>
+        ),
+      },
+      {
+        title: "RM",
+        key: "rm",
+        render: (_, app) => (
+          <div>
+            <p className="text-sm font-medium text-gray-900">{app.rmName}</p>
+            <p className="text-xs text-gray-500">{app.rmEmployeeId}</p>
+          </div>
+        ),
+      },
+      {
+        title: "Partner",
+        dataIndex: "partnerName",
+        key: "partner",
+        render: (v) => (
+          <span className="text-sm text-gray-600">{v || "Direct"}</span>
+        ),
+      },
+      {
+        title: "Application Date",
+        dataIndex: "applicationDate",
+        key: "applicationDate",
+      },
+      {
+        title: "Loan Type",
+        dataIndex: "loanType",
+        key: "loanType",
+        render: (v) => (
+          <span className="text-sm">{loanTypeToTableShort(v)}</span>
+        ),
+      },
+      {
+        title: "Loan Amount",
+        key: "loanAmount",
+        render: (_, app) => (
+          <span className="font-semibold">{formatCurrency(app.loanAmount)}</span>
+        ),
+      },
+      {
+        title: "Approved Amount",
+        key: "approved",
+        render: (_, app) => (
+          <span className="font-semibold text-green-600">
+            {app.approvedLoanAmount > 0
+              ? formatCurrency(app.approvedLoanAmount)
+              : "-"}
+          </span>
+        ),
+      },
+      {
+        title: "Payout",
+        key: "payout",
+        render: (_, app) => (
+          <span className="font-semibold">
+            {app.payoutAmount ? formatCurrency(app.payoutAmount) : "—"}
+          </span>
+        ),
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        render: (s) => <LoanStatusBadge status={s} />,
+      },
+      {
+        title: "Action",
+        key: "action",
+        width: 80,
+        render: (_, app) => (
+          <button
+            type="button"
+            className="p-2 hover:bg-gray-100 rounded transition-colors"
+            onClick={() => {
+              navigate("/rsm/applications/view", {
+                state: {
+                  applicationId: app.id,
+                  customerId: app.customerId,
+                },
+              });
+            }}
+            title="View Details"
+          >
+            <Eye size={16} className="text-gray-600" />
+          </button>
+        ),
+      },
+    ],
+    [navigate]
+  );
+
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      {/* Page Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Applications</h1>
-          <p className="text-gray-600 mt-1">
-            Manage loan applications assigned to you
-          </p>
-        </div>
-      </div>
-
-      {/* Search + Filter */}
-      <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search
-              size={20}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Search by customer name, ID, phone, email, app number, or RM..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
-
-          <div className="relative">
-            <Filter
-              size={20}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="pl-10 pr-8 py-3 border border-gray-200 rounded-xl bg-white min-w-[160px]"
+    <DashboardTablePage
+      title="Applications"
+      subtitle="Manage loan applications assigned to you"
+      toolbar={
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row">
+            <div className="relative flex-1">
+              <Search
+                size={20}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                placeholder="Search by customer name, ID, phone, email, app number, or RM..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-emerald-100 md:py-3"
+              />
+            </div>
+            <div className="relative">
+              <Filter
+                size={20}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="min-w-[160px] rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-8 text-sm md:py-3"
+              >
+                <option value="All">All Status</option>
+                <option value="DOC_COMPLETE">Document Complete</option>
+                <option value="UNDER_REVIEW">Under Review</option>
+                <option value="APPROVED">Approved</option>
+                <option value="AGREEMENT">Agreement</option>
+                <option value="DISBURSED">Disbursed</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 md:py-3"
             >
-              <option value="All">All Status</option>
-              <option value="DOC_COMPLETE">Document Complete</option>
-              <option value="UNDER_REVIEW">Under Review</option>
-              <option value="APPROVED">Approved</option>
-              <option value="AGREEMENT">Agreement</option>
-              <option value="DISBURSED">Disbursed</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
+              <Download size={18} />
+              Export
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* Applications Table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-100">
-              <tr style={{ backgroundColor: "rgb(18, 185, 156)" }} className="text-white">
-                <th className="px-3 py-3 text-left">App No</th>
-                <th className="px-3 py-3 text-left">Customer</th>
-                <th className="px-3 py-3 text-left">RM</th>
-                <th className="px-3 py-3 text-left">Partner</th>
-                <th className="px-3 py-3 text-left">Application Date</th>
-                <th className="px-3 py-3 text-left">Loan Type</th>
-                <th className="px-3 py-3 text-left">Loan Amount</th>
-                <th className="px-3 py-3 text-left">Approved Amount</th>
-                <th className="px-3 py-3 text-left">Payout</th>
-                <th className="px-3 py-3 text-left">Status</th>
-                <th className="px-3 py-3 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="10" className="text-center py-12">
-                    <div className="flex items-center justify-center gap-2 text-gray-500">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-primary"></div>
-                      Loading applications...
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredApplications.length > 0 ? (
-                filteredApplications.map((app) => (
-                  <tr key={app.id} className="border-b hover:bg-gray-50">
-                    <td className="px-3 py-4 font-mono text-xs">
-                      {app.appNo || "N/A"}
-                    </td>
-                    <td className="px-3 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{app.customerName}</p>
-                        <p className="text-xs text-gray-500">{app.customerId}</p>
-                        <p className="text-xs text-gray-500 flex items-center gap-1">
-                          <Phone size={12} /> {app.customerPhone}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-3 py-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{app.rmName}</p>
-                        <p className="text-xs text-gray-500">{app.rmEmployeeId}</p>
-                      </div>
-                    </td>
-                    <td className="px-3 py-4">
-                      <span className="text-sm text-gray-600">
-                        {app.partnerName || "Direct"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-4 text-gray-600">
-                      {app.applicationDate}
-                    </td>
-                    <td className="px-3 py-4">
-                      <span className="text-sm">{app.loanType}</span>
-                    </td>
-                    <td className="px-3 py-4 font-semibold">
-                      {formatCurrency(app.loanAmount)}
-                    </td>
-                    <td className="px-3 py-4 font-semibold text-green-600">
-                      {app.approvedLoanAmount > 0
-                        ? formatCurrency(app.approvedLoanAmount)
-                        : "-"}
-                    </td>
-                    <td className="px-3 py-4 font-semibold">
-                      {app.payoutAmount
-                        ? formatCurrency(app.payoutAmount)
-                        : "—"}
-                    </td>
-                    <td className="px-3 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${getLoanStatusBadgeClass(
-                          app.status
-                        )}`}
-                      >
-                        {getLoanStatusLabel(app.status)}
-                      </span>
-                    </td>
-                    <td className="px-3 py-4">
-                      <button
-                        className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        onClick={() => {
-                          navigate("/rsm/applications/view", {
-                            state: {
-                              applicationId: app.id,
-                              customerId: app.customerId,
-                            },
-                          });
-                        }}
-                        title="View Details"
-                      >
-                        <Eye size={16} className="text-gray-600" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="10" className="text-center py-12">
-                    <div className="text-gray-500">
-                      <FileText size={48} className="mx-auto mb-4 text-gray-400" />
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        No applications found
-                      </h3>
-                      <p className="text-gray-600">
-                        Try adjusting your search or filters.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+      }
+    >
+      <AppAntTable
+        rowKey="id"
+        columns={columns}
+        dataSource={filteredApplications}
+        loading={loading}
+        locale={{
+          emptyText: (
+            <div className="py-8 text-gray-500">
+              <FileText size={48} className="mx-auto mb-4 text-gray-400" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                No applications found
+              </h3>
+              <p className="text-gray-600">Try adjusting your search or filters.</p>
+            </div>
+          ),
+        }}
+      />
+    </DashboardTablePage>
   );
 }
 

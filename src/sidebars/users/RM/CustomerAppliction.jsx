@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
-import { getLoanStatusBadgeClass, getLoanStatusLabel } from "../../../utils/loanStatus";
+import { getLoanStatusLabel } from "../../../utils/loanStatus";
 
 // ================== FIELD DEFINITIONS (Outside component) ==================
 const customerFields = [
@@ -567,14 +567,15 @@ const CustomerApplication = () => {
 
     setUpdateStatusLoading(true);
     const { rmToken } = getAuthData();
-    const docTypeParam = encodeURIComponent(selectedDocForStatus.docType);
+    const updatingDocType = selectedDocForStatus.docType;
+    const docTypeParam = encodeURIComponent(updatingDocType);
     
     // Optimistic update - update UI immediately for fast response
     const previousDocs = [...docs];
     const previousAppData = applicationData ? { ...applicationData } : null;
     
     const optimisticUpdatedDocs = docs.map((doc) => {
-      if (doc.docType === selectedDocForStatus.docType) {
+      if (doc.docType === updatingDocType) {
         return {
           ...doc,
           status: docNewStatus,
@@ -648,23 +649,25 @@ const CustomerApplication = () => {
         }
       }
 
-      // Update with backend response (sync with server)
+      // Update with backend response (sync with server; use optimistic list — not stale `docs` closure)
       if (response.data && response.data.document) {
-        const syncedDocs = docs.map((doc) => {
-          if (doc.docType === selectedDocForStatus.docType) {
+        const syncedDocs = optimisticUpdatedDocs.map((doc) => {
+          if (doc.docType === updatingDocType) {
             return response.data.document;
           }
           return doc;
         });
         setDocs(syncedDocs);
-        
-        if (applicationData) {
-          setApplicationData({
-            ...applicationData,
-            docs: syncedDocs,
-            status: response.data.applicationStatus || applicationData.status,
-          });
-        }
+
+        setApplicationData((prev) =>
+          prev
+            ? {
+                ...prev,
+                docs: syncedDocs,
+                status: response.data.applicationStatus || prev.status,
+              }
+            : prev
+        );
       }
       
       // Show success toast
@@ -753,6 +756,17 @@ const CustomerApplication = () => {
   const [remark, setRemark] = useState("");
 
   const [submittedStatus, setSubmittedStatus] = useState(null);
+
+  // Keep status dropdown aligned with server state (was stuck on default SUBMITTED after load).
+  useEffect(() => {
+    if (!applicationData?.status) return;
+    const s = applicationData.status;
+    if (["SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE"].includes(s)) {
+      setStatus(s);
+    } else if (s === "LOGIN") {
+      setStatus("DOC_COMPLETE");
+    }
+  }, [applicationData?._id, applicationData?.status]);
 
   const statusColors = {
     KYC_PENDING: "bg-orange-100 text-orange-700 border border-orange-300",
@@ -1057,17 +1071,29 @@ const CustomerApplication = () => {
         }
       );
       
-      // Sync with backend response
+      // Sync with backend response (merge rsmId/asmId set on DOC_COMPLETE)
+      const nextStatus = response.data?.status || status;
       if (response.data && applicationData) {
-        setApplicationData({
-          ...applicationData,
-          status: response.data.status || status,
+        setApplicationData((prev) => {
+          if (!prev) return prev;
+          const merged = {
+            ...prev,
+            status: nextStatus,
+          };
+          if (response.data.rsmId != null) merged.rsmId = response.data.rsmId;
+          if (response.data.asmId != null) merged.asmId = response.data.asmId;
+          return merged;
         });
+      }
+      if (["SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE"].includes(nextStatus)) {
+        setStatus(nextStatus);
+      } else if (nextStatus === "LOGIN") {
+        setStatus("DOC_COMPLETE");
       }
 
       // Update local state
       setSubmittedStatus({
-        status,
+        status: nextStatus,
         remark,
         approvedLoanAmount: approvalAmount,
       });
@@ -1077,7 +1103,7 @@ const CustomerApplication = () => {
       setApprovalAmount("");
 
       // Show success toast
-      toast.success(`Application status updated to ${status} successfully!`, {
+      toast.success(`Application status updated to ${nextStatus} successfully!`, {
         duration: 3000,
         position: "top-right",
       });
@@ -1120,9 +1146,6 @@ const CustomerApplication = () => {
       setSubmitLoading(false);
     }
   };
-
-  const getStatusColor = (status) =>
-    `${getLoanStatusBadgeClass(status)} border border-gray-200`;
 
   // Don't render anything if no data and still loading
   if (loading) {

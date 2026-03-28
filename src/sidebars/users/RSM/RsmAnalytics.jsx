@@ -87,7 +87,7 @@ const RsmAnalytics = () => {
     setKpisError(null);
     dispatch(fetchAnalyticsKpis({ id, start, end }))
       .unwrap()
-      .then((res) => setKpis(res?.data?.kpis || null))
+      .then((res) => setKpis(res?.kpis ?? res?.data?.kpis ?? null))
       .catch((e) => setKpisError(typeof e === "string" ? e : "Failed to load KPI analytics"))
       .finally(() => setKpisLoading(false));
   }, [id, filters, dispatch]);
@@ -95,6 +95,33 @@ const RsmAnalytics = () => {
   // Process analytics data using universal parser
   const parsedData = useMemo(() => parseAnalyticsData(data, "RM"), [data]);
   
+  const pageSubtitle = useMemo(() => {
+    const nav = location.state || {};
+    const empId = parsedData.profile?.employeeId;
+    const idLabel =
+      empId && empId !== "N/A"
+        ? empId
+        : id
+        ? String(id).length > 12
+          ? `…${String(id).slice(-8)}`
+          : String(id)
+        : "";
+    const detail = nav.detail || "Relationship Manager";
+    const nm =
+      nav.name ||
+      (parsedData.profile?.name && parsedData.profile.name !== "N/A"
+        ? parsedData.profile.name
+        : "");
+    const parts = [
+      idLabel ? `ID: ${idLabel}` : null,
+      detail || null,
+      nm || null,
+    ].filter(Boolean);
+    return parts.length
+      ? parts.join(" · ")
+      : "RSM view (RM performance and monthly history)";
+  }, [location.state, id, parsedData]);
+
   const analyticsData = useMemo(() => {
     // Use totalDisbursed for progress bar calculation (overall total, not just current month)
     const totalDisbursed = parsedData.totalDisbursed;
@@ -170,7 +197,7 @@ const RsmAnalytics = () => {
         <div className="mb-6">
           <PageHeader
             title="Analytics"
-            subtitle="RSM view (RM performance and monthly history)"
+            subtitle={pageSubtitle}
             right={
               <button
                 type="button"

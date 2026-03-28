@@ -85,7 +85,7 @@ const PartnerAnalytics = () => {
 
     dispatch(fetchAnalyticsKpis({ id: partnerId, start, end }))
       .unwrap()
-      .then((res) => setKpis(res?.data?.kpis || null))
+      .then((res) => setKpis(res?.kpis ?? res?.data?.kpis ?? null))
       .catch((e) => setError(String(e || "Failed to load analytics")))
       .finally(() => setLoading(false));
   }, [dispatch, partnerId, filters]);

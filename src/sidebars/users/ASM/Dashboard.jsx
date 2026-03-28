@@ -11,7 +11,6 @@ import {
   BarChart3,
   IndianRupee,
   FileText,
-  Eye,
 } from "lucide-react";
 import { fetchAsmDashboard } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
@@ -28,7 +27,12 @@ const Dashboard = () => {
     (performer) => {
       if (!performer?.id) return;
       navigate("/asm/analytics", {
-        state: { id: performer.id, role: "RSM" },
+        state: {
+          id: performer.id,
+          role: "RSM",
+          name: performer.name || "",
+          detail: performer.rsmType || "Regional Sales Manager",
+        },
       });
     },
     [navigate]
@@ -300,13 +304,7 @@ const Dashboard = () => {
                 topPerformers.map((performer, index) => (
                   <div
                     key={performer.id || index}
-                    className="flex items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                    onClick={() => openRsmAnalytics(performer)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") openRsmAnalytics(performer);
-                    }}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 p-3 transition-colors"
                   >
                     <div className="flex items-center min-w-0">
                       <div
@@ -334,15 +332,10 @@ const Dashboard = () => {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-brand-primary/5"
-                        title="Open RSM analytics"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openRsmAnalytics(performer);
-                        }}
+                        className="text-[11px] font-medium text-slate-600 hover:text-brand-primary hover:underline"
+                        onClick={() => openRsmAnalytics(performer)}
                       >
-                        <Eye size={14} className="text-brand-primary" />
-                        View
+                        Analytics
                       </button>
                       <div className="text-right">
                         <p className="text-gray-800 text-sm font-semibold">

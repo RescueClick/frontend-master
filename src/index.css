@@ -49,3 +49,95 @@
 .hero-float {
   animation: hero-float 5s ease-in-out infinite;
 }
+
+/* AppAntTable: stable block height + pagination spacing on all dashboards */
+.app-ant-table-shell {
+  min-height: 22rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-ant-table-shell .ant-table-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-ant-table-shell .ant-table-pagination.ant-pagination {
+  margin: 1rem 0 0 !important;
+  flex-shrink: 0;
+}
+
+.app-ant-table-shell .ant-spin-nested-loading,
+.app-ant-table-shell .ant-spin-container {
+  min-height: 12rem;
+}
+
+.app-ant-table-shell--compact {
+  min-height: 0;
+}
+
+.app-ant-table-shell--compact .ant-spin-nested-loading,
+.app-ant-table-shell--compact .ant-spin-container {
+  min-height: 0;
+}
+
+.app-ant-table-shell--compact .ant-table-pagination.ant-pagination {
+  margin-top: 0.5rem !important;
+}
+
+/* DashboardTablePage — same shell as Admin RSM for every list/table screen */
+.app-list-page {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  padding: 0.5rem;
+  background-color: #f8fafc;
+  color: #111827;
+}
+
+@media (min-width: 768px) {
+  .app-list-page {
+    padding: 1rem 1.25rem;
+  }
+}
+
+.app-list-page__header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .app-list-page__header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+}
+
+.app-list-page__toolbar {
+  margin-bottom: 1rem;
+}
+
+.app-list-page__toolbar > * + * {
+  margin-top: 0.75rem;
+}
+
+.app-list-page__table-wrap {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  background-color: #fff;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+/* All data tables — pointer on row hover (Ant Design + plain HTML tables) */
+table thead tr:hover,
+table tbody tr:hover,
+table tfoot tr:hover {
+  cursor: pointer;
+}

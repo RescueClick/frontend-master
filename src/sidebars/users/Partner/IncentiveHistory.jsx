@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowLeft, Search, Calendar, Award, IndianRupee } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchPartnerDashboard } from "../../../feature/thunks/partnerThunks";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import AppAntTable from "../../../components/shared/AppAntTable";
 
 const IncentiveHistory = () => {
   const dispatch = useDispatch();
@@ -47,6 +48,68 @@ const IncentiveHistory = () => {
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  const incentiveColumns = useMemo(
+    () => [
+      {
+        title: "Date",
+        key: "dt",
+        render: (_, inv) => {
+          const dateObj = new Date(inv.createdAt || inv.updatedAt || Date.now());
+          return (
+            <span className="text-xs">{dateObj.toLocaleDateString("en-IN")}</span>
+          );
+        },
+      },
+      {
+        title: "Month / Year",
+        key: "my",
+        render: (_, inv) => {
+          const dateObj = new Date(inv.createdAt || inv.updatedAt || Date.now());
+          const monthName = dateObj.toLocaleString("default", { month: "short" });
+          const y = dateObj.getFullYear();
+          return (
+            <span className="text-xs">
+              {monthName} / {y}
+            </span>
+          );
+        },
+      },
+      {
+        title: "Basis",
+        key: "basis",
+        render: (_, inv) =>
+          inv.basis === "PERCENT"
+            ? `Percent (${inv.percentValue || 0}%)`
+            : inv.basis === "FIXED"
+              ? "Fixed"
+              : "-",
+      },
+      {
+        title: "Amount",
+        key: "amt",
+        render: (_, inv) => (
+          <span className="font-semibold">{formatCurrency(inv.amount || 0)}</span>
+        ),
+      },
+      {
+        title: "Status",
+        key: "st",
+        render: (_, inv) => (
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium ${
+              inv.status === "PAID"
+                ? "bg-green-100 text-green-700"
+                : "bg-yellow-100 text-yellow-700"
+            }`}
+          >
+            {inv.status}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -130,75 +193,20 @@ const IncentiveHistory = () => {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg shadow-sm bg-white">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-slate-800 text-white">
-              <tr>
-                <th className="px-3 py-3 text-left">Date</th>
-                <th className="px-3 py-3 text-left">Month / Year</th>
-                <th className="px-3 py-3 text-left">Basis</th>
-                <th className="px-3 py-3 text-left">Amount</th>
-                <th className="px-3 py-3 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-4">
-                    Loading incentives...
-                  </td>
-                </tr>
-              ) : sortedFiltered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-4 text-gray-500">
-                    No incentives found for this month/year.
-                  </td>
-                </tr>
-              ) : (
-                sortedFiltered.map((inv) => {
-                  const dateObj = new Date(inv.createdAt || inv.updatedAt || Date.now());
-                  const monthName = dateObj.toLocaleString("default", {
-                    month: "short",
-                  });
-                  const y = dateObj.getFullYear();
-
-                  return (
-                    <tr key={inv._id} className="border-b hover:bg-gray-50">
-                      <td className="px-3 py-3 align-middle text-xs">
-                        {dateObj.toLocaleDateString("en-IN")}
-                      </td>
-                      <td className="px-3 py-3 align-middle text-xs">
-                        {monthName} / {y}
-                      </td>
-                      <td className="px-3 py-3 align-middle text-xs">
-                        {inv.basis === "PERCENT"
-                          ? `Percent (${inv.percentValue || 0}%)`
-                          : inv.basis === "FIXED"
-                          ? "Fixed"
-                          : "-"}
-                      </td>
-                      <td className="px-3 py-3 align-middle font-semibold">
-                        {formatCurrency(inv.amount || 0)}
-                      </td>
-                      <td className="px-3 py-3 align-middle">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            inv.status === "PAID"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-700"
-                          }`}
-                        >
-                          {inv.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        <AppAntTable
+          rowKey={(inv) => String(inv?._id ?? inv?.id ?? "")}
+          columns={incentiveColumns}
+          dataSource={sortedFiltered}
+          loading={loading}
+          size="small"
+          locale={{
+            emptyText: (
+              <div className="py-8 text-center text-gray-500">
+                No incentives found for this month/year.
+              </div>
+            ),
+          }}
+        />
       </div>
     </div>
   );

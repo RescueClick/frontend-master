@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Eye, Edit, Trash, Search, Download } from "lucide-react";
+import { Edit, Trash, Search, Download } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
@@ -9,6 +9,8 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
 import toast from "react-hot-toast";
 
@@ -63,11 +65,8 @@ function RM() {
   const location = useLocation();
   const dispatch = useDispatch();
 
-  const [selectedUser, setSelectedUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [rmToView, setRmToView] = useState(null);
   const [rmToDeactivate, setRmToDeactivate] = useState(null);
   const [replacementSearch, setReplacementSearch] = useState("");
   const [selectedReplacementRmId, setSelectedReplacementRmId] = useState(null);
@@ -151,13 +150,6 @@ function RM() {
         statusBadge: r.status,
       }));
   }, [rms, rmToDeactivate, replacementSearch]);
-
-  // Handle view RM details
-  const handleViewRM = (rm) => {
-    setRmToView(rm);
-    setShowViewModal(true);
-  };
-
 
   const handleDeactivateRM = async (rmToDeactivate, selectedReplacement) => {
     const { adminToken } = getAuthData() || {};
@@ -311,23 +303,113 @@ loginAsUser(userId, navigate);
     }
   };
 
+  const rmColumns = [
+    {
+      title: "User Name",
+      key: "name",
+      render: (_, rm) => (
+        <span className="text-sm font-medium text-gray-900">
+          {rm.firstName} {rm.lastName}
+        </span>
+      ),
+    },
+    { title: "User ID", dataIndex: "employeeId", key: "eid" },
+    {
+      title: "Contact",
+      dataIndex: "phone",
+      key: "phone",
+      render: (v) => (
+        <span className="text-sm font-medium">{v || "N/A"}</span>
+      ),
+    },
+    {
+      title: "Created On",
+      dataIndex: "createdAt",
+      key: "created",
+      render: (v) => new Date(v).toLocaleDateString(),
+    },
+    {
+      title: "Login as",
+      key: "login",
+      render: (_, rm) => (
+        <button
+          type="button"
+          className="px-2 py-1 border rounded text-xs"
+          style={{
+            borderColor: colors.secondary,
+            color: colors.secondary,
+          }}
+          onClick={() => handleLoginAs(rm._id)}
+        >
+          Login
+        </button>
+      ),
+    },
+    {
+      title: "Activation",
+      key: "act",
+      render: (_, rm) => (
+        <div
+          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${rm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"}`}
+          onClick={() => {
+            if (rm.status === "ACTIVE") {
+              setRmToDeactivate(rm);
+              setSelectedReplacementRmId(null);
+              setReplacementSearch("");
+              setShowDeactivateModal(true);
+            } else {
+              setRMactiveModel(rm._id);
+            }
+          }}
+        >
+          <div
+            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${rm.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"}`}
+          />
+        </div>
+      ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      render: (_, rm) => (
+        <div className="flex h-full flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+            onClick={() =>
+              navigate("/admin/analytics", {
+                state: {
+                  id: rm._id,
+                  role: "RM",
+                  name: `${rm.firstName || ""} ${rm.lastName || ""}`.trim(),
+                  detail: "Relationship Manager",
+                },
+              })
+            }
+          >
+            Analytics
+          </button>
+          {rm.status !== "ACTIVE" && (
+            <button
+              type="button"
+              className="cursor-pointer p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
+              onClick={() => handleDeleteRm(rm._id)}
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <>
-      <div
-        className="p-2"
-        style={{ background: colors.background, color: colors.text }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h2 className="text-lg font-medium">Relationship Managers</h2>
-            <p className="text-xs">
-              Total {filteredRms?.length || 0} records found
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-
+      <DashboardTablePage
+        title="Relationship Managers"
+        subtitle={`Total ${filteredRms?.length || 0} records found`}
+        headerRight={
+          <>
             <div className="relative">
               <Search
                 size={16}
@@ -341,353 +423,29 @@ loginAsUser(userId, navigate);
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-
-
-            <button className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              onClick={() => { handleExport() }}
+            <button
+              type="button"
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              onClick={() => {
+                handleExport();
+              }}
             >
               <Download size={16} className="inline mr-2" />
               Export
             </button>
-          </div>
-        </div>
-
-        {/* Error message */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg shadow-sm">
-          <table className="w-full border-collapse bg-white text-sm">
-            <thead style={{ background: colors.primary, color: "white" }}>
-              <tr>
-                <th className="px-2 py-4 text-left">User Name</th>
-                <th className="px-2 py-4 text-left">User ID</th>
-                <th className="px-2 py-4 text-left">Contact</th>
-                <th className="px-2 py-4 text-left">Created On</th>
-                <th className="px-2 py-4 text-left">Login as</th>
-                <th className="px-2 py-4 text-left">Activation</th>
-                <th className="px-2 py-4 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="text-center py-4">
-                    Loading...
-                  </td>
-                </tr>
-              ) : sortedFilteredRms.length > 0 ? (
-                sortedFilteredRms.map((rm) => (
-                  <tr key={rm._id} className="border-b hover:bg-gray-50">
-                    <td
-                      className="px-2 py-3 align-top  "
-                      
-                      onClick={() =>
-
-                        navigate("/admin/analytics", {
-                          state: { id: rm._id, role: "RM" },
-                        })
-                      }
-
-                    >
-                      <div className="cursor-pointer">
-                        {rm.firstName} {rm.lastName}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">{rm.employeeId}</td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="text-sm font-medium">
-                        {rm.phone || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      {new Date(rm.createdAt).toLocaleDateString()}
-                    </td>
-
-                    <td>
-                      <button
-                        className="px-2 py-1 border rounded text-xs"
-                        style={{
-                          borderColor: colors.secondary,
-                          color: colors.secondary,
-                        }}
-                        onClick={()=> handleLoginAs(rm._id)}
-                      >
-                        Login
-                      </button>
-                    </td>
-
-                    <td className="px-2 py-3 align-middle">
-                      <div
-                        className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${rm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
-                          }`}
-                        onClick={() => {
-                          if (rm.status === "ACTIVE") {
-                            setRmToDeactivate(rm);
-                            setSelectedReplacementRmId(null);
-                            setReplacementSearch("");
-                            setShowDeactivateModal(true);
-                          } else {
-
-                            setRMactiveModel(rm._id)
-
-                          }
-                        }}
-                      >
-                        <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${rm.status === "ACTIVE"
-                              ? "translate-x-6"
-                              : "translate-x-0"
-                            }`}
-                        />
-                      </div>
-                    </td>
-
-
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center gap-2 h-full flex-wrap">
-                        <button
-                          type="button"
-                          className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-                          title="Open analytics"
-                          onClick={() =>
-                            navigate("/admin/analytics", {
-                              state: { id: rm._id, role: "RM" },
-                            })
-                          }
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
-                          onClick={() => handleViewRM(rm)}
-                        >
-                          Details
-                        </button>
-                        {rm.status !== "ACTIVE" && (
-                          <button
-                            className="cursor-pointer p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
-                            onClick={() => handleDeleteRm(rm._id)}
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7" className="text-center py-4">
-                    No RMs found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* View RM Details Modal */}
-      {showViewModal && rmToView && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowViewModal(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="p-5 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">RM Details</h3>
-                </div>
-                <button
-                  className="text-white/80 hover:text-white rounded-full p-2"
-                  onClick={() => setShowViewModal(false)}
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-5 bg-[#F8FAFC] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Personal Information */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <h4 className="font-semibold text-[#111827] mb-3 text-sm">
-                    Personal Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Full Name</p>
-                      <p className="font-medium text-sm">
-                        {rmToView.firstName} {rmToView.lastName}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Email</p>
-                      <p className="text-sm font-mono">{rmToView.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Phone</p>
-                      <p className="text-sm font-mono">{rmToView.phone}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Joing date</p>
-                      <p className="text-sm">
-                        {new Date(rmToView.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Work Information */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <h4 className="font-semibold text-[#111827] mb-3 text-sm">
-                    Work Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Role</p>
-                      <p className="text-sm">{rmToView.role}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Employee ID</p>
-                      <p className="text-sm font-mono">{rmToView.employeeId}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">RM Code</p>
-                      <p className="text-sm font-mono">{rmToView.rmCode}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Status</p>
-                      <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${rmToView.status === "ACTIVE"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                          }`}
-                      >
-                        {rmToView.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ASM Information */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <h4 className="font-semibold text-[#111827] mb-3 text-sm">
-                    ASM Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">ASM Name</p>
-                      <p className="text-sm">{rmToView.asmName || "N/A"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">
-                        ASM Employee ID
-                      </p>
-                      <p className="text-sm font-mono">
-                        {rmToView.asmEmployeeId || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Personal Loan RSM Information */}
-                {rmToView.personalRsmName && (
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                    <h4 className="font-semibold text-[#111827] mb-3 text-sm">
-                      Personal Loan RSM Information
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">RSM Name</p>
-                        <p className="text-sm">{rmToView.personalRsmName}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">
-                          RSM Employee ID
-                        </p>
-                        <p className="text-sm font-mono">
-                          {rmToView.personalRsmEmployeeId || "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">RSM Phone</p>
-                        <p className="text-sm font-mono">
-                          {rmToView.personalRsmPhone || "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">RSM Email</p>
-                        <p className="text-sm font-mono">
-                          {rmToView.personalRsmEmail || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Business & Home Loan RSM Information */}
-                {rmToView.businessHomeRsmName && (
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                    <h4 className="font-semibold text-[#111827] mb-3 text-sm">
-                      Business & Home Loan RSM Information
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">RSM Name</p>
-                        <p className="text-sm">{rmToView.businessHomeRsmName}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">
-                          RSM Employee ID
-                        </p>
-                        <p className="text-sm font-mono">
-                          {rmToView.businessHomeRsmEmployeeId || "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">RSM Phone</p>
-                        <p className="text-sm font-mono">
-                          {rmToView.businessHomeRsmPhone || "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">RSM Email</p>
-                        <p className="text-sm font-mono">
-                          {rmToView.businessHomeRsmEmail || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer actions */}
-              <div className="flex items-center justify-end gap-3 mt-5">
-                <button
-                  className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-                  onClick={() => setShowViewModal(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        error={error}
+      >
+        <AppAntTable
+          rowKey="_id"
+          columns={rmColumns}
+          dataSource={sortedFilteredRms}
+          loading={loading}
+          size="small"
+          locale={{ emptyText: "No RMs found" }}
+        />
+      </DashboardTablePage>
 
       <ReassignmentDeactivateModal
         isOpen={showDeactivateModal && !!rmToDeactivate}

@@ -129,8 +129,8 @@ const AboutUs = () => {
                   the market.
                 </p>
                 <p>
-                  Today we serve customers across India through our digital platform, collaborating with leading banks, finance companies,
-                  and NBFCs.
+                  Today we serve customers across India through our digital platform, collaborating with leading banks
+                  and lending partners.
                 </p>
               </div>
             </div>

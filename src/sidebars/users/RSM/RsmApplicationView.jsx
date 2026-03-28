@@ -28,7 +28,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
 import { fetchRsmApplication, transitionRsmApplication } from "../../../feature/thunks/rsmThunks";
 import { useDispatch } from "react-redux";
-import { getLoanStatusBadgeClass, getLoanStatusLabel } from "../../../utils/loanStatus";
+import { getLoanStatusLabel } from "../../../utils/loanStatus";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 
 // ================== FIELD DEFINITIONS (Outside component) ==================
 const customerFields = [
@@ -537,8 +538,6 @@ const RsmApplicationView = () => {
     }
   };
 
-  const getStatusColor = (status) => `${getLoanStatusBadgeClass(status)} border border-gray-200`;
-
   const getDocStatusColor = (status) => {
     switch (status) {
       case "VERIFIED":
@@ -568,8 +567,6 @@ const RsmApplicationView = () => {
         return <Clock className="w-4 h-4" />;
     }
   };
-
-  const statusColors = (status) => `${getLoanStatusBadgeClass(status)} border border-gray-200`;
 
   // Helper functions for rendering
   const renderFields = (fields, data) => (
@@ -1233,9 +1230,10 @@ const RsmApplicationView = () => {
                     <div className="space-y-4">
                       {submittedStatus ? (
                         <div className="space-y-3">
-                          <div className={`inline-flex items-center px-4 py-2 rounded-xl font-semibold text-sm ${statusColors(submittedStatus.status)}`}>
-                            {getLoanStatusLabel(submittedStatus.status)}
-                          </div>
+                          <LoanStatusBadge
+                            status={submittedStatus.status}
+                            className="!px-4 !py-2 !rounded-xl !text-sm"
+                          />
                           {submittedStatus.remark && (
                             <div className="bg-gray-50 p-2 rounded-lg">
                               <p className="text-sm font-medium text-gray-700 mb-1">Latest Remark:</p>

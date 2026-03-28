@@ -3,6 +3,7 @@ import { Copy, ExternalLink, Eye, EyeOff, Search } from "lucide-react";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 const Banks = () => {
     const [showPassword, setShowPassword] = useState({});
@@ -126,7 +127,7 @@ const Banks = () => {
                             Lending Partner Access
                         </h1>
                         <p className="mt-1 max-w-2xl text-sm text-gray-600">
-                            Manage and access portals of all partnered banks and NBFCs for loan applications.
+                            Manage and access portals of all lending partners for loan applications.
                         </p>
                     </div>
                     {!loading && banks.length > 0 && (
@@ -265,7 +266,7 @@ const Banks = () => {
 
                                 <div className="mt-auto pt-2 border-t border-dashed border-gray-200 flex items-center justify-between gap-2">
                                     <span className="px-2 py-1 text-[10px] font-semibold rounded-md bg-emerald-100 text-emerald-700 truncate max-w-[55%]">
-                                        {bank.loanType || "N/A"}
+                                        {loanTypeToTableShort(bank.loanType)}
                                     </span>
                                     <a
                                         href={bank.portalLink}

@@ -1,17 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
-import { getAuthData, saveAuthData } from "../../../utils/localStorage";
+import { getAuthData } from "../../../utils/localStorage";
 
 
 import {
   Users,
   UserPlus,
   Search,
-  Filter,
   MoreVertical,
   Eye,
   Edit,
-  ChevronDown,
   Phone,
   Mail,
   MapPin,
@@ -32,7 +30,14 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
 import MetricCard from "../../../components/shared/MetricCard";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import { formatCurrency } from "../../../utils/designSystem";
+import toast from "react-hot-toast";
+import { getLoanStatusLabel } from "../../../utils/loanStatus";
+import { downloadXlsx } from "../../../utils/downloadXlsx";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 const formatCurrencyFull = (amount) => {
   const value = Number(amount || 0);
@@ -49,73 +54,48 @@ const formatLoanTypeLabel = (loanType) => {
 };
 
 
-const colors = {
-  primary: "var(--color-brand-primary)",
-  secondary: "#1E3A8A",
-  background: "#F8FAFC",
-  accent: "#F59E0B",
-  text: "#111827",
-};
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString("en-IN", {
-    year: "numeric",
-
-    month: "short",
-
+const formatApplicationDateCell = (customer) => {
+  const raw = customer.createdAt || customer.joinDate;
+  if (!raw) return "—";
+  return new Date(raw).toLocaleDateString("en-IN", {
     day: "numeric",
-
-    hour: "2-digit",
-
-    minute: "2-digit",
+    month: "numeric",
+    year: "numeric",
   });
 };
 
-// ✅ Put this OUTSIDE the component, reuse everywhere
-
-const getStatusColor = (status) => {
-
-
-  switch (status?.toLowerCase()) {
-    case "kyc_pending":
-      return "bg-orange-100 text-orange-800 border border-orange-200";
-
-    case "DOC_COMPLETE":
-      return "bg-emerald-100 text-emerald-800 border border-emerald-200";
-
-    case "under_review":
-      return "bg-indigo-100 text-indigo-800 border border-indigo-200";
-
-    case "in_process":
-      return "bg-yellow-100 text-yellow-800 border border-yellow-200";
-
-    case "submitted":
-      return "bg-blue-100 text-blue-800 border border-blue-200";
-
-    case "approved":
-      return "bg-green-100 text-green-800 border border-green-200";
-
-    case "agreement":
-      return "bg-cyan-100 text-cyan-800 border border-cyan-200";
-
-    case "disbursed":
-
-    case "disburse":
-      return "bg-purple-100 text-purple-800 border border-purple-200";
-
-    case "rejected":
-      return "bg-red-100 text-red-800 border border-red-200";
-
-    case "pending":
-      return "bg-yellow-100 text-yellow-800 border border-yellow-200";
-
-    case "active":
-      return "bg-green-100 text-green-800 border border-green-200";
-
-    default:
-      return "bg-gray-100 text-gray-800 border border-gray-200";
-  }
+const formatNumericLoanCell = (amount) => {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  return n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 };
+
+const formatDisburseCell = (customer) => {
+  const st = String(customer.status || "").toUpperCase();
+  if (st !== "DISBURSED") return "—";
+  const n = Number(customer.approvedAmount);
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  return n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+};
+
+const displayCustomerName = (customer) => {
+  if (customer.firstName || customer.lastName) {
+    return `${customer.firstName || ""} ${customer.lastName || ""}`.trim();
+  }
+  return customer.customerName || "—";
+};
+
+const RM_STATUS_FILTER_OPTIONS = [
+  "All",
+  "DOC_INCOMPLETE",
+  "DOC_COMPLETE",
+  "UNDER_REVIEW",
+  "SUBMITTED",
+  "APPROVED",
+  "AGREEMENT",
+  "DISBURSED",
+  "REJECTED",
+];
 
 const Customers = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -133,10 +113,17 @@ const Customers = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [loanTypeOpen, setLoanTypeOpen] = useState(false);
   const [selectedLoanType, setSelectedLoanType] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
+
+  const statusSelectValue = useMemo(() => {
+    const sf = selectedFilter;
+    if (sf === "all" || sf === "in_process") return "All";
+    if (sf === "rejected") return "REJECTED";
+    if (sf === "disbursed") return "DISBURSED";
+    const u = String(sf || "").toUpperCase();
+    if (RM_STATUS_FILTER_OPTIONS.includes(u)) return u;
+    return "All";
+  }, [selectedFilter]);
 
 
   const location = useLocation();
@@ -144,7 +131,7 @@ const Customers = () => {
 
 
   useEffect(() => {
-    setSearchTerm(id);
+    setSearchTerm(id != null && id !== "" ? String(id) : "");
   }, [id]);
 
   const navigate = useNavigate();
@@ -183,8 +170,8 @@ const Customers = () => {
   // ✅ When navigated with partnerName, set it in search bar
 
   useEffect(() => {
-    if (location.state?.partnerName) {
-      setSearchTerm(location.state.partnerName);
+    if (location.state?.partnerName != null && location.state.partnerName !== "") {
+      setSearchTerm(String(location.state.partnerName));
     }
   }, [location.state]);
 
@@ -233,21 +220,29 @@ const Customers = () => {
     return bTime - aTime; // newest first
   });
 
-  const totalPages = Math.max(1, Math.ceil(sortedFilteredCustomers.length / rowsPerPage));
-  const paginatedCustomers = sortedFilteredCustomers.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedFilter, selectedLoanType]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+  const handleExport = useCallback(() => {
+    const rows = sortedFilteredCustomers.map((c) => {
+      const displayName =
+        c.firstName && c.lastName
+          ? `${c.firstName} ${c.lastName}`.trim()
+          : c.customerName || "";
+      return {
+        "User Name": displayName,
+        "Customer ID": c.customerEmployeeId || c.customerId || "",
+        Contact: c.contact || "",
+        "Application Date": c.createdAt
+          ? new Date(c.createdAt).toLocaleDateString("en-IN")
+          : c.joinDate || "",
+        "Loan Type": loanTypeToTableShort(c.loanType),
+        "Loan Amount": c.requestedAmount ?? "",
+        "Approval Amount": c.approvedAmount ?? "",
+        Status: getLoanStatusLabel(c.status) || String(c.status || ""),
+      };
+    });
+    if (!downloadXlsx(rows, "rm-customers.xlsx", "Customers")) {
+      toast.error("No rows to export");
     }
-  }, [currentPage, totalPages]);
+  }, [sortedFilteredCustomers]);
 
   const loanTypeOptions = [
     { label: "All", value: "All" },
@@ -256,18 +251,117 @@ const Customers = () => {
     { label: "Home Loan", value: "HOME" },
   ];
 
-  const getAccountTypeColor = (type) => {
-    switch (type) {
-      case "Home Loan":
-        return "bg-purple-100 text-purple-700";
-
-      case "Business Loan":
-        return "bg-blue-100 text-blue-700";
-
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
+  const columns = useMemo(
+    () => [
+      {
+        title: "User Name",
+        key: "userName",
+        ellipsis: true,
+        render: (_, customer) => (
+          <span className="text-sm font-semibold text-gray-900">
+            {displayCustomerName(customer)}
+          </span>
+        ),
+      },
+      {
+        title: "User ID",
+        key: "userId",
+        width: 120,
+        render: (_, customer) => (
+          <span className="font-mono text-sm text-gray-800">
+            {customer.customerEmployeeId || "—"}
+          </span>
+        ),
+      },
+      {
+        title: "Contact",
+        key: "contact",
+        width: 130,
+        render: (_, customer) => (
+          <span className="text-sm text-gray-800">{customer.contact || "—"}</span>
+        ),
+      },
+      {
+        title: "Application Date",
+        key: "date",
+        width: 130,
+        render: (_, customer) => (
+          <span className="text-sm text-gray-800">
+            {formatApplicationDateCell(customer)}
+          </span>
+        ),
+      },
+      {
+        title: "Loan Type",
+        key: "loanType",
+        ellipsis: true,
+        render: (_, customer) => (
+          <span
+            className="text-xs font-semibold tracking-wide text-gray-900"
+            title={formatLoanTypeLabel(customer.loanType)}
+          >
+            {loanTypeToTableShort(customer.loanType)}
+          </span>
+        ),
+      },
+      {
+        title: "Loan",
+        key: "loan",
+        align: "right",
+        width: 110,
+        render: (_, customer) => (
+          <span className="text-sm font-medium text-gray-900 tabular-nums">
+            {formatNumericLoanCell(
+              customer.requestedAmount ?? customer.approvedAmount
+            )}
+          </span>
+        ),
+      },
+      {
+        title: "Disburse",
+        key: "disburse",
+        align: "right",
+        width: 110,
+        render: (_, customer) => (
+          <span className="text-sm font-medium text-gray-900 tabular-nums">
+            {formatDisburseCell(customer)}
+          </span>
+        ),
+      },
+      {
+        title: "Status",
+        key: "status",
+        width: 160,
+        render: (_, customer) => (
+          <LoanStatusBadge status={customer.status} className="max-w-full" />
+        ),
+      },
+      {
+        title: "Action",
+        key: "action",
+        width: 72,
+        align: "center",
+        render: (_, customer) => (
+          <button
+            type="button"
+            onClick={() =>
+              navigate("/rm/CustomerAppliction", {
+                state: {
+                  customerId: customer?.customerId,
+                  applicationId: customer?.applicationId,
+                },
+              })
+            }
+            className="rounded-full bg-gray-100 p-1 text-gray-700 transition-colors hover:bg-gray-200"
+            title="View details"
+          >
+            <Eye size={14} />
+          </button>
+        ),
+      },
+    ],
+    [navigate]
+  );
 
   const calculateCommission = () => {
     const loanAmount =
@@ -290,18 +384,6 @@ const Customers = () => {
 
   
     closeModal();
-  };
-
-  const [open, setOpen] = useState(false);
-
-  const [selected, setSelected] = useState("Filter");
-
-  const handleSelect = (value) => {
-    setSelected(value);
-
-    setSelectedFilter(value === "All" ? "all" : value); // support 'All'
-
-    setOpen(false);
   };
 
   function InProcessCount(applications) {
@@ -346,7 +428,6 @@ const Customers = () => {
       icon: TrendingUp,
       subtitle: "Applications under process",
       onClick: () => {
-        setSelected("IN_PROCESS");
         setSelectedFilter("in_process");
       },
     },
@@ -357,7 +438,6 @@ const Customers = () => {
       icon: UserPlus,
       subtitle: "Needs follow-up",
       onClick: () => {
-        setSelected("REJECTED");
         setSelectedFilter("rejected");
       },
     },
@@ -368,7 +448,6 @@ const Customers = () => {
       icon: CreditCard,
       subtitle: "Completed disbursement",
       onClick: () => {
-        setSelected("DISBURSED");
         setSelectedFilter("disbursed");
       },
     },
@@ -410,49 +489,10 @@ const Customers = () => {
     );
   }
 
-    
-  const loginAsUser = async (userId, navigate) => {
-    try {
-      const { rmToken } = getAuthData();
-      if (!rmToken) throw new Error("Admin not authenticated");
-  
-      const res = await axios.post(
-        `${backendurl}/auth/login-as/${userId}`,
-        {},
-        { headers: { Authorization: `Bearer ${rmToken}` } }
-      );
-  
-      const { token, user } = res.data;
-  
-      // Save impersonated token without removing admin token
-      saveAuthData(token, user, true);
-  
-      // Navigate to role
-      switch (user.role) {
-        case "ASM": navigate("/asm"); break;
-        case "RM": navigate("/rm"); break;
-        case "PARTNER": navigate("/partner"); break;
-        case "CUSTOMER": navigate("/customer"); break;
-        default: navigate("/"); break;
-      }
-    } catch (err) {
-      console.error("Login as user failed:", err.response?.data || err.message);
-      alert(err.response?.data?.message || err.message || "Login as user failed");
-    }
-  };
-  
- // Usage in component
-const handleLoginAs = (userId) => {
-  console.log(userId)
-loginAsUser(userId, navigate);
-};
-
   return (
     <>
-      <div className="min-h-screen bg-gray-50 text-gray-900">
-        <main className="mx-auto flex max-w-7xl flex-col gap-4 p-3 md:gap-5 md:p-6">
-          {/* Stats Cards */}
-
+      <div className="min-h-screen text-gray-900" style={{ background: "#F8FAFC" }}>
+        <div className="mx-auto w-full max-w-[min(100%,1600px)] px-2 pt-3 md:px-5 md:pt-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             {stats.map((stat, index) => (
               <MetricCard
@@ -467,302 +507,90 @@ loginAsUser(userId, navigate);
               />
             ))}
           </div>
+        </div>
 
-          {/* Search & Filter */}
-
-          <div className="mb-2 rounded-xl bg-white p-2 shadow">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              {/* Search */}
-
-              <div className="flex-1 relative">
+        <DashboardTablePage
+          title="Customer Applications"
+          subtitle={`Total ${sortedFilteredCustomers.length} records found`}
+          headerRight={
+            <>
+              <div className="relative">
                 <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={20}
+                  size={16}
+                  className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
                 />
-
                 <input
                   type="text"
-                  placeholder="Search customers by name or email..."
+                  className="w-[min(100vw-2rem,220px)] rounded-md border border-gray-300 py-2 pl-8 pr-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary sm:w-56"
+                  placeholder="Search name, ID, email, phone…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-xs focus:ring-2 focus:ring-teal-500"
+                  aria-label="Search customers"
                 />
               </div>
-
-              {/* Loan Type Filter Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setLoanTypeOpen((prev) => !prev)}
-                  className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-xs text-white transition hover:bg-teal-700"
-                  type="button"
-                >
-                  <span>{selectedLoanType || "Loan Type"}</span>
-                  <ChevronDown size={18} />
-                </button>
-
-                {loanTypeOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                    <ul className="py-2 text-gray-700">
-                      {loanTypeOptions.map((option) => (
-                        <li
-                          key={option.value}
-                          onClick={() => {
-                            setSelectedLoanType(option.value);
-                            setLoanTypeOpen(false);
-                          }}
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                        >
-                          {option.label}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              {/* Filter with dropdown */}
-
-              <div className="relative">
-                <button
-                  onClick={() => setOpen(!open)}
-                  className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-xs text-white transition hover:bg-teal-700"
-                >
-                  <Filter size={20} />
-
-                  <span>{selected}</span>
-
-                  <ChevronDown size={18} />
-                </button>
-
-                {open && (
-                  <div className="absolute left-0 top-full mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                    <ul className="py-2 text-gray-700">
-                      {[
-                        "All",
-                        "DOC_INCOMPLETE",
-                        "DOC_COMPLETE",
-                        "UNDER_REVIEW",
-                        "SUBMITTED",
-                        "APPROVED",
-                        "AGREEMENT",
-                        "DISBURSED",
-                        "REJECTED",
-                      ].map((status) => (
-                        <li
-                          key={status}
-                          onClick={() => handleSelect(status)}
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                        >
-                          {status}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Customer Table */}
-
-          <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-4 py-3 md:px-5">
-              <div className="flex justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-slate-900">Customer List</h2>
+              <select
+                className="rounded-md border border-gray-300 bg-white py-2 pl-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                value={selectedLoanType}
+                onChange={(e) => setSelectedLoanType(e.target.value)}
+                aria-label="Loan type"
+              >
+                {loanTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="max-w-[11rem] rounded-md border border-gray-300 bg-white py-2 pl-2 pr-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary sm:max-w-none"
+                value={statusSelectValue}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSelectedFilter(v === "All" ? "all" : v);
+                }}
+                aria-label="Status filter"
+              >
+                {RM_STATUS_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt === "All" ? "All status" : opt}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm transition-colors hover:bg-gray-50"
+                onClick={handleExport}
+              >
+                <Download size={16} className="mr-2" />
+                Export
+              </button>
+            </>
+          }
+        >
+          <AppAntTable
+            rowKey={(row, index) =>
+              `${row.applicationId ?? ""}-${row.customerId ?? ""}-${row.customerEmployeeId ?? index}`
+            }
+            columns={columns}
+            dataSource={sortedFilteredCustomers}
+            loading={loading}
+            size="small"
+            scroll={{ x: "max-content" }}
+            locale={{
+              emptyText: (searchTerm ?? "").trim() ? (
+                <div className="py-12 text-center text-gray-600">
+                  No customers match your search.
                 </div>
-                <div>
-                  <h2 className="flex items-center justify-center rounded-md bg-teal-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
-                    {filteredCustomers.length}
-                  </h2>
+              ) : (
+                <div className="py-12 text-center">
+                  <Users size={48} className="mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-900">No records</h3>
+                  <p className="text-gray-600">Try adjusting your filters.</p>
                 </div>
-              </div>
-
-              <p className="text-xs text-slate-500">
-                Manage and view all customer information
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full table-fixed text-xs md:text-sm">
-                <thead className="sticky top-0 z-10 bg-teal-500">
-                  <tr>
-                    <th className="w-[17%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
-                      User Name
-                    </th>
-
-                    <th className="w-[13%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
-                      Application Date
-                    </th>
-
-                    <th className="w-[19%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
-                      Loan Type
-                    </th>
-
-                    <th className="w-[15%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
-                      Loan Amount
-                    </th>
-
-                    <th className="w-[15%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
-                      Approval Amount
-                    </th>
-                    
-                 
-                    <th className="w-[10%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
-                      Status
-                    </th>
-
-                    <th className="w-[8%] px-2 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/95 md:px-2.5">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                    {paginatedCustomers.map((customer) => (
-                    <tr
-                      key={customer.id}
-                      className="align-top transition-colors hover:bg-slate-50/70"
-                    >
-                      {/* User Name */}
-
-                      <td className="px-2 py-2.5 align-top md:px-2.5">
-                        <div className="flex items-start gap-1.5">
-                          <div>
-                            <p className="truncate text-sm font-semibold leading-5 text-slate-900 md:text-sm" title={customer.firstName && customer.lastName
-                                ? `${customer.firstName} ${customer.lastName}`.trim()
-                                : customer.customerName || "N/A"}>
-                              {customer.firstName && customer.lastName
-                                ? `${customer.firstName} ${customer.lastName}`.trim()
-                                : customer.customerName || "N/A"}
-                            </p>
-                            <p className="mt-0.5 break-words text-[11px] text-slate-500">
-                              ID: {customer?.customerEmployeeId || "N/A"}
-                            </p>
-                            <p className="break-words text-[11px] text-slate-500">
-                              Contact: {customer.contact || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Application Date */}
-
-                      <td className="break-words px-2 py-2.5 align-top text-xs text-slate-600 md:px-2.5">
-                        {customer.createdAt
-                          ? new Date(customer.createdAt).toLocaleDateString()
-                          : customer.joinDate || "N/A"}
-                      </td>
-
-                      {/* Loan Type */}
-
-                      <td className="overflow-hidden px-2 py-2.5 align-top md:px-2.5">
-                        <span
-                          className={`inline-flex max-w-[170px] whitespace-normal break-all rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4 ${getAccountTypeColor(
-                            customer.loanType || "Personal Loan"
-                          )}`}
-                          title={formatLoanTypeLabel(customer.loanType)}
-                        >
-                          {formatLoanTypeLabel(customer.loanType)}
-                        </span>
-                      </td>
-
-                      {/* Loan Amount */}
-
-                      <td className="break-words px-2 py-2.5 align-top text-xs font-semibold text-slate-800 md:px-2.5">
-                        {formatCurrencyFull(customer.requestedAmount || 0)}
-                      </td>
-
-                      {/* Approval Amount */}
-
-                      <td className="break-words px-2 py-2.5 align-top text-xs font-semibold text-slate-800 md:px-2.5">
-                        {customer.approvedAmount ? formatCurrencyFull(customer.approvedAmount) : "-"}
-                      </td>
-
-                      {/* Status */}
-
-                      <td className="px-2 py-2.5 align-top md:px-2.5">
-                        <span
-                          className={`inline-flex max-w-full break-words rounded-full px-2 py-0.5 text-[11px] font-semibold ${getStatusColor(
-                            customer.status === "DRAFT" ? "SUBMITTED" : customer.status
-                          )}`}
-                        >
-                          {customer.status === "DRAFT" ? "SUBMITTED" : (customer.status || "N/A")}
-                        </span>
-                      </td>
-
-                      {/* Action */}
-
-                      <td className="px-2 py-2.5 align-top md:px-2.5">
-                        <div className="flex items-center">
-                          <button
-                            onClick={() => {
-                              navigate("/rm/CustomerAppliction", {
-                                state: {
-                                  customerId: customer?.customerId,
-                                  applicationId: customer?.applicationId,
-                                },
-                              });
-                            }}
-                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:border-teal-200 hover:bg-teal-50"
-                            title="View"
-                          >
-                            <Eye size={13} className="text-teal-600" />
-                            <span className="hidden md:inline">View</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {sortedFilteredCustomers.length > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-2.5">
-                <p className="text-xs text-slate-600">
-                  Showing {(currentPage - 1) * rowsPerPage + 1}-
-                  {Math.min(currentPage * rowsPerPage, sortedFilteredCustomers.length)} of {sortedFilteredCustomers.length}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Prev
-                  </button>
-                  <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                    Page {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {sortedFilteredCustomers.length === 0 && (
-              <div className="py-12 text-center">
-                <Users size={48} className="mx-auto text-gray-300 mb-4" />
-
-                <h3 className="text-lg font-medium text-gray-600 mb-2">
-                  No customers found
-                </h3>
-
-                <p className="text-gray-500">
-                  Try adjusting your search or filter criteria
-                </p>
-              </div>
-            )}
-          </div>
-        </main>
+              ),
+            }}
+          />
+        </DashboardTablePage>
+      </div>
 
         {/* Payout Modal */}
 
@@ -928,7 +756,6 @@ loginAsUser(userId, navigate);
             </div>
           </div>
         )}
-      </div>
     </>
   );
 };

@@ -9,6 +9,8 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
 import toast from "react-hot-toast";
 
@@ -29,8 +31,6 @@ export default function RSM() {
   const dispatch = useDispatch();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [rsmToView, setRsmToView] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 const [selectedNewRsmId, setSelectedNewRsmId] = useState(null);
@@ -107,12 +107,6 @@ const [searchRsm, setSearchRsm] = useState("");
   }, [rsms, searchQuery]);
 
   const sortedFilteredRsms = sortNewestFirst(filteredRsms, { dateKeys: ["createdAt"] });
-
-  // Handle view RSM details
-  const handleViewRSM = (rsm) => {
-    setRsmToView(rsm);
-    setShowViewModal(true);
-  };
 
   const handleExport = () => {
     // Format data before exporting
@@ -243,16 +237,6 @@ const [searchRsm, setSearchRsm] = useState("");
     }
   };
 
-  const toggleActivation = (rsm) => {
-    if (rsm.status === "ACTIVE") {
-      // For deactivation, we don't need replacement (simple toggle)
-      setRsmToDeactivate(rsm);
-    } else {
-      // For activation, show confirmation modal
-      setRSMactiveModel(rsm._id);
-    }
-  };
-
   const confirmDeactivate = async () => {
     if (!rsmToDeactivate || !selectedNewRsmId) {
       toast.error("Please select a replacement RSM");
@@ -374,22 +358,120 @@ const [searchRsm, setSearchRsm] = useState("");
     }
   };
 
+  const rsmColumns = [
+    {
+      title: "User Name",
+      key: "name",
+      render: (_, rsm) => (
+        <span className="text-sm font-medium text-gray-900">
+          {rsm.firstName} {rsm.lastName}
+        </span>
+      ),
+    },
+    { title: "User ID", dataIndex: "employeeId", key: "eid" },
+    {
+      title: "RSM Type",
+      dataIndex: "rsmType",
+      key: "type",
+      render: (v) => (
+        <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+          {v || "N/A"}
+        </span>
+      ),
+    },
+    {
+      title: "Contact",
+      dataIndex: "phone",
+      key: "phone",
+      render: (v) => (
+        <span className="text-sm font-medium">{v || "N/A"}</span>
+      ),
+    },
+    {
+      title: "ASM",
+      dataIndex: "asmName",
+      key: "asm",
+      render: (v) => <span className="text-sm">{v || "N/A"}</span>,
+    },
+    {
+      title: "Created On",
+      dataIndex: "createdAt",
+      key: "created",
+      render: (v) => new Date(v).toLocaleDateString(),
+    },
+    {
+      title: "Login as",
+      key: "login",
+      render: (_, rsm) => (
+        <button
+          type="button"
+          className="px-2 py-1 border rounded text-xs"
+          style={{
+            borderColor: colors.secondary,
+            color: colors.secondary,
+          }}
+          onClick={() => handleLoginAs(rsm._id)}
+        >
+          Login
+        </button>
+      ),
+    },
+    {
+      title: "Activation",
+      key: "act",
+      render: (_, rsm) => (
+        <div
+          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${rsm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"}`}
+          onClick={() => {
+            if (rsm.status === "ACTIVE") {
+              setRsmToDeactivate(rsm);
+              setShowDeactivateModal(true);
+              setSelectedNewRsmId(null);
+              setSearchRsm("");
+            } else {
+              setRSMactiveModel(rsm._id);
+            }
+          }}
+        >
+          <div
+            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${rsm.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"}`}
+          />
+        </div>
+      ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      render: (_, rsm) => (
+        <div className="flex h-full flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+            onClick={() =>
+              navigate("/admin/analytics", {
+                state: {
+                  id: rsm._id,
+                  role: "RSM",
+                  name: `${rsm.firstName || ""} ${rsm.lastName || ""}`.trim(),
+                  detail: rsm.rsmType || "Regional Sales Manager",
+                },
+              })
+            }
+          >
+            Analytics
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
-      <div
-        className="p-2"
-        style={{ background: colors.background, color: colors.text }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h2 className="text-lg font-medium">Regional Sales Managers</h2>
-            <p className="text-xs">
-              Total {filteredRsms?.length || 0} records found
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Note: Creation of RSM is done from Admin Dashboard Quick Actions */}
+      <DashboardTablePage
+        title="Regional Sales Managers"
+        subtitle={`Total ${filteredRsms?.length || 0} records found`}
+        headerRight={
+          <>
             <div className="relative">
               <Search
                 size={16}
@@ -403,8 +485,8 @@ const [searchRsm, setSearchRsm] = useState("");
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-
             <button
+              type="button"
               className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               onClick={() => {
                 handleExport();
@@ -413,279 +495,19 @@ const [searchRsm, setSearchRsm] = useState("");
               <Download size={16} className="inline mr-2" />
               Export
             </button>
-          </div>
-        </div>
-
-        {/* Error message */}
-        {!showCreateModal && error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg shadow-sm">
-          <table className="w-full border-collapse bg-white text-sm">
-            <thead style={{ background: colors.primary, color: "white" }}>
-              <tr>
-                <th className="px-2 py-4 text-left">User Name</th>
-                <th className="px-2 py-4 text-left">User ID</th>
-                <th className="px-2 py-4 text-left">RSM Type</th>
-                <th className="px-2 py-4 text-left">Contact</th>
-                <th className="px-2 py-4 text-left">ASM</th>
-                <th className="px-2 py-4 text-left">Created On</th>
-                <th className="px-2 py-4 text-left">Activation</th>
-                <th className="px-2 py-4 text-left">Login as</th>
-                <th className="px-2 py-4 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="9" className="text-center py-4">
-                    Loading...
-                  </td>
-                </tr>
-              ) : sortedFilteredRsms.length > 0 ? (
-                sortedFilteredRsms.map((rsm) => (
-                  <tr key={rsm._id} className="border-b hover:bg-gray-50">
-                    <td
-                      className="px-2 py-3 align-top cursor-pointer"
-                      onClick={() =>
-                        navigate("/admin/analytics", {
-                          state: { id: rsm._id, role: "RSM" },
-                        })
-                      }
-                    >
-                      <div>
-                        {rsm.firstName} {rsm.lastName}
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle">{rsm.employeeId}</td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
-                        {rsm.rsmType || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="text-sm font-medium">
-                        {rsm.phone || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="text-sm">{rsm.asmName || "N/A"}</span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      {new Date(rsm.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div
-                        className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${rsm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
-                          }`}
-                          onClick={() => {
-                            if (rsm.status === "ACTIVE") {
-                              setRsmToDeactivate(rsm);
-                          
-                              // 🔥 ADD THIS (THIS WAS MISSING)
-                              setShowDeactivateModal(true);
-                          
-                              // optional reset
-                              setSelectedNewRsmId(null);
-                              setSearchRsm("");
-                            } else {
-                              setRSMactiveModel(rsm._id);
-                            }
-                          }}
-                      >
-                        <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${rsm.status === "ACTIVE"
-                              ? "translate-x-6"
-                              : "translate-x-0"
-                            }`}
-                        />
-                      </div>
-                    </td>
-                    <td>
-                      <button
-                        className="px-2 py-1 border rounded text-xs"
-                        style={{
-                          borderColor: colors.secondary,
-                          color: colors.secondary,
-                        }}
-                        onClick={() => handleLoginAs(rsm._id)}
-                      >
-                        Login
-                      </button>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <div className="flex items-center gap-2 h-full">
-                        <button
-                          type="button"
-                          className="cursor-pointer p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-                          title="Open analytics"
-                          onClick={() =>
-                            navigate("/admin/analytics", {
-                              state: { id: rsm._id, role: "RSM" },
-                            })
-                          }
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
-                          onClick={() => handleViewRSM(rsm)}
-                        >
-                          Details
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="9" className="text-center py-4">
-                    No RSMs found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* View RSM Details Modal */}
-      {showViewModal && rsmToView && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowViewModal(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="p-5 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">RSM Details</h3>
-                </div>
-                <button
-                  className="text-white/80 hover:text-white rounded-full p-2"
-                  onClick={() => setShowViewModal(false)}
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-5 bg-[#F8FAFC] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Personal Information */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <h4 className="font-semibold text-[#111827] mb-3 text-sm">
-                    Personal Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Full Name</p>
-                      <p className="font-medium text-sm">
-                        {rsmToView.firstName} {rsmToView.lastName}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Email</p>
-                      <p className="text-sm font-mono">{rsmToView.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Phone</p>
-                      <p className="text-sm font-mono">{rsmToView.phone}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Joining date</p>
-                      <p className="text-sm">
-                        {new Date(rsmToView.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Work Information */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <h4 className="font-semibold text-[#111827] mb-3 text-sm">
-                    Work Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Role</p>
-                      <p className="text-sm">{rsmToView.role}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Employee ID</p>
-                      <p className="text-sm font-mono">{rsmToView.employeeId}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">RSM Type</p>
-                      <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
-                        {rsmToView.rsmType || "N/A"}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Status</p>
-                      <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                          rsmToView.status === "ACTIVE"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {rsmToView.status}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Region</p>
-                      <p className="text-sm">{rsmToView.region || "N/A"}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ASM Information */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <h4 className="font-semibold text-[#111827] mb-3 text-sm">
-                    ASM Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">ASM Name</p>
-                      <p className="text-sm">{rsmToView.asmName || "N/A"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">
-                        ASM Employee ID
-                      </p>
-                      <p className="text-sm font-mono">
-                        {rsmToView.asmEmployeeId || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer actions */}
-              <div className="flex items-center justify-end gap-3 mt-5">
-                <button
-                  className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-                  onClick={() => setShowViewModal(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        error={!showCreateModal && error ? error : null}
+      >
+        <AppAntTable
+          rowKey="_id"
+          columns={rsmColumns}
+          dataSource={sortedFilteredRsms}
+          loading={loading}
+          size="small"
+          locale={{ emptyText: "No RSMs found" }}
+        />
+      </DashboardTablePage>
 
       {/* Create RSM Modal */}
       {showCreateModal && (

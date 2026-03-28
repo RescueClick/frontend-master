@@ -40,7 +40,7 @@ const passwordMeetsRules = (pw) =>
 
 const fieldClass = (fieldName, fieldErrors) =>
   [
-    "w-full rounded-xl border-2 bg-white/80 px-4 py-3.5 transition focus:outline-none focus:ring-2",
+    "w-full min-w-0 max-w-full rounded-xl border-2 bg-white/80 px-3 py-3 text-base transition focus:outline-none focus:ring-2 sm:px-4 sm:py-3.5",
     fieldErrors[fieldName]
       ? "border-red-400 focus:border-red-500 focus:ring-red-500/25"
       : "border-stone-200 focus:border-[#0d9488] focus:ring-[#0d9488]/25",
@@ -507,24 +507,24 @@ const PartnerRegistrationForm = () => {
 
       <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-stone-100 via-teal-50/40 to-amber-50/35">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_0%,rgba(13,148,136,0.12),transparent)]" />
-        <div className="relative px-4 py-10 sm:px-6 lg:py-14">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-10 text-center">
-            <div className="mx-auto mb-5 flex h-14 max-w-[260px] items-center justify-center rounded-2xl border border-white/40 bg-white/95 px-4 shadow-lg shadow-teal-900/10 backdrop-blur-sm">
+        <div className="relative px-3 py-8 sm:px-6 sm:py-10 lg:py-14">
+        <div className="mx-auto w-full max-w-4xl min-w-0">
+          <div className="mb-8 text-center sm:mb-10">
+            <div className="mx-auto mb-4 flex h-12 max-w-[min(100%,260px)] items-center justify-center rounded-xl border border-white/40 bg-white/95 px-3 shadow-lg shadow-teal-900/10 backdrop-blur-sm sm:mb-5 sm:h-14 sm:rounded-2xl sm:px-4">
               <img
                 src={brandLogo}
                 alt={COMPANY_NAME}
-                className="max-h-10 w-full object-contain"
+                className="max-h-9 w-full object-contain sm:max-h-10"
               />
             </div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#0d9488]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0d9488] sm:text-[11px] sm:tracking-[0.28em]">
               Partner onboarding
             </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+            <h1 className="mt-2 text-balance text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl md:text-4xl">
               Become a {COMPANY_NAME} partner
             </h1>
             <p className="mt-2 text-stone-600">{COMPANY_TAGLINE}</p>
-            <p className="mx-auto mt-4 max-w-lg text-sm text-stone-500">
+            <p className="mx-auto mt-3 max-w-lg px-1 text-xs text-stone-500 sm:mt-4 sm:px-0 sm:text-sm">
               Trusted lending marketplace: complete all sections. Fields marked * are required.
             </p>
             <Link
@@ -537,20 +537,20 @@ const PartnerRegistrationForm = () => {
 
           <form
             onSubmit={handleSubmit}
-            className="overflow-hidden rounded-3xl border border-white/40 bg-white/80 shadow-2xl shadow-teal-900/10 backdrop-blur-md"
+            className="w-full max-w-full overflow-hidden rounded-2xl border border-white/40 bg-white/80 shadow-2xl shadow-teal-900/10 backdrop-blur-md sm:rounded-3xl"
             noValidate
           >
             {/* Personal Information Section */}
-            <div className="p-8 space-y-8 bg-gray-50 rounded-2xl shadow-md">
+            <div className="space-y-6 bg-gray-50 p-4 sm:space-y-8 sm:p-6 md:p-8 rounded-2xl shadow-md">
               {/* Personal Information */}
 
-              <section className="bg-white p-8 rounded-2xl shadow-md border border-gray-200 space-y-8">
+              <section className="space-y-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-md sm:space-y-8 sm:p-6 md:p-8">
                 {/* Header */}
-                <div className="mb-6 flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] shadow-md shadow-teal-900/15">
-                    <User className="h-6 w-6 text-white" />
+                <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] shadow-md shadow-teal-900/15 sm:h-12 sm:w-12">
+                    <User className="h-5 w-5 text-white sm:h-6 sm:w-6" />
                   </div>
-                  <h2 className="text-2xl font-bold text-stone-800">
+                  <h2 className="text-xl font-bold text-stone-800 sm:text-2xl">
                     Personal Information
                   </h2>
                 </div>
@@ -772,8 +772,8 @@ const PartnerRegistrationForm = () => {
               </section>
 
               {/* Address Details */}
-              <section className="bg-white p-8 rounded-2xl shadow-md border border-gray-200 space-y-6">
-                <h2 className="text-xl font-bold text-gray-800">
+              <section className="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-md sm:space-y-6 sm:p-6 md:p-8">
+                <h2 className="text-lg font-bold text-gray-800 sm:text-xl">
                   Address Details
                 </h2>
 
@@ -930,7 +930,7 @@ const PartnerRegistrationForm = () => {
                       ref={adharInputRef}
                       accept="image/jpeg,image/png,image/jpg,application/pdf"
                       onChange={handleChange}
-                      className={`w-full cursor-pointer rounded-xl border-2 bg-white/80 p-4 pr-24 text-transparent caret-transparent transition file:mr-4 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-[#0d9488] file:to-[#0f766e] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 ${
+                      className={`w-full min-w-0 cursor-pointer rounded-xl border-2 bg-white/80 p-3 pr-[4.5rem] text-transparent caret-transparent transition file:mr-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-[#0d9488] file:to-[#0f766e] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 sm:p-4 sm:pr-24 sm:file:mr-4 sm:file:px-4 sm:file:py-2 sm:file:text-sm ${
                         fieldErrors.adharCard
                           ? "border-red-400"
                           : "border-stone-200"
@@ -940,16 +940,16 @@ const PartnerRegistrationForm = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveFile("adharCard")}
-                        className="absolute inset-y-0 right-12 flex items-center text-slate-500 hover:text-red-600"
+                        className="absolute inset-y-0 right-10 flex items-center text-slate-500 hover:text-red-600 sm:right-12"
                         title="Remove file"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                     )}
-                    <Upload className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                    <Upload className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 sm:right-4 sm:h-5 sm:w-5" />
                   </div>
-                  <div className="mt-2 text-sm text-slate-600 flex items-center justify-between">
-                    <span className="truncate max-w-[80%]">
+                  <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
+                    <span className="min-w-0 truncate">
                       {formData.adharCard
                         ? formData.adharCard.name
                         : "No file selected"}
@@ -984,7 +984,7 @@ const PartnerRegistrationForm = () => {
                       ref={panInputRef}
                       accept="image/jpeg,image/png,image/jpg,application/pdf"
                       onChange={handleChange}
-                      className={`w-full cursor-pointer rounded-xl border-2 bg-white/80 p-4 pr-24 text-transparent caret-transparent transition file:mr-4 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-[#0d9488] file:to-[#0f766e] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 ${
+                      className={`w-full min-w-0 cursor-pointer rounded-xl border-2 bg-white/80 p-3 pr-[4.5rem] text-transparent caret-transparent transition file:mr-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-[#0d9488] file:to-[#0f766e] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 sm:p-4 sm:pr-24 sm:file:mr-4 sm:file:px-4 sm:file:py-2 sm:file:text-sm ${
                         fieldErrors.panCard
                           ? "border-red-400"
                           : "border-stone-200"
@@ -994,16 +994,16 @@ const PartnerRegistrationForm = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveFile("panCard")}
-                        className="absolute inset-y-0 right-12 flex items-center text-slate-500 hover:text-red-600"
+                        className="absolute inset-y-0 right-10 flex items-center text-slate-500 hover:text-red-600 sm:right-12"
                         title="Remove file"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                     )}
-                    <Upload className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                    <Upload className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 sm:right-4 sm:h-5 sm:w-5" />
                   </div>
-                  <div className="mt-2 text-sm text-slate-600 flex items-center justify-between">
-                    <span className="truncate max-w-[80%]">
+                  <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
+                    <span className="min-w-0 truncate">
                       {formData.panCard
                         ? formData.panCard.name
                         : "No file selected"}
@@ -1038,7 +1038,7 @@ const PartnerRegistrationForm = () => {
                       ref={selfieInputRef}
                       accept="image/jpeg,image/png,image/jpg"
                       onChange={handleChange}
-                      className={`w-full cursor-pointer rounded-xl border-2 bg-white/80 p-4 pr-24 text-transparent caret-transparent transition file:mr-4 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-[#0d9488] file:to-[#0f766e] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 ${
+                      className={`w-full min-w-0 cursor-pointer rounded-xl border-2 bg-white/80 p-3 pr-[4.5rem] text-transparent caret-transparent transition file:mr-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-[#0d9488] file:to-[#0f766e] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 sm:p-4 sm:pr-24 sm:file:mr-4 sm:file:px-4 sm:file:py-2 sm:file:text-sm ${
                         fieldErrors.selfie
                           ? "border-red-400"
                           : "border-stone-200"
@@ -1048,16 +1048,16 @@ const PartnerRegistrationForm = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveFile("selfie")}
-                        className="absolute inset-y-0 right-12 flex items-center text-slate-500 hover:text-red-600"
+                        className="absolute inset-y-0 right-10 flex items-center text-slate-500 hover:text-red-600 sm:right-12"
                         title="Remove file"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                     )}
-                    <Upload className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                    <Upload className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 sm:right-4 sm:h-5 sm:w-5" />
                   </div>
-                  <div className="mt-2 text-sm text-slate-600 flex items-center justify-between">
-                    <span className="truncate max-w-[80%]">
+                  <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
+                    <span className="min-w-0 truncate">
                       {formData.selfie
                         ? formData.selfie.name
                         : "No file selected"}
@@ -1084,12 +1084,12 @@ const PartnerRegistrationForm = () => {
             </div>
 
             {/* Bank KYC Section */}
-            <div className="border-b border-stone-100 p-8">
-              <div className="mb-6 flex flex-wrap items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e]">
-                  <Building2 className="h-5 w-5 text-white" />
+            <div className="border-b border-stone-100 p-4 sm:p-6 md:p-8">
+              <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] sm:h-10 sm:w-10">
+                  <Building2 className="h-4 w-4 text-white sm:h-5 sm:w-5" />
                 </div>
-                <h2 className="text-2xl font-bold text-stone-800">
+                <h2 className="text-xl font-bold text-stone-800 sm:text-2xl">
                   Bank KYC Details
                 </h2>
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
@@ -1161,12 +1161,12 @@ const PartnerRegistrationForm = () => {
             </div>
 
             {/* Password Section */}
-            <div className="p-8">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e]">
-                  <Lock className="h-5 w-5 text-white" />
+            <div className="p-4 sm:p-6 md:p-8">
+              <div className="mb-4 flex items-center gap-2 sm:mb-6 sm:gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] sm:h-10 sm:w-10">
+                  <Lock className="h-4 w-4 text-white sm:h-5 sm:w-5" />
                 </div>
-                <h2 className="text-2xl font-bold text-stone-800">Security</h2>
+                <h2 className="text-xl font-bold text-stone-800 sm:text-2xl">Security</h2>
               </div>
 
             <div className="grid max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
@@ -1279,11 +1279,11 @@ const PartnerRegistrationForm = () => {
             </div>
             </div>
 
-            <div className="border-t border-stone-100 bg-stone-50/80 px-8 py-8">
+            <div className="border-t border-stone-100 bg-stone-50/80 px-4 py-6 sm:px-6 sm:py-8 md:px-8">
               <button
                 disabled={isLoading}
                 type="submit"
-                className={`flex w-full min-h-[52px] items-center justify-center gap-2 rounded-2xl px-8 py-4 text-sm font-semibold text-white shadow-lg transition md:w-auto ${
+                className={`flex w-full min-h-[48px] items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition min-[480px]:min-h-[52px] min-[480px]:rounded-2xl min-[480px]:px-8 min-[480px]:py-4 md:w-auto ${
                   isLoading
                     ? "cursor-not-allowed bg-[#0f766e]/70"
                     : "bg-[#0d9488] hover:bg-[#0f766e] hover:shadow-xl"

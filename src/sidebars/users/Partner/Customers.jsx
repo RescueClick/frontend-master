@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Search,
   Filter,
@@ -11,12 +11,17 @@ import {
   ChevronDown,
   Eye,
   Menu,
+  Download,
 } from "lucide-react";
 
 import { getAuthData } from "../../../utils/localStorage";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
-import { getLoanStatusBadgeClass, getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import { getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
+import toast from "react-hot-toast";
+import { downloadXlsx } from "../../../utils/downloadXlsx";
 
 const Customer = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,6 +81,24 @@ const Customer = () => {
     return bTime - aTime; // newest first
   });
 
+  const handleExport = useCallback(() => {
+    const rows = sortedFilteredCustomers.map((c) => ({
+      "User Name": c.customerName || "",
+      "User ID": c.customerEmployeeId || "",
+      Contact: c.contact || "",
+      "Application Date": c.createdAt
+        ? new Date(c.createdAt).toLocaleDateString("en-IN")
+        : "",
+      "Loan Amount": c.loanAmount ?? "",
+      "Disbursed Amount": c.approvedAmount ?? "",
+      Payout: c.payoutAmount ?? "",
+      Status: getLoanStatusLabel(c.status) || String(c.status || ""),
+    }));
+    if (!downloadXlsx(rows, "partner-customers.xlsx", "Customers")) {
+      toast.error("No rows to export");
+    }
+  }, [sortedFilteredCustomers]);
+
   const { totalLoanAmount, count } = customersData.reduce(
     (acc, customer) => {
       let amount = 0;
@@ -111,6 +134,91 @@ const Customer = () => {
     ).length;
   }
 
+  const desktopColumns = useMemo(
+    () => [
+      {
+        title: "User Name",
+        key: "name",
+        render: (_, customer) => (
+          <div className="flex items-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm mr-3 flex-shrink-0">
+              {customer?.customerName
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
+            </div>
+            <div className="font-medium text-gray-900 min-w-0">
+              <div className="truncate">{customer.customerName}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: "User ID",
+        dataIndex: "customerEmployeeId",
+        key: "uid",
+        className: "font-mono font-medium text-teal-500",
+      },
+      {
+        title: "Contact",
+        key: "contact",
+        render: (_, customer) => (
+          <div className="flex items-center text-gray-600">
+            <Phone size={14} className="mr-2 text-gray-400 flex-shrink-0" />
+            <span className="truncate">{customer.contact}</span>
+          </div>
+        ),
+      },
+      {
+        title: "Application Date",
+        key: "created",
+        render: (_, customer) =>
+          new Date(customer.createdAt).toLocaleDateString("en-IN"),
+      },
+      {
+        title: "Loan Amount",
+        dataIndex: "loanAmount",
+        key: "loan",
+        render: (v) => (
+          <span className="font-medium text-gray-900 whitespace-nowrap">₹ {v}</span>
+        ),
+      },
+      {
+        title: "Disbursed Amount",
+        key: "appr",
+        render: (_, customer) => (
+          <span className="font-medium text-green-700 whitespace-nowrap">
+            {customer.approvedAmount ? (
+              `₹ ${Number(customer.approvedAmount).toLocaleString("en-IN")}`
+            ) : (
+              <span className="text-gray-400">—</span>
+            )}
+          </span>
+        ),
+      },
+      {
+        title: "Payout",
+        key: "payout",
+        render: (_, customer) => (
+          <span className="font-medium text-purple-700 whitespace-nowrap">
+            ₹ {(customer.payoutAmount || 0).toLocaleString("en-IN", {
+              minimumFractionDigits: 2,
+            })}
+          </span>
+        ),
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        render: (s) => (
+          <LoanStatusBadge status={s} className="whitespace-nowrap" />
+        ),
+      },
+    ],
+    []
+  );
+
   // Mobile Card Component
   const MobileCustomerCard = ({ customer }) => (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
@@ -127,9 +235,10 @@ const Customer = () => {
             <div className="text-sm font-mono text-teal-600">{customer.customerEmployeeId}</div>
           </div>
         </div>
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getLoanStatusBadgeClass(customer.status)} whitespace-nowrap ml-2`}>
-                            {getLoanStatusLabel(customer.status)}
-                          </span>
+                          <LoanStatusBadge
+                            status={customer.status}
+                            className="whitespace-nowrap ml-2"
+                          />
       </div>
 
       <div className="space-y-2 text-sm">
@@ -168,8 +277,8 @@ const Customer = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
-      <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
+    <div className="app-list-page min-h-screen w-full overflow-x-hidden">
+      <div className="container mx-auto max-w-7xl py-3 sm:py-4 md:py-5">
         {/* Summary Cards - Enhanced responsive grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[ 
@@ -247,6 +356,14 @@ const Customer = () => {
               </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
             </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 sm:w-auto w-full"
+            >
+              <Download size={18} />
+              Export
+            </button>
           </div>
         </div>
   
@@ -259,74 +376,14 @@ const Customer = () => {
             ))}
           </div>
         ) : (
-          // Desktop Table Layout
-          <div className="rounded-xl shadow-sm bg-white">
-            <div className="overflow-x-auto w-full">
-              <div className="max-h-[70vh] overflow-y-auto min-w-[900px]">
-                <table className="w-full table-auto text-xs sm:text-sm">
-                  <thead className="bg-teal-600 text-white sticky top-0 z-10 text-left">
-                <tr>
-                  {[
-                    "User Name",
-                    "User ID",
-                    "Contact",
-                    "Application Date",
-                    "Loan Amount",
-                    "Disbursed Amount",
-                    "Payout",
-                    "Status",
-                  ].map((header) => (
-                    <th key={header} className="px-4 lg:px-6 py-4 text-left text-sm font-semibold whitespace-nowrap">
-                      {header}
-                    </th>
-                  ))}
-                    </tr>
-                  </thead>
-      
-                  <tbody className="divide-y divide-gray-100">
-                    {sortedFilteredCustomers?.map((customer) => (
-                      <tr key={customer.customerId} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-3 lg:px-5 py-3">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm mr-3 flex-shrink-0">
-                              {customer?.customerName
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </div>
-                            <div className="font-medium text-gray-900 min-w-0">
-                              <div className="truncate">{customer.customerName}</div>
-                            </div>
-                          </div>
-                        </td>
-                    <td className="px-3 lg:px-5 py-3 text-xs sm:text-sm font-mono font-medium text-teal-500">{customer.customerEmployeeId}</td>
-                    <td className="px-3 lg:px-5 py-3 text-xs sm:text-sm text-gray-600">
-                          <div className="flex items-center">
-                            <Phone size={14} className="mr-2 text-gray-400 flex-shrink-0" />
-                            <span className="truncate">{customer.contact}</span>
-                          </div>
-                        </td>
-                    <td className="px-3 lg:px-5 py-3 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-                          {new Date(customer.createdAt).toLocaleDateString("en-IN")}
-                        </td>
-                    <td className="px-3 lg:px-5 py-3 font-medium text-gray-900 whitespace-nowrap text-xs sm:text-sm">₹ {customer.loanAmount}</td>
-                    <td className="px-3 lg:px-5 py-3 text-xs sm:text-sm font-medium text-green-700 whitespace-nowrap">
-                          {customer.approvedAmount ? `₹ ${Number(customer.approvedAmount).toLocaleString("en-IN")}` : <span className="text-gray-400">—</span>}
-                        </td>
-                    <td className="px-3 lg:px-5 py-3 text-xs sm:text-sm font-medium text-purple-700 whitespace-nowrap">
-                          ₹ {(customer.payoutAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </td>
-                    <td className="px-3 lg:px-5 py-3">
-                          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getLoanStatusBadgeClass(customer.status)} whitespace-nowrap`}>
-                            {getLoanStatusLabel(customer.status)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <div className="app-list-page__table-wrap">
+            <AppAntTable
+              rowKey="customerId"
+              columns={desktopColumns}
+              dataSource={sortedFilteredCustomers}
+              size="small"
+              scroll={{ x: 900 }}
+            />
           </div>
         )}
   

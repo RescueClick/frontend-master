@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowLeft, Search, CheckCircle } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -7,6 +7,16 @@ import {
   payAdminIncentive,
 } from "../../../feature/thunks/adminThunks";
 import toast from "react-hot-toast";
+import AppAntTable from "../../../components/shared/AppAntTable";
+
+const fmtEligInr = (amount) => {
+  if (!amount) return "₹0";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 const AdminEligibleIncentive = () => {
   const dispatch = useDispatch();
@@ -62,6 +72,99 @@ const AdminEligibleIncentive = () => {
   };
 
   const eligibleCount = filtered.length;
+
+  const eligibleColumns = useMemo(
+    () => [
+      {
+        title: "Partner",
+        key: "p",
+        render: (_, row) => (
+          <div>
+            <p className="font-medium">{row.partnerName}</p>
+            <p className="text-xs text-gray-500">{row.partnerEmployeeId}</p>
+          </div>
+        ),
+      },
+      {
+        title: "ASM",
+        key: "asm",
+        render: () => <span className="text-xs text-gray-500">—</span>,
+      },
+      {
+        title: "Month",
+        key: "m",
+        render: () => (
+          <span className="text-xs">
+            {month}/{year}
+          </span>
+        ),
+      },
+      {
+        title: "Target / Achieved",
+        key: "ta",
+        render: (_, row) => (
+          <div className="text-xs">
+            <p>
+              Files:{" "}
+              <span className="font-semibold">
+                {row.achievedFileCount} / {row.fileCountTarget}
+              </span>
+            </p>
+            <p>
+              Disb:{" "}
+              <span className="font-semibold">
+                {fmtEligInr(row.achievedDisbursement)} /{" "}
+                {fmtEligInr(row.disbursementTarget)}
+              </span>
+            </p>
+          </div>
+        ),
+      },
+      {
+        title: "Basis",
+        key: "b",
+        render: (_, row) =>
+          row.basis === "PERCENT"
+            ? `Percent (${row.percentValue || 0}%)`
+            : row.basis === "FIXED"
+              ? "Fixed"
+              : "-",
+      },
+      {
+        title: "Incentive Amount",
+        key: "amt",
+        render: (_, row) => (
+          <span className="font-semibold">
+            {fmtEligInr(row.proposedAmount || row.incentiveAmount)}
+          </span>
+        ),
+      },
+      {
+        title: "Status",
+        key: "st",
+        render: (_, row) => (
+          <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+            {row.incentiveStatus || "PENDING"}
+          </span>
+        ),
+      },
+      {
+        title: "Action",
+        key: "act",
+        render: (_, row) => (
+          <button
+            type="button"
+            className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-1 w-fit"
+            onClick={() => setSelectedIncentive(row)}
+          >
+            <CheckCircle className="w-3 h-3" />
+            Create Payment
+          </button>
+        ),
+      },
+    ],
+    [month, year]
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -289,104 +392,22 @@ const AdminEligibleIncentive = () => {
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-lg shadow-sm bg-white">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-emerald-600 text-white">
-              <tr>
-                <th className="px-2 py-3 text-left">Partner</th>
-                <th className="px-2 py-3 text-left">ASM</th>
-                <th className="px-2 py-3 text-left">Month</th>
-                <th className="px-2 py-3 text-left">Target / Achieved</th>
-                <th className="px-2 py-3 text-left">Basis</th>
-                <th className="px-2 py-3 text-left">Incentive Amount</th>
-                <th className="px-2 py-3 text-left">Status</th>
-                <th className="px-2 py-3 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-4">
-                    Loading incentives...
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-4 text-red-600">
-                    {error}
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-4 text-gray-500">
-                    No incentives found
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((row) => (
-                  <tr key={row.id} className="border-b hover:bg-gray-50">
-                    <td className="px-2 py-3 align-top">
-                      <div>
-                        <p className="font-medium">{row.partnerName}</p>
-                        <p className="text-xs text-gray-500">
-                          {row.partnerEmployeeId}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-top text-xs text-gray-500">
-                      —
-                    </td>
-                    <td className="px-2 py-3 align-middle text-xs">
-                      {month}/{year}
-                    </td>
-                    <td className="px-2 py-3 align-middle text-xs">
-                      <div>
-                        <p>
-                          Files:{" "}
-                          <span className="font-semibold">
-                            {row.achievedFileCount} / {row.fileCountTarget}
-                          </span>
-                        </p>
-                        <p>
-                          Disb:{" "}
-                          <span className="font-semibold">
-                            {formatCurrency(row.achievedDisbursement)} /{" "}
-                            {formatCurrency(row.disbursementTarget)}
-                          </span>
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-2 py-3 align-middle text-xs">
-                      {row.basis === "PERCENT"
-                        ? `Percent (${row.percentValue || 0}%)`
-                        : row.basis === "FIXED"
-                        ? "Fixed"
-                        : "-"}
-                    </td>
-                    <td className="px-2 py-3 align-middle font-semibold">
-                      {formatCurrency(row.proposedAmount || row.incentiveAmount)}
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                        {row.incentiveStatus || "PENDING"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 align-middle">
-                      <button
-                        type="button"
-                        className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-1"
-                        onClick={() => setSelectedIncentive(row)}
-                      >
-                        <CheckCircle className="w-3 h-3" />
-                        Create Payment
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <AppAntTable
+          rowKey={(row) => String(row.id ?? row.partnerId ?? row.partnerEmployeeId ?? "")}
+          columns={eligibleColumns}
+          dataSource={error ? [] : filtered}
+          loading={loading}
+          size="small"
+          locale={{
+            emptyText: error ? (
+              <div className="py-8 text-center text-red-600">{error}</div>
+            ) : (
+              <div className="py-8 text-center text-gray-500">
+                No incentives found
+              </div>
+            ),
+          }}
+        />
       </div>
     </div>
   );

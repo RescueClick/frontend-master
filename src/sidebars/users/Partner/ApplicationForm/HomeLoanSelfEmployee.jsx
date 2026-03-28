@@ -1,6 +1,6 @@
 //updTED CODE
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   User,
   Phone,
@@ -21,14 +21,20 @@ import toast from "react-hot-toast";
 import { z } from "zod";
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
+import {
+  fetchPublicDefaultPartnerReferralCode,
+  PUBLIC_LOAN_REFERRAL_FALLBACK,
+} from "../../../../feature/publicLoanReferral";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 
-export default function HomeLoanSelfEmployee() {
-  const defaultReferralCode = "PT-D4CTD8B2"
+export default function HomeLoanSelfEmployee({ embed = false } = {}) {
   const { partnerToken } = getAuthData();
   const isPartnerLoggedIn = Boolean(partnerToken);
+  const [defaultReferralCode, setDefaultReferralCode] = useState(
+    PUBLIC_LOAN_REFERRAL_FALLBACK
+  );
 
   const [formData, setFormData] = useState({
     // Personal Information
@@ -125,19 +131,41 @@ export default function HomeLoanSelfEmployee() {
   const [fieldErrors, setFieldErrors] = useState({});
   const abortControllerRef = useRef(null);
 
-  const loanDraftStorageKey = "trustline.homeLoanSelfEmployeeDraft.v1";
+  const loanDraftStorageKey = embed
+    ? "trustline.homeLoanSelfEmployeeDraft.embed.v1"
+    : "trustline.homeLoanSelfEmployeeDraft.v1";
   const steps = ["Personal", "Address", "Loan & Business", "Documents", "References", "Review"];
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStep, setMaxStep] = useState(0);
 
-  const stepFirstFieldName = [
-    "firstName",
-    "currentAddress",
-    "loanAmount",
-    "aadharFront",
-    "reference1Name",
-    "partnerReferralCode",
-  ];
+  const stepFirstFieldName = useMemo(
+    () => [
+      "firstName",
+      "currentAddress",
+      "loanAmount",
+      "aadharFront",
+      "reference1Name",
+      isPartnerLoggedIn ? "reference2Contact" : "partnerReferralCode",
+    ],
+    [isPartnerLoggedIn]
+  );
+
+  useEffect(() => {
+    if (isPartnerLoggedIn) return;
+    let cancelled = false;
+    fetchPublicDefaultPartnerReferralCode().then((code) => {
+      if (cancelled) return;
+      setDefaultReferralCode(code);
+      setFormData((prev) => {
+        const existing = String(prev.partnerReferralCode ?? "").trim();
+        if (existing) return prev;
+        return { ...prev, partnerReferralCode: code };
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isPartnerLoggedIn]);
 
   const stepAnchorIds = [
     "loan-selfe-step-personal",
@@ -758,6 +786,8 @@ export default function HomeLoanSelfEmployee() {
         docsQueue.push({ file: formData.aadharFront, type: "AADHAR_FRONT" });
       if (formData.aadharBack)
         docsQueue.push({ file: formData.aadharBack, type: "AADHAR_BACK" });
+      if (formData.otherDocs)
+        docsQueue.push({ file: formData.otherDocs, type: "OTHER_DOCS" });
       if (formData.panCard)
         docsQueue.push({ file: formData.panCard, type: "PAN" });
       if (formData.lightBill)
@@ -1103,8 +1133,12 @@ export default function HomeLoanSelfEmployee() {
 
   return (
     <div
-      className="min-h-screen py-8 px-4"
-      style={{ backgroundColor: "#F8FAFC" }}
+      className={
+        embed
+          ? "py-4 px-0 sm:px-2"
+          : "min-h-screen py-8 px-4"
+      }
+      style={{ backgroundColor: embed ? "transparent" : "#F8FAFC" }}
     >
       <DocumentPreviewModal
         url={documentModel}
@@ -2128,7 +2162,7 @@ export default function HomeLoanSelfEmployee() {
             )}
 
             {/* Business Information */}
-            <section hidden={currentStep !== 3}>
+            <section hidden={currentStep !== 2}>
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -2654,37 +2688,41 @@ export default function HomeLoanSelfEmployee() {
               </div>
             </section>
 
-            {/* Partner Referral */}
+            {/* Partner Referral — public only; section kept for step anchor */}
             <section id="loan-selfe-step-review" hidden={currentStep !== 5}>
-              <h2
-                className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                style={{ color: "#111827" }}
-              >
-                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Partner Referral
-              </h2>
-              <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
+              {!isPartnerLoggedIn && (
+                <>
+                  <h2
+                    className="text-2xl font-semibold mb-6 flex items-center gap-3"
                     style={{ color: "#111827" }}
                   >
-                    Partner Referral Code (optional) - use {defaultReferralCode} if you don't have a partner code
-                  </label>
-                  <input
-                    type="text"
-                    name="partnerReferralCode"
-                    value={formData.partnerReferralCode}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    placeholder="Enter partner code"
-                  />
-                </div>
-              </div>
+                    <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
+                    Partner Referral
+                  </h2>
+                  <div className="grid grid-cols-1 gap-6">
+                    <div>
+                      <label
+                        className="block text-sm font-medium mb-2"
+                        style={{ color: "#111827" }}
+                      >
+                        Partner Referral Code (optional) - use {defaultReferralCode} if you don&apos;t have a partner code
+                      </label>
+                      <input
+                        type="text"
+                        name="partnerReferralCode"
+                        value={formData.partnerReferralCode}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        placeholder="Enter partner code"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </section>
 
             {/* Submit Button + inline messages */}

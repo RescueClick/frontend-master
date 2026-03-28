@@ -81,7 +81,13 @@ export const fetchAnalyticsKpis = createAsyncThunk(
         },
       });
 
-      return response.data;
+      const body = response.data || {};
+      // Backend sends { profile, kpis }; some responses may nest under `data`.
+      return {
+        ...body,
+        kpis: body.kpis ?? body.data?.kpis ?? null,
+        profile: body.profile ?? body.data?.profile,
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch analytics KPIs"

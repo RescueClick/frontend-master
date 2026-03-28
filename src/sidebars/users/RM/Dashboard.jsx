@@ -18,7 +18,8 @@ import {
   PieChart,
   ArrowUp,
   ArrowDown,
-  Eye,
+  Search,
+  Download,
   FileText,
   Target,
   Activity,
@@ -32,6 +33,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import {backendurl} from "../../../feature/urldata"
 import MetricCard from "../../../components/shared/MetricCard";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
+import toast from "react-hot-toast";
+import { downloadXlsx } from "../../../utils/downloadXlsx";
 
 
 
@@ -41,7 +47,14 @@ const Dashboard = () => {
 
   const openPartnerAnalytics = useCallback((p) => {
     if (!p?.id) return;
-    navigate("/rm/analytics", { state: { id: p.id, role: "RM" } });
+    navigate("/rm/analytics", {
+      state: {
+        id: p.id,
+        role: "RM",
+        name: p.name || "",
+        detail: "Partner",
+      },
+    });
   }, [navigate]);
 
   const dispatch = useDispatch();
@@ -266,6 +279,7 @@ const Dashboard = () => {
   ];
 
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [partnerSnapshotQuery, setPartnerSnapshotQuery] = useState("");
 
   function formatCurrency(amount) {
     if (amount >= 10000000) {
@@ -284,33 +298,89 @@ const Dashboard = () => {
   }
   
 
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case "disburse":
-        return "text-green-700 bg-green-100 border-green-200";
-      case "in process":
-        return "text-blue-700 bg-blue-100 border-blue-200";
-    }
-  };
-
-  const getPartnerStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case "premium":
-        return "text-purple-700 bg-purple-100 border-purple-200";
-      case "gold":
-        return "text-yellow-700 bg-yellow-100 border-yellow-200";
-      case "silver":
-        return "text-gray-700 bg-gray-100 border-gray-200";
-      default:
-        return "text-gray-700 bg-gray-100 border-gray-200";
-    }
-  };
-
   const currentDate = new Date();
 
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
+  ];
+
+  const filteredPartnerSnapshot = useMemo(() => {
+    const rows = data?.partnerPayoutSummary || [];
+    const term = partnerSnapshotQuery.trim().toLowerCase();
+    if (!term) return rows;
+    return rows.filter((p) => {
+      const name = (p.name || "").toLowerCase();
+      const status = (p.status || "").toString().toLowerCase();
+      return name.includes(term) || status.includes(term);
+    });
+  }, [data?.partnerPayoutSummary, partnerSnapshotQuery]);
+
+  const exportPartnerSnapshot = useCallback(() => {
+    const rows = filteredPartnerSnapshot.map((p) => ({
+      Partner: p.name || "",
+      Status: p.status || "",
+      "Deals (month)": p.dealsThisMonth ?? 0,
+      Disbursed: p.totalDisbursed ?? 0,
+      Payout: p.totalPayout ?? 0,
+    }));
+    if (!downloadXlsx(rows, "rm-dashboard-partners.xlsx", "Partners")) {
+      toast.error("No rows to export");
+    }
+  }, [filteredPartnerSnapshot]);
+
+  const partnerSnapshotColumns = [
+    {
+      title: "Partner",
+      dataIndex: "name",
+      key: "name",
+      render: (text) => (
+        <span className="font-medium text-gray-900">{text}</span>
+      ),
+    },
+    {
+      title: "Status",
+      key: "status",
+      render: (_, p) => <EntityStatusBadge status={p.status} />,
+    },
+    {
+      title: "Deals (month)",
+      dataIndex: "dealsThisMonth",
+      key: "deals",
+      render: (v) => v ?? 0,
+    },
+    {
+      title: "Disbursed",
+      key: "disbursed",
+      render: (_, p) => (
+        <span className="font-semibold text-emerald-700">
+          {formatCurrency(p.totalDisbursed || 0)}
+        </span>
+      ),
+    },
+    {
+      title: "Payout",
+      key: "payout",
+      render: (_, p) => (
+        <span className="font-semibold text-violet-700">
+          {formatCurrency(p.totalPayout || 0)}
+        </span>
+      ),
+    },
+    {
+      title: "Analytics",
+      key: "view",
+      align: "right",
+      render: (_, p) => (
+        <button
+          type="button"
+          onClick={() => openPartnerAnalytics(p)}
+          className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+        >
+          Analytics
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -402,6 +472,9 @@ const Dashboard = () => {
                 </h3>
                 <p className="text-sm text-gray-500">
                   Disbursement and completed payout by partner (top {data.partnerPayoutSummary.length})
+                  {partnerSnapshotQuery.trim()
+                    ? ` — showing ${filteredPartnerSnapshot.length} match${filteredPartnerSnapshot.length !== 1 ? "es" : ""}`
+                    : null}
                 </p>
               </div>
               <button
@@ -412,54 +485,39 @@ const Dashboard = () => {
                 View partner list
               </button>
             </div>
-            <div className="overflow-x-auto rounded-xl border border-gray-100">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead>
-                  <tr className="bg-slate-50 text-left text-gray-600">
-                    <th className="px-4 py-3 font-semibold">Partner</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Deals (month)</th>
-                    <th className="px-4 py-3 font-semibold">Disbursed</th>
-                    <th className="px-4 py-3 font-semibold">Payout</th>
-                    <th className="px-4 py-3 font-semibold text-right">View</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {data.partnerPayoutSummary.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/80">
-                      <td
-                        className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:text-brand-primary"
-                        onClick={() => openPartnerAnalytics(p)}
-                      >
-                        {p.name}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                          {p.status || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-800">{p.dealsThisMonth ?? 0}</td>
-                      <td className="px-4 py-3 font-semibold text-emerald-700">
-                        {formatCurrency(p.totalDisbursed || 0)}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-violet-700">
-                        {formatCurrency(p.totalPayout || 0)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => openPartnerAnalytics(p)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:border-brand-primary/40 hover:bg-brand-primary/5 hover:text-brand-primary"
-                          title="Open partner analytics"
-                        >
-                          <Eye size={14} className="text-brand-primary" />
-                          Analytics
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+              <div className="relative w-full min-w-0 sm:max-w-xs sm:flex-1">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  value={partnerSnapshotQuery}
+                  onChange={(e) => setPartnerSnapshotQuery(e.target.value)}
+                  placeholder="Search partner or status..."
+                  className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={exportPartnerSnapshot}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 sm:w-auto"
+              >
+                <Download size={16} />
+                Export
+              </button>
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white p-2">
+              <AppAntTable
+                rowKey={(row) => String(row.id ?? row.name)}
+                columns={partnerSnapshotColumns}
+                dataSource={filteredPartnerSnapshot}
+                size="small"
+                scroll={{ x: 640 }}
+                pagination={false}
+                compact
+              />
             </div>
           </div>
         ) : null}
@@ -661,13 +719,7 @@ const Dashboard = () => {
                         </p>
                       </div>
                     </div>
-                    <span
-                      className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                        customer.status
-                      )}`}
-                    >
-                      {customer.status}
-                    </span>
+                    <LoanStatusBadge status={customer.status} />
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -724,13 +776,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                          lead.status
-                        )}`}
-                      >
-                        {lead.status}
-                      </span>
+                      <LoanStatusBadge status={lead.status} />
                     </div>
                   </div>
                   <div className="flex items-center justify-between">

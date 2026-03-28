@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from "react";
-import { Eye , Download, Trash2 } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
+import { Eye, Download, Trash2, Search, X } from "lucide-react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { getAllCustomers } from "../../../feature/thunks/adminThunks";
 import { getAuthData,saveAuthData } from "../../../utils/localStorage";
 import axios from "axios"
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
-import { getLoanStatusBadgeClass, getLoanStatusLabel } from "../../../utils/loanStatus";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
+import { getLoanStatusLabel } from "../../../utils/loanStatus";
+import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
  
 
@@ -26,7 +30,9 @@ export default function CustomerTable() {
   const [model, setModel] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // Customer to delete
   const [deleting, setDeleting] = useState(false)
-  const  navigate = useNavigate()
+  const [searchQuery, setSearchQuery] = useState("")
+  const navigate = useNavigate()
+  const location = useLocation()
 
 
 
@@ -35,17 +41,60 @@ export default function CustomerTable() {
 
   console.log("data : ",data);
 
-  const sortedData = [...(data || [])].sort((a, b) => {
-    const aTime = a?.applicationDate ? new Date(a.applicationDate).getTime() : (a?.createdAt ? new Date(a.createdAt).getTime() : 0);
-    const bTime = b?.applicationDate ? new Date(b.applicationDate).getTime() : (b?.createdAt ? new Date(b.createdAt).getTime() : 0);
-    return bTime - aTime; // newest first
-  });
-  
+  const sortedData = useMemo(() => {
+    return [...(data || [])].sort((a, b) => {
+      const aTime = a?.applicationDate ? new Date(a.applicationDate).getTime() : (a?.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const bTime = b?.applicationDate ? new Date(b.applicationDate).getTime() : (b?.createdAt ? new Date(b.createdAt).getTime() : 0);
+      return bTime - aTime;
+    });
+  }, [data]);
 
+  const filteredCustomers = useMemo(() => {
+    if (!sortedData.length) return [];
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return sortedData;
+    return sortedData.filter((c) => {
+      const fullName = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
+      const employeeId = (c.employeeId || "").toLowerCase();
+      const phone = String(c.phone || "").toLowerCase();
+      const email = (c.email || "").toLowerCase();
+      const mongoId = (c._id || "").toLowerCase();
+      const appNo = String(c.appNo ?? "").toLowerCase();
+      const loanType = (c.loanType || "").toLowerCase();
+      const asmName = (c.asmName || "").toLowerCase();
+      const rmName = (c.rmName || "").toLowerCase();
+      const partnerName = (c.partnerName || "").toLowerCase();
+      const status = String(c.status || "").toLowerCase();
+      return (
+        fullName.includes(term) ||
+        employeeId.includes(term) ||
+        phone.includes(term) ||
+        email.includes(term) ||
+        mongoId.includes(term) ||
+        appNo.includes(term) ||
+        loanType.includes(term) ||
+        asmName.includes(term) ||
+        rmName.includes(term) ||
+        partnerName.includes(term) ||
+        status.includes(term)
+      );
+    });
+  }, [sortedData, searchQuery]);
 
   useEffect(() => {
     dispatch(getAllCustomers());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!location?.state) return;
+    const incoming = location.state;
+    if (typeof incoming === "string") {
+      setSearchQuery(incoming);
+    } else if (typeof incoming === "object" && incoming !== null) {
+      const possible = incoming.employeeId || incoming.query;
+      if (possible) setSearchQuery(String(possible));
+    }
+  }, [location]);
 
       // Format date
       const formatDate = (dateString) => {
@@ -127,8 +176,95 @@ export default function CustomerTable() {
         setDeleting(false);
       }
     };
-    
- 
+
+  const columns = useMemo(
+    () => [
+      {
+        title: "User Name",
+        key: "name",
+        render: (_, c) => `${c.firstName} ${c.lastName}`,
+      },
+      { title: "User ID", dataIndex: "employeeId", key: "eid" },
+      { title: "Contact", dataIndex: "phone", key: "phone" },
+      {
+        title: "Application Date",
+        key: "ad",
+        render: (_, c) =>
+          c.applicationDate
+            ? new Date(c.applicationDate).toLocaleDateString("en-IN")
+            : "—",
+      },
+      {
+        title: "Loan Type",
+        dataIndex: "loanType",
+        key: "lt",
+        render: (v) => loanTypeToTableShort(v),
+      },
+      {
+        title: "Loan",
+        dataIndex: "loanAmount",
+        key: "la",
+        render: (v) => v || "-",
+      },
+      {
+        title: "Disburse",
+        dataIndex: "disburseAmount",
+        key: "da",
+        render: (v) => v || "-",
+      },
+      {
+        title: "Login As",
+        key: "login",
+        render: (_, c) => (
+          <button
+            type="button"
+            className="px-2 py-1 border rounded text-xs"
+            style={{
+              borderColor: colors.secondary,
+              color: colors.secondary,
+            }}
+            onClick={() => handleLoginAs(c._id)}
+          >
+            Login
+          </button>
+        ),
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        render: (s) => <LoanStatusBadge status={s} />,
+      },
+      {
+        title: "Action",
+        key: "act",
+        render: (_, c) => (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+              onClick={() => {
+                setModel(c);
+              }}
+              title="View Details"
+            >
+              <Eye size={14} />
+            </button>
+            <button
+              type="button"
+              className="p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
+              onClick={() => setDeleteConfirm(c)}
+              title="Delete Customer"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
+
   return (
 
 
@@ -204,252 +340,186 @@ export default function CustomerTable() {
   </div>
 )}
 
-{model && 
-  <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 overflow-y-auto">
-    <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl p-6 relative mx-4 my-8">
-      
-      {/* Close Button */}
-      <button
-        onClick={() => setModel(null)}
-        className="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-xl"
-      >
-        ×
-      </button>
-
+{model && (
+  <div
+    className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center p-0 sm:p-4 md:p-6 bg-black/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="customer-detail-title"
+    onClick={(e) => {
+      if (e.target === e.currentTarget) setModel(null);
+    }}
+  >
+    <div
+      className="flex flex-col w-full max-w-5xl min-h-0 sm:min-h-0 sm:max-h-[min(90dvh,880px)] max-h-[100dvh] sm:rounded-2xl bg-white shadow-2xl border border-gray-200/90 sm:my-auto"
+      onClick={(e) => e.stopPropagation()}
+    >
       {/* Header */}
-      <h2 className="text-xl font-bold mb-6 text-center text-brand-primary">
-        Customer Details
-      </h2>
-
-      {/* 3 Column Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        {/* Personal Info */}
-        <div>
-          <h3 className="font-semibold text-gray-700 mb-3 text-center">Personal Info</h3>
-          <div className="space-y-3">
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Application No</p>
-              <p className="font-medium text-gray-800">{model.appNo}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Application Date</p>
-              <p className="font-medium text-gray-800">{formatDate(model.applicationDate)}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">User Name</p>
-              <p className="font-medium text-gray-800">{model.userName}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">User ID</p>
-              <p className="font-medium text-gray-800">{model.userId || "N/A"}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Phone</p>
-              <p className="font-medium text-gray-800">{model.phone}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Email</p>
-              <p className="font-medium text-gray-800">{model.email}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Custromers ID</p>
-              <p className="font-medium text-gray-800">{model.employeeId}</p>
-            </div>
-          </div>
+      <header className="relative shrink-0 flex items-start gap-3 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 border-b border-gray-100 bg-gradient-to-b from-slate-50/80 to-white">
+        <div className="flex-1 min-w-0 pr-10 sm:pr-12">
+          <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 mb-0.5">
+            Customer record
+          </p>
+          <h2
+            id="customer-detail-title"
+            className="text-lg sm:text-xl font-semibold text-slate-900 truncate"
+          >
+            {[model.firstName, model.lastName].filter(Boolean).join(" ") || model.userName || "Customer details"}
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 mt-1 truncate">
+            App no.{" "}
+            <span className="font-mono text-slate-800">{model.appNo ?? "—"}</span>
+            {model.employeeId ? (
+              <>
+                {" "}
+                · ID <span className="font-mono text-slate-800">{model.employeeId}</span>
+              </>
+            ) : null}
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setModel(null)}
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </header>
 
-        {/* Management Team */}
-        <div>
-          <h3 className="font-semibold text-gray-700 mb-3 text-center">Management Team</h3>
-          <div className="space-y-3">
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">ASM Employee ID</p>
-              <p className="font-medium text-gray-800">{model.asmEmployeeId}</p>
-            </div>
+      {/* Scrollable body */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
+          {/* Personal Info */}
+          <section className="rounded-xl border border-slate-200/80 bg-slate-50/40 p-4 sm:p-5">
+            <h3 className="text-sm font-semibold text-slate-800 mb-3 pb-2 border-b border-slate-200/90">
+              Personal info
+            </h3>
+            <dl className="space-y-3">
+              {[
+                ["Application no.", model.appNo ?? "—"],
+                ["Application date", formatDate(model.applicationDate)],
+                ["User name", model.userName ?? "—"],
+                ["User ID", model.userId || "N/A"],
+                ["Phone", model.phone ?? "—"],
+                ["Email", model.email ?? "—"],
+                ["Customer ID", model.employeeId ?? "—"],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-white px-3 py-2.5 border border-slate-100 shadow-sm">
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+                  <dd className="mt-0.5 text-sm text-slate-900 font-medium break-words">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">ASM Name</p>
-              <p className="font-medium text-gray-800">{model.asmName}</p>
-            </div>
+          {/* Management Team */}
+          <section className="rounded-xl border border-slate-200/80 bg-slate-50/40 p-4 sm:p-5">
+            <h3 className="text-sm font-semibold text-slate-800 mb-3 pb-2 border-b border-slate-200/90">
+              Management team
+            </h3>
+            <dl className="space-y-3">
+              {[
+                ["ASM employee ID", model.asmEmployeeId ?? "—"],
+                ["ASM name", model.asmName ?? "—"],
+                ["RM employee ID", model.rmEmployeeId ?? "—"],
+                ["RM name", model.rmName ?? "—"],
+                ["Partner employee ID", model.partnerEmployeeId ?? "—"],
+                ["Partner name", model.partnerName ?? "—"],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-white px-3 py-2.5 border border-slate-100 shadow-sm">
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+                  <dd className="mt-0.5 text-sm text-slate-900 font-medium break-words">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">RM Employee ID</p>
-              <p className="font-medium text-gray-800">{model.rmEmployeeId}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">RM Name</p>
-              <p className="font-medium text-gray-800">{model.rmName}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Partner Employee ID</p>
-              <p className="font-medium text-gray-800">{model.partnerEmployeeId}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Partner Name</p>
-              <p className="font-medium text-gray-800">{model.partnerName}</p>
-            </div>
-
-          
-          </div>
+          {/* Loan Info — full width on md, third column on xl */}
+          <section className="rounded-xl border border-slate-200/80 bg-slate-50/40 p-4 sm:p-5 md:col-span-2 xl:col-span-1">
+            <h3 className="text-sm font-semibold text-slate-800 mb-3 pb-2 border-b border-slate-200/90">
+              Loan info
+            </h3>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3 xl:grid-cols-1">
+              {[
+                ["Loan amount", model.loanAmount ?? "—"],
+                ["Disburse amount", model.disburseAmount ?? "—"],
+                ["Loan type", loanTypeToTableShort(model.loanType)],
+                ["Status", getLoanStatusLabel(model.status)],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-white px-3 py-2.5 border border-slate-100 shadow-sm">
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+                  <dd className="mt-0.5 text-sm text-slate-900 font-medium break-words">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
         </div>
-
-        {/* Loan Info */}
-        <div>
-          <h3 className="font-semibold text-gray-700 mb-3 text-center">Loan Info</h3>
-          <div className="space-y-3">
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Loan Amount</p>
-              <p className="font-medium text-gray-800">{model.loanAmount}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Disburse Amount</p>
-              <p className="font-medium text-gray-800">{model.disburseAmount}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Loan Type</p>
-              <p className="font-medium text-gray-800">{model.loanType}</p>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs text-gray-500">Status</p>
-              <p className="font-medium text-gray-800">{getLoanStatusLabel(model.status)}</p>
-            </div>
-          </div>
-        </div>
-
       </div>
 
       {/* Footer */}
-      <div className="mt-6 text-center">
+      <footer className="shrink-0 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-100 bg-slate-50/50">
         <button
+          type="button"
           onClick={() => setModel(null)}
-          className="bg-[#1E3A8A] text-white px-6 py-2 rounded-lg"
+          className="w-full sm:w-auto px-4 py-2.5 sm:py-2 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/25"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => setModel(null)}
+          className="w-full sm:w-auto px-5 py-2.5 sm:py-2 text-sm font-semibold rounded-lg text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary/40"
+          style={{ backgroundColor: colors.secondary }}
         >
           Close
         </button>
-      </div>
+      </footer>
     </div>
   </div>
-}
+)}
 
 
-<div
-      className="p-4 rounded-lg"
-      style={{ background: colors.background, color: colors.text }}
+<DashboardTablePage
+      title="Customer Applications"
+      subtitle={
+        loading ? "Loading..." : `Total ${filteredCustomers.length} records found`
+      }
+      headerRight={
+        <>
+          <div className="relative">
+            <Search
+              size={16}
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              className="border border-gray-300 rounded-md pl-8 pr-2 py-2 text-sm w-[min(100vw-2rem,280px)] sm:w-64 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              placeholder="Search by name, ID, phone, email, app no…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search customers"
+            />
+          </div>
+          <button
+            type="button"
+            className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center"
+          >
+            <Download size={16} className="mr-2" />
+            Export
+          </button>
+        </>
+      }
     >
-      
-
-
-       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
-          {/* Left side - Text */}
-          <div>
-            <h2 className="text-lg font-medium mb-2">Customer Applications</h2>
-            <p className="text-xs mb-3">
-            
-               {loading ? "Loading..." : `Total ${data?.length} records found`}
-            </p>
-          </div>
-
-          {/* Right side - Export button */}
-          <div>
-            <button className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
-              <Download size={16} className="mr-2" />
-              Export
-            </button>
-          </div>
-        </div>
-      </div>
- 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-lg shadow-md">
-        <table className="w-full border-collapse bg-white text-sm">
-          <thead style={{ background: colors.primary, color: "white" }}>
-            <tr>
-              <th className="px-3 py-3 text-left">User Name</th>
-              <th className="px-3 py-3 text-left">User ID</th>
-              <th className="px-3 py-3 text-left">Contact</th>
-              <th className="px-3 py-3 text-left">Application Date</th>
-              <th className="px-3 py-3 text-left">Loan Type</th>
-              <th className="px-3 py-3 text-left">Loan </th>
-              <th className="px-3 py-3 text-left">Disburse </th>
-              <th className="px-3 py-3 text-left">Login As </th> 
-              <th className="px-3 py-3 text-left">Status</th>
-              <th className="px-3 py-3 text-left">Action</th>
-            </tr>
-          </thead>
-
-
-          <tbody>
-  {sortedData?.map((c, idx) => (
-    <tr key={idx} className="border-b hover:bg-gray-50">
-      <td className="px-3 py-2">{`${c.firstName} ${c.lastName}`}</td>
-      <td className="px-3 py-2">{c.employeeId}</td>
-      <td className="px-3 py-2">{c.phone}</td>
-      <td className="px-3 py-2">
-        {new Date(c.applicationDate).toLocaleDateString("en-IN")}
-      </td>
-      <td className="px-3 py-2">{c.loanType || "-"}</td>
-      <td className="px-3 py-2">{c.loanAmount || "-"}</td>
-      <td className="px-3 py-2">{c.disburseAmount || "-"}</td>
-      <td className="px-3 py-2">
-      <button
-                        className="px-2 py-1 border rounded text-xs"
-                        style={{
-                          borderColor: colors.secondary,
-                          color: colors.secondary,
-                        }}
-                        onClick={()=> handleLoginAs(c._id)}
-                      >
-                        Login
-                      </button> 
-      </td>                
-      <td className="px-3 py-2">
-        <span
-          className={`px-2 py-1 text-xs rounded border ${getLoanStatusBadgeClass(c.status)}`}
-        >
-          {getLoanStatusLabel(c.status)}
-        </span>
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <button 
-            className="p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-            onClick={()=>{setModel(c)}}
-            title="View Details"
-          >
-            <Eye size={14} />
-          </button>
-          <button 
-            className="p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
-            onClick={() => setDeleteConfirm(c)}
-            title="Delete Customer"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </td>
-    </tr>
-  ))}
-</tbody>
-
-
-
-        </table>
-      </div>
-    </div>
+      <AppAntTable
+        rowKey={(row) => row._id || `${row.employeeId}-${row.applicationDate}`}
+        columns={columns}
+        dataSource={filteredCustomers}
+        loading={loading}
+        size="small"
+        locale={{ emptyText: searchQuery.trim() ? "No customers match your search" : "No records" }}
+      />
+    </DashboardTablePage>
 
 
     </>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { User, Search, Plus, Download, Eye } from "lucide-react";
+import { User, Search, Plus, Download } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,7 +14,9 @@ import axios from "axios";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
-import TableLoader from "../../../components/shared/TableLoader";
+import AppAntTable from "../../../components/shared/AppAntTable";
+import DashboardTablePage from "../../../components/shared/DashboardTablePage";
+import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 
@@ -46,7 +48,14 @@ const Partners = () => {
 
   const openPartnerAnalytics = useCallback((partner) => {
     if (!partner?.id) return;
-    navigate("/rm/analytics", { state: { id: partner.id, role: "RM" } });
+    navigate("/rm/analytics", {
+      state: {
+        id: partner.id,
+        role: "RM",
+        name: partner.name || "",
+        detail: "Partner",
+      },
+    });
   }, [navigate]);
 
   const { loading, error, data } = useSelector((state) => state.rm.partner);
@@ -86,21 +95,6 @@ const Partners = () => {
     topPerformer: "Alpha Financial Services",
   };
 
-
-  const getStatusColor = (status) => {
-    switch (String(status || "").toLowerCase()) {
-      case "active":
-        return "text-green-700 bg-green-100 border-green-200";
-      case "inactive":
-        return "text-red-700 bg-red-100 border-red-200";
-      case "under review":
-        return "text-yellow-700 bg-yellow-100 border-yellow-200";
-      case "suspended":
-        return "text-red-700 bg-red-100 border-red-200";
-      default:
-        return "text-gray-700 bg-gray-100 border-gray-200";
-    }
-  };
 
   const formatCurrency = (amount) => {
     if (amount >= 10000000) {
@@ -289,6 +283,150 @@ const Partners = () => {
     }
   };
 
+  const partnerColumns = [
+    {
+      title: "Partner name",
+      key: "name",
+      render: (_, partner) => (
+        <div className="flex items-center gap-2 align-top">
+          {partner?.profilePic ? (
+            <img
+              src={partner.profilePic}
+              alt={partner.name || "Partner"}
+              className="h-8 w-8 rounded-full object-cover"
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200">
+              <User className="h-4 w-4 text-gray-500" />
+            </div>
+          )}
+          <div>
+            <span className="text-sm font-semibold">{partner.name}</span>
+            <p className="text-xs text-gray-500">{partner.type || "Partner"}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Contact",
+      dataIndex: "phone",
+      key: "contact",
+      render: (phone) => <span className="text-sm">{phone || "—"}</span>,
+    },
+    {
+      title: "Status",
+      key: "status",
+      render: (_, partner) => <EntityStatusBadge status={partner.status} />,
+    },
+    {
+      title: "Deals",
+      key: "deals",
+      render: (_, partner) => (
+        <span className="text-sm font-medium text-blue-600">
+          {partner.dealsClosedThisMonth ?? partner.dealsThisMonth ?? 0}
+        </span>
+      ),
+    },
+    {
+      title: "Revenue",
+      key: "revenue",
+      render: (_, partner) => (
+        <span className="text-sm font-medium text-green-600">
+          {formatCurrency(partner.totalDisbursed || 0)}
+        </span>
+      ),
+    },
+    {
+      title: "Payout",
+      key: "payout",
+      render: (_, partner) => (
+        <span className="text-sm font-medium text-purple-700">
+          {formatCurrency(partner.totalPayout ?? partner.payoutDone ?? 0)}
+        </span>
+      ),
+    },
+    {
+      title: "Incentive",
+      key: "incentive",
+      render: (_, partner) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-semibold text-emerald-700">
+            {formatCurrency(partner.incentivePaid ?? 0)}
+          </span>
+          <span className="text-[10px] leading-tight text-slate-500">
+            Pending {formatCurrency(partner.incentivePending ?? 0)}
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: "Login as",
+      key: "login",
+      render: (_, partner) => (
+        <button
+          type="button"
+          className="rounded border px-2 py-1 text-xs"
+          style={{ borderColor: colors.secondary, color: colors.secondary }}
+          onClick={() => handleLoginAs(partner?.id)}
+        >
+          Login
+        </button>
+      ),
+    },
+    {
+      title: "Activation",
+      key: "activation",
+      render: (_, partner) =>
+        partner.status === "ACTIVE" ? (
+          <button
+            type="button"
+            className="rounded-lg bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
+            onClick={() => toggleActivation(partner)}
+          >
+            Deactivate
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="rounded-lg bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-700"
+            onClick={() => {
+              setActivateModel(true);
+              setSelectedPartner(partner);
+            }}
+          >
+            Activate
+          </button>
+        ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      render: (_, partner) => (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => openPartnerAnalytics(partner)}
+            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+          >
+            Analytics
+          </button>
+          {partner.status === "SUSPENDED" && (
+            <button
+              type="button"
+              onClick={() => handleDeletePartner(partner.id)}
+              className="flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-red-700"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
 
@@ -323,245 +461,69 @@ const Partners = () => {
         confirmLabel="Yes, Suspend"
         confirmDisabled={!newPartnerId}
       />
-      <div className="min-h-screen" style={{ backgroundColor: "#F8FAFC" }}>
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-6 py-2">
-            <div className="flex items-center justify-end">
-              <div className="flex items-center space-x-3">
-
-                <button className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  onClick={() => { handleExport() }}                >
-                  <Download size={16} className="inline mr-2" />
-                  Export
-                </button>
-
-                <button
-                  className="px-4 py-2 text-sm text-white rounded-lg hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: "var(--color-brand-primary)" }}
-                  onClick={() => navigate("/rm/add-partner")}
-                >
-                  <Plus size={16} className="inline mr-2" />
-                  Add Partner
-                </button>
+      <DashboardTablePage
+        title="Partner Directory"
+        subtitle={`${sortedFilteredPartners.length} partner${sortedFilteredPartners.length !== 1 ? "s" : ""}`}
+        headerRight={
+          <>
+            <button
+              type="button"
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm transition-colors hover:bg-gray-50"
+              onClick={() => {
+                handleExport();
+              }}
+            >
+              <Download size={16} className="mr-2 inline" />
+              Export
+            </button>
+            <button
+              type="button"
+              className="rounded-lg px-4 py-2 text-sm text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "var(--color-brand-primary)" }}
+              onClick={() => navigate("/rm/add-partner")}
+            >
+              <Plus size={16} className="mr-2 inline" />
+              Add Partner
+            </button>
+          </>
+        }
+        toolbar={
+          <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <div className="relative flex-1 sm:max-w-xs">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 transform text-gray-400"
+                  size={16}
+                />
+                <input
+                  type="text"
+                  placeholder="Search partners..."
+                  className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
+              <select
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={selectedFilter}
+                onChange={(e) => setSelectedFilter(e.target.value)}
+              >
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </div>
           </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto p-2">
-          {/* Stats Cards */}
-
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-            {/* Partner List */}
-            <div className="lg:col-span-12">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
-                {/* Search and Filters */}
-                <div className="p-3 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3
-                      className="text-lg font-semibold"
-                      style={{ color: "#111827" }}
-                    >
-                      Partner Directory
-                    </h3>
-                    <div className="flex items-center space-x-2">
-                      <div className="relative">
-                        <Search
-                          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                          size={16}
-                        />
-                        <input
-                          type="text"
-                          placeholder="Search partners..."
-                          className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                      </div>
-                      <select
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        value={selectedFilter}
-                        onChange={(e) => setSelectedFilter(e.target.value)}
-                      >
-                        <option value="all">All</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Partner Table */}
-                <div className="overflow-x-auto rounded-lg shadow-sm">
-                  <table className="w-full border-collapse bg-white text-sm">
-                    <thead style={{ background: colors.primary, color: "white" }}>
-                      <tr>
-                        <th className="px-2 py-4 text-left">Partner Name</th>
-                        <th className="px-2 py-4 text-left">Contact</th>
-                        <th className="px-2 py-4 text-left">Status</th>
-                        <th className="px-2 py-4 text-left">Deals</th>
-                        <th className="px-2 py-4 text-left">Revenue</th>
-                        <th className="px-2 py-4 text-left">Payout</th>
-                        <th className="px-2 py-4 text-left">Incentive</th>
-                        <th className="px-2 py-4 text-left">Login As</th>
-                        <th className="px-2 py-4 text-left">Activation</th>
-                        <th className="px-2 py-4 text-left">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loading ? (
-                        <TableLoader colSpan={10} label="Loading partners…" />
-                      ) : sortedFilteredPartners.length > 0 ? (
-                        sortedFilteredPartners.map((partner) => (
-                          <tr key={partner.id} className="border-b hover:bg-gray-50">
-                            <td
-                              className="px-2 py-3 align-top cursor-pointer"
-                              onClick={() => openPartnerAnalytics(partner)}
-                            >
-                              <div className="flex items-center gap-2">
-                                {partner?.profilePic ? (
-                                  <img
-                                    src={partner.profilePic}
-                                    alt={partner.name || "Partner"}
-                                    className="w-8 h-8 rounded-full object-cover"
-                                    onError={(e) => {
-                                      e.target.style.display = "none";
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <User className="w-4 h-4 text-gray-500" />
-                                  </div>
-                                )}
-                                <div>
-                                  <span className="font-semibold text-sm">
-                                    {partner.name}
-                                  </span>
-                                  <p className="text-xs text-gray-500">
-                                    {partner.type || "Partner"}
-                                  </p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-2 py-3 align-middle">
-                              <span className="text-sm">{partner.phone || "—"}</span>
-                            </td>
-                            <td className="px-2 py-3 align-middle">
-                              <span
-                                className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(
-                                  partner.status
-                                )}`}
-                              >
-                                {partner.status}
-                              </span>
-                            </td>
-                            <td className="px-2 py-3 align-middle">
-                              <span className="text-sm font-medium text-blue-600">
-                                {partner.dealsClosedThisMonth ??
-                                  partner.dealsThisMonth ??
-                                  0}
-                              </span>
-                            </td>
-                            <td className="px-2 py-3 align-middle">
-                              <span className="text-sm font-medium text-green-600">
-                                {formatCurrency(partner.totalDisbursed || 0)}
-                              </span>
-                            </td>
-                            <td className="px-2 py-3 align-middle">
-                              <span className="text-sm font-medium text-purple-700">
-                                {formatCurrency(partner.totalPayout ?? partner.payoutDone ?? 0)}
-                              </span>
-                            </td>
-                            <td className="px-2 py-3 align-middle">
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-sm font-semibold text-emerald-700">
-                                  {formatCurrency(partner.incentivePaid ?? 0)}
-                                </span>
-                                <span className="text-[10px] leading-tight text-slate-500">
-                                  Pending {formatCurrency(partner.incentivePending ?? 0)}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-2 py-3 align-middle">
-                              <button
-                                className="px-2 py-1 border rounded text-xs"
-                                style={{
-                                  borderColor: colors.secondary,
-                                  color: colors.secondary,
-                                }}
-                                onClick={() => handleLoginAs(partner?.id)}
-                              >
-                                Login
-                              </button>
-                            </td>
-                            <td className="px-2 py-3 align-middle">
-                              {partner.status === "ACTIVE" ? (
-                                <button
-                                  className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
-                                  onClick={() => {
-                                    toggleActivation(partner);
-                                  }}
-                                >
-                                  Deactivate
-                                </button>
-                              ) : (
-                                <button
-                                  className="px-2 py-1 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700"
-                                  onClick={() => {
-                                    setActivateModel(true);
-                                    setSelectedPartner(partner);
-                                  }}
-                                >
-                                  Activate
-                                </button>
-                              )}
-                            </td>
-
-                            <td className="px-3 py-3 align-middle">
-                              <div className="flex items-center gap-3">
-
-                                {/* Analytics — same destination as clicking partner name */}
-                                <button
-                                  type="button"
-                                  onClick={() => openPartnerAnalytics(partner)}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-brand-primary/40 hover:bg-brand-primary/5 hover:text-brand-primary"
-                                  title="Open partner analytics"
-                                >
-                                  <Eye size={14} className="text-brand-primary" />
-                                  View
-                                </button>
-
-                                {/* Delete Button (only if suspended) */}
-                                {partner.status === "SUSPENDED" && (
-                                  <button
-                                    onClick={() => handleDeletePartner(partner.id)}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition"
-                                  >
-                                    Delete
-                                  </button>
-                                )}
-
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={10} className="text-center py-4">
-                            No partners found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        }
+      >
+        <AppAntTable
+          columns={partnerColumns}
+          dataSource={sortedFilteredPartners}
+          rowKey="id"
+          loading={loading}
+          locale={{ emptyText: "No partners found" }}
+        />
+      </DashboardTablePage>
     </>
   );
 };

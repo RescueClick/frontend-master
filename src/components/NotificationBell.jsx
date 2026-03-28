@@ -21,6 +21,7 @@ import socketManager from "../utils/socket";
 import { getAuthData } from "../utils/localStorage";
 import { backendurl } from "../feature/urldata";
 import axios from "axios";
+import { loanTypeToTableShort } from "../utils/loanTypeShort";
 
 // API helper functions for MongoDB notifications
 const getAuthToken = () => {
@@ -705,7 +706,7 @@ const NotificationBell = () => {
                                       {formatted.loanInfo.loanType && (
                                         <p>
                                           <span className="font-semibold text-slate-900">Type</span>{" "}
-                                          {formatted.loanInfo.loanType}
+                                          {loanTypeToTableShort(formatted.loanInfo.loanType)}
                                         </p>
                                       )}
                                       {formatted.loanInfo.customerName && (

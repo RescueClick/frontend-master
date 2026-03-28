@@ -6,10 +6,13 @@ export const LOAN_STATUS_DISPLAY = {
   DOC_SUBMITTED: "DOC_SUBMITTED",
   LOGIN: "LOGIN",
   UNDER_REVIEW: "UNDER_REVIEW",
+  IN_PROCESS: "UNDER_REVIEW",
   APPROVED: "APPROVED",
   AGREEMENT: "AGREEMENT",
   REJECTED: "REJECTED",
   DISBURSED: "DISBURSED",
+  DISBURSE: "DISBURSED",
+  KYC_PENDING: "KYC_PENDING",
 };
 
 export const LOAN_STATUS_LABELS = {
@@ -19,6 +22,7 @@ export const LOAN_STATUS_LABELS = {
   DOC_SUBMITTED: "Document Submitted",
   LOGIN: "Login",
   UNDER_REVIEW: "Under Review",
+  KYC_PENDING: "KYC Pending",
   APPROVED: "Approved",
   AGREEMENT: "Agreement",
   REJECTED: "Rejected",
@@ -27,7 +31,7 @@ export const LOAN_STATUS_LABELS = {
 
 export function normalizeLoanStatus(status) {
   if (!status) return "";
-  const normalized = String(status).trim().toUpperCase();
+  const normalized = String(status).trim().toUpperCase().replace(/\s+/g, "_");
   return LOAN_STATUS_DISPLAY[normalized] || normalized;
 }
 
@@ -58,6 +62,8 @@ export function getLoanStatusBadgeClass(status) {
       return "bg-violet-100 text-violet-800";
     case "LOGIN":
       return "bg-amber-100 text-amber-800";
+    case "KYC_PENDING":
+      return "bg-orange-100 text-orange-800";
     default:
       return "bg-slate-100 text-slate-800";
   }

@@ -29,6 +29,8 @@ import {
   Download,
   Upload,
 } from "lucide-react";
+import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
+import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 
 const ActivePartner = () => {
   const [selectedTab, setSelectedTab] = useState("overview");
@@ -198,21 +200,6 @@ const ActivePartner = () => {
     },
   ];
 
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case "active":
-        return "text-green-700 bg-green-100 border-green-200";
-      case "inactive":
-        return "text-red-700 bg-red-100 border-red-200";
-      case "under review":
-        return "text-yellow-700 bg-yellow-100 border-yellow-200";
-      case "suspended":
-        return "text-red-700 bg-red-100 border-red-200";
-      default:
-        return "text-gray-700 bg-gray-100 border-gray-200";
-    }
-  };
-
   const formatCurrency = (amount) => {
     return `₹${(amount / 100000).toFixed(1)}L`;
   };
@@ -293,13 +280,7 @@ const ActivePartner = () => {
                             {partner.type}
                           </p>
                           <div className="flex items-center space-x-2 mt-1">
-                            <span
-                              className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(
-                                partner.status
-                              )}`}
-                            >
-                              {partner.status}
-                            </span>
+                            <EntityStatusBadge status={partner.status} />
                           </div>
                         </div>
                       </div>
@@ -443,13 +424,7 @@ const ActivePartner = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                            lead.status
-                          )}`}
-                        >
-                          {lead.status}
-                        </span>
+                        <LoanStatusBadge status={lead.status} />
                       </div>
                     </div>
                     <div className="flex items-center justify-between">

@@ -27,26 +27,36 @@ const Home = () => {
 
   const navigate = useNavigate();
 
-
   const container = useRef(null);
 
   useGSAP(() => {
-    const lines = container.current.querySelectorAll(".line");
+    const root = container.current;
+    if (!root) return;
 
-    // ✅ Create timeline for sequential animation
-    const tl = gsap.timeline();
+    const lines = root.querySelectorAll(".line");
+    if (!lines.length) return;
 
-    // Animate lines with stagger
-    tl.from(lines, {
-      x: 150,
-      opacity: 0,
-      stagger: 0.3,
-      duration: 1,
-      ease: "power3.out",
+    const mm = gsap.matchMedia();
+    mm.add("(max-width: 639px)", () => {
+      gsap.from(lines, {
+        x: 32,
+        opacity: 0,
+        stagger: 0.2,
+        duration: 0.75,
+        ease: "power3.out",
+      });
+    });
+    mm.add("(min-width: 640px)", () => {
+      gsap.from(lines, {
+        x: 120,
+        opacity: 0,
+        stagger: 0.28,
+        duration: 1,
+        ease: "power3.out",
+      });
     });
 
-    // Animate button after lines finish
-
+    return () => mm.revert();
   }, []);
 
 
@@ -132,7 +142,7 @@ const Home = () => {
   return (
     <>
       {/* Hero — landing (inside MainLayout) */}
-      <section className="relative flex min-h-[88vh] items-center overflow-hidden bg-slate-950">
+      <section className="relative flex min-h-0 items-center overflow-x-hidden overflow-y-visible bg-slate-950 py-10 min-[480px]:min-h-[85vh] min-[480px]:py-0 lg:min-h-[88vh]">
         <div
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(15,23,42,0.98)_0%,rgba(15,23,42,0.92)_40%,rgba(13,148,136,0.12)_100%)]"
           aria-hidden
@@ -150,16 +160,16 @@ const Home = () => {
           aria-hidden
         />
 
-        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
-          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
-            <div className="order-2 mx-auto max-w-xl text-center lg:order-1 lg:mx-0 lg:max-w-[32rem] lg:text-left">
-              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.28em] text-brand-primary-light sm:text-[11px]">
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-3 py-12 sm:px-6 sm:py-16 md:py-20 lg:px-8 lg:py-24">
+          <div className="grid min-w-0 items-center gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-20">
+            <div className="order-2 min-w-0 mx-auto max-w-xl text-center lg:order-1 lg:mx-0 lg:max-w-[32rem] lg:text-left">
+              <p className="mb-3 sm:mb-4 inline-flex max-w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.22em] text-brand-primary-light min-[400px]:text-[10px] min-[400px]:tracking-[0.28em] sm:px-4 sm:text-[11px]">
                 {COMPANY_TAGLINE}
               </p>
 
               <h1
                 ref={container}
-                className="mb-6 text-[1.65rem] font-semibold leading-[1.12] tracking-[-0.02em] text-white sm:text-4xl md:text-5xl lg:text-[3.15rem] xl:text-[3.5rem]"
+                className="mb-5 sm:mb-6 text-[clamp(1.45rem,4.2vw+0.65rem,2.5rem)] font-semibold leading-[1.12] tracking-[-0.02em] text-white sm:text-4xl md:text-5xl lg:text-[3.15rem] xl:text-[3.5rem]"
               >
                 <span className="line block text-slate-100">Credit solutions for</span>
                 <span className="line block text-slate-100">salaried &amp; business</span>
@@ -168,7 +178,7 @@ const Home = () => {
                 </span>
               </h1>
 
-              <p className="mx-auto mb-8 max-w-lg text-[15px] leading-[1.7] text-slate-400 sm:text-lg lg:mx-0">
+              <p className="mx-auto mb-6 sm:mb-8 max-w-lg text-sm leading-[1.7] text-slate-400 min-[400px]:text-[15px] sm:text-lg lg:mx-0">
                 Compare loan options across leading banks and lenders with a guided digital journey, expert assistance, and a partner program designed for growth.
               </p>
 
@@ -189,21 +199,21 @@ const Home = () => {
                 </a>
               </div>
 
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 border-t border-white/10 pt-8 text-sm text-slate-500 lg:justify-start">
-                <span className="inline-flex items-center gap-2">
+              <div className="mt-8 sm:mt-10 flex flex-col flex-wrap items-center justify-center gap-3 border-t border-white/10 pt-6 text-xs text-slate-500 min-[400px]:flex-row min-[400px]:gap-x-6 min-[400px]:gap-y-2 min-[400px]:pt-8 min-[400px]:text-sm sm:gap-x-8 lg:justify-start">
+                <span className="inline-flex items-center justify-center gap-2 text-center">
                   <Shield className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
                   Bank-grade security
                 </span>
-                <span className="hidden h-4 w-px bg-white/15 sm:block" aria-hidden />
-                <span className="inline-flex items-center gap-2">
+                <span className="hidden h-4 w-px bg-white/15 min-[400px]:block" aria-hidden />
+                <span className="inline-flex items-center justify-center gap-2 text-center">
                   <Building className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
                   100+ lender partnerships
                 </span>
               </div>
             </div>
 
-            <div className="relative order-1 flex justify-center lg:order-2">
-              <div className="relative w-full max-w-md">
+            <div className="relative order-1 flex min-w-0 justify-center lg:order-2">
+              <div className="relative w-full max-w-[min(100%,28rem)] sm:max-w-md">
                 <div className="absolute -inset-1 rounded-[1.75rem] bg-gradient-to-br from-brand-primary/30 via-teal-600/10 to-transparent blur-2xl" aria-hidden />
                 <div className="relative overflow-hidden rounded-[1.65rem] border border-white/10 shadow-2xl shadow-black/50">
                   <img
@@ -212,13 +222,13 @@ const Home = () => {
                     className="aspect-[4/5] w-full object-cover sm:aspect-[5/6]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
-                  <div className="absolute right-4 top-4 rounded-xl border border-white/15 bg-slate-950/55 px-3 py-2 text-left text-xs text-white shadow-lg backdrop-blur-md hero-float sm:right-5 sm:px-4 sm:py-2.5 sm:text-sm">
+                  <div className="absolute right-2 top-2 max-w-[calc(100%-1rem)] rounded-lg border border-white/15 bg-slate-950/55 px-2.5 py-1.5 text-left text-[10px] text-white shadow-lg backdrop-blur-md hero-float min-[400px]:right-4 min-[400px]:top-4 min-[400px]:rounded-xl min-[400px]:px-3 min-[400px]:py-2 min-[400px]:text-xs sm:right-5 sm:px-4 sm:py-2.5 sm:text-sm">
                     <p className="font-semibold text-brand-primary-light">Trusted guidance</p>
                     <p className="mt-0.5 text-slate-200">End-to-end loan support</p>
                   </div>
-                  <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-slate-950/40 p-5 backdrop-blur-sm sm:p-6">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-primary-light sm:text-xs">Why {COMPANY_NAME}</p>
-                    <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-slate-200 sm:text-[15px]">
+                  <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-slate-950/40 p-3.5 backdrop-blur-sm sm:p-5 md:p-6">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-brand-primary-light min-[400px]:text-[10px] min-[400px]:tracking-[0.2em] sm:text-xs">Why {COMPANY_NAME}</p>
+                    <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-200 min-[400px]:mt-1.5 min-[400px]:text-sm sm:text-[15px]">
                       One platform for discovery, application tracking, and partner growth.
                     </p>
                   </div>
@@ -231,7 +241,7 @@ const Home = () => {
 
 
       {/* Products — loan catalogue */}
-      <section className="relative overflow-x-hidden border-t border-slate-200/70 bg-gradient-to-b from-slate-100/90 via-white to-slate-50/95 py-20 px-4 sm:py-28">
+      <section className="relative overflow-x-hidden border-t border-slate-200/70 bg-gradient-to-b from-slate-100/90 via-white to-slate-50/95 py-14 px-3 sm:py-20 sm:px-4 md:py-28">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_55%_at_50%_-8%,rgba(13,148,136,0.09),transparent_58%)]"
           aria-hidden
@@ -245,7 +255,7 @@ const Home = () => {
           aria-hidden
         />
 
-        <div className="relative z-10 mx-auto mb-16 max-w-7xl text-center">
+        <div className="relative z-10 mx-auto mb-12 max-w-7xl px-1 text-center sm:mb-16 sm:px-0">
           <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/15 bg-white/80 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary shadow-sm shadow-slate-900/5 backdrop-blur-sm sm:text-xs">
             Loan products
           </span>
@@ -260,7 +270,7 @@ const Home = () => {
           </p>
         </div>
 
-        <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-4 lg:gap-6">
+        <div className="relative z-10 mx-auto grid min-w-0 max-w-7xl grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 md:gap-7 lg:grid-cols-4 lg:gap-6">
           {services.map((service, index) => {
             const Icon = service.icon;
             return (
@@ -272,7 +282,7 @@ const Home = () => {
                   className={`h-1 w-full shrink-0 bg-gradient-to-r ${service.accentBar}`}
                   aria-hidden
                 />
-                <div className="flex flex-1 flex-col px-6 pb-7 pt-8 sm:px-7">
+                <div className="flex flex-1 flex-col px-4 pb-6 pt-6 sm:px-6 sm:pb-7 sm:pt-8 md:px-7">
                   <div
                     className={`mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br shadow-inner ring-1 ${service.iconBg}`}
                   >
@@ -316,9 +326,7 @@ const Home = () => {
         </div>
       </section>
 
-
-
-      <section className="relative overflow-hidden bg-gradient-to-br from-amber-600 via-amber-700 to-amber-950 py-16 sm:py-20 lg:min-h-[min(90vh,920px)] lg:flex lg:items-center">
+      <section className="relative overflow-x-hidden overflow-y-visible bg-gradient-to-br from-amber-600 via-amber-700 to-amber-950 py-12 sm:py-16 md:py-20 lg:flex lg:min-h-[min(90vh,920px)] lg:items-center">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_20%_30%,rgba(255,255,255,0.12),transparent_55%)]"
           aria-hidden
@@ -333,8 +341,8 @@ const Home = () => {
         />
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" aria-hidden />
 
-        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14 xl:gap-20">
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="grid min-w-0 grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-14 xl:gap-20">
             {/* Visual — professional with mobile (hero focal) */}
             <div className="order-1 flex justify-center lg:justify-start">
               <div className="relative w-full max-w-[min(100%,520px)]">
@@ -343,7 +351,7 @@ const Home = () => {
                   aria-hidden
                 />
                 <div className="relative overflow-hidden rounded-2xl border border-amber-200/25 shadow-2xl shadow-black/35 ring-1 ring-black/10">
-                  <div className="relative aspect-[3/4] w-full max-h-[min(580px,78vh)] sm:aspect-[4/5]">
+                  <div className="relative aspect-[3/4] w-full max-h-[min(380px,52svh)] sm:max-h-[min(480px,65svh)] md:max-h-[min(580px,78vh)] sm:aspect-[4/5]">
                     <img
                       src={becomePartner}
                       alt="Channel partner using the DhanSource partner platform"
@@ -425,7 +433,7 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="overflow-hidden border-t border-amber-900/30 bg-white py-20 px-4 sm:px-6 lg:py-24">
+      <section className="overflow-x-hidden border-t border-amber-900/30 bg-white py-14 px-3 sm:py-20 sm:px-6 lg:py-24">
         <div className="mx-auto max-w-7xl">
           <div className="mb-14 text-center">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary">Platform</p>
@@ -441,7 +449,7 @@ const Home = () => {
             {cardData.map((card, index) => (
               <div
                 key={index}
-                className="flex h-full flex-col rounded-2xl border border-slate-200/90 bg-slate-50/80 p-7 text-center transition hover:border-brand-primary/15 hover:bg-white hover:shadow-md"
+                className="flex h-full flex-col rounded-2xl border border-slate-200/90 bg-slate-50/80 p-5 text-center transition hover:border-brand-primary/15 hover:bg-white hover:shadow-md sm:p-6 md:p-7"
               >
                 <div className="mb-4 flex justify-center">{card.icon}</div>
                 <h3 className="mb-2 text-base font-semibold text-slate-900">{card.title}</h3>
@@ -470,7 +478,7 @@ const Home = () => {
           className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-primary/40 to-transparent"
           aria-hidden
         />
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-7xl px-3 sm:px-6">
           <div className="mx-auto mb-14 max-w-3xl text-center">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary-light">
               Why {COMPANY_NAME}
@@ -602,7 +610,7 @@ const Home = () => {
         </div>
       </section> */}
 
-      <section className="relative overflow-hidden border-t border-slate-200/90 bg-gradient-to-b from-slate-100/40 via-white to-slate-50/50 py-20 px-4 sm:px-6 sm:py-28">
+      <section className="relative overflow-hidden border-t border-slate-200/90 bg-gradient-to-b from-slate-100/40 via-white to-slate-50/50 py-14 px-3 sm:py-20 sm:px-6 md:py-28">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_45%_at_50%_-5%,rgba(13,148,136,0.07),transparent_65%)]"
           aria-hidden
@@ -625,8 +633,8 @@ const Home = () => {
                 Curated relationships with leading banks and institutions so every recommendation is backed by credible, regulated lenders.
               </p>
             </div>
-            <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-0">
-              <div className="flex items-center gap-4 rounded-2xl border border-slate-200/90 bg-white/90 px-6 py-4 shadow-sm shadow-slate-900/5 backdrop-blur-sm sm:rounded-r-none sm:border-r-0 sm:py-5">
+            <div className="flex min-w-0 shrink-0 flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-0">
+              <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/90 px-4 py-3.5 shadow-sm shadow-slate-900/5 backdrop-blur-sm sm:gap-4 sm:rounded-r-none sm:border-r-0 sm:px-6 sm:py-5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white">
                   <Building className="h-5 w-5 shrink-0" aria-hidden />
                 </div>
@@ -640,7 +648,7 @@ const Home = () => {
                 </div>
               </div>
               <div className="hidden h-px w-full bg-slate-200 sm:block sm:h-auto sm:w-px sm:self-stretch" aria-hidden />
-              <div className="rounded-2xl border border-slate-200/90 bg-white/90 px-6 py-4 text-sm leading-snug text-slate-600 shadow-sm shadow-slate-900/5 backdrop-blur-sm sm:rounded-l-none sm:border-l-0 sm:py-5 sm:pl-5 lg:max-w-[220px]">
+              <div className="rounded-2xl border border-slate-200/90 bg-white/90 px-4 py-3.5 text-sm leading-snug text-slate-600 shadow-sm shadow-slate-900/5 backdrop-blur-sm sm:rounded-l-none sm:border-l-0 sm:px-6 sm:py-5 sm:pl-5 lg:max-w-[220px]">
                 <span className="font-medium text-slate-800">Pan-India coverage</span>
                 <span className="mt-1 block text-xs text-slate-500">
                   Consistent product access across major banks &amp; lenders
@@ -655,11 +663,11 @@ const Home = () => {
                 Featured lending institutions
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-px bg-slate-200/90 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            <div className="grid min-w-0 grid-cols-2 gap-px bg-slate-200/90 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
               {partners.map((partner) => (
                 <div
                   key={partner.name}
-                  className="partner-card group relative flex min-h-[132px] flex-col items-center justify-center bg-white px-4 py-7 transition-colors hover:bg-slate-50/90 sm:min-h-[148px] sm:py-8"
+                  className="partner-card group relative flex min-h-[118px] flex-col items-center justify-center bg-white px-2 py-5 transition-colors hover:bg-slate-50/90 min-[400px]:min-h-[132px] min-[400px]:px-4 min-[400px]:py-7 sm:min-h-[148px] sm:py-8"
                 >
                   <div className="mb-4 flex h-[52px] w-full max-w-[128px] items-center justify-center sm:h-14">
                     <img
