@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Eye, Search, Download, Plus, X, User, Mail, Phone, Lock, Calendar, AlertCircle, CheckCircle } from "lucide-react";
+import { Eye, Search, Download, Plus, X, User, Mail, Phone, Lock, Calendar, AlertCircle, CheckCircle, Trash2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchRSMs, createRSM, fetchAsms, activateRSM, adminDeactivateRsm } from "../../../feature/thunks/adminThunks";
+import { fetchRSMs, createRSM, fetchAsms, activateRSM, adminDeactivateRsm, deleteRsm } from "../../../feature/thunks/adminThunks";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
@@ -63,6 +63,10 @@ const [searchRsm, setSearchRsm] = useState("");
   // Get ASMs for dropdown
   const { data: asms } = useSelector((state) => state.admin.asm);
   const { loading: createLoading, error: createError } = useSelector((state) => state.admin.createRSMAdmin);
+
+  // const { data: deleteRsmData} = useSelector((state) => state.admin.deleteRsm);
+
+  // console.log("deleteRsmData", deleteRsmData);
 
   // Prefill search from navigation state
   useEffect(() => {
@@ -192,6 +196,12 @@ const [searchRsm, setSearchRsm] = useState("");
 
   const [RSMactiveModel, setRSMactiveModel] = useState(null);
   const [rsmToDeactivate, setRsmToDeactivate] = useState(null);
+  const [rsmToDelete, setRsmToDelete] = useState(null);
+  const [deleteRsmSubmitting, setDeleteRsmSubmitting] = useState(false);
+
+  console.log("rsmToDelete", rsmToDelete);
+  // console.log("deleteRsmSubmitting", deleteRsmSubmitting);
+  
 
   const rsmDeactivateCandidates = useMemo(() => {
     if (!rsmToDeactivate || !Array.isArray(rsms)) return [];
@@ -262,6 +272,28 @@ const [searchRsm, setSearchRsm] = useState("");
       setSearchRsm("");
     } catch (err) {
       // toast is handled in thunk
+    }
+  };
+
+  const handleConfirmDeleteRsm = async () => {
+    if (!rsmToDelete) return;
+    const { adminToken } = getAuthData() || {};
+    if (!adminToken) {
+      toast.error("Missing admin token");
+      return;
+    }
+    setDeleteRsmSubmitting(true);
+    try {
+      await dispatch(deleteRsm(rsmToDelete._id)).unwrap();
+      dispatch(fetchRSMs(adminToken));
+      toast.success("RSM deleted successfully",);
+      setRsmToDelete(null);
+    } catch (err) {
+      toast.error(
+        typeof err === "string" ? err : err?.message || "Failed to delete RSM",
+      );
+    } finally {
+      setDeleteRsmSubmitting(false);
     }
   };
 
@@ -420,22 +452,54 @@ const [searchRsm, setSearchRsm] = useState("");
       title: "Activation",
       key: "act",
       render: (_, rsm) => (
-        <div
-          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${rsm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"}`}
-          onClick={() => {
-            if (rsm.status === "ACTIVE") {
-              setRsmToDeactivate(rsm);
-              setShowDeactivateModal(true);
-              setSelectedNewRsmId(null);
-              setSearchRsm("");
-            } else {
-              setRSMactiveModel(rsm._id);
-            }
-          }}
-        >
+        <div className="flex flex-wrap items-center gap-2">
           <div
-            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${rsm.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"}`}
-          />
+            role="button"
+            tabIndex={0}
+            aria-label={
+              rsm.status === "ACTIVE"
+                ? "Active — click to deactivate"
+                : "Inactive — click to activate"
+            }
+            className={`shrink-0 flex h-6 w-12 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ${rsm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"}`}
+            onClick={() => {
+              if (rsm.status === "ACTIVE") {
+                setRsmToDeactivate(rsm);
+                setShowDeactivateModal(true);
+                setSelectedNewRsmId(null);
+                setSearchRsm("");
+              } else {
+                setRSMactiveModel(rsm._id);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                if (rsm.status === "ACTIVE") {
+                  setRsmToDeactivate(rsm);
+                  setShowDeactivateModal(true);
+                  setSelectedNewRsmId(null);
+                  setSearchRsm("");
+                } else {
+                  setRSMactiveModel(rsm._id);
+                }
+              }
+            }}
+          >
+            <div
+              className={`h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${rsm.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"}`}
+            />
+          </div>
+          {rsm.status !== "ACTIVE" ? (
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center justify-center rounded-md border border-red-200 bg-white p-1.5 text-red-700 shadow-sm transition-colors hover:border-red-300 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200 focus-visible:ring-offset-1"
+              aria-label={`Delete RSM ${rsm.firstName || ""} ${rsm.lastName || ""}`.trim()}
+              onClick={() => setRsmToDelete(rsm)}
+            >
+              <Trash2 size={15} strokeWidth={2.25} aria-hidden />
+            </button>
+          ) : null}
         </div>
       ),
     },
@@ -786,6 +850,18 @@ const [searchRsm, setSearchRsm] = useState("");
         confirmLabel="Activate"
         onCancel={() => setRSMactiveModel(null)}
         onConfirm={handleRSMactive}
+      />
+
+      <ActivationConfirmModal
+        isOpen={!!rsmToDelete}
+        title="Delete RSM"
+        message="Permanently delete this RSM account?"
+        confirmLabel="Delete"
+        confirmLoading={deleteRsmSubmitting}
+        onCancel={() => {
+          if (!deleteRsmSubmitting) setRsmToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteRsm}
       />
 
       <ReassignmentDeactivateModal

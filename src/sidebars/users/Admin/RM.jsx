@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Edit, Trash, Search, Download } from "lucide-react";
+import { Search, Download, Trash2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,13 +14,8 @@ import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
 import toast from "react-hot-toast";
 
-
-
-
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-
-
 
 const colors = {
   primary: "var(--color-brand-primary)",
@@ -72,7 +67,9 @@ function RM() {
   const [selectedReplacementRmId, setSelectedReplacementRmId] = useState(null);
 
 
-  const [RMactiveModel, setRMactiveModel] = useState(null)
+  const [RMactiveModel, setRMactiveModel] = useState(null);
+  const [rmToDelete, setRmToDelete] = useState(null);
+  const [deleteRmSubmitting, setDeleteRmSubmitting] = useState(false);
 
   // Fetch RMs on mount
   useEffect(() => {
@@ -281,25 +278,26 @@ const handleLoginAs = (userId) => {
 loginAsUser(userId, navigate);
 };
 
-  const handleDeleteRm = async (rmId) => {
+  const handleConfirmDeleteRm = async () => {
+    if (!rmToDelete) return;
     const { adminToken } = getAuthData() || {};
     if (!adminToken) {
-      alert("Missing admin token");
+      toast.error("Missing admin token");
       return;
     }
-    const confirmed = window.confirm(
-      "Are you sure you want to permanently delete this RM account?"
-    );
-    if (!confirmed) return;
-
+    setDeleteRmSubmitting(true);
     try {
-      await dispatch(deleteRm(rmId)).unwrap();
+      await dispatch(deleteRm(rmToDelete._id)).unwrap();
       dispatch(fetchRMs(adminToken));
-      alert("RM deleted");
+     
+      toast.success("RM deleted successfully");
+      setRmToDelete(null);
     } catch (err) {
-      alert(
+      toast.error(
         typeof err === "string" ? err : err?.message || "Failed to delete RM"
       );
+    } finally {
+      setDeleteRmSubmitting(false);
     }
   };
 
@@ -349,22 +347,52 @@ loginAsUser(userId, navigate);
       title: "Activation",
       key: "act",
       render: (_, rm) => (
-        <div
-          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${rm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"}`}
-          onClick={() => {
-            if (rm.status === "ACTIVE") {
-              setRmToDeactivate(rm);
-              setSelectedReplacementRmId(null);
-              setReplacementSearch("");
-              setShowDeactivateModal(true);
-            } else {
-              setRMactiveModel(rm._id);
-            }
-          }}
-        >
+        <div className="flex flex-wrap items-center gap-2">
           <div
-            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${rm.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"}`}
-          />
+            role="button"
+            tabIndex={0}
+            aria-label={
+              rm.status === "ACTIVE" ? "Active — click to deactivate" : "Inactive — click to activate"
+            }
+            className={`shrink-0 flex h-6 w-12 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ${rm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"}`}
+            onClick={() => {
+              if (rm.status === "ACTIVE") {
+                setRmToDeactivate(rm);
+                setSelectedReplacementRmId(null);
+                setReplacementSearch("");
+                setShowDeactivateModal(true);
+              } else {
+                setRMactiveModel(rm._id);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                if (rm.status === "ACTIVE") {
+                  setRmToDeactivate(rm);
+                  setSelectedReplacementRmId(null);
+                  setReplacementSearch("");
+                  setShowDeactivateModal(true);
+                } else {
+                  setRMactiveModel(rm._id);
+                }
+              }
+            }}
+          >
+            <div
+              className={`h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${rm.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"}`}
+            />
+          </div>
+          {rm.status !== "ACTIVE" ? (
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center justify-center rounded-md border border-red-200 bg-white p-1.5 text-red-700 shadow-sm transition-colors hover:border-red-300 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200 focus-visible:ring-offset-1"
+              aria-label={`Delete RM ${rm.firstName || ""} ${rm.lastName || ""}`.trim()}
+              onClick={() => setRmToDelete(rm)}
+            >
+              <Trash2 size={15} strokeWidth={2.25} aria-hidden />
+            </button>
+          ) : null}
         </div>
       ),
     },
@@ -389,15 +417,6 @@ loginAsUser(userId, navigate);
           >
             Analytics
           </button>
-          {rm.status !== "ACTIVE" && (
-            <button
-              type="button"
-              className="cursor-pointer p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
-              onClick={() => handleDeleteRm(rm._id)}
-            >
-              Delete
-            </button>
-          )}
         </div>
       ),
     },
@@ -486,6 +505,18 @@ loginAsUser(userId, navigate);
         confirmLabel="Activate"
         onCancel={() => setRMactiveModel(null)}
         onConfirm={handleRMactive}
+      />
+
+      <ActivationConfirmModal
+        isOpen={!!rmToDelete}
+        title="Delete RM"
+        message="Permanently delete this RM account?"
+        confirmLabel="Delete"
+        confirmLoading={deleteRmSubmitting}
+        onCancel={() => {
+          if (!deleteRmSubmitting) setRmToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteRm}
       />
 
     </>
