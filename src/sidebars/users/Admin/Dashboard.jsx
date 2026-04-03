@@ -38,6 +38,9 @@ const Dashboard = () => {
 
   const navigate = useNavigate();
 
+  // console.log("partner data", data  );
+  
+
   // Real-time dashboard updates with 30 second polling
   useRealtimeData(fetchAdminDashboard, {
     interval: 30000, // 30 seconds
@@ -65,10 +68,6 @@ const Dashboard = () => {
       iconColor: 'text-white',
 
     },
-
-
-
-
 
   ];
 

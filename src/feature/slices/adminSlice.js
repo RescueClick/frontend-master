@@ -20,6 +20,7 @@ import {
   getAllCustomers,
   fetchBanners,
   deleteRm,
+  deleteRsm,
   rejectPartner,
   loginAsUserThunk,
   fetchDeleteAccountRequests,
@@ -202,6 +203,12 @@ const initialState = {
 
   // Delete RM action state
   deleteRm: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+  deleteRsm: {
     loading: false,
     error: null,
     success: false,
@@ -1273,6 +1280,31 @@ const adminSlice = createSlice({
         state.rm.data = state._rmBackup;
       })
       //----------------------------------------------------------------------------------------------------------------------------------------------//
+
+      // 🔹 Delete RSM
+      .addCase(deleteRsm.pending, (state, action) => {
+        state.deleteRsm.loading = true;
+        state.deleteRsm.error = null;
+        state.deleteRsm.success = false;
+
+        const rsmId = action.meta.arg;
+        state._rsmBackup = state.rsm.data;
+        if (Array.isArray(state.rsm.data)) {
+          state.rsm.data = state.rsm.data.filter(
+            (rsm) => String(rsm._id) !== String(rsmId),
+          );
+        }
+      })
+      .addCase(deleteRsm.fulfilled, (state) => {
+        state.deleteRsm.loading = false;
+        state.deleteRsm.success = true;
+      })
+      .addCase(deleteRsm.rejected, (state, action) => {
+        state.deleteRsm.loading = false;
+        state.deleteRsm.error = action.payload;
+        state.deleteRsm.success = false;
+        state.rsm.data = state._rsmBackup;
+      })
 
       // Activate RSM
       .addCase(activateRSM.pending, (state, action) => {

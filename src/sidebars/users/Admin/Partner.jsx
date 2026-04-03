@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { Download, Search, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   activatePartner,
   fetchPartners,
   adminDeactivatePartner,
+  rejectPartner,
 } from "../../../feature/thunks/adminThunks";
 import { getAuthData,saveAuthData } from "../../../utils/localStorage";
 import axios from "axios";
@@ -18,6 +19,7 @@ import ReassignmentDeactivateModal from "../../../components/shared/Reassignment
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
+import toast from "react-hot-toast";
 
 
 const colors = {
@@ -74,6 +76,10 @@ export default function PartnerTable() {
   const [PartneractiveModel, setPartneractiveModel] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  /** null | { mode: 'single', partner } | { mode: 'all', partners: [] } */
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   console.log(" partners : ", data);
 
@@ -219,7 +225,45 @@ export default function PartnerTable() {
 
   const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
-  
+  const deactivatedPartners = useMemo(
+    () => (data || []).filter((p) => p.status !== "ACTIVE"),
+    [data]
+  );
+
+  const closeDeleteConfirm = () => {
+    if (!deleteSubmitting) setDeleteConfirm(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
+    const { adminToken } = getAuthData();
+    setDeleteSubmitting(true);
+    try {
+      if (deleteConfirm.mode === "single") {
+        await dispatch(rejectPartner(deleteConfirm.partner._id)).unwrap();
+        
+        toast.success("Partner deleted successfully");
+      } else {
+        const count = deleteConfirm.partners.length;
+        for (const p of deleteConfirm.partners) {
+          await dispatch(rejectPartner(p._id)).unwrap();
+        }
+        toast.success(
+          count === 1
+            ? "1 partner deleted successfully"
+            : `${count} partners deleted successfully`
+        );
+      }
+      if (adminToken) dispatch(fetchPartners(adminToken));
+      setDeleteConfirm(null);
+    } catch (e) {
+      toast.error(typeof e === "string" ? e : e?.message || "Delete failed");
+      if (adminToken) dispatch(fetchPartners(adminToken));
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
   const loginAsUser = async (userId, navigate) => {
     try {
       const { adminToken, asmToken, rmToken, partnerToken } = getAuthData();
@@ -331,32 +375,47 @@ loginAsUser(userId, navigate);
       title: "Activation",
       key: "activation",
       render: (_, p) => (
-        <div
-          role="button"
-          tabIndex={0}
-          className={`flex h-6 w-12 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ${
-            p.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
-          }`}
-          onClick={() => {
-            if (p.status === "ACTIVE") {
-              toggleActivation(p);
-            } else {
-              setPartneractiveModel(p._id);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              if (p.status === "ACTIVE") toggleActivation(p);
-              else setPartneractiveModel(p._id);
-            }
-          }}
-        >
+        <div className="flex flex-wrap items-center gap-2">
           <div
-            className={`h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
-              p.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"
+            role="button"
+            tabIndex={0}
+            aria-label={
+              p.status === "ACTIVE" ? "Active — click to suspend" : "Inactive — click to activate"
+            }
+            className={`shrink-0 flex h-6 w-12 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ${
+              p.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
             }`}
-          />
+            onClick={() => {
+              if (p.status === "ACTIVE") {
+                toggleActivation(p);
+              } else {
+                setPartneractiveModel(p._id);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                if (p.status === "ACTIVE") toggleActivation(p);
+                else setPartneractiveModel(p._id);
+              }
+            }}
+          >
+            <div
+              className={`h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+                p.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"
+              }`}
+            />
+          </div>
+          {p.status !== "ACTIVE" ? (
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-semibold text-red-700 shadow-sm transition-colors hover:border-red-300 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200 focus-visible:ring-offset-1"
+              onClick={() => setDeleteConfirm({ mode: "single", partner: p })}
+              aria-label={`Delete partner ${p.firstName || ""} ${p.lastName || ""}`.trim()}
+            >
+              <Trash2 size={18} strokeWidth={2.25} className="opacity-90" aria-hidden />
+            </button>
+          ) : null}
         </div>
       ),
     },
@@ -424,6 +483,29 @@ loginAsUser(userId, navigate);
           onConfirm={handlePartneractive}
         />
 
+        <ActivationConfirmModal
+          isOpen={!!deleteConfirm}
+          title={
+            deleteConfirm?.mode === "all"
+              ? "Delete all deactivated partners"
+              : "Delete partner"
+          }
+          message={
+            deleteConfirm?.mode === "all"
+              ? `Permanently delete ${deleteConfirm?.partners?.length ?? 0} deactivated partner(s)? This cannot be undone.`
+              : "Permanently delete"
+          }
+          subjectName={
+            deleteConfirm?.mode === "single"
+              ? `${deleteConfirm.partner.firstName || ""} ${deleteConfirm.partner.lastName || ""}`.trim()
+              : ""
+          }
+          confirmLabel="Delete"
+          confirmLoading={deleteSubmitting}
+          onCancel={closeDeleteConfirm}
+          onConfirm={handleDeleteConfirm}
+        />
+
         <DashboardTablePage
           title="Partner"
           subtitle={
@@ -444,6 +526,7 @@ loginAsUser(userId, navigate);
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+             
               <button
                 type="button"
                 className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center"

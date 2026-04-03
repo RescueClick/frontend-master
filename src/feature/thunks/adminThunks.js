@@ -519,26 +519,42 @@ export const deleteRm = createAsyncThunk(
   }
 );
 
-// Reject Partner
+// Permanently delete RSM (SUPER_ADMIN) — DELETE /admin/rsm/:rsmId
+export const deleteRsm = createAsyncThunk(
+  "admin/deleteRsm",
+  async (rsmId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.delete(`${backendurl}/admin/rsm/${rsmId}`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete RSM"
+      );
+    }
+  }
+);
+
+// Permanently delete partner (SUPER_ADMIN) — DELETE /admin/partner/:partnerId
 export const rejectPartner = createAsyncThunk(
   "admin/rejectPartner",
   async (partnerId, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
-      const response = await axios.post(
-        `${backendurl}/admin/reject-partner`,
-        { partnerId },
+      const response = await axios.delete(
+        `${backendurl}/admin/partner/${partnerId}`,
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
           },
         }
       );
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to reject partner"
+        error.response?.data?.message || "Failed to delete partner"
       );
     }
   }

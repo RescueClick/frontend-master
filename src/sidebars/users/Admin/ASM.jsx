@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Edit, Trash, Plus, X, Calendar, IndianRupee, Download } from "lucide-react";
+import { X, Calendar, IndianRupee, Download, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
@@ -34,8 +34,6 @@ const colors = {
   text: "#111827",
 };
 
-
-
 export default function ASM() {
   const dispatch = useDispatch();
   const [regionQuery, setRegionQuery] = useState("");
@@ -47,6 +45,8 @@ export default function ASM() {
   const [confirmError, setConfirmError] = useState("");
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [userToActivate, setUserToActivate] = useState(null);
+  const [asmToDelete, setAsmToDelete] = useState(null);
+  const [deleteAsmSubmitting, setDeleteAsmSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingState, setLoading] = useState(false);
   
@@ -97,10 +97,6 @@ export default function ASM() {
 
   const navigate = useNavigate();
 
-
-
- 
-
   const toggleActivation = (user) => {
     if (user?.status === "ACTIVE") {
       setUserToDeactivate(user);
@@ -118,8 +114,6 @@ export default function ASM() {
   };
 
   
-
-
   const handleExport = () => {
     // Optional: Format data before exporting
     const formattedData = asm.map((user) => ({
@@ -251,28 +245,26 @@ const handleLoginAs = (userId) => {
   loginAsUser(userId, navigate);
 };
 
-  const handleDeleteAsm = async (asmId) => {
+  const handleConfirmDeleteAsm = async () => {
+    if (!asmToDelete) return;
     const { adminToken } = getAuthData() || {};
     if (!adminToken) {
       toast.error("Missing admin token");
       return;
     }
-    const confirmed = window.confirm(
-      "Are you sure you want to permanently delete this ASM account?"
-    );
-    if (!confirmed) return;
-
+    setDeleteAsmSubmitting(true);
     try {
-      setLoading(true);
-      await dispatch(deleteAsm({ asmId })).unwrap();
-      toast.success("ASM deleted");
+      await dispatch(deleteAsm(asmToDelete._id)).unwrap();
       dispatch(fetchAsms(adminToken));
+      
+      toast.success( "ASM deleted successfully");
+      setAsmToDelete(null);
     } catch (err) {
       toast.error(
-        typeof err === "string" ? err : err?.message || "Failed to delete ASM"
+        typeof err === "string" ? err : err?.message || "Failed to delete ASM",
       );
     } finally {
-      setLoading(false);
+      setDeleteAsmSubmitting(false);
     }
   };
 
@@ -320,17 +312,45 @@ const handleLoginAs = (userId) => {
       title: "Status",
       key: "status",
       render: (_, c) => (
-        <div
-          onClick={() => toggleActivation(c)}
-          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
-            c.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
-          }`}
-        >
+        <div className="flex flex-wrap items-center gap-2">
           <div
-            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-              c.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"
+            role="button"
+            tabIndex={0}
+            aria-label={
+              c.status === "ACTIVE"
+                ? "Active — click to deactivate"
+                : "Inactive — click to activate"
+            }
+            onClick={() => toggleActivation(c)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                toggleActivation(c);
+              }
+            }}
+            className={`shrink-0 flex h-6 w-12 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ${
+              c.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
             }`}
-          />
+          >
+            <div
+              className={`h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+                c.status === "ACTIVE" ? "translate-x-6" : "translate-x-0"
+              }`}
+            />
+          </div>
+          {c.status !== "ACTIVE" ? (
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center justify-center rounded-md border border-red-200 bg-white p-1.5 text-red-700 shadow-sm transition-colors hover:border-red-300 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200 focus-visible:ring-offset-1"
+              aria-label={`Delete ASM ${c.firstName || ""} ${c.lastName || ""}`.trim()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setAsmToDelete(c);
+              }}
+            >
+              <Trash2 size={15} strokeWidth={2.25} aria-hidden />
+            </button>
+          ) : null}
         </div>
       ),
     },
@@ -355,15 +375,6 @@ const handleLoginAs = (userId) => {
           >
             Analytics
           </button>
-          {c.status !== "ACTIVE" && (
-            <button
-              type="button"
-              className="cursor-pointer p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
-              onClick={() => handleDeleteAsm(c._id)}
-            >
-              Delete
-            </button>
-          )}
         </div>
       ),
     },
@@ -475,9 +486,6 @@ const handleLoginAs = (userId) => {
           </div>
         </div>
       )}
-
-
-      
 
       <DashboardTablePage
         title="Area Sales Manager"
@@ -607,6 +615,18 @@ const handleLoginAs = (userId) => {
             setConfirmBusy(false);
           }
         }}
+      />
+
+      <ActivationConfirmModal
+        isOpen={!!asmToDelete}
+        title="Delete ASM"
+        message="Permanently delete this ASM account?"
+        confirmLabel="Delete"
+        confirmLoading={deleteAsmSubmitting}
+        onCancel={() => {
+          if (!deleteAsmSubmitting) setAsmToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteAsm}
       />
     </>
   );
