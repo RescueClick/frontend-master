@@ -120,7 +120,6 @@ const CompleteApplication = () => {
     if (key === "PERSONAL" || key === "PERSONAL_LOAN") {
       return [
         ...baseDocs,
-        "OTHER_DOCS",
         "COMPANY_ID_CARD",
         "SALARY_SLIP_1",
         "SALARY_SLIP_2",
@@ -133,7 +132,6 @@ const CompleteApplication = () => {
     if (key === "HOME_LOAN_SALARIED") {
       return [
         ...baseDocs,
-        "OTHER_DOCS",
         "COMPANY_ID_CARD",
         "SALARY_SLIP_1",
         "SALARY_SLIP_2",

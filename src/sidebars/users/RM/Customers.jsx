@@ -17,7 +17,6 @@ import {
   TrendingUp,
   Calendar,
   X,
-  DollarSign,
   Percent,
   Calculator,
   User,

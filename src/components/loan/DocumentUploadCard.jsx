@@ -11,12 +11,16 @@ export default function DocumentUploadCard({
   onRemove,
   error,
   onPreview,
+  hint,
 }) {
   return (
     <div>
       <label className="block text-base font-medium mb-1.5" style={{ color: "#111827" }}>
         {label}
       </label>
+      {hint ? (
+        <p className="text-xs text-slate-500 mb-2 leading-relaxed">{hint}</p>
+      ) : null}
       <div className="relative flex items-center gap-1.5">
         <input
           type="file"

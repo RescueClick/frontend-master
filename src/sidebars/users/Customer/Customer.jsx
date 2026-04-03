@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Phone, DollarSign, User, Calendar, Info, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Phone, User, Calendar, Info, CheckCircle, XCircle, Clock } from "lucide-react";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 import { useNavigate } from "react-router-dom";

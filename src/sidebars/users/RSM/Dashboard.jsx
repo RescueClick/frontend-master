@@ -7,7 +7,6 @@ import {
   ChevronDown,
   UserCheck,
   TrendingUp,
-  DollarSign,
   Bell,
   Calendar,
   Phone,

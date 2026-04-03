@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { backendurl } from "../feature/urldata";
 import { COMPANY_NAME, SUPPORT_EMAIL } from "../config/branding";
 import { getAuthData } from "../utils/localStorage";
@@ -15,6 +15,40 @@ const DeleteAccount = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(null);
+  const [isPartnerSession, setIsPartnerSession] = useState(false);
+  const [deleteStatus, setDeleteStatus] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+
+  const loadPartnerDeleteStatus = useCallback(async () => {
+    const { partnerToken } = getAuthData() || {};
+    setIsPartnerSession(!!partnerToken);
+    if (!partnerToken) {
+      setStatusLoading(false);
+      setDeleteStatus(null);
+      return;
+    }
+    setStatusLoading(true);
+    try {
+      const res = await fetch(`${backendurl}/partner/delete-account-request/status`, {
+        headers: { Authorization: `Bearer ${partnerToken}` },
+      });
+      const data = await res.json().catch(() => null);
+      setDeleteStatus(res.ok ? data : null);
+    } catch {
+      setDeleteStatus(null);
+    } finally {
+      setStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPartnerDeleteStatus();
+  }, [loadPartnerDeleteStatus]);
+
+  const partnerStatusBlocksSubmit =
+    isPartnerSession &&
+    deleteStatus?.hasRequest &&
+    (deleteStatus.status === "PENDING" || deleteStatus.status === "COMPLETED");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -55,6 +89,7 @@ const DeleteAccount = () => {
           partnerId: "",
           reason: "",
         });
+        await loadPartnerDeleteStatus();
       } else {
         const response = await fetch(`${backendurl}/contact`, {
           method: "POST",
@@ -123,6 +158,38 @@ const DeleteAccount = () => {
 
         {/* Content */}
         <div className="px-6 py-5 space-y-6">
+          {isPartnerSession && statusLoading ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              Checking your delete request status…
+            </div>
+          ) : null}
+          {isPartnerSession && !statusLoading && deleteStatus?.hasRequest ? (
+            <div
+              className={`rounded-xl border px-4 py-3 text-sm ${
+                deleteStatus.status === "REJECTED"
+                  ? "border-rose-200 bg-rose-50 text-rose-900"
+                  : deleteStatus.status === "PENDING"
+                    ? "border-amber-200 bg-amber-50 text-amber-900"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-900"
+              }`}
+            >
+              <p className="font-semibold">
+                {deleteStatus.status === "PENDING" && "Request status: Under review"}
+                {deleteStatus.status === "REJECTED" &&
+                  "Request status: Rejected — your account remains active"}
+                {deleteStatus.status === "COMPLETED" && "Request status: Processed"}
+              </p>
+              <p className="mt-1 text-slate-700">
+                {deleteStatus.status === "PENDING" &&
+                  "You will receive an email and an in-app notification when admin acts on your request."}
+                {deleteStatus.status === "REJECTED" &&
+                  "Admin did not approve account deletion this time. You may submit a new request below."}
+                {deleteStatus.status === "COMPLETED" &&
+                  "This request was completed. Contact support if you have questions about your access."}
+              </p>
+            </div>
+          ) : null}
+
           {/* Info box */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
             <p className="text-sm text-slate-700">
@@ -144,9 +211,9 @@ const DeleteAccount = () => {
               Request deletion via email
             </h2>
             <p className="text-sm text-slate-600 mb-3">
-              Fill the form below and we will send your request to our support
-              team. They will verify your details and complete the deletion
-              process.
+              {isPartnerSession
+                ? "You are logged in as a partner. Submit an optional reason — your identity is taken from your session."
+                : "Fill the form below and we will send your request to our support team. They will verify your details and complete the deletion process."}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -160,7 +227,7 @@ const DeleteAccount = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    required
+                    required={!isPartnerSession}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Your full name"
                   />
@@ -190,7 +257,7 @@ const DeleteAccount = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    required
+                    required={!isPartnerSession}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="name@example.com"
                   />
@@ -204,7 +271,7 @@ const DeleteAccount = () => {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    required
+                    required={!isPartnerSession}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="10-digit mobile or +91…"
                   />
@@ -219,7 +286,7 @@ const DeleteAccount = () => {
                   name="reason"
                   value={formData.reason}
                   onChange={handleChange}
-                  required
+                  required={!isPartnerSession}
                   className="w-full min-h-[90px] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-y"
                   placeholder="Example: I am no longer using the platform, created an account by mistake, etc."
                 />
@@ -241,7 +308,7 @@ const DeleteAccount = () => {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || partnerStatusBlocksSubmit}
                 className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-teal-600 text-white text-sm font-semibold shadow-md hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? "Sending..." : "Send Delete Request"}

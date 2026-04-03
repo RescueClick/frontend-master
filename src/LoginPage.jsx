@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Lock, User, Shield, AlertCircle, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser } from './feature/thunks/adminThunks';
 import { getAuthData } from './utils/localStorage';
@@ -10,6 +10,7 @@ import {
   COMPANY_NAME,
   COMPANY_TAGLINE,
 } from "./config/branding";
+import { PARTNER_REF_SESSION_KEY } from "./feature/publicLoanReferral";
 
 
 const ErrorModal = ({ isOpen, onClose, error }) => {
@@ -67,6 +68,7 @@ const ErrorModal = ({ isOpen, onClose, error }) => {
 const LoginPage = () => {
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const dispatch = useDispatch();
 
@@ -86,6 +88,21 @@ const LoginPage = () => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [modalError, setModalError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  /**
+   * Non–partner-invite `ref` for public loan forms (PT/RM invites redirect in AppRoutes before this mounts).
+   */
+  useEffect(() => {
+    const ref = (searchParams.get("ref") || "").trim();
+    if (!ref) return;
+    const upper = ref.toUpperCase();
+    if (upper.startsWith("PT-") || upper.startsWith("RM-")) return;
+    try {
+      sessionStorage.setItem(PARTNER_REF_SESSION_KEY, ref);
+    } catch {
+      /* ignore */
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

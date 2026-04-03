@@ -9,7 +9,6 @@ import {
   CreditCard,
   MapPin,
   Calendar,
-  DollarSign,
   Phone,
   Mail,
   MessageSquare,

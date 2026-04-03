@@ -3,7 +3,6 @@ import {
   TrendingUp,
   Users,
   UserCheck,
-  DollarSign,
   Target,
   CheckCircle,
   Award,

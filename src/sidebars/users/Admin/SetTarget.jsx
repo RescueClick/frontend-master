@@ -22,6 +22,7 @@ const SetTarget = () => {
   const [previewData, setPreviewData] = useState(null);
   const [showTargetInput, setShowTargetInput] = useState(false);
   const [currentFileCountTarget, setCurrentFileCountTarget] = useState(0);
+  const [newJoinerLoading, setNewJoinerLoading] = useState(false);
 
   useEffect(() => {
     fetchTargetPolicy();
@@ -169,6 +170,49 @@ const SetTarget = () => {
       toast.error(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssignNewJoiners = async () => {
+    try {
+      setNewJoinerLoading(true);
+      const { adminToken } = getAuthData();
+      if (!adminToken) {
+        toast.error("Authentication required. Please log in again.");
+        return;
+      }
+
+      const response = await axios.post(
+        `${backendurl}/admin/target/assign-new-users`,
+        {
+          month: Number(formData.month),
+          year: Number(formData.year),
+          prorateByJoinDate: true,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = response.data || {};
+      const summary = data.summary || {};
+      const totalNew = Number(data.totalNewAssignments || 0);
+      if (totalNew === 0) {
+        toast.success("No new joiners found for target assignment in this period.");
+      } else {
+        toast.success(
+          `Assigned ${totalNew} new joiner targets (${summary.asmAssigned || 0} ASM, ${summary.rsmAssigned || 0} RSM, ${summary.rmAssigned || 0} RM, ${summary.partnerAssigned || 0} Partner).`
+        );
+      }
+      fetchDistributionPreview();
+    } catch (err) {
+      console.error("Error assigning new joiner targets:", err);
+      toast.error(err?.response?.data?.message || "Failed to assign new joiner targets");
+    } finally {
+      setNewJoinerLoading(false);
     }
   };
 
@@ -494,6 +538,30 @@ const SetTarget = () => {
                     <strong>RM/RSM/ASM receive:</strong> Disbursement only (calculated from below)
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* New Joiner Assignment */}
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+              <div className="flex items-start justify-between gap-4 flex-col md:flex-row">
+                <div>
+                  <p className="text-sm font-semibold text-indigo-900 mb-1">Assign Targets to New Joiners</p>
+                  <p className="text-xs text-indigo-800">
+                    Use this when new ASM/RSM/RM/Partners are added after main distribution. This assigns only missing targets for selected month/year using proration by join date.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAssignNewJoiners}
+                  disabled={newJoinerLoading}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition ${
+                    newJoinerLoading
+                      ? "bg-indigo-300 cursor-not-allowed"
+                      : "bg-indigo-600 hover:bg-indigo-700"
+                  }`}
+                >
+                  {newJoinerLoading ? "Assigning..." : "Assign New Joiner Targets"}
+                </button>
               </div>
             </div>
 

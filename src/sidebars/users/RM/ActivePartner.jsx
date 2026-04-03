@@ -6,7 +6,6 @@ import {
   Plus,
   Star,
   TrendingUp,
-  DollarSign,
   FileText,
   Phone,
   Mail,

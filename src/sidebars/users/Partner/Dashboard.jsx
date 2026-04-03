@@ -30,6 +30,7 @@ import {
   Plus,
   IndianRupee,
   Award,
+  Gift,
 } from "lucide-react";
 import { getAuthData } from "../../../utils/localStorage";
 
@@ -51,7 +52,9 @@ const Dashboard = () => {
   const dispatch = useDispatch();
 
   // Select dashboard state
-  const { data } = useSelector((state) => state.partner.dashboard);
+  const { data, loading: dashboardLoading } = useSelector(
+    (state) => state.partner.dashboard || { data: null, loading: false }
+  );
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -192,6 +195,24 @@ const Dashboard = () => {
   const handleCallPartner = (phone) => {
     const phoneNumber = phone; // replace with your partner's number
     window.location.href = `tel:${phoneNumber}`;
+  };
+
+  const formatReferralInr = (n) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(Number(n) || 0);
+
+  const refRewards = data?.referralRewards;
+  const referralStatusPill = (st) => {
+    const map = {
+      PENDING: "bg-amber-50 text-amber-800 border-amber-100",
+      APPROVED: "bg-sky-50 text-sky-800 border-sky-100",
+      PAID: "bg-emerald-50 text-emerald-800 border-emerald-100",
+      CANCELLED: "bg-slate-100 text-slate-600 border-slate-200",
+    };
+    return map[st] || "bg-slate-50 text-slate-700 border-slate-100";
   };
 
   return (
@@ -417,7 +438,135 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Referral rewards — this month summary + link to full history */}
+      <div className="bg-white rounded-2xl shadow-md border border-gray-200 mb-4 sm:mb-6 overflow-hidden">
+        <div className="border-b border-gray-100 bg-gradient-to-r from-teal-50 to-emerald-50 px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-teal-700 shadow-sm ring-1 ring-teal-100">
+              <Gift className="h-5 w-5" aria-hidden />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Referral rewards</h3>
+              <p className="text-sm text-gray-600 mt-0.5">
+                Earnings when partners you referred sign up or their loans disburse. Below is{" "}
+                <span className="font-medium text-gray-800">this calendar month</span>.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/partner/referral-rewards")}
+            className="inline-flex items-center justify-center gap-1 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 shrink-0"
+          >
+            Full history
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
 
+        <div className="p-4 sm:p-6">
+          {refRewards ? (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-3 sm:p-4">
+                  <p className="text-xs font-medium text-gray-500">Month total</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900 mt-1 tabular-nums">
+                    {formatReferralInr(refRewards.monthTotal)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 sm:p-4">
+                  <p className="text-xs font-medium text-emerald-800">Paid</p>
+                  <p className="text-lg sm:text-xl font-bold text-emerald-900 mt-1 tabular-nums">
+                    {formatReferralInr(refRewards.paidTotal)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3 sm:p-4">
+                  <p className="text-xs font-medium text-amber-900">Pending</p>
+                  <p className="text-lg sm:text-xl font-bold text-amber-950 mt-1 tabular-nums">
+                    {formatReferralInr(refRewards.byStatus?.PENDING?.totalAmount)}
+                  </p>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    {refRewards.byStatus?.PENDING?.count ?? 0} line(s)
+                  </p>
+                </div>
+                <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-3 sm:p-4">
+                  <p className="text-xs font-medium text-sky-900">Approved</p>
+                  <p className="text-lg sm:text-xl font-bold text-sky-950 mt-1 tabular-nums">
+                    {formatReferralInr(refRewards.byStatus?.APPROVED?.totalAmount)}
+                  </p>
+                  <p className="text-[11px] text-sky-800 mt-0.5">
+                    {refRewards.byStatus?.APPROVED?.count ?? 0} line(s)
+                  </p>
+                </div>
+              </div>
+
+              <h4 className="text-sm font-semibold text-gray-800 mb-3">Recent this month</h4>
+              {Array.isArray(refRewards.preview) && refRewards.preview.length > 0 ? (
+                <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">
+                  {refRewards.preview.map((row) => (
+                    <li
+                      key={String(row._id)}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 sm:px-4 py-3 bg-white hover:bg-gray-50/80"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {row.downlineLabel}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {row.eventType}
+                          {row.appNo ? ` · ${row.appNo}` : ""}
+                          {row.createdAt
+                            ? ` · ${new Date(row.createdAt).toLocaleDateString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                              })}`
+                            : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border ${referralStatusPill(row.status)}`}
+                        >
+                          {row.status}
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 tabular-nums">
+                          {formatReferralInr(row.amount)}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500 py-6 text-center rounded-xl border border-dashed border-gray-200 bg-gray-50/50">
+                  No referral rewards yet this month. Share your PT referral code from Profile — when
+                  downlines grow and loans disburse, entries appear here and in{" "}
+                  <button
+                    type="button"
+                    className="text-teal-700 font-medium underline-offset-2 hover:underline"
+                    onClick={() => navigate("/partner/referral-rewards")}
+                  >
+                    full history
+                  </button>
+                  .
+                </p>
+              )}
+            </>
+          ) : dashboardLoading ? (
+            <p className="text-sm text-gray-500">Loading referral summary…</p>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Referral summary will show here for the current month. Open{" "}
+              <button
+                type="button"
+                className="text-teal-700 font-medium underline-offset-2 hover:underline"
+                onClick={() => navigate("/partner/referral-rewards")}
+              >
+                full history
+              </button>{" "}
+              for all months.
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Current Month Target */}
       <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-md border border-gray-200 mb-4 sm:mb-6">

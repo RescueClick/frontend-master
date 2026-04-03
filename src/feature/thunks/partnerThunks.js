@@ -132,7 +132,18 @@ export const signupPartner = createAsyncThunk(
 
       return res.data; // response from backend
     } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
+      if (err.response?.status === 413) {
+        return rejectWithValue(
+          "This file is larger than 5MB. Please upload a smaller JPG, PNG, or PDF."
+        );
+      }
+      const data = err.response?.data;
+      const msg =
+        (typeof data === "string" && data.trim()) ||
+        data?.message ||
+        err.message ||
+        "Registration failed. Please try again.";
+      return rejectWithValue(msg);
     }
   }
 );

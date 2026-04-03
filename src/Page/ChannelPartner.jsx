@@ -7,6 +7,7 @@ import React from 'react'
 
 import { useNavigate } from 'react-router-dom';
 import { COMPANY_NAME } from "../config/branding";
+import { PARTNER_REGISTRATION_ROUTE } from "../config/publicReferral.js";
 
 import {
   IndianRupee,
@@ -173,7 +174,7 @@ const Channelpartner = () => {
             type="button"
             className="mt-10 inline-flex min-h-[48px] items-center justify-center rounded-full bg-brand-primary px-10 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-primary/25 transition hover:bg-brand-primary-hover hover:shadow-xl sm:text-base"
             onClick={() => {
-              navigate("/PartnerRegistrationForm");
+              navigate(PARTNER_REGISTRATION_ROUTE);
             }}
           >
             Join now
@@ -330,7 +331,7 @@ export default Channelpartner
 // import { useNavigate } from 'react-router-dom';
 
 // import {
-//   DollarSign,
+//   IndianRupee,
 //   IndianRupee,
 //   TrendingUp,
 //   Briefcase,

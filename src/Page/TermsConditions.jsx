@@ -1,339 +1,334 @@
-import React, { useState } from 'react';
-import { FileText, Scale, AlertCircle, CheckCircle, XCircle, DollarSign, Shield, Users } from 'lucide-react';
+import React from "react";
+import { Link } from "react-router-dom";
+import {
+  FileText,
+  Scale,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Shield,
+  Users,
+  Briefcase,
+} from "lucide-react";
+import LegalPageShell, { LegalSection } from "../components/LegalPageShell";
 import { COMPANY_NAME, LEGAL_EMAIL } from "../config/branding";
 
+const toc = [
+  { id: "overview", label: "Overview" },
+  { id: "notice", label: "Important notice" },
+  { id: "key-terms", label: "Key terms" },
+  { id: "account-terms", label: "Account terms" },
+  { id: "fees", label: "Fees & payment" },
+  { id: "prohibited", label: "Prohibited activities" },
+  { id: "ip", label: "Intellectual property" },
+  { id: "liability", label: "Limitation of liability" },
+  { id: "indemnification", label: "Indemnification" },
+  { id: "termination", label: "Termination" },
+  { id: "dispute", label: "Dispute resolution" },
+  { id: "changes", label: "Changes to terms" },
+  { id: "contact", label: "Contact" },
+];
+
+const mainSections = [
+  {
+    id: 1,
+    icon: <CheckCircle className="h-6 w-6 shrink-0" aria-hidden />,
+    title: "Acceptance of Terms",
+    content: `By accessing and using ${COMPANY_NAME}'s services, you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, you must not use our services. Your continued use of our platform constitutes acceptance of any updates or modifications to these terms.`,
+  },
+  {
+    id: 2,
+    icon: <Users className="h-6 w-6 shrink-0" aria-hidden />,
+    title: "Eligibility",
+    content:
+      "You must be at least 18 years old and have the legal capacity to enter into binding contracts to use our services. By registering, you represent and warrant that all information provided is accurate, current, and complete. You are responsible for maintaining the confidentiality of your account credentials.",
+  },
+  {
+    id: 3,
+    icon: <Briefcase className="h-6 w-6 shrink-0" aria-hidden />,
+    title: "Services Description",
+    content: `${COMPANY_NAME} provides financial technology services including but not limited to payment processing, financial transactions, account management, and related financial services. We reserve the right to modify, suspend, or discontinue any aspect of our services at any time with or without notice.`,
+  },
+  {
+    id: 4,
+    icon: <Shield className="h-6 w-6 shrink-0" aria-hidden />,
+    title: "User Responsibilities",
+    content:
+      "You agree to use our services only for lawful purposes and in accordance with these Terms. You must not use our services to engage in fraudulent activities, money laundering, or any illegal transactions. You are responsible for all activities conducted through your account.",
+  },
+];
+
 export default function TermsConditions() {
-  const [expandedSection, setExpandedSection] = useState(null);
-
-  const toggleSection = (id) => {
-    setExpandedSection(expandedSection === id ? null : id);
-  };
-
-  const mainSections = [
-    {
-      id: 1,
-      icon: <CheckCircle className="w-6 h-6" />,
-      title: "Acceptance of Terms",
-      content: `By accessing and using ${COMPANY_NAME}'s services, you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, you must not use our services. Your continued use of our platform constitutes acceptance of any updates or modifications to these terms.`
-    },
-    {
-      id: 2,
-      icon: <Users className="w-6 h-6" />,
-      title: "Eligibility",
-      content: "You must be at least 18 years old and have the legal capacity to enter into binding contracts to use our services. By registering, you represent and warrant that all information provided is accurate, current, and complete. You are responsible for maintaining the confidentiality of your account credentials."
-    },
-    {
-      id: 3,
-      icon: "",
-      title: "Services Description",
-      content: `${COMPANY_NAME} provides financial technology services including but not limited to payment processing, financial transactions, account management, and related financial services. We reserve the right to modify, suspend, or discontinue any aspect of our services at any time with or without notice.`
-    },
-    {
-      id: 4,
-      icon: <Shield className="w-6 h-6" />,
-      title: "User Responsibilities",
-      content: "You agree to use our services only for lawful purposes and in accordance with these Terms. You must not use our services to engage in fraudulent activities, money laundering, or any illegal transactions. You are responsible for all activities conducted through your account."
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-3">
-            <Scale className="w-10 h-10 text-blue-600" />
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">Terms & Conditions</h1>
-              <p className="text-sm text-slate-600 mt-1">{COMPANY_NAME}</p>
-            </div>
+    <LegalPageShell
+      title="Terms & Conditions"
+      titleIcon={<Scale className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden />}
+      meta={{ label: "Effective date", value: "December 2, 2025" }}
+      toc={toc}
+      hero={{
+        id: "overview",
+        title: `Welcome to ${COMPANY_NAME}`,
+        icon: <FileText className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden />,
+        body: (
+          <>
+            <p>
+              These Terms and Conditions govern your use of {COMPANY_NAME}&apos;s services and website.
+              Please read these terms carefully before using our platform. By accessing or using our
+              services, you agree to be bound by these terms and all applicable laws and regulations.
+            </p>
+          </>
+        ),
+      }}
+      footerAside={
+        <p className="border-t border-slate-200/90 pt-8 text-center text-sm text-slate-600">
+          Related:{" "}
+          <Link
+            to="/PrivacyPolicy"
+            className="font-semibold text-brand-primary underline-offset-4 outline-none hover:underline focus-visible:rounded focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2"
+          >
+            Privacy Policy
+          </Link>
+        </p>
+      }
+    >
+      <div
+        id="notice"
+        className="scroll-mt-28 rounded-2xl border border-amber-200/80 bg-amber-50/90 p-5 sm:p-6 md:p-7"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+          <AlertCircle className="h-6 w-6 shrink-0 text-amber-700 sm:mt-0.5" aria-hidden />
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-amber-950 sm:text-lg">Important notice</h2>
+            <p className="mt-2 text-[15px] leading-7 text-amber-950/90 sm:text-base sm:leading-8">
+              These terms include important information about your rights and obligations. Please review
+              them carefully. By continuing to use our services, you acknowledge that you have read,
+              understood, and agree to these terms.
+            </p>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Introduction */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-slate-200">
-          <div className="flex items-start gap-4">
-            <div className="bg-blue-100 rounded-full p-3">
-              <FileText className="w-8 h-8 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900 mb-3">
-                Welcome to {COMPANY_NAME}
-              </h2>
-              <p className="text-slate-700 leading-relaxed mb-4">
-                These Terms and Conditions govern your use of {COMPANY_NAME}&apos;s services and website. Please read these terms carefully before using our platform. By accessing or using our services, you agree to be bound by these terms and all applicable laws and regulations.
-              </p>
-              <p className="text-sm text-slate-600">
-                <strong>Effective Date:</strong> December 2, 2025
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Important Notice */}
-        <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-6 mb-8 shadow-md">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
-            <div>
-              <h3 className="font-semibold text-amber-900 mb-2">Important Notice</h3>
-              <p className="text-amber-800 text-sm">
-                These terms include important information about your rights and obligations. Please review them carefully. By continuing to use our services, you acknowledge that you have read, understood, and agree to these terms.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Sections Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+      <div id="key-terms" className="scroll-mt-28 space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+          Key terms
+        </h2>
+        <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
           {mainSections.map((section) => (
-            <div
+            <article
               key={section.id}
-              className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-slate-200 overflow-hidden"
+              className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm transition hover:border-slate-300/90 hover:shadow-md"
             >
-              <div className="bg-gradient-to-r bg-brand-primary text-white p-6">
-                <div className="flex items-center gap-3">
-                  {section.icon}
-                  <h3 className="text-xl font-semibold">{section.title}</h3>
-                </div>
+              <div className="flex items-center gap-3 bg-gradient-to-br from-brand-primary to-brand-primary-hover px-5 py-4 text-white sm:px-6 sm:py-5">
+                {section.icon}
+                <h3 className="text-base font-semibold leading-snug sm:text-lg">{section.title}</h3>
               </div>
-              <div className="p-6">
-                <p className="text-slate-700 leading-relaxed">{section.content}</p>
-              </div>
+              <p className="border-t border-slate-100 p-5 text-[15px] leading-7 text-slate-700 sm:p-6 sm:text-base sm:leading-8">
+                {section.content}
+              </p>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <LegalSection id="account-terms" title="Account terms">
+        <ul className="list-none space-y-3">
+          {[
+            "You must provide accurate and complete registration information.",
+            "You are responsible for maintaining the security of your account and password.",
+            "You must notify us immediately of any unauthorized use of your account.",
+            "One person or legal entity may not maintain more than one account without authorization.",
+            "We reserve the right to suspend or terminate accounts that violate these terms.",
+          ].map((line) => (
+            <li key={line} className="flex gap-3">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-primary" aria-hidden />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </LegalSection>
+
+      <LegalSection id="fees" title="Fees and payment">
+        <p>
+          Certain services may be subject to fees. All applicable fees will be clearly disclosed before
+          you complete a transaction. You agree to pay all fees associated with your use of our services.
+        </p>
+        <div className="rounded-xl border border-brand-primary/15 bg-brand-primary/5 p-4 sm:p-5">
+          <h4 className="font-semibold text-slate-900">Payment terms</h4>
+          <ul className="mt-3 list-none space-y-2.5 text-[14px] sm:text-[15px]">
+            {[
+              "All fees are non-refundable unless otherwise stated.",
+              "We may change fees with 30 days advance notice.",
+              "You authorize us to charge your payment method on file.",
+              "Failed payments may result in service suspension.",
+            ].map((line) => (
+              <li key={line} className="flex gap-2.5">
+                <span className="font-medium text-brand-primary" aria-hidden>
+                  ·
+                </span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </LegalSection>
+
+      <LegalSection id="prohibited" title="Prohibited activities" icon={<XCircle className="text-red-600" />}>
+        <p>You agree not to engage in any of the following prohibited activities:</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            "Fraudulent or illegal transactions",
+            "Money laundering or terrorist financing",
+            "Violating any applicable laws or regulations",
+            "Attempting to gain unauthorized access",
+            "Interfering with service operations",
+            "Transmitting malware or harmful code",
+          ].map((label) => (
+            <div
+              key={label}
+              className="flex gap-2.5 rounded-xl border border-red-100 bg-red-50/80 p-4 text-[14px] leading-relaxed text-slate-800 sm:text-[15px]"
+            >
+              <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden />
+              <span>{label}</span>
             </div>
           ))}
         </div>
+      </LegalSection>
 
-        {/* Detailed Sections */}
-        <div className="space-y-6">
-          {/* Account Terms */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4">Account Terms</h3>
-            <div className="space-y-4 text-slate-700">
-              <div className="flex items-start gap-3">
-                <span className="text-blue-600 font-bold mt-1">•</span>
-                <p>You must provide accurate and complete registration information</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-blue-600 font-bold mt-1">•</span>
-                <p>You are responsible for maintaining the security of your account and password</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-blue-600 font-bold mt-1">•</span>
-                <p>You must notify us immediately of any unauthorized use of your account</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-blue-600 font-bold mt-1">•</span>
-                <p>One person or legal entity may not maintain more than one account without authorization</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-blue-600 font-bold mt-1">•</span>
-                <p>We reserve the right to suspend or terminate accounts that violate these terms</p>
-              </div>
-            </div>
-          </div>
+      <LegalSection id="ip" title="Intellectual property">
+        <p>
+          All content, features, and functionality of our services, including but not limited to text,
+          graphics, logos, icons, images, software, and trademarks, are the exclusive property of{" "}
+          {COMPANY_NAME} and are protected by international copyright, trademark, and other intellectual
+          property laws.
+        </p>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
+          <p className="text-[14px] sm:text-[15px]">
+            You may not reproduce, distribute, modify, create derivative works of, publicly display, or
+            otherwise use any content without our express written permission.
+          </p>
+        </div>
+      </LegalSection>
 
-          {/* Fees and Payment */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4 flex items-center gap-3">
-              Fees and Payment
-            </h3>
-            <p className="text-slate-700 mb-4">
-              Certain services may be subject to fees. All applicable fees will be clearly disclosed before you complete a transaction. You agree to pay all fees associated with your use of our services.
-            </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-slate-900 mb-2">Payment Terms:</h4>
-              <ul className="space-y-2 text-sm text-slate-700">
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600">→</span>
-                  <span>All fees are non-refundable unless otherwise stated</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600">→</span>
-                  <span>We may change fees with 30 days advance notice</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600">→</span>
-                  <span>You authorize us to charge your payment method on file</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600">→</span>
-                  <span>Failed payments may result in service suspension</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+      <LegalSection id="liability" title="Limitation of liability">
+        <p>
+          To the maximum extent permitted by law, {COMPANY_NAME} shall not be liable for any indirect,
+          incidental, special, consequential, or punitive damages, or any loss of profits or revenues,
+          whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible
+          losses resulting from:
+        </p>
+        <ol className="list-none space-y-3">
+          {[
+            "Your access to or use of or inability to access or use our services",
+            "Any conduct or content of any third party on our services",
+            "Any content obtained from our services",
+            "Unauthorized access, use, or alteration of your transmissions or content",
+          ].map((line, i) => (
+            <li key={line} className="flex gap-3">
+              <span className="inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md bg-slate-100 text-sm font-semibold text-brand-primary">
+                {i + 1}
+              </span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ol>
+      </LegalSection>
 
-          {/* Prohibited Activities */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4 flex items-center gap-3">
-              <XCircle className="w-7 h-7 text-red-600" />
-              Prohibited Activities
-            </h3>
-            <p className="text-slate-700 mb-4">You agree not to engage in any of the following prohibited activities:</p>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-slate-700 flex items-start gap-2">
-                  <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <span>Fraudulent or illegal transactions</span>
-                </p>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-slate-700 flex items-start gap-2">
-                  <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <span>Money laundering or terrorist financing</span>
-                </p>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-slate-700 flex items-start gap-2">
-                  <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <span>Violating any applicable laws or regulations</span>
-                </p>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-slate-700 flex items-start gap-2">
-                  <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <span>Attempting to gain unauthorized access</span>
-                </p>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-slate-700 flex items-start gap-2">
-                  <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <span>Interfering with service operations</span>
-                </p>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-slate-700 flex items-start gap-2">
-                  <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <span>Transmitting malware or harmful code</span>
-                </p>
-              </div>
-            </div>
-          </div>
+      <LegalSection id="indemnification" title="Indemnification">
+        <p>
+          You agree to indemnify, defend, and hold harmless {COMPANY_NAME}, its officers, directors,
+          employees, and agents from and against any claims, liabilities, damages, losses, and expenses,
+          including reasonable attorney&apos;s fees, arising out of or in any way connected with your
+          access to or use of our services, your violation of these Terms, or your violation of any rights
+          of another party.
+        </p>
+      </LegalSection>
 
-          {/* Intellectual Property */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4">Intellectual Property</h3>
-            <p className="text-slate-700 mb-4">
-              All content, features, and functionality of our services, including but not limited to text, graphics, logos, icons, images, software, and trademarks, are the exclusive property of {COMPANY_NAME} and are protected by international copyright, trademark, and other intellectual property laws.
-            </p>
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <p className="text-sm text-slate-700">
-                You may not reproduce, distribute, modify, create derivative works of, publicly display, or otherwise use any content without our express written permission.
-              </p>
-            </div>
-          </div>
+      <LegalSection id="termination" title="Termination">
+        <p>
+          We may terminate or suspend your account and access to our services immediately, without prior
+          notice or liability, for any reason, including if you breach these Terms.
+        </p>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
+          <p className="text-[14px] sm:text-[15px]">
+            Upon termination, your right to use our services will immediately cease. All provisions of
+            these Terms which by their nature should survive termination shall survive, including ownership
+            provisions, warranty disclaimers, indemnity, and limitations of liability.
+          </p>
+        </div>
+      </LegalSection>
 
-          {/* Limitation of Liability */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4">Limitation of Liability</h3>
-            <p className="text-slate-700 mb-4">
-              To the maximum extent permitted by law, {COMPANY_NAME} shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses resulting from:
-            </p>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 text-slate-700">
-                <span className="text-blue-600 font-bold mt-1">1.</span>
-                <p>Your access to or use of or inability to access or use our services</p>
-              </div>
-              <div className="flex items-start gap-3 text-slate-700">
-                <span className="text-blue-600 font-bold mt-1">2.</span>
-                <p>Any conduct or content of any third party on our services</p>
-              </div>
-              <div className="flex items-start gap-3 text-slate-700">
-                <span className="text-blue-600 font-bold mt-1">3.</span>
-                <p>Any content obtained from our services</p>
-              </div>
-              <div className="flex items-start gap-3 text-slate-700">
-                <span className="text-blue-600 font-bold mt-1">4.</span>
-                <p>Unauthorized access, use, or alteration of your transmissions or content</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Indemnification */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4">Indemnification</h3>
-            <p className="text-slate-700">
-              You agree to indemnify, defend, and hold harmless {COMPANY_NAME}, its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, and expenses, including reasonable attorney's fees, arising out of or in any way connected with your access to or use of our services, your violation of these Terms, or your violation of any rights of another party.
+      <LegalSection id="dispute" title="Dispute resolution">
+        <p>
+          Any dispute arising from these Terms or your use of our services shall be resolved through
+          binding arbitration in accordance with the rules of the American Arbitration Association.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-brand-primary/15 bg-brand-primary/5 p-4 sm:p-5">
+            <h4 className="font-semibold text-slate-900">Governing law</h4>
+            <p className="mt-2 text-[14px] sm:text-[15px]">
+              These Terms shall be governed by and construed in accordance with applicable laws.
             </p>
           </div>
-
-          {/* Termination */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4">Termination</h3>
-            <p className="text-slate-700 mb-4">
-              We may terminate or suspend your account and access to our services immediately, without prior notice or liability, for any reason, including if you breach these Terms.
+          <div className="rounded-xl border border-brand-primary/15 bg-brand-primary/5 p-4 sm:p-5">
+            <h4 className="font-semibold text-slate-900">Class action waiver</h4>
+            <p className="mt-2 text-[14px] sm:text-[15px]">
+              You agree to bring claims only on an individual basis, not as part of a class action.
             </p>
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <p className="text-sm text-slate-700">
-                Upon termination, your right to use our services will immediately cease. All provisions of these Terms which by their nature should survive termination shall survive, including ownership provisions, warranty disclaimers, indemnity, and limitations of liability.
-              </p>
-            </div>
-          </div>
-
-          {/* Dispute Resolution */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4">Dispute Resolution</h3>
-            <p className="text-slate-700 mb-4">
-              Any dispute arising from these Terms or your use of our services shall be resolved through binding arbitration in accordance with the rules of the American Arbitration Association.
-            </p>
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <h4 className="font-semibold text-slate-900 mb-2">Governing Law</h4>
-                <p className="text-sm text-slate-700">These Terms shall be governed by and construed in accordance with applicable laws.</p>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <h4 className="font-semibold text-slate-900 mb-2">Class Action Waiver</h4>
-                <p className="text-sm text-slate-700">You agree to bring claims only on an individual basis, not as part of a class action.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Changes to Terms */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4">Changes to Terms</h3>
-            <p className="text-slate-700">
-              We reserve the right to modify these Terms at any time. We will notify users of any material changes by posting the updated Terms on our website and updating the "Effective Date" at the top of this page. Your continued use of our services after such modifications constitutes your acceptance of the updated Terms.
-            </p>
-          </div>
-
-          {/* Contact Information */}
-          <div className="bg-white rounded-xl shadow-md p-8 border border-slate-200">
-            <h3 className="text-2xl font-semibold text-slate-900 mb-4">Contact Information</h3>
-            <p className="text-slate-700 mb-4">
-              If you have any questions about these Terms and Conditions, please contact us:
-            </p>
-            <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
-              <div className="space-y-2 text-slate-700">
-                <p><strong>Email:</strong> {LEGAL_EMAIL}</p>
-                <p><strong>Address:</strong> {COMPANY_NAME} Legal Department</p>
-                <p><strong>Phone:</strong> Available through customer support</p>
-              </div>
-            </div>
           </div>
         </div>
+      </LegalSection>
 
-        {/* Acknowledgment CTA */}
-        <div className="mt-8 bg-gradient-to-r bg-brand-primary rounded-2xl shadow-xl p-8 text-white">
-          <div className="text-center">
-            <Scale className="w-12 h-12 mx-auto mb-4" />
-            <h3 className="text-2xl font-semibold mb-3">
-              Questions About These Terms?
-            </h3>
-            <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-              Our legal team is available to answer any questions you may have about these Terms and Conditions.
-            </p>
-            <a
-              href={`mailto:${LEGAL_EMAIL}`}
-              className="inline-block bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 shadow-lg"
-            >
-              Contact Legal Team
-            </a>
-          </div>
+      <LegalSection id="changes" title="Changes to terms">
+        <p>
+          We reserve the right to modify these Terms at any time. We will notify users of any material
+          changes by posting the updated Terms on our website and updating the &quot;Effective Date&quot;
+          at the top of this page. Your continued use of our services after such modifications constitutes
+          your acceptance of the updated Terms.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="contact" title="Contact information">
+        <p>If you have any questions about these Terms and Conditions, please contact us:</p>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-5 sm:p-6">
+          <dl className="space-y-2 text-[15px] sm:text-base">
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</dt>
+              <dd>
+                <a
+                  href={`mailto:${LEGAL_EMAIL}`}
+                  className="font-medium text-brand-primary underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2"
+                >
+                  {LEGAL_EMAIL}
+                </a>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Address</dt>
+              <dd>{COMPANY_NAME} Legal Department</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Phone</dt>
+              <dd>Available through customer support</dd>
+            </div>
+          </dl>
         </div>
-      </main>
-    </div>
+      </LegalSection>
+
+      <div className="rounded-2xl border border-brand-primary/20 bg-gradient-to-br from-brand-primary to-brand-primary-hover p-6 text-white shadow-lg sm:p-8 md:p-10">
+        <div className="mx-auto max-w-xl text-center">
+          <Scale className="mx-auto mb-4 h-10 w-10 opacity-95 sm:h-12 sm:w-12" aria-hidden />
+          <h3 className="text-lg font-semibold sm:text-xl">Questions about these terms?</h3>
+          <p className="mt-3 text-sm leading-relaxed text-white/90 sm:text-base">
+            Our legal team is available to answer questions about these Terms and Conditions.
+          </p>
+          <a
+            href={`mailto:${LEGAL_EMAIL}`}
+            className="mt-6 inline-flex min-h-[48px] w-full max-w-xs items-center justify-center rounded-xl bg-white px-6 text-sm font-semibold text-brand-primary shadow-md transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-primary sm:w-auto"
+          >
+            Contact legal team
+          </a>
+        </div>
+      </div>
+    </LegalPageShell>
   );
 }

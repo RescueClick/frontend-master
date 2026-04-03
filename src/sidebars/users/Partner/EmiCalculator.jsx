@@ -1,5 +1,5 @@
 // import React, { useState, useEffect } from 'react';
-// import { Calculator, DollarSign, Calendar, Percent, TrendingUp, PieChart, Info } from 'lucide-react';
+// import { Calculator, IndianRupee, Calendar, Percent, TrendingUp, PieChart, Info } from 'lucide-react';
  
 // const EmiCalculator = () => {
 //   const [loanAmount, setLoanAmount] = useState(500000);
@@ -74,7 +74,7 @@
 //               {/* Loan Amount */}
 //               <div>
 //                 <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-//                   <DollarSign className="w-4 h-4 text-green-600" />
+//                   <IndianRupee className="w-4 h-4 text-green-600" />
 //                   Loan Amount
 //                 </label>
 //                 <div className="relative mb-4">
@@ -194,7 +194,7 @@
 //               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
 //                 <div className="flex items-center gap-3 mb-3">
 //                   <div className="p-2 bg-green-100 rounded-lg">
-//                     <DollarSign className="w-5 h-5 text-green-600" />
+//                     <IndianRupee className="w-5 h-5 text-green-600" />
 //                   </div>
 //                   <h3 className="font-semibold text-gray-800">Total Amount</h3>
 //                 </div>
@@ -358,10 +358,10 @@
  
 // export default EmiCalculator;
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Calculator,
-  DollarSign,
+  IndianRupee,
   Calendar,
   Percent,
   TrendingUp,
@@ -398,29 +398,35 @@ const EmiCalculator = () => {
   const [loanAmountInput, setLoanAmountInput] = useState("500000");
   const [interestRateInput, setInterestRateInput] = useState("8.5");
   const [loanTenureInput, setLoanTenureInput] = useState("20");
-  const [emi, setEmi] = useState(0);
-  const [totalAmount, setTotalAmount] = useState(0);
-  const [totalInterest, setTotalInterest] = useState(0);
- 
-  // Calculate EMI
-  const calculateEmi = () => {
+
+  const { emi, totalAmount, totalInterest } = useMemo(() => {
     const principal = Number(loanAmount);
-    const rate = Number(interestRate) / 100 / 12; // Monthly interest rate
-    const tenure = Number(loanTenure) * 12; // Total months
- 
-    if (principal > 0 && rate > 0 && tenure > 0) {
-      const emiAmount = (principal * rate * Math.pow(1 + rate, tenure)) / (Math.pow(1 + rate, tenure) - 1);
-      const totalAmountPayable = emiAmount * tenure;
-      const totalInterestPayable = totalAmountPayable - principal;
- 
-      setEmi(emiAmount);
-      setTotalAmount(totalAmountPayable);
-      setTotalInterest(totalInterestPayable);
+    const monthlyRate = Number(interestRate) / 100 / 12;
+    const months = Number(loanTenure) * 12;
+
+    if (
+      !Number.isFinite(principal) ||
+      !Number.isFinite(monthlyRate) ||
+      !Number.isFinite(Number(loanTenure)) ||
+      principal <= 0 ||
+      monthlyRate <= 0 ||
+      months <= 0
+    ) {
+      return { emi: 0, totalAmount: 0, totalInterest: 0 };
     }
-  };
- 
-  useEffect(() => {
-    calculateEmi();
+
+    const factor = Math.pow(1 + monthlyRate, months);
+    const emiRaw =
+      (principal * monthlyRate * factor) / (factor - 1);
+    const emiRounded = Math.round(emiRaw * 100) / 100;
+    const totalPayable = Math.round(emiRounded * months);
+    const interestPaid = totalPayable - principal;
+
+    return {
+      emi: emiRounded,
+      totalAmount: totalPayable,
+      totalInterest: Math.max(0, interestPaid),
+    };
   }, [loanAmount, interestRate, loanTenure]);
  
   const formatCurrency = (amount) => {
@@ -478,8 +484,9 @@ const EmiCalculator = () => {
 
   const handleRateSlider = (val) => {
     const clamped = clamp(val, MIN_RATE, MAX_RATE);
-    setInterestRate(clamped);
-    setInterestRateInput(String(clamped));
+    const rounded = Math.round(clamped * 10) / 10;
+    setInterestRate(rounded);
+    setInterestRateInput(String(rounded));
   };
 
   const handleTenureSlider = (val) => {
@@ -487,6 +494,11 @@ const EmiCalculator = () => {
     setLoanTenure(clamped);
     setLoanTenureInput(String(Math.round(clamped)));
   };
+
+  const LOAN_SLIDER_MIN = 100000;
+  const LOAN_SLIDER_MAX = 10000000;
+  const pctInRange = (val, min, max) =>
+    max <= min ? 0 : Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100));
  
   // Calculate percentages for breakdown
   const principalPercentage =
@@ -522,7 +534,7 @@ const EmiCalculator = () => {
               {/* Loan Amount */}
               <div>
                 <label className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-teal-500" />
+                  <IndianRupee className="w-4 h-4 text-teal-500" />
                   Loan Amount
                 </label>
                 <div className="relative mb-4">
@@ -532,10 +544,10 @@ const EmiCalculator = () => {
                     max="10000000"
                     step="50000"
                     value={loanAmount}
-                    onChange={(e) => handleAmountChange(e.target.value)}
+                    onChange={(e) => handleAmountSlider(Number(e.target.value))}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500"
                     style={{
-                      background: `linear-gradient(to right, var(--color-brand-primary) 0%, var(--color-brand-primary) ${((loanAmount - 100000) / (10000000 - 100000)) * 100}%, #e5e7eb ${((loanAmount - 100000) / (10000000 - 100000)) * 100}%, #e5e7eb 100%)`
+                      background: `linear-gradient(to right, #0d9488 0%, #0d9488 ${pctInRange(loanAmount, LOAN_SLIDER_MIN, LOAN_SLIDER_MAX)}%, #e5e7eb ${pctInRange(loanAmount, LOAN_SLIDER_MIN, LOAN_SLIDER_MAX)}%, #e5e7eb 100%)`,
                     }}
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -545,9 +557,10 @@ const EmiCalculator = () => {
                 </div>
                 <div>
                   <input
-                    type="number"
-                    value={loanAmount}
-                    onChange={(e) => handleAmountChange(e.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    value={loanAmountInput}
+                    onChange={(e) => handleAmountTextChange(e.target.value)}
                     className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none text-lg font-semibold bg-slate-50 transition-colors"
                     placeholder="Enter loan amount"
                   />
@@ -568,10 +581,10 @@ const EmiCalculator = () => {
                     max="30"
                     step="0.1"
                     value={interestRate}
-                    onChange={(e) => handleRateChange(e.target.value)}
+                    onChange={(e) => handleRateSlider(Number(e.target.value))}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
                     style={{
-                      background: `linear-gradient(to right, #F59E0B 0%, #F59E0B ${((interestRate - 1) / (30 - 1)) * 100}%, #e5e7eb ${((interestRate - 1) / (30 - 1)) * 100}%, #e5e7eb 100%)`
+                      background: `linear-gradient(to right, #F59E0B 0%, #F59E0B ${pctInRange(interestRate, 1, 30)}%, #e5e7eb ${pctInRange(interestRate, 1, 30)}%, #e5e7eb 100%)`,
                     }}
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -581,10 +594,10 @@ const EmiCalculator = () => {
                 </div>
                 <div>
                   <input
-                    type="number"
-                    value={interestRate}
-                    onChange={(e) => handleRateChange(e.target.value)}
-                    step="0.1"
+                    type="text"
+                    inputMode="decimal"
+                    value={interestRateInput}
+                    onChange={(e) => handleRateTextChange(e.target.value)}
                     className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-lg font-semibold bg-slate-50 transition-colors"
                     placeholder="Enter interest rate"
                   />
@@ -605,10 +618,10 @@ const EmiCalculator = () => {
                     max="30"
                     step="1"
                     value={loanTenure}
-                    onChange={(e) => handleTenureChange(e.target.value)}
+                    onChange={(e) => handleTenureSlider(Number(e.target.value))}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-800"
                     style={{
-                      background: `linear-gradient(to right, #1E3A8A 0%, #1E3A8A ${((loanTenure - 1) / (30 - 1)) * 100}%, #e5e7eb ${((loanTenure - 1) / (30 - 1)) * 100}%, #e5e7eb 100%)`
+                      background: `linear-gradient(to right, #1E3A8A 0%, #1E3A8A ${pctInRange(loanTenure, 1, 30)}%, #e5e7eb ${pctInRange(loanTenure, 1, 30)}%, #e5e7eb 100%)`,
                     }}
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -618,11 +631,12 @@ const EmiCalculator = () => {
                 </div>
                 <div>
                   <input
-                    type="number"
-                    value={loanTenure}
-                    onChange={(e) => handleTenureChange(e.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    value={loanTenureInput}
+                    onChange={(e) => handleTenureTextChange(e.target.value)}
                     className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-800 focus:outline-none text-lg font-semibold bg-slate-50 transition-colors"
-                    placeholder="Enter loan tenure"
+                    placeholder="Enter loan tenure (years)"
                   />
                   <p className="text-sm text-gray-600 mt-1">{loanTenure} years ({loanTenure * 12} months)</p>
                 </div>
@@ -651,7 +665,7 @@ const EmiCalculator = () => {
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-teal-50 rounded-lg">
-                    <DollarSign className="w-5 h-5 text-teal-500" />
+                    <IndianRupee className="w-5 h-5 text-teal-500" />
                   </div>
                   <h3 className="font-semibold text-gray-900">Total Amount</h3>
                 </div>

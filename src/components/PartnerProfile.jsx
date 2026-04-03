@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 
 import {
   User,
@@ -14,6 +14,11 @@ import {
   X,
   Link2 as LinkIcon,
   GitBranch,
+  Share2,
+  Copy,
+  MessageCircle,
+  Gift,
+  ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchPartnerProfile } from "../feature/thunks/partnerThunks";
@@ -21,17 +26,186 @@ import { useDispatch, useSelector } from "react-redux";
 import { clearAuthData, getAuthData } from "../utils/localStorage";
 import { useRealtimeData } from "../utils/useRealtimeData";
 import { backendurl } from "../feature/urldata";
+import {
+  COMPANY_NAME,
+  SUPPORT_EMAIL,
+  PARTNER_APP_PLAY_STORE_URL,
+  PUBLIC_WEB_ORIGIN,
+  appendPartnerShareUtm,
+  whatsAppShareUrl,
+  canonicalPartnerReferralCode,
+  legacyReferralAlternate,
+} from "../config/branding";
+import { PARTNER_REGISTRATION_ROUTE } from "../config/publicReferral.js";
 
 import axios from "axios"
 
+/** One share text: web registration URL + app install / referral link + PT code. */
+function buildCombinedPartnerReferralMessage({
+  webRegistrationUrl,
+  appInviteUrl,
+  playStoreUrl,
+  code,
+  legacyAlt,
+}) {
+  const c = (code || "").trim() || "—";
+  const web = (webRegistrationUrl || "").trim();
+  const store = (playStoreUrl || "").trim();
+  const invite = (appInviteUrl || "").trim();
+  const lines = [
+    `Join ${COMPANY_NAME} as a channel partner!`,
+    ``,
+    `🌐 Register on the web:`,
+    web || "—",
+  ];
+  lines.push(``);
+  if (invite) {
+    lines.push(`📱 Partner app — install & signup (referral rewards):`, invite);
+    if (store && !invite.includes("play.google.com")) {
+      lines.push(``, `Or install from Google Play:`, store);
+    }
+  } else {
+    lines.push(`📱 Install the Partner app from Google Play:`, store || "—");
+  }
+  lines.push(``, `Your PT referral code (enter if a form asks): ${c}`);
+  const alt = (legacyAlt || "").trim();
+  if (alt && alt.toUpperCase() !== c.toUpperCase()) {
+    lines.push(``, `If a form still expects an older code, try: ${alt}`);
+  }
+  lines.push(``, `Questions? ${SUPPORT_EMAIL}`);
+  return lines.join("\n");
+}
 
+async function shareOrCopyText({ title, text, onOk, onErr }) {
+  try {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      await navigator.share({ title, text });
+      onOk("shared");
+      return;
+    }
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      onOk("copied");
+      return;
+    }
+    window.prompt("Copy this message:", text);
+    onOk("copied");
+  } catch (err) {
+    if (err?.name === "AbortError") return;
+    try {
+      await navigator.clipboard.writeText(text);
+      onOk("copied");
+    } catch {
+      onErr();
+    }
+  }
+}
 
 const PartnerProfile = ({ inModal = false }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState("password");
   const [profileImage, setProfileImage] = useState(null);
+  const [inviteShareHint, setInviteShareHint] = useState("");
   const { data } = useSelector((state) => state.partner.profile);
-  
+
+  const referralCodeCanonical = useMemo(
+    () => canonicalPartnerReferralCode(data?.partnerCode, data?.referralCode),
+    [data?.partnerCode, data?.referralCode]
+  );
+
+  const referralLegacyAlt = useMemo(
+    () => legacyReferralAlternate(data?.partnerCode, data?.referralCode),
+    [data?.partnerCode, data?.referralCode]
+  );
+
+  /**
+   * Always build `?ref=` and invite `?code=` from the same canonical value (partnerCode first).
+   * Do not use API `referralLink` / `appInviteLink` as-is — legacy rows can embed different codes per field.
+   */
+  const webRegistrationUrl = useMemo(() => {
+    if (!referralCodeCanonical) {
+      return appendPartnerShareUtm(`${PUBLIC_WEB_ORIGIN}${PARTNER_REGISTRATION_ROUTE}`, "web");
+    }
+    return appendPartnerShareUtm(
+      `${PUBLIC_WEB_ORIGIN}${PARTNER_REGISTRATION_ROUTE}?ref=${encodeURIComponent(referralCodeCanonical)}`,
+      "web"
+    );
+  }, [referralCodeCanonical]);
+
+  const playStoreUrlResolved = useMemo(
+    () => String(data?.playStoreUrl || PARTNER_APP_PLAY_STORE_URL).trim(),
+    [data?.playStoreUrl]
+  );
+
+  const appInviteUrlResolved = useMemo(() => {
+    if (!referralCodeCanonical) return "";
+    return appendPartnerShareUtm(
+      `${PUBLIC_WEB_ORIGIN}/invite?code=${encodeURIComponent(referralCodeCanonical)}`,
+      "invite"
+    );
+  }, [referralCodeCanonical]);
+
+  const combinedReferralMessage = useMemo(
+    () =>
+      buildCombinedPartnerReferralMessage({
+        webRegistrationUrl,
+        appInviteUrl: appInviteUrlResolved,
+        playStoreUrl: playStoreUrlResolved,
+        code: referralCodeCanonical,
+        legacyAlt: referralLegacyAlt,
+      }),
+    [
+      webRegistrationUrl,
+      appInviteUrlResolved,
+      playStoreUrlResolved,
+      referralCodeCanonical,
+      referralLegacyAlt,
+    ]
+  );
+
+  const shareCombinedReferral = useCallback(async () => {
+    setInviteShareHint("");
+    await shareOrCopyText({
+      title: `${COMPANY_NAME} — Partner referral invite`,
+      text: combinedReferralMessage,
+      onOk: (mode) =>
+        setInviteShareHint(
+          mode === "shared"
+            ? "Invite shared."
+            : "Invite copied — paste in WhatsApp, SMS, or email."
+        ),
+      onErr: () => setInviteShareHint("Could not share — try Copy message."),
+    });
+  }, [combinedReferralMessage]);
+
+  const copyCombinedReferral = useCallback(async () => {
+    setInviteShareHint("");
+    try {
+      await navigator.clipboard.writeText(combinedReferralMessage);
+      setInviteShareHint("Invite message copied.");
+    } catch {
+      setInviteShareHint("Copy failed.");
+    }
+  }, [combinedReferralMessage]);
+
+  const whatsAppCombinedUrl = useMemo(
+    () => whatsAppShareUrl(combinedReferralMessage),
+    [combinedReferralMessage]
+  );
+
+  const copyReferralCode = useCallback(async () => {
+    setInviteShareHint("");
+    if (!referralCodeCanonical) {
+      setInviteShareHint("No code available.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(referralCodeCanonical);
+      setInviteShareHint("Referral code copied.");
+    } catch {
+      setInviteShareHint("Could not copy code.");
+    }
+  }, [referralCodeCanonical]);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -234,44 +408,109 @@ const PartnerProfile = ({ inModal = false }) => {
               </div>
             </div>
 
-            {/* Address & Referral Link */}
+            {/* Address */}
+            <div className="mt-5 flex items-start space-x-3">
+              <div className="bg-teal-100 p-2 rounded-lg shrink-0">
+                <MapPin className="w-4 h-4 text-teal-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-gray-600 text-xs">Address</p>
+                <p className="text-gray-800 font-medium text-sm">{data?.address}</p>
+              </div>
+            </div>
 
-              <div className="grid md:grid-cols-2 gap-4 mt-4">
-              {/* Address */}
+            {/* Referral program — one PT code; partnerCode & referralCode in API are the same value when synced */}
+            <div className="mt-8 pt-6 border-t border-slate-200">
+              <h4 className="text-base font-semibold text-gray-900 tracking-tight">Referrals &amp; invites</h4>
+              <p className="text-xs text-gray-500 mt-1.5 mb-4 max-w-2xl leading-relaxed">
+                You have <span className="font-medium text-gray-700">one referral code</span> (always{" "}
+                <span className="font-medium text-gray-700">PT-…</span>). Use{" "}
+                <span className="font-medium text-gray-700">Share invite</span> to send both your web registration link
+                and Partner app install link in a single message.
+              </p>
 
-              <div className="flex items-start space-x-3">
-                <div className="bg-teal-100 p-2 rounded-lg">
-                  <MapPin className="w-4 h-4 text-teal-500" />
+              <div className="mb-5 rounded-2xl border border-teal-200/80 bg-gradient-to-br from-teal-50/90 to-white px-4 py-4 shadow-sm ring-1 ring-teal-100/60">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-teal-800/90">Your PT referral code</p>
+                <p className="text-[11px] text-gray-500 mt-0.5 mb-3">
+                  Web <span className="font-medium">?ref=</span> and app invite use this same PT code.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="font-mono text-lg font-bold tracking-wide text-gray-900 break-all">
+                    {referralCodeCanonical || "—"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={copyReferralCode}
+                    disabled={!referralCodeCanonical}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy referral code
+                  </button>
                 </div>
-
-                <div>
-                  <p className="text-gray-600 text-xs">Address</p>
-
-                  <p className="text-gray-800 font-medium text-sm">
-                    {data?.address}
+                {referralLegacyAlt ? (
+                  <p className="mt-3 text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                    An older value is still stored:{" "}
+                    <span className="font-mono font-medium">{referralLegacyAlt}</span>. Always share the PT code above.
+                    Ask support to run the partner code sync if this message stays.
                   </p>
-                </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => navigate("/partner/referral-rewards")}
+                  className="mt-4 flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-left text-sm font-medium text-slate-800 transition hover:border-teal-300 hover:bg-teal-50/50"
+                >
+                  <span className="flex items-center gap-2">
+                    <Gift className="h-4 w-4 text-teal-600 shrink-0" />
+                    View referral rewards &amp; history
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+                </button>
               </div>
 
-              {/* Referral Link */}
-
-              <div className="flex items-start space-x-3">
-                <div className="bg-teal-100 p-2 rounded-lg">
-                  <LinkIcon className="w-4 h-4 text-teal-500" />
+              <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/40 p-4">
+                <div className="flex items-start gap-2 mb-1">
+                  <LinkIcon className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-stone-800">Share invite</p>
+                    <p className="text-[11px] text-stone-500 mt-0.5">
+                      One message with your web registration link, Partner app link, and referral code. Use Share, Copy,
+                      or WhatsApp.
+                    </p>
+                  </div>
                 </div>
-
-                <div>
-                  <p className="text-gray-600 text-xs">Referral Link</p>
-
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={shareCombinedReferral}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Share invite
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyCombinedReferral}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-teal-600 bg-white px-4 py-2 text-sm font-medium text-teal-800 hover:bg-teal-50"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy message
+                  </button>
                   <a
-                    href={data?.referralLink}
+                    href={whatsAppCombinedUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-teal-600 font-medium text-sm break-all hover:underline"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-600/50 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
                   >
-                    {data?.referralLink}
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
                   </a>
                 </div>
+                {inviteShareHint ? (
+                  <p className="text-xs text-teal-800 mt-3" role="status">
+                    {inviteShareHint}
+                  </p>
+                ) : null}
               </div>
             </div>
 

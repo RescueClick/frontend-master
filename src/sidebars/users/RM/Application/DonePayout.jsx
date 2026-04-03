@@ -9,7 +9,6 @@ import {
   Hash,
   CreditCard,
   Calculator,
-  DollarSign,
   IndianRupee,
   Save,
   Ban,

@@ -27,7 +27,17 @@ import {
 } from "../../../../feature/publicLoanReferral";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
+import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofBlock";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
+import {
+  findOversizeInLoanDocsQueue,
+  formatLoanDocOversizeError,
+} from "../../../../utils/docUploadLimits";
+import {
+  validateLoanDocumentUpload,
+  loanDocumentFieldHint,
+} from "../../../../utils/loanDocumentUpload";
+import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 
 export default function HomeLoanSelfEmployee({ embed = false } = {}) {
   const { partnerToken } = getAuthData();
@@ -75,14 +85,6 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
     aadharBack: null,
     panCard: null,
     addressProof: null,
-    lightBill: null,
-    utilityBill: null,
-    rentAgreement: null,
-
-    // Address Proof Checkboxes
-    lightBillSelected: false,
-    utilityBillSelected: false,
-    rentAgreementSelected: false,
 
 
     shopPhoto: null,
@@ -132,8 +134,8 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
   const abortControllerRef = useRef(null);
 
   const loanDraftStorageKey = embed
-    ? "trustline.homeLoanSelfEmployeeDraft.embed.v1"
-    : "trustline.homeLoanSelfEmployeeDraft.v1";
+    ? "dhansource.homeLoanSelfEmployeeDraft.embed.v1"
+    : "dhansource.homeLoanSelfEmployeeDraft.v1";
   const steps = ["Personal", "Address", "Loan & Business", "Documents", "References", "Review"];
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStep, setMaxStep] = useState(0);
@@ -336,7 +338,7 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
           "panCard",
           "selfie",
           "passportPhoto",
-          "newAddressProofs",
+          "addressProof",
           "bankStatementFile1",
           "bankStatementFile2",
           "shopPhoto",
@@ -423,61 +425,27 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
-    if (name.startsWith("newAddressProofs.")) {
-      const proofType = name.split(".")[1];
-      setFormData((prev) => ({
-        ...prev,
-        newAddressProofs: {
-          ...prev.newAddressProofs,
-          [proofType]: files[0],
-        },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: files[0],
-      }));
+    const file = files?.[0];
+    if (!file) return;
+    const err = validateLoanDocumentUpload(file, name);
+    if (err) {
+      toast.error(err);
+      e.target.value = "";
+      return;
     }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: file,
+    }));
   };
 
   const handleFileRemove = (fieldName) => {
-    if (fieldName.startsWith("newAddressProofs.")) {
-      const proofType = fieldName.split(".")[1];
-      setFormData((prev) => ({
-        ...prev,
-        newAddressProofs: {
-          ...prev.newAddressProofs,
-          [proofType]: null,
-        },
-      }));
-      const fileInput = document.querySelector(
-        `input[name="newAddressProofs.${proofType}"]`
-      );
-      if (fileInput) fileInput.value = "";
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [fieldName]: null,
-      }));
-      const fileInput = document.querySelector(`input[name="${fieldName}"]`);
-      if (fileInput) fileInput.value = "";
-    }
-  };
-
-  const handleProofCheckboxChange = (fieldName, checked) => {
     setFormData((prev) => ({
       ...prev,
-      [fieldName]: checked,
+      [fieldName]: null,
     }));
-    if (!checked) {
-      const fileField = fieldName.replace("Selected", "");
-      setFormData((prev) => ({
-        ...prev,
-        [fileField]: null,
-      }));
-      const fileInput = document.querySelector(`input[name="${fileField}"]`);
-      if (fileInput) fileInput.value = "";
-    }
+    const fileInput = document.querySelector(`input[name="${fieldName}"]`);
+    if (fileInput) fileInput.value = "";
   };
 
   const handleSameAddressChange = (e) => {
@@ -597,8 +565,8 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
 
 
     // At least one address proof
-    if (!formData.lightBill && !formData.utilityBill && !formData.rentAgreement) {
-      errors.addressProof = "At least one address proof is required.";
+    if (!formData.addressProof) {
+      errors.addressProof = "Address proof is required.";
     }
 
     
@@ -790,15 +758,8 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
         docsQueue.push({ file: formData.otherDocs, type: "OTHER_DOCS" });
       if (formData.panCard)
         docsQueue.push({ file: formData.panCard, type: "PAN" });
-      if (formData.lightBill)
-        docsQueue.push({ file: formData.lightBill, type: "LIGHT_BILL" });
-      if (formData.utilityBill)
-        docsQueue.push({ file: formData.utilityBill, type: "UTILITY_BILL" });
-      if (formData.rentAgreement)
-        docsQueue.push({
-          file: formData.rentAgreement,
-          type: "RENT_AGREEMENT",
-        });
+      if (formData.addressProof)
+        docsQueue.push({ file: formData.addressProof, type: "ADDRESS_PROOF" });
       if (formData.shopAct)
         docsQueue.push({ file: formData.shopAct, type: "SHOP_ACT" });
       if (formData.udhyamAadhar)
@@ -1064,14 +1025,6 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
       aadharBack: null,
       panCard: null,
       addressProof: null,
-      lightBill: null,
-      utilityBill: null,
-      rentAgreement: null,
-
-      // Address Proof Checkboxes
-      lightBillSelected: false,
-      utilityBillSelected: false,
-      rentAgreementSelected: false,
       shopPhoto: null,
       shopAct: null,
       udhyamAadhar: null,
@@ -1117,18 +1070,13 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
   }
 
 
-  const checkFileSize = (files) => {
-    const maxSize = 20 * 1024 * 1024; // 20 MB
-
-    for (let fileObj of files) {
-      if (fileObj?.file && fileObj.file.size > maxSize) {
-        const type = fileObj.type;
-        setError(`${type} file is too large. Maximum allowed size is 20MB.`);
-        return false; // Return the type of the file that exceeded size
-      }
+  const checkFileSize = (docsQueue) => {
+    const viol = findOversizeInLoanDocsQueue(docsQueue);
+    if (viol) {
+      setError(formatLoanDocOversizeError(viol));
+      return false;
     }
-
-    return true; // All files are valid
+    return true;
   };
 
   return (
@@ -1844,146 +1792,15 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
               </div>
             </section>
 
-            {/* Address Proof Selection */}
+            {/* Address proof — one upload */}
             <section id="loan-selfe-step-docs" hidden={currentStep !== 3}>
-              <h2
-                className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                style={{ color: "#111827" }}
-              >
-                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                4.1 Address Proof Documents
-              </h2>
-              <p className="text-sm text-slate-600 mb-4">
-                Accepted files: PDF, JPG, JPEG, PNG. Preview appears after upload.
-              </p>
-              <div className="space-y-6">
-                <div>
-                  <label className="flex items-center gap-3 mb-2">
-                    <input
-                      type="checkbox"
-                      name="lightBillSelected"
-                      checked={formData.lightBillSelected}
-                      onChange={(e) =>
-                        handleProofCheckboxChange(
-                          "lightBillSelected",
-                          e.target.checked
-                        )
-                      }
-                      className="w-5 h-5 rounded"
-                      style={{ accentColor: "var(--color-brand-primary)" }}
-                    />
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "#111827" }}
-                    >
-                      Light Bill
-                    </span>
-                  </label>
-                  {formData.lightBillSelected && (
-                    <>
-                      <input
-                        type="file"
-                        name="lightBill"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-                      {renderPreviewLink("lightBill")}
-                    </>
-                  )}
-                </div>
-                <div>
-                  <label className="flex items-center gap-3 mb-2">
-                    <input
-                      type="checkbox"
-                      name="utilityBillSelected"
-                      checked={formData.utilityBillSelected}
-                      onChange={(e) =>
-                        handleProofCheckboxChange(
-                          "utilityBillSelected",
-                          e.target.checked
-                        )
-                      }
-                      className="w-5 h-5 rounded"
-                      style={{ accentColor: "var(--color-brand-primary)" }}
-                    />
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "#111827" }}
-                    >
-                      Water / Gas / WiFi Bill
-                    </span>
-                  </label>
-                  {formData.utilityBillSelected && (
-                    <>
-                      <input
-                        type="file"
-                        name="utilityBill"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-                      {renderPreviewLink("utilityBill")}
-                    </>
-                  )}
-                </div>
-                <div>
-                  <label className="flex items-center gap-3 mb-2">
-                    <input
-                      type="checkbox"
-                      name="rentAgreementSelected"
-                      checked={formData.rentAgreementSelected}
-                      onChange={(e) =>
-                        handleProofCheckboxChange(
-                          "rentAgreementSelected",
-                          e.target.checked
-                        )
-                      }
-                      className="w-5 h-5 rounded"
-                      style={{ accentColor: "var(--color-brand-primary)" }}
-                    />
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "#111827" }}
-                    >
-                      Rent Agreement
-                    </span>
-                  </label>
-                  {formData.rentAgreementSelected && (
-                    <>
-                      <input
-                        type="file"
-                        name="rentAgreement"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-                      {renderPreviewLink("rentAgreement")}
-                    </>
-                  )}
-                </div>
-
-                {/* Error message */}
-                {!formData.lightBill &&
-                  !formData.utilityBill &&
-                  !formData.rentAgreement &&
-                  fieldErrors.addressProof && (
-                    <p className="text-red-500 text-sm">{fieldErrors.addressProof}</p>
-                  )}
-
-              </div>
+              <LoanAddressProofBlock
+                stepLabel="4.1"
+                file={formData.addressProof}
+                onChange={handleFileChange}
+                renderError={renderError}
+                onPreview={() => openDocumentPreview(formData.addressProof)}
+              />
             </section>
 
             {/* Personal Document Upload */}
@@ -2002,7 +1819,12 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
                 {[
                   { name: "aadharFront", label: "Aadhar Front *", required: true },
                   { name: "aadharBack", label: "Aadhar Back *", required: true },
-                  { name: "otherDocs", label: "Other Docs", required: false },
+                  {
+                    name: "otherDocs",
+                    label: "Extra supporting file (optional)",
+                    required: false,
+                    hint: OPTIONAL_EXTRA_DOC_CAPTION,
+                  },
                   { name: "panCard", label: "PAN Card *", required: true },
                   { name: "selfie", label: "Upload Selfie *", required: true, accept: ".jpg,.jpeg,.png" },
                 ].map((doc) => (
@@ -2013,6 +1835,7 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
                     file={formData[doc.name]}
                     accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
                     required={doc.required}
+                    hint={doc.hint ?? loanDocumentFieldHint(doc.name)}
                     onChange={handleFileChange}
                     onRemove={handleFileRemove}
                     error={renderError(doc.name)}

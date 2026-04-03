@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Users, DollarSign, UserCheck, Banknote, TrendingUp, IndianRupee, FileText } from "lucide-react";
+import { Users, UserCheck, Banknote, TrendingUp, IndianRupee, FileText } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchRmAnalytics } from '../../../feature/thunks/rsmThunks';

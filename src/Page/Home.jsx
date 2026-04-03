@@ -5,6 +5,7 @@ import { FaHandshake, FaLaptop, FaBolt, FaHeadset } from "react-icons/fa";
 import { Users, Building, MapPin, Shield, Phone, Mail, Wallet, BriefcaseBusiness, Home as HomeIcon, Store, ArrowRight, Target } from "lucide-react";
 
 import { COMPANY_NAME, COMPANY_TAGLINE, CONTACT_EMAIL } from "../config/branding";
+import { PARTNER_REGISTRATION_ROUTE } from "../config/publicReferral.js";
 import { useNavigate } from 'react-router-dom';
 import sbiLogo from "../assets/SBI_bank.png";
 import iciciLogo from "../assets/icici_bank.jpeg";
@@ -186,12 +187,12 @@ const Home = () => {
                 <button
                   type="button"
                   className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-brand-primary px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-primary/25 transition hover:bg-brand-primary-hover hover:shadow-xl hover:shadow-brand-primary/30 sm:text-[15px]"
-                  onClick={() => navigate("/PartnerRegistrationForm")}
+                  onClick={() => navigate(PARTNER_REGISTRATION_ROUTE)}
                 >
                   Become a partner
                 </button>
                 <a
-                  href="/Trustline_v2.apk"
+                  href="/DhanSource_v2.apk"
                   download
                   className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-white/15 bg-white/[0.03] px-8 py-3 text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/[0.07] sm:text-[15px]"
                 >
@@ -416,7 +417,7 @@ const Home = () => {
               <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center lg:justify-start">
                 <button
                   type="button"
-                  onClick={() => navigate("/PartnerRegistrationForm")}
+                  onClick={() => navigate(PARTNER_REGISTRATION_ROUTE)}
                   className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-slate-950 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-black/25 transition hover:bg-black hover:shadow-xl sm:px-10 sm:text-base"
                 >
                   Apply as partner

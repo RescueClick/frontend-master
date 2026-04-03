@@ -1,5 +1,11 @@
-import React, { useState, useRef, useMemo, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, {
+  useState,
+  useRef,
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+} from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import {
   User,
   Mail,
@@ -25,8 +31,10 @@ import {
   COMPANY_NAME,
   COMPANY_TAGLINE,
 } from "../config/branding";
-
 const PASSWORD_MIN_LEN = 8;
+const MAX_PARTNER_DOC_BYTES = 5 * 1024 * 1024;
+const PARTNER_FILE_TOO_LARGE_MSG =
+  "This file is larger than 5MB. Please upload a smaller JPG, PNG, or PDF.";
 
 const passwordRuleChecks = (pw) => ({
   len: (pw || "").length >= PASSWORD_MIN_LEN,
@@ -38,6 +46,36 @@ const passwordRuleChecks = (pw) => ({
 
 const passwordMeetsRules = (pw) =>
   Object.values(passwordRuleChecks(pw)).every(Boolean);
+
+/** Avoid PDF iframes on phones/tablets — they often open full-screen and trap the user. */
+function shouldEmbedPdfInIframe() {
+  if (typeof window === "undefined") return true;
+  try {
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    const mobileUa = /iPhone|iPad|iPod|Android/i.test(
+      navigator.userAgent || ""
+    );
+    return !coarse && !mobileUa;
+  } catch {
+    return true;
+  }
+}
+
+/** Read PT-… / RM-… from common query keys used in share / referral links. */
+function partnerRefFromSearchParams(searchParams) {
+  if (!searchParams) return "";
+  const keys = ["ref", "partnerCode", "partnerReferralCode", "code"];
+  for (const key of keys) {
+    const raw = searchParams.get(key);
+    const trimmed = (raw || "").trim();
+    if (!trimmed) continue;
+    const upper = trimmed.toUpperCase();
+    if (upper.startsWith("PT-") || upper.startsWith("RM-")) {
+      return upper;
+    }
+  }
+  return "";
+}
 
 const fieldClass = (fieldName, fieldErrors) =>
   [
@@ -65,10 +103,15 @@ const PartnerRegistrationForm = () => {
   });
   const adharInputRef = useRef(null);
   const panInputRef = useRef(null);
-  const selfieInputRef = useRef(null);
+  const selfieCameraInputRef = useRef(null);
+  const selfieGalleryInputRef = useRef(null);
+  const [embedPdfInIframe, setEmbedPdfInIframe] = useState(
+    shouldEmbedPdfInIframe
+  );
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -80,7 +123,7 @@ const PartnerRegistrationForm = () => {
     aadharNumber: "",
     panNumber: "",
     region: "",
-    rmCode: "",
+    partnerReferralCode: "",
     pincode: "",
     employmentType: "",
     address: "",
@@ -129,7 +172,17 @@ const PartnerRegistrationForm = () => {
     let nextValue;
 
     if (type === "file") {
-      nextValue = files?.[0] ?? null;
+      const f = files?.[0] ?? null;
+      if (f && f.size > MAX_PARTNER_DOC_BYTES) {
+        e.target.value = "";
+        setFieldErrors((prev) => ({ ...prev, [name]: PARTNER_FILE_TOO_LARGE_MSG }));
+        setFormData((prev) => ({ ...prev, [name]: null }));
+        return;
+      }
+      nextValue = f;
+      setFormData((prev) => ({ ...prev, [name]: nextValue }));
+      clearFieldError(name);
+      return;
     } else if (name === "phone") {
       nextValue = normalizeMobileDigits(value);
     } else if (name === "aadharNumber") {
@@ -142,6 +195,8 @@ const PartnerRegistrationForm = () => {
       nextValue = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 10);
     } else if (name === "ifscCode") {
       nextValue = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 11);
+    } else if (name === "partnerReferralCode") {
+      nextValue = value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 32);
     } else if (name === "firstName" || name === "lastName") {
       nextValue = value.replace(/[^A-Za-z\s.'-]/g, "").slice(0, 50);
     } else if (name === "middleName") {
@@ -166,8 +221,10 @@ const PartnerRegistrationForm = () => {
     if (name === "panCard" && panInputRef.current) {
       panInputRef.current.value = "";
     }
-    if (name === "selfie" && selfieInputRef.current) {
-      selfieInputRef.current.value = "";
+    if (name === "selfie") {
+      if (selfieCameraInputRef.current) selfieCameraInputRef.current.value = "";
+      if (selfieGalleryInputRef.current)
+        selfieGalleryInputRef.current.value = "";
     }
   };
 
@@ -266,13 +323,12 @@ const PartnerRegistrationForm = () => {
     else if (!docMimeOk(formData.selfie, false))
       err.selfie = "Use JPG or PNG for selfie (max 5MB)";
 
-    const maxFileSize = 5 * 1024 * 1024;
-    if (formData.adharCard?.size > maxFileSize)
-      err.adharCard = "Aadhaar file must be 5MB or less";
-    if (formData.panCard?.size > maxFileSize)
-      err.panCard = "PAN file must be 5MB or less";
-    if (formData.selfie?.size > maxFileSize)
-      err.selfie = "Selfie must be 5MB or less";
+    if (formData.adharCard?.size > MAX_PARTNER_DOC_BYTES)
+      err.adharCard = PARTNER_FILE_TOO_LARGE_MSG;
+    if (formData.panCard?.size > MAX_PARTNER_DOC_BYTES)
+      err.panCard = PARTNER_FILE_TOO_LARGE_MSG;
+    if (formData.selfie?.size > MAX_PARTNER_DOC_BYTES)
+      err.selfie = PARTNER_FILE_TOO_LARGE_MSG;
 
     setFieldErrors(err);
     return Object.keys(err).length === 0;
@@ -297,7 +353,8 @@ const PartnerRegistrationForm = () => {
       aadharNumber: formData.aadharNumber,
       panNumber: formData.panNumber,
       region: formData.region || null,
-      rmcode: formData.rmCode || null,
+      partnerReferralCode: formData.partnerReferralCode?.trim() || null,
+      referralCode: formData.partnerReferralCode?.trim() || null,
       pincode: formData.pincode || null,
       employmentType: formData.employmentType || null,
       address: formData.address || null,
@@ -340,10 +397,11 @@ const PartnerRegistrationForm = () => {
       resetFields();
       setTimeout(() => navigate("/LoginPage"), 800);
     } catch (err) {
+      const payload = err?.payload;
       const backendMsg =
+        (typeof payload === "string" && payload.trim()) ||
+        payload?.message ||
         err?.message ||
-        err?.error ||
-        err?.payload?.message ||
         "Registration failed. Please try again.";
       showError(backendMsg);
     } finally {
@@ -362,7 +420,7 @@ const PartnerRegistrationForm = () => {
       aadharNumber: "",
       panNumber: "",
       region: "",
-      rmCode: "",
+      partnerReferralCode: "",
       pincode: "",
       employmentType: "",
       address: "",
@@ -376,9 +434,21 @@ const PartnerRegistrationForm = () => {
       accountNumber: "",
       ifscCode: "",
       password: "",
-    confirmPassword: "",
+      confirmPassword: "",
     });
+    if (adharInputRef.current) adharInputRef.current.value = "";
+    if (panInputRef.current) panInputRef.current.value = "";
+    if (selfieCameraInputRef.current) selfieCameraInputRef.current.value = "";
+    if (selfieGalleryInputRef.current) selfieGalleryInputRef.current.value = "";
   };
+
+  /* Auto-fill from referral URLs (?ref= / ?partnerCode=, often with UTM params). useLayoutEffect avoids an empty flash. */
+  const searchKey = searchParams.toString();
+  useLayoutEffect(() => {
+    const code = partnerRefFromSearchParams(searchParams);
+    if (!code) return;
+    setFormData((prev) => ({ ...prev, partnerReferralCode: code }));
+  }, [searchKey]);
 
   useEffect(() => {
     return () => {
@@ -387,6 +457,18 @@ const PartnerRegistrationForm = () => {
       }
     };
   }, [docPreview.url]);
+
+  useEffect(() => {
+    const sync = () => setEmbedPdfInIframe(shouldEmbedPdfInIframe());
+    sync();
+    window.addEventListener("resize", sync);
+    const mq = window.matchMedia("(pointer: coarse)");
+    mq.addEventListener("change", sync);
+    return () => {
+      window.removeEventListener("resize", sync);
+      mq.removeEventListener("change", sync);
+    };
+  }, []);
 
   const openDocPreview = (file) => {
     if (!file) return;
@@ -444,7 +526,26 @@ const PartnerRegistrationForm = () => {
             </div>
 
             <div className="max-h-[80vh] overflow-auto bg-stone-50 p-4">
-              {isPdfPreview ? (
+              {isPdfPreview && !embedPdfInIframe ? (
+                <div className="flex flex-col items-center gap-4 px-2 py-8 text-center">
+                  <FileText className="h-14 w-14 text-stone-400" />
+                  <p className="max-w-md text-sm leading-relaxed text-stone-600">
+                    In-browser PDF preview can leave this form on a phone. Your
+                    file is still attached. Use download if you want to check it,
+                    then close to continue.
+                  </p>
+                  <p className="w-full truncate text-xs font-medium text-stone-500">
+                    {docPreview.name}
+                  </p>
+                  <a
+                    href={docPreview.url}
+                    download={docPreview.name || "document.pdf"}
+                    className="inline-flex items-center justify-center rounded-xl bg-[#0d9488] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+                  >
+                    Download PDF
+                  </a>
+                </div>
+              ) : isPdfPreview ? (
                 <iframe
                   title="Document preview"
                   src={docPreview.url}
@@ -752,22 +853,25 @@ const PartnerRegistrationForm = () => {
 
                     <div className="relative">
                       <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                        <Lock className="h-4 w-4 text-[#0d9488]" /> RM Code{" "}
+                        <Lock className="h-4 w-4 text-[#0d9488]" /> Partner
+                        referral code{" "}
                         <span className="ml-1 text-xs font-normal text-stone-400">
                           (optional)
                         </span>
                       </label>
                       <input
                         type="text"
-                        name="rmCode"
-                        value={formData.rmCode || ""}
+                        name="partnerReferralCode"
+                        value={formData.partnerReferralCode || ""}
                         onChange={handleChange}
-                        placeholder="Enter RM code (if any)"
+                        placeholder="e.g. PT-XXXXXXXX"
                         className="w-full rounded-xl border-2 border-stone-200 bg-white/80 px-4 py-3.5 transition focus:border-[#0d9488] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/25"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        RM code is optional. If you have been referred by a
-                        Relationship Manager, please enter their code here.
+                        If another channel partner referred you, enter their{" "}
+                        <span className="font-mono">PT-</span> code so they are
+                        credited. You can use an <span className="font-mono">RM-</span>{" "}
+                        code instead if your Relationship Manager shared one.
                       </p>
                     </div>
                   </div>
@@ -1034,31 +1138,65 @@ const PartnerRegistrationForm = () => {
                     <User className="w-4 h-4 text-emerald-500" />
                     Selfie Photo <span className="text-emerald-600">*</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      name="selfie"
-                      ref={selfieInputRef}
-                      accept="image/jpeg,image/png,image/jpg"
-                      onChange={handleChange}
-                      className={`w-full min-w-0 cursor-pointer rounded-xl border-2 bg-white/80 p-3 pr-[4.5rem] text-transparent caret-transparent transition file:mr-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-[#0d9488] file:to-[#0f766e] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 sm:p-4 sm:pr-24 sm:file:mr-4 sm:file:px-4 sm:file:py-2 sm:file:text-sm ${
-                        fieldErrors.selfie
-                          ? "border-red-400"
-                          : "border-stone-200"
-                      }`}
-                    />
+                  <input
+                    type="file"
+                    name="selfie"
+                    ref={selfieCameraInputRef}
+                    accept="image/jpeg,image/png,image/jpg"
+                    capture="user"
+                    onChange={handleChange}
+                    className="sr-only"
+                    aria-hidden
+                    tabIndex={-1}
+                  />
+                  <input
+                    type="file"
+                    name="selfie"
+                    ref={selfieGalleryInputRef}
+                    accept="image/jpeg,image/png,image/jpg"
+                    onChange={handleChange}
+                    className="sr-only"
+                    aria-hidden
+                    tabIndex={-1}
+                  />
+                  <div
+                    className={`flex min-h-[3rem] flex-wrap items-center gap-2 rounded-xl border-2 bg-white/80 p-3 sm:min-h-[3.25rem] sm:p-4 ${
+                      fieldErrors.selfie
+                        ? "border-red-400"
+                        : "border-stone-200"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => selfieCameraInputRef.current?.click()}
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#0d9488] to-[#0f766e] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 min-[400px]:flex-none sm:px-4 sm:text-sm"
+                    >
+                      <Upload className="h-4 w-4 shrink-0" />
+                      Use camera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selfieGalleryInputRef.current?.click()}
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-[#0d9488] bg-white px-3 py-2 text-xs font-semibold text-[#0d9488] transition hover:bg-teal-50 min-[400px]:flex-none sm:px-4 sm:text-sm"
+                    >
+                      <Upload className="h-4 w-4 shrink-0" />
+                      From gallery
+                    </button>
                     {formData.selfie && (
                       <button
                         type="button"
                         onClick={() => handleRemoveFile("selfie")}
-                        className="absolute inset-y-0 right-10 flex items-center text-slate-500 hover:text-red-600 sm:right-12"
+                        className="ml-auto inline-flex items-center text-slate-500 hover:text-red-600"
                         title="Remove file"
                       >
-                        <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <X className="h-5 w-5" />
                       </button>
                     )}
-                    <Upload className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 sm:right-4 sm:h-5 sm:w-5" />
                   </div>
+                  <p className="mt-1.5 text-[11px] text-slate-500 sm:text-xs">
+                    Camera may ask for permission in the browser. Use gallery if
+                    you already have a photo.
+                  </p>
                   <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
                     <span className="min-w-0 truncate">
                       {formData.selfie

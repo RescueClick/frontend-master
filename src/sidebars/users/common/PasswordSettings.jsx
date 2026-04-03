@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FileText, Shield, Trash2, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import axios from "axios";
@@ -45,6 +45,8 @@ const PasswordSettings = () => {
   const [deleteReason, setDeleteReason] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState({ text: "", ok: null });
+  const [deleteRequestStatus, setDeleteRequestStatus] = useState(null);
+  const [deleteStatusLoading, setDeleteStatusLoading] = useState(false);
   const pageTitle = useMemo(() => pageTitleForPath(pathname), [pathname]);
   const emailRole = useMemo(() => emailRoleForPath(pathname), [pathname]);
 
@@ -84,6 +86,11 @@ const PasswordSettings = () => {
           hint: "Name, contact & region (not in sidebar — open from here)",
           state: { from: pathname },
         },
+        {
+          to: "/partner/profile",
+          label: "Referrals & invites",
+          hint: "Your PT code — one Share invite for web + app",
+        },
       ];
     }
     return [];
@@ -91,10 +98,38 @@ const PasswordSettings = () => {
 
   const pageSubtitle = useMemo(() => {
     if (pathname.startsWith("/partner")) {
-      return "Edit profile details, request email change with verification, manage password, and account actions.";
+      return "Edit profile, referrals & invites (one PT code), email change with verification, password, and account actions.";
     }
     return "Update your profile, login email, and password — all in one place.";
   }, [pathname]);
+
+  const loadDeleteRequestStatus = useCallback(async () => {
+    if (!isPartner) return;
+    const { partnerToken } = getAuthData() || {};
+    if (!partnerToken) {
+      setDeleteRequestStatus(null);
+      return;
+    }
+    setDeleteStatusLoading(true);
+    try {
+      const res = await axios.get(`${backendurl}/partner/delete-account-request/status`, {
+        headers: { Authorization: `Bearer ${partnerToken}` },
+      });
+      setDeleteRequestStatus(res.data ?? null);
+    } catch {
+      setDeleteRequestStatus(null);
+    } finally {
+      setDeleteStatusLoading(false);
+    }
+  }, [isPartner]);
+
+  useEffect(() => {
+    loadDeleteRequestStatus();
+  }, [loadDeleteRequestStatus]);
+
+  const deleteStatusBlocksSubmit =
+    deleteRequestStatus?.hasRequest &&
+    (deleteRequestStatus.status === "PENDING" || deleteRequestStatus.status === "COMPLETED");
 
   const requestDeleteAccount = async () => {
     setDeleteMsg({ text: "", ok: null });
@@ -117,6 +152,7 @@ const PasswordSettings = () => {
         ok: true,
       });
       setDeleteReason("");
+      await loadDeleteRequestStatus();
     } catch (err) {
       setDeleteMsg({
         text:
@@ -183,6 +219,35 @@ const PasswordSettings = () => {
                 </div>
               </div>
 
+              {deleteStatusLoading ? (
+                <p className="mb-3 text-sm text-slate-500">Loading request status…</p>
+              ) : deleteRequestStatus?.hasRequest ? (
+                <div
+                  className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+                    deleteRequestStatus.status === "REJECTED"
+                      ? "border-rose-200 bg-rose-50 text-rose-900"
+                      : deleteRequestStatus.status === "PENDING"
+                        ? "border-amber-200 bg-amber-50 text-amber-900"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-900"
+                  }`}
+                >
+                  <p className="font-semibold">
+                    {deleteRequestStatus.status === "PENDING" && "Status: Under review"}
+                    {deleteRequestStatus.status === "REJECTED" &&
+                      "Status: Rejected — your account stays active"}
+                    {deleteRequestStatus.status === "COMPLETED" && "Status: Processed"}
+                  </p>
+                  <p className="mt-1 text-slate-700">
+                    {deleteRequestStatus.status === "PENDING" &&
+                      "We will email you and notify you in the app when the request is updated."}
+                    {deleteRequestStatus.status === "REJECTED" &&
+                      "Your deletion request was not approved. You can submit a new request below if needed."}
+                    {deleteRequestStatus.status === "COMPLETED" &&
+                      "This delete request was completed. Contact support if you need help with access."}
+                  </p>
+                </div>
+              ) : null}
+
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                 Reason (optional)
               </label>
@@ -215,7 +280,7 @@ const PasswordSettings = () => {
                 <button
                   type="button"
                   onClick={requestDeleteAccount}
-                  disabled={deleting}
+                  disabled={deleting || deleteStatusBlocksSubmit}
                   className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
                 >
                   {deleting ? (

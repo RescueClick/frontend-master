@@ -137,6 +137,10 @@ class SocketManager {
       this.emit("payoutStatusChanged", data);
     });
 
+    this.socket.on("incentiveStatusChanged", (data) => {
+      this.emit("incentiveStatusChanged", data);
+    });
+
     // General Notification Event
     this.socket.on("notification", (data) => {
       this.emit("notification", data);

@@ -4,6 +4,7 @@ import { FaPhoneAlt, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
 import { FaFacebookF, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { brandLogo, COMPANY_NAME, COMPANY_NAME_LEGAL, COMPANY_TAGLINE, CONTACT_EMAIL } from "../config/branding";
+import { PARTNER_REGISTRATION_ROUTE } from "../config/publicReferral.js";
 import { getSessionDashboardBasePath } from "../utils/sessionDashboardPath";
 
 
@@ -139,7 +140,7 @@ const MainLayout = () => {
                 {/* Sign Up */}
                 <button
                   className="cursor-pointer hidden lg:inline-flex items-center px-4 py-2 border border-brand-primary text-brand-primary font-medium rounded-full hover:bg-brand-primary/10 transition-all duration-200"
-                  onClick={() => { navigate('/PartnerRegistrationForm'); }}
+                  onClick={() => { navigate(PARTNER_REGISTRATION_ROUTE); }}
                 >
                   <h1>Become Partner</h1>
                 </button>
@@ -246,7 +247,7 @@ const MainLayout = () => {
                 type="button"
                 className="flex w-full min-h-[48px] items-center justify-center rounded-full border border-brand-primary/40 bg-white px-4 text-sm font-semibold text-brand-primary shadow-sm transition hover:bg-brand-primary/5"
                 onClick={() => {
-                  navigate("/PartnerRegistrationForm");
+                  navigate(PARTNER_REGISTRATION_ROUTE);
                   toggleMenu();
                 }}
               >
@@ -314,7 +315,7 @@ const MainLayout = () => {
             <ul className="space-y-3 text-sm">
               <li><a href="/Home" className="text-slate-400 transition-colors hover:text-white">Home</a></li>
               <li><a href="/Contact" className="text-slate-400 transition-colors hover:text-white">Contact Us</a></li>
-              <li><a href="/PartnerRegistrationForm" className="text-slate-400 transition-colors hover:text-white">Apply for Channel Partner</a></li>
+              <li><a href={PARTNER_REGISTRATION_ROUTE} className="text-slate-400 transition-colors hover:text-white">Apply for Channel Partner</a></li>
               <li>
                 <a href="/delete-account" className="text-slate-400 transition-colors hover:text-white">
                   Delete Account Help
@@ -335,7 +336,7 @@ const MainLayout = () => {
                 <FaFacebookF size={18} />
               </a>
               <a
-                href="https://www.instagram.com/trustline_fintech"
+                href="https://www.instagram.com/dhansourcecapital"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-slate-400 transition hover:border-white/25 hover:bg-white/5 hover:text-white"

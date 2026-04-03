@@ -27,7 +27,17 @@ import {
 } from "../../../../feature/publicLoanReferral";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
+import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofBlock";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
+import {
+  findOversizeInLoanDocsQueue,
+  formatLoanDocOversizeError,
+} from "../../../../utils/docUploadLimits";
+import {
+  validateLoanDocumentUpload,
+  loanDocumentFieldHint,
+} from "../../../../utils/loanDocumentUpload";
+import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 
 export default function HomeLoanSalaried({ embed = false } = {}) {
   const [documentModel, setdocumentModel] = useState(null);
@@ -65,8 +75,6 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     permanentAddress: "",
     addressProofType: "",
     addressProof: "",
-    utilityBill: "",
-    rentAgreement: "",
     otherDocument: "",
     aadhar: "",
     companyName: "",
@@ -115,9 +123,6 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     bankStatement2: "",
     bankStatement3: "",
 
-    // New address proofs
-    newAddressProofs: "",
-
     password: "",
     confirmPassword: "",
     partnerReferralCode: "",
@@ -139,8 +144,8 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
   const objectUrlsRef = useRef([]); // Store all created object URLs
 
   const loanDraftStorageKey = embed
-    ? "trustline.homeLoanSalariedDraft.embed.v1"
-    : "trustline.homeLoanSalariedDraft.v1";
+    ? "dhansource.homeLoanSalariedDraft.embed.v1"
+    : "dhansource.homeLoanSalariedDraft.v1";
   const steps = ["Personal", "Address", "Loan & Employment", "Documents", "References", "Review"];
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStep, setMaxStep] = useState(0);
@@ -297,7 +302,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
           "salarySlip2",
           "salarySlip3",
           "form16_26as",
-          "newAddressProofs",
+          "addressProof",
           "bankStatement1",
           "bankStatement2",
         ];
@@ -372,21 +377,18 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
-    if (name.startsWith("newAddressProofs.")) {
-      const proofType = name.split(".")[1];
-      setFormData((prev) => ({
-        ...prev,
-        newAddressProofs: {
-          ...prev.newAddressProofs,
-          [proofType]: files[0],
-        },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: files[0],
-      }));
+    const file = files?.[0];
+    if (!file) return;
+    const err = validateLoanDocumentUpload(file, name);
+    if (err) {
+      toast.error(err);
+      e.target.value = "";
+      return;
     }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: file,
+    }));
   };
 
   // const handleFileChangeAddressProofs = (e) => {
@@ -400,45 +402,28 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
   // };
 
   const handleFileChangeAddressProofs = (e) => {
-    const file = e.target.files[0];
-
+    const file = e.target.files?.[0];
     if (!file) return;
-
+    const err = validateLoanDocumentUpload(file, "addressProof");
+    if (err) {
+      toast.error(err);
+      e.target.value = "";
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
-      newAddressProofs: file,   // <-- FIXED
-    }));
-
-    // OPTIONAL: clear validation error
-    setError((prev) => ({
-      ...prev,
-      newAddressProofs: "",
+      addressProof: file,
     }));
   };
 
 
   const handleFileRemove = (fieldName) => {
-    if (fieldName.startsWith("newAddressProofs.")) {
-      const proofType = fieldName.split(".")[1];
-      setFormData((prev) => ({
-        ...prev,
-        newAddressProofs: {
-          ...prev.newAddressProofs,
-          [proofType]: null,
-        },
-      }));
-      const fileInput = document.querySelector(
-        `input[name="newAddressProofs.${proofType}"]`
-      );
-      if (fileInput) fileInput.value = "";
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [fieldName]: null,
-      }));
-      const fileInput = document.querySelector(`input[name="${fieldName}"]`);
-      if (fileInput) fileInput.value = "";
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [fieldName]: null,
+    }));
+    const fileInput = document.querySelector(`input[name="${fieldName}"]`);
+    if (fileInput) fileInput.value = "";
   };
 
 
@@ -588,9 +573,8 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
       errors.passportPhoto = "Applicant photo is required";
     }
 
-    // New Address Proof Validation
-    if (!formData.newAddressProofs) {
-      errors.newAddressProofs = "At least one address proof document is required.";
+    if (!formData.addressProof) {
+      errors.addressProof = "Address proof is required.";
     }
 
 
@@ -726,10 +710,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
         { file: formData.panCard, type: "PAN" },
         { file: applicantPhoto, type: "PHOTO" },
         { file: formData.addressProof, type: "ADDRESS_PROOF" },
-        {
-          file: formData.otherDocument || formData.utilityBill || formData.rentAgreement,
-          type: "OTHER_DOCS",
-        },
+        { file: formData.otherDocument, type: "OTHER_DOCS" },
         { file: formData.companyIdCard, type: "COMPANY_ID_CARD" },
         { file: formData.salarySlip1, type: "SALARY_SLIP_1" },
         { file: formData.salarySlip2, type: "SALARY_SLIP_2" },
@@ -948,8 +929,6 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
       permanentAddress: "",
       addressProofType: "",
       addressProof: "",
-      utilityBill: "",
-      rentAgreement: "",
       otherDocument: "",
       aadhar: "",
       companyName: "",
@@ -987,9 +966,6 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
       bankStatement2: "",
       bankStatement3: "",
 
-      // New address proofs
-      newAddressProofs: "",
-
       password: "",
       confirmPassword: "",
     });
@@ -1005,20 +981,13 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     }
   };
 
-  const checkFileSize = (files) => {
-    const maxSize = 20 * 1024 * 1024; // 20 MB
-
-    for (let fileObj of files) {
-      if (fileObj?.file && fileObj.file.size > maxSize) {
-        const type = fileObj.type;
-        setError(
-          `${type} file is too large. Maximum allowed size is 20MB.`
-        );
-        return false; // Return the type of the file that exceeded size
-      }
+  const checkFileSize = (docsQueue) => {
+    const viol = findOversizeInLoanDocsQueue(docsQueue);
+    if (viol) {
+      setError(formatLoanDocOversizeError(viol));
+      return false;
     }
-
-    return true; // All files are valid
+    return true;
   };
 
   return (
@@ -1754,7 +1723,12 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                       required: true,
                       accept: ".jpg,.jpeg,.png",
                     },
-                    { name: "otherDocument", label: "Other Document", required: false },
+                    {
+                      name: "otherDocument",
+                      label: "Extra supporting file (optional)",
+                      required: false,
+                      hint: OPTIONAL_EXTRA_DOC_CAPTION,
+                    },
                   ].map((doc) => (
                     <DocumentUploadCard
                       key={doc.name}
@@ -1763,6 +1737,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                       file={formData[doc.name]}
                       accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
                       required={doc.required}
+                      hint={doc.hint}
                       onChange={handleFileChange}
                       onRemove={handleFileRemove}
                       error={renderError(doc.name)}
@@ -2316,56 +2291,18 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
               </section>
 
               <section hidden={currentStep !== 3}>
-                <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-gray-900">
-                  <FileText className="w-6 h-6 text-teal-500" />
-                  4.4 Address Proof Document
-                </h2>
-
-                <label className="block text-sm font-medium mb-2 text-gray-900">
-                  Select one document to submit as address proof (e.g.,
-                  Lightbill, Wifi, Water, Gas Bill, or Rent Agreement) *
-                </label>
-
-                <input
-                  type="file"
-                  name="newAddressProofs" // <--- store in newAddressProofs
+                <LoanAddressProofBlock
+                  stepLabel="4.4"
+                  file={formData.addressProof}
                   onChange={handleFileChangeAddressProofs}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-teal-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-500 file:text-white hover:file:bg-teal-600"
+                  renderError={renderError}
+                  onPreview={() => {
+                    if (!formData.addressProof) return;
+                    const url = URL.createObjectURL(formData.addressProof);
+                    objectUrlsRef.current.push(url);
+                    setdocumentModel(url);
+                  }}
                 />
-
-                {formData.newAddressProofs ? "" : renderError("newAddressProofs")}   {/* <-- KEEP ONLY THIS */}
-
-                {formData.newAddressProofs && (
-                  <div className="mt-2 text-sm text-gray-700">
-                    {formData.newAddressProofs.type?.includes("image") ? (
-                      <button
-                        type="button"
-                        className="text-blue-600 underline"
-                        onClick={() => {
-                          const url = URL.createObjectURL(formData.newAddressProofs);
-                          objectUrlsRef.current.push(url);
-                          setdocumentModel(url);
-                        }}
-                      >
-                        🖼️ {formData.newAddressProofs.name} (Preview)
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="text-blue-600 underline"
-                        onClick={() => {
-                          const url = URL.createObjectURL(formData.newAddressProofs);
-                          objectUrlsRef.current.push(url);
-                          setdocumentModel(url);
-                        }}
-                      >
-                        📄 {formData.newAddressProofs.name} (Preview)
-                      </button>
-                    )}
-                  </div>
-                )}
-
               </section>
 
               {/* References */}

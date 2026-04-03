@@ -10,6 +10,10 @@ import {
 } from "lucide-react";
 import { backendurl } from "../../../feature/urldata.js";
 import { getAuthData } from "../../../utils/localStorage.js";
+import {
+  getMaxUploadBytesForDocType,
+  maxUploadMbForDocType,
+} from "../../../utils/docUploadLimits.js";
 
 const DocumentUpload = () => {
   const navigate = useNavigate();
@@ -128,10 +132,12 @@ const DocumentUpload = () => {
         return;
       }
 
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        alert("File size should be less than 10MB");
-        e.target.value = '';
+      const maxBytes = getMaxUploadBytesForDocType(docType || "");
+      if (file.size > maxBytes) {
+        alert(
+          `File is too large. Maximum for this document is ${maxUploadMbForDocType(docType || "")}MB.`
+        );
+        e.target.value = "";
         return;
       }
 

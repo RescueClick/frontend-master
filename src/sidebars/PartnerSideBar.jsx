@@ -14,6 +14,7 @@ import {
   Award,
   IndianRupee,
   X,
+  Gift,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -57,6 +58,7 @@ const PartnerSideBar = () => {
     { name: "Applications", icon: FileText, path: "/partner/applications" },
     { name: "My Target", icon: Target, path: "/partner/my-target" },
     { name: "Incentive History", icon: Award, path: "/partner/incentives" },
+    { name: "Referral rewards", icon: Gift, path: "/partner/referral-rewards" },
     { name: "Payout History", icon: IndianRupee, path: "/partner/payouts" },
     { name: "Emi Calculator", icon: Calculator, path: "/partner/EmiCalculator" },
     { name: "KYC Details", icon: IdCard, path: "/partner/KYCDetails" },
@@ -149,7 +151,7 @@ const PartnerSideBar = () => {
               {/* Notifications */}
               <NotificationBell />
 
-              {/* Profile — opens centered popup */}
+              {/* Profile — opens right-side panel */}
               <div className="relative">
                 <button
                   type="button"
@@ -185,26 +187,20 @@ const PartnerSideBar = () => {
         </main>
       </div>
 
-      {/* Profile modal (centered popup) */}
+      {/* Profile drawer (slides in from the right) */}
       {profileOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="partner-profile-modal-title"
-        >
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="partner-profile-drawer-title">
           <button
             type="button"
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/40 transition-opacity"
             aria-label="Close profile"
             onClick={() => setProfileOpen(false)}
           />
-          <div className="relative z-10 flex max-h-[min(90vh,900px)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+          <div
+            className="absolute inset-y-0 right-0 z-10 flex w-full max-w-full flex-col border-l border-gray-200 bg-white shadow-2xl sm:max-w-lg md:max-w-xl"
+          >
             <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
-              <h3
-                id="partner-profile-modal-title"
-                className="text-lg font-semibold text-gray-800"
-              >
+              <h3 id="partner-profile-drawer-title" className="text-lg font-semibold text-gray-800">
                 Partner profile
               </h3>
               <button

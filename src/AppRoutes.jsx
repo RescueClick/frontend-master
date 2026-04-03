@@ -3,7 +3,7 @@
 // using React Router. Each section below corresponds to a specific user type and their accessible pages.
 
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import LoginPage from "./LoginPage";
 import MainLayout from "./Page/MainLayout";
 import Home from "./Page/Home";
@@ -15,9 +15,11 @@ import Contact from "./Page/Contact";
 import PrivacyPolicy from "./Page/PrivacyPolicy";
 import TermsConditions from "./Page/TermsConditions";
 import DeleteAccount from "./Page/DeleteAccount";
+import PageNotFound from "./Page/PageNotFound";
 
 
 import PartnerRegistrationForm from "./Page/PartnerRegistrationForm";
+import { PARTNER_REGISTRATION_ROUTE } from "./config/publicReferral.js";
 
 import { RequestResetForm } from "./Page/RequestResetForm.jsx";
 import { ConfirmResetForm } from "./Page/ConfirmResetForm.jsx";
@@ -60,6 +62,8 @@ import AdminDoneIncentive from "./sidebars/users/Admin/AdminDoneIncentive";
 import AdminPendingIncentive from "./sidebars/users/Admin/AdminPendingIncentive";
 import AdminSettings from "./sidebars/users/Admin/AdminSettings";
 import AdminPublicLoanReferral from "./sidebars/users/Admin/AdminPublicLoanReferral";
+import AdminReferralRewardAmounts from "./sidebars/users/Admin/AdminReferralRewardAmounts";
+import AdminReferralRewards from "./sidebars/users/Admin/AdminReferralRewards";
 
 // Import ASM user pages
 import AsmDashboard from "./sidebars/users/ASM/Dashboard";
@@ -122,6 +126,7 @@ import DocumentUpload from "./sidebars/users/Partner/DocumentUpload";
 import MyTarget from "./sidebars/users/Partner/MyTarget";
 import IncentiveHistory from "./sidebars/users/Partner/IncentiveHistory";
 import PayoutHistory from "./sidebars/users/Partner/PayoutHistory";
+import PartnerReferralRewardHistory from "./sidebars/users/Partner/PartnerReferralRewardHistory";
 import PartnerAnalytics from "./sidebars/users/Partner/PartnerAnalytics";
 import PartnerProfile from "./components/PartnerProfile";
 import PartnerEditProfile from "./components/PartnerEditProfile";
@@ -154,6 +159,22 @@ const ROLES = {
   CUSTOMER: "CUSTOMER",
 };
 
+/** Old share links used /LoginPage?ref=PT-… — send users straight to partner registration (no login flash). */
+function LoginPageRoute() {
+  const [searchParams] = useSearchParams();
+  const ref = (searchParams.get("ref") || "").trim();
+  const upper = ref.toUpperCase();
+  if (upper.startsWith("PT-") || upper.startsWith("RM-")) {
+    return (
+      <Navigate
+        to={`${PARTNER_REGISTRATION_ROUTE}?ref=${encodeURIComponent(ref)}`}
+        replace
+      />
+    );
+  }
+  return <LoginPage />;
+}
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -173,9 +194,11 @@ const AppRoutes = () => {
       </Route>
 
 
-      <Route path="/LoginPage" element={<LoginPage />} />
-      <Route path="/PartnerRegistrationForm" element={<PartnerRegistrationForm  />} />
-      
+      <Route path="/LoginPage" element={<LoginPageRoute />} />
+      <Route
+        path={PARTNER_REGISTRATION_ROUTE}
+        element={<PartnerRegistrationForm />}
+      />
 
       <Route path="/reset-password/request" element={<RequestResetForm />} />
       <Route path="/reset-password/confirm" element={<ConfirmResetForm />} />
@@ -224,6 +247,8 @@ const AppRoutes = () => {
         <Route path="partner" element={<AdminPartner />} />
         <Route path="Partner" element={<AdminPartner />} />
         <Route path="public-loan-referral" element={<AdminPublicLoanReferral />} />
+        <Route path="referral-reward-amounts" element={<AdminReferralRewardAmounts />} />
+        <Route path="referral-rewards" element={<AdminReferralRewards />} />
         <Route path="customer" element={<AdiminCustomer />} />
         <Route path="target" element={<SetTarget />} />
         <Route path="partner-targets" element={<PartnerTargets />} />
@@ -346,6 +371,7 @@ const AppRoutes = () => {
           <Route path="document-upload" element={<DocumentUpload />} />
           <Route path="my-target" element={<MyTarget />} />
           <Route path="incentives" element={<IncentiveHistory />} />
+          <Route path="referral-rewards" element={<PartnerReferralRewardHistory />} />
           <Route path="payouts" element={<PayoutHistory />} />
 
           <Route path="get-loan" element={<GetLoan />} />
@@ -360,8 +386,8 @@ const AppRoutes = () => {
       </Route>
 
       {/* //loanlinkss */}
-      
 
+      <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
 };

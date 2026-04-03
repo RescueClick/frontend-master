@@ -15,6 +15,7 @@ import {
   IndianRupee,
   Award,
   Link2,
+  Gift,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -72,6 +73,12 @@ const AdminSideBar = () => {
       name: "Public loan referral",
       icon: Link2,
       path: "/admin/public-loan-referral",
+      highlight: true,
+    },
+    {
+      name: "Referral rewards",
+      icon: Gift,
+      path: "/admin/referral-rewards",
       highlight: true,
     },
     // highlight payout / incentives / target / add bank
