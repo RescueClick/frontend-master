@@ -23,6 +23,7 @@ import {
   Shield,
   Check,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { signupPartner } from "../feature/thunks/partnerThunks";
 import { normalizeMobileDigits } from "../utils/phoneNormalize";
 import { useDispatch } from "react-redux";
@@ -113,6 +114,8 @@ const PartnerRegistrationForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+
+
   const [formData, setFormData] = useState({
     firstName: "",
     middleName: "",
@@ -139,6 +142,24 @@ const PartnerRegistrationForm = () => {
     password: "",
     confirmPassword: "",
   });
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      const isFormFilled = Object.values(formData).some((val) => {
+        if (typeof val === "string") return val.trim().length > 0;
+        if (val !== null && val !== undefined) return true; // checking files
+        return false;
+      });
+
+      if (isFormFilled && !isLoading && !successMessage) {
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [formData, isLoading, successMessage]);
 
   const showError = (message) => {
     setSuccessMessageType("error");
@@ -182,6 +203,9 @@ const PartnerRegistrationForm = () => {
       nextValue = f;
       setFormData((prev) => ({ ...prev, [name]: nextValue }));
       clearFieldError(name);
+      if (f) {
+        toast.success(`File ${f.name} selected successfully!`, { duration: 3000 });
+      }
       return;
     } else if (name === "phone") {
       nextValue = normalizeMobileDigits(value);
@@ -203,6 +227,8 @@ const PartnerRegistrationForm = () => {
       nextValue = value.replace(/[^A-Za-z\s.'-]/g, "").slice(0, 50);
     } else if (name === "bankName" || name === "region") {
       nextValue = value.slice(0, 120);
+    } else if (name === "addressStability") {
+      nextValue = value.replace(/\D/g, "").slice(0, 3);
     } else {
       nextValue = value;
     }
@@ -278,8 +304,11 @@ const PartnerRegistrationForm = () => {
 
     if (!formData.homeType) err.homeType = "Select Own or Rented";
 
-    if (!formData.addressStability.trim())
-      err.addressStability = "Enter how long you’ve stayed at this address";
+    if (!formData.addressStability || !String(formData.addressStability).trim()) {
+      err.addressStability = "Enter how long you’ve stayed at this address in months";
+    } else if (!/^\d+$/.test(formData.addressStability)) {
+      err.addressStability = "Please enter numbers only (e.g., 24 for 24 months)";
+    }
     if (!formData.bankName.trim()) err.bankName = "Bank name is required";
     if (!formData.accountNumber.trim())
       err.accountNumber = "Account number is required";
@@ -323,6 +352,13 @@ const PartnerRegistrationForm = () => {
     else if (!docMimeOk(formData.selfie, false))
       err.selfie = "Use JPG or PNG for selfie (max 5MB)";
 
+    if (formData.partnerReferralCode && formData.partnerReferralCode.trim() !== "") {
+      const code = formData.partnerReferralCode.trim();
+      if (!/^(PT-|RM-)[A-Z0-9]+$/.test(code)) {
+        err.partnerReferralCode = "Code must start with PT- or RM- followed by alphanumeric characters";
+      }
+    }
+
     if (formData.adharCard?.size > MAX_PARTNER_DOC_BYTES)
       err.adharCard = PARTNER_FILE_TOO_LARGE_MSG;
     if (formData.panCard?.size > MAX_PARTNER_DOC_BYTES)
@@ -331,6 +367,15 @@ const PartnerRegistrationForm = () => {
       err.selfie = PARTNER_FILE_TOO_LARGE_MSG;
 
     setFieldErrors(err);
+    if (Object.keys(err).length > 0) {
+      setTimeout(() => {
+        const firstErrorField = document.querySelector(".border-red-400");
+        if (firstErrorField) {
+          firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
+          firstErrorField.focus();
+        }
+      }, 100);
+    }
     return Object.keys(err).length === 0;
   };
 
@@ -754,7 +799,7 @@ const PartnerRegistrationForm = () => {
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        placeholder="Enter email address"
+                        placeholder="example@gmail.com"
                         className={fieldClass("email", fieldErrors)}
                         autoComplete="email"
                       />
@@ -976,14 +1021,15 @@ const PartnerRegistrationForm = () => {
                   <div className="relative">
                     <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
                       <Building2 className="h-4 w-4 text-[#0d9488]" /> Address
-                      Stability *
+                      Stability (In Months) *
                     </label>
                     <input
                       type="text"
+                      inputMode="numeric"
                       name="addressStability"
                       value={formData.addressStability}
                       onChange={handleChange}
-                      placeholder="e.g., 2 years"
+                      placeholder="e.g., 24"
                       className={fieldClass("addressStability", fieldErrors)}
                     />
                     {fieldErrors.addressStability && (
@@ -1057,22 +1103,29 @@ const PartnerRegistrationForm = () => {
                   </div>
                   <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
                     <span className="min-w-0 truncate">
-                      {formData.adharCard
-                        ? formData.adharCard.name
-                        : "No file selected"}
+                      {formData.adharCard ? (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-emerald-500" />
+                          <span className="text-emerald-700 font-medium">{formData.adharCard.name}</span>
+                        </div>
+                      ) : (
+                        "No file selected"
+                      )}
                     </span>
-                    <span className="text-xs text-slate-500">Max 5MB</span>
+                    <div className="flex items-center gap-3">
+                      {formData.adharCard && (
+                        <button
+                          type="button"
+                          onClick={() => openDocPreview(formData.adharCard)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0d9488] hover:text-[#0f766e]"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Preview
+                        </button>
+                      )}
+                      <span className="text-xs text-slate-500">Max 5MB</span>
+                    </div>
                   </div>
-                  {formData.adharCard && (
-                    <button
-                      type="button"
-                      onClick={() => openDocPreview(formData.adharCard)}
-                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#0d9488] hover:text-[#0f766e]"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Preview
-                    </button>
-                  )}
                   {fieldErrors.adharCard && (
                     <p className="mt-1.5 text-sm text-red-600">
                       {fieldErrors.adharCard}
@@ -1111,22 +1164,29 @@ const PartnerRegistrationForm = () => {
                   </div>
                   <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
                     <span className="min-w-0 truncate">
-                      {formData.panCard
-                        ? formData.panCard.name
-                        : "No file selected"}
+                      {formData.panCard ? (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-emerald-500" />
+                          <span className="text-emerald-700 font-medium">{formData.panCard.name}</span>
+                        </div>
+                      ) : (
+                        "No file selected"
+                      )}
                     </span>
-                    <span className="text-xs text-slate-500">Max 5MB</span>
+                    <div className="flex items-center gap-3">
+                      {formData.panCard && (
+                        <button
+                          type="button"
+                          onClick={() => openDocPreview(formData.panCard)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0d9488] hover:text-[#0f766e]"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Preview
+                        </button>
+                      )}
+                      <span className="text-xs text-slate-500">Max 5MB</span>
+                    </div>
                   </div>
-                  {formData.panCard && (
-                    <button
-                      type="button"
-                      onClick={() => openDocPreview(formData.panCard)}
-                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#0d9488] hover:text-[#0f766e]"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Preview
-                    </button>
-                  )}
                   {fieldErrors.panCard && (
                     <p className="mt-1.5 text-sm text-red-600">
                       {fieldErrors.panCard}
@@ -1199,22 +1259,29 @@ const PartnerRegistrationForm = () => {
                   </p>
                   <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
                     <span className="min-w-0 truncate">
-                      {formData.selfie
-                        ? formData.selfie.name
-                        : "No file selected"}
+                      {formData.selfie ? (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-emerald-500" />
+                          <span className="text-emerald-700 font-medium">{formData.selfie.name}</span>
+                        </div>
+                      ) : (
+                        "No file selected"
+                      )}
                     </span>
-                    <span className="text-xs text-slate-500">Max 5MB</span>
+                    <div className="flex items-center gap-3">
+                      {formData.selfie && (
+                        <button
+                          type="button"
+                          onClick={() => openDocPreview(formData.selfie)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0d9488] hover:text-[#0f766e]"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Preview
+                        </button>
+                      )}
+                      <span className="text-xs text-slate-500">Max 5MB</span>
+                    </div>
                   </div>
-                  {formData.selfie && (
-                    <button
-                      type="button"
-                      onClick={() => openDocPreview(formData.selfie)}
-                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#0d9488] hover:text-[#0f766e]"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Preview
-                    </button>
-                  )}
                   {fieldErrors.selfie && (
                     <p className="mt-1.5 text-sm text-red-600">
                       {fieldErrors.selfie}
@@ -1391,6 +1458,7 @@ const PartnerRegistrationForm = () => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     autoComplete="new-password"
+                    onPaste={(e) => e.preventDefault()}
                     className={`${fieldClass("confirmPassword", fieldErrors)} pr-12`}
                     placeholder="Re-enter password"
                   />

@@ -140,6 +140,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     password: false,
     confirmPassword: false,
   });
+  const [isCheckingExistence, setIsCheckingExistence] = useState(false);
   const abortControllerRef = useRef(null);
   const objectUrlsRef = useRef([]); // Store all created object URLs
 
@@ -2608,7 +2609,8 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                 {currentStep < steps.length - 1 ? (
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
+                      if (loading || isCheckingExistence) return;
                       setError("");
                       const stepErrors = validateHomeLoanSalariedStep(currentStep);
                       setFieldErrors(stepErrors);
@@ -2618,6 +2620,30 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                         setError("Please fix the highlighted fields to continue.");
                         scrollToFirstError(stepErrors);
                         return;
+                      }
+
+                      // New: Check if customer exists after Step 1 (Personal Info)
+                      if (currentStep === 0 && isPartnerLoggedIn) {
+                        setIsCheckingExistence(true);
+                        try {
+                          const { data } = await axios.get(`${backendurl}/partner/check-customer`, {
+                            params: {
+                              email: formData.email,
+                              phone: formData.phone,
+                            },
+                            headers: { Authorization: `Bearer ${partnerToken}` },
+                          });
+
+                          if (data.exists) {
+                            setError(data.message);
+                            setIsCheckingExistence(false);
+                            return;
+                          }
+                        } catch (err) {
+                          console.error("Error checking customer existence:", err);
+                        } finally {
+                          setIsCheckingExistence(false);
+                        }
                       }
 
                       const nextStep = currentStep + 1;

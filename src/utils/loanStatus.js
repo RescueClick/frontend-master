@@ -23,6 +23,7 @@ export const LOAN_STATUS_LABELS = {
   LOGIN: "Login",
   UNDER_REVIEW: "Under Review",
   KYC_PENDING: "KYC Pending",
+  KYC_COMPLETE: "KYC Complete",
   APPROVED: "Approved",
   AGREEMENT: "Agreement",
   REJECTED: "Rejected",

@@ -121,6 +121,7 @@ export default function PersonalLoan({ embed = false } = {}) {
     password: false,
     confirmPassword: false,
   });
+  const [isCheckingExistence, setIsCheckingExistence] = useState(false);
 
   // Multi-step wizard state
   const steps = [
@@ -559,8 +560,8 @@ export default function PersonalLoan({ embed = false } = {}) {
     [formData]
   );
 
-  const handleNext = () => {
-    if (loading) return;
+  const handleNext = async () => {
+    if (loading || isCheckingExistence) return;
     setError("");
     const stepErrors = validateStep(currentStep);
     if (Object.keys(stepErrors).length > 0) {
@@ -569,6 +570,32 @@ export default function PersonalLoan({ embed = false } = {}) {
       setValidationErrors(Object.values(stepErrors));
       scrollToFirstError(stepErrors);
       return;
+    }
+
+    // New: Check if customer exists after Step 1 (Personal Info)
+    if (currentStep === 0 && isPartnerLoggedIn) {
+      setIsCheckingExistence(true);
+      try {
+        const { data } = await axios.get(`${backendurl}/partner/check-customer`, {
+          params: {
+            email: formData.email,
+            phone: formData.contactNo,
+          },
+          headers: { Authorization: `Bearer ${partnerToken}` },
+        });
+
+        if (data.exists) {
+          setError(data.message);
+          setIsCheckingExistence(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking customer existence:", err);
+        // Fallback: allow proceeding if the check itself fails, 
+        // as the final submit will still catch duplicates.
+      } finally {
+        setIsCheckingExistence(false);
+      }
     }
 
     setFieldErrors({});

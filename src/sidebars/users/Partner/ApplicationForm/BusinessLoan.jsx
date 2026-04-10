@@ -124,6 +124,7 @@ export default function BusinessLoan({ embed = false } = {}) {
   const [validationErrors, setValidationErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
   const [savedApplication, setSavedApplication] = useState(null);
+  const [isCheckingExistence, setIsCheckingExistence] = useState(false);
   const abortControllerRef = useRef(null);
 
   const loanDraftStorageKey = embed
@@ -2562,7 +2563,8 @@ const handleSubmit = async () => {
                 {currentStep < steps.length - 1 ? (
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
+                      if (loading || isCheckingExistence) return;
                       setShowClientValidation(true);
                       setError("");
                       const stepErrors = validateBusinessLoanStep(currentStep, formData);
@@ -2573,6 +2575,30 @@ const handleSubmit = async () => {
                         setError("Please fix the highlighted fields to continue.");
                         scrollToFirstError(stepErrors);
                         return;
+                      }
+
+                      // New: Check if customer exists after Step 1 (Personal Info)
+                      if (currentStep === 0 && isPartnerLoggedIn) {
+                        setIsCheckingExistence(true);
+                        try {
+                          const { data } = await axios.get(`${backendurl}/partner/check-customer`, {
+                            params: {
+                              email: formData.email,
+                              phone: formData.phone,
+                            },
+                            headers: { Authorization: `Bearer ${partnerToken}` },
+                          });
+
+                          if (data.exists) {
+                            setError(data.message);
+                            setIsCheckingExistence(false);
+                            return;
+                          }
+                        } catch (err) {
+                          console.error("Error checking customer existence:", err);
+                        } finally {
+                          setIsCheckingExistence(false);
+                        }
                       }
 
                       const nextStep = currentStep + 1;
