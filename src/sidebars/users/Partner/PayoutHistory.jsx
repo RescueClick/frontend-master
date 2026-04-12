@@ -70,6 +70,8 @@ const PayoutHistory = () => {
       row?.application?.appNo,
       row?.application?.loanType,
       row?.amount,
+      row?.application?.customer?.firstName,
+      row?.application?.customer?.lastName,
     ]);
 
     return sameYear && sameMonth && matchesText;
@@ -97,6 +99,14 @@ const PayoutHistory = () => {
         title: "Application No",
         key: "app",
         render: (_, row) => row.application?.appNo || "-",
+      },
+      {
+        title: "Customer",
+        key: "cust",
+        render: (_, row) =>
+          row.application?.customer
+            ? `${row.application.customer.firstName} ${row.application.customer.lastName || ""}`
+            : "-",
       },
       {
         title: "Loan Type",

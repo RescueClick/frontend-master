@@ -23,6 +23,7 @@ const SetTarget = () => {
   const [showTargetInput, setShowTargetInput] = useState(false);
   const [currentFileCountTarget, setCurrentFileCountTarget] = useState(0);
   const [newJoinerLoading, setNewJoinerLoading] = useState(false);
+  const [fileTargetLoading, setFileTargetLoading] = useState(false);
 
   useEffect(() => {
     fetchTargetPolicy();
@@ -217,6 +218,57 @@ const SetTarget = () => {
   };
 
 
+  const handleUpdateFileTarget = async () => {
+    if (!formData.partnerFileCountTarget || formData.partnerFileCountTarget < 1) {
+      toast.error("File Target must be at least 1");
+      return;
+    }
+
+    setFileTargetLoading(true);
+    try {
+      const { adminToken } = getAuthData();
+      if (!adminToken) {
+        toast.error("Authentication required");
+        return;
+      }
+
+      // Step 1: Save global target policy
+      await axios.post(
+        `${backendurl}/admin/target-policy`,
+        {
+          fileCountTarget: Number(formData.partnerFileCountTarget),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Step 2: Update all existing partner targets for this month/year
+      // We use currentAsmTarget (total already assigned) to refresh everything
+      await dispatch(
+        distributeHierarchicalTargets({
+          month: Number(formData.month),
+          year: Number(formData.year),
+          totalCompanyTarget: Number(previewData?.currentTotals?.asmTotal || 1000000), // Fallback to min if none
+          partnerFileCountTarget: Number(formData.partnerFileCountTarget),
+          assignmentMode: "replace",
+        })
+      ).unwrap();
+
+      toast.success("Monthly File Target updated for all partners!");
+      fetchTargetPolicy();
+      fetchDistributionPreview();
+    } catch (err) {
+      console.error("Error updating file target:", err);
+      toast.error(err?.message || "Failed to update file target");
+    } finally {
+      setFileTargetLoading(false);
+    }
+  };
+
   const formatCurrency = (amount) => {
     const safeAmount = Number(amount || 0);
     return new Intl.NumberFormat("en-IN", {
@@ -232,11 +284,7 @@ const SetTarget = () => {
     formData.assignmentMode === "add"
       ? currentAsmTarget + proposedInput
       : proposedInput;
-  const proposedFileTarget = Number(formData.partnerFileCountTarget || 0);
-  const finalFileTarget =
-    formData.assignmentMode === "add"
-      ? currentFileCountTarget + proposedFileTarget
-      : proposedFileTarget;
+  const finalFileTarget = Number(formData.partnerFileCountTarget || 0);
   const shouldShowComparison = !!formData.assignmentMode && proposedInput > 0;
 
   if (fetching) {
@@ -387,6 +435,54 @@ const SetTarget = () => {
               </div>
             </div>
 
+            {/* Global File Target Setting - Outside of Mode Selection */}
+            <div className="bg-white border border-blue-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <label className="text-lg font-semibold text-gray-700">
+                    Set Monthly File Target
+                  </label>
+                </div>
+                <div className="flex flex-col md:flex-row gap-3 items-end">
+                  <div className="flex-1 relative">
+                    <input
+                      type="number"
+                      name="partnerFileCountTarget"
+                      value={formData.partnerFileCountTarget}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 pr-24 border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-bold bg-slate-50 transition-all"
+                      required
+                      min="1"
+                      step="1"
+                      placeholder="Enter file target"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">
+                      files/month
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUpdateFileTarget}
+                    disabled={fileTargetLoading}
+                    className={`px-6 py-3 rounded-xl text-white font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                      fileTargetLoading
+                        ? "bg-blue-300 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg"
+                    }`}
+                  >
+                    {fileTargetLoading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <Target className="w-4 h-4" />
+                    )}
+                    Update File Target Only
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-2">
+                  * This file target applies to ALL partners for the selected period.
+                </p>
+            </div>
+
             {/* Assignment Mode */}
             <div className="bg-violet-50 rounded-lg p-6 border border-violet-200">
               <div className="flex items-center gap-3 mb-4">
@@ -409,7 +505,7 @@ const SetTarget = () => {
                     className="mt-1"
                   />
                   <div>
-                    <p className="text-sm font-semibold text-gray-800">Replace Existing (Recommended for new cycle)</p>
+                    <p className="text-sm font-semibold text-gray-800">Replace Existing Disbursement (Recommended for new cycle)</p>
                     <p className="text-xs text-gray-600">System will overwrite current month-year targets with new calculated values.</p>
                   </div>
                 </label>
@@ -423,7 +519,7 @@ const SetTarget = () => {
                     className="mt-1"
                   />
                   <div>
-                    <p className="text-sm font-semibold text-gray-800">Add On Top (Adjustment mode)</p>
+                    <p className="text-sm font-semibold text-gray-800">Add On Top of Disbursement (Adjustment mode)</p>
                     <p className="text-xs text-gray-600">System will increment existing targets. Example: 500000 + 600000 = 1100000.</p>
                   </div>
                 </label>
@@ -487,27 +583,6 @@ const SetTarget = () => {
                         <span className="text-xs font-bold text-blue-600">{formatCurrency(formData.totalCompanyTarget)}</span>
                       </div>
                     )}
-                  </div>
-                  <div className="bg-white border border-blue-200 rounded-lg p-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Enter File Target
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        name="partnerFileCountTarget"
-                        value={formData.partnerFileCountTarget}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 pr-24 border-2 border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-semibold bg-white transition-all"
-                        required
-                        min="1"
-                        step="1"
-                        placeholder="Enter file target"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">
-                        files/month
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -592,10 +667,7 @@ const SetTarget = () => {
                         <strong>Input Target:</strong> {formatCurrency(proposedInput)}
                       </p>
                       <p>
-                        <strong>Old File Target:</strong> {currentFileCountTarget} files/month
-                      </p>
-                      <p>
-                        <strong>New File Input:</strong> {proposedFileTarget || 0} files/month
+                        <strong>New Global File Target:</strong> {finalFileTarget || 0} files/month
                       </p>
                       <p>
                         <strong>Mode:</strong>{" "}
@@ -611,7 +683,7 @@ const SetTarget = () => {
                       <p className="text-[11px] text-amber-800">
                         Formula:{" "}
                         {formData.assignmentMode === "add"
-                          ? "Old + New Input"
+                          ? "Disbursement (Old + New) | File Target (Absolute)"
                           : "New Input only (overwrite old)"}
                       </p>
                       {previewData?.hierarchyCounts && (
