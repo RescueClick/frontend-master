@@ -31,6 +31,7 @@ import { fetchDashboard } from "../../../feature/thunks/rmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import {backendurl} from "../../../feature/urldata"
+import { designSystem, formatCurrency, formatNumber, formatPercentage, typography } from "../../../utils/designSystem";
 import MetricCard from "../../../components/shared/MetricCard";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import AppAntTable from "../../../components/shared/AppAntTable";
@@ -105,10 +106,8 @@ const Dashboard = () => {
       const achievement = item.achieved || 0;
       const fileCountTarget = item.fileCountTarget || 0;
       const achievedFileCount = item.achievedFileCount || 0;
-      const percentage =
-        target > 0 ? Math.round((achievement / target) * 100) : 0;
-      const filePercentage =
-        fileCountTarget > 0 ? Math.round((achievedFileCount / fileCountTarget) * 100) : 0;
+      const percentage = formatPercentage(achievement, target);
+      const filePercentage = formatPercentage(achievedFileCount, fileCountTarget);
 
       return {
         month: item.month,
@@ -552,9 +551,7 @@ const Dashboard = () => {
                           : "bg-orange-100 text-orange-700"
                       }`}
                     >
-                      {currentMonthTarget.disbursementTarget > 0
-                        ? Math.round((currentMonthTarget.achievedDisbursement / currentMonthTarget.disbursementTarget) * 100)
-                        : 0}%
+                        {formatPercentage(currentMonthTarget.achievedDisbursement, currentMonthTarget.disbursementTarget)}
                     </span>
                   </div>
                 </div>
@@ -633,14 +630,14 @@ const Dashboard = () => {
                         ) : (
                           <Target size={16} className="text-orange-500" />
                         )}
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${item.percentage >= 100
-                              ? "bg-green-100 text-green-700"
-                              : "bg-orange-100 text-orange-700"
-                            }`}
-                        >
-                          {item.percentage}%
-                        </span>
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${item.target > 0 && item.achievement >= item.target
+                                ? "bg-green-100 text-green-700"
+                                : "bg-orange-100 text-orange-700"
+                              }`}
+                          >
+                            {formatPercentage(item.achievement, item.target)}
+                          </span>
                       </div>
                     </div>
                     <span

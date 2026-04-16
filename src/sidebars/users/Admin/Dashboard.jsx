@@ -23,7 +23,7 @@ import {
   IndianRupee
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { formatCurrency, formatNumber, typography } from '../../../utils/designSystem';
+import { formatCurrency, formatNumber, formatPercentage, typography } from '../../../utils/designSystem';
 import PageHeader from "../../../components/shared/PageHeader";
 import FiltersBar from "../../../components/shared/FiltersBar";
 
@@ -278,18 +278,16 @@ const Dashboard = () => {
           <div className="relative w-32 h-32 flex-shrink-0">
             {(() => {
               const pct = data?.totalDisbursementTarget
-                ? Math.min(
-                    100,
-                    Math.round(
-                      (data.totalRevenue / data.totalDisbursementTarget) * 100
-                    )
-                  )
+                ? (data.totalRevenue / data.totalDisbursementTarget) * 100
                 : 0;
+              const displayPct = formatPercentage(data?.totalRevenue, data?.totalDisbursementTarget);
               const radius = 52;
               const circumference = 2 * Math.PI * radius;
-              const offset = circumference - (pct / 100) * circumference;
+              // Limit visual bar to 100%
+              const visualPct = Math.min(100, pct);
+              const offset = circumference - (visualPct / 100) * circumference;
               const percentageLabel = data?.totalDisbursementTarget
-                ? `${pct}%`
+                ? displayPct
                 : "—";
               return (
                 <svg
@@ -323,14 +321,7 @@ const Dashboard = () => {
             <div>
               <p className={typography.captionSmall()}>Target Achievement</p>
               <p className={`${typography.h2()} mt-1`}>
-                {data?.totalDisbursementTarget
-                  ? `${Math.min(
-                      100,
-                      Math.round(
-                        (data.totalRevenue / data.totalDisbursementTarget) * 100
-                      )
-                    )}%`
-                  : "—"}
+                {formatPercentage(data?.totalRevenue, data?.totalDisbursementTarget)}
               </p>
               <p className={`${typography.caption()} text-gray-500 mt-1`}>
                 Company-level achievement vs target

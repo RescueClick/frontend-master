@@ -38,6 +38,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchPartnerDashboard } from "../../../feature/thunks/partnerThunks";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import { backendurl } from "../../../feature/urldata";
+import { formatCurrency, formatNumber, formatPercentage, typography } from "../../../utils/designSystem";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
@@ -603,9 +604,7 @@ const Dashboard = () => {
                         : "bg-orange-100 text-orange-700"
                     }`}
                   >
-                    {currentMonthTarget.fileCountTarget > 0
-                      ? Math.round((currentMonthTarget.achievedFileCount / currentMonthTarget.fileCountTarget) * 100)
-                      : 0}%
+                    {formatPercentage(currentMonthTarget.achievedFileCount, currentMonthTarget.fileCountTarget)}
                   </span>
                 </div>
               </div>
@@ -648,9 +647,7 @@ const Dashboard = () => {
                         : "bg-orange-100 text-orange-700"
                     }`}
                   >
-                    {currentMonthTarget.disbursementTarget > 0
-                      ? Math.round((currentMonthTarget.achievedDisbursement / currentMonthTarget.disbursementTarget) * 100)
-                      : 0}%
+                    {formatPercentage(currentMonthTarget.achievedDisbursement, currentMonthTarget.disbursementTarget)}
                   </span>
                 </div>
               </div>
@@ -791,7 +788,7 @@ const Dashboard = () => {
                                 : "bg-orange-100 text-orange-700"
                             }`}
                           >
-                            {Math.min(item.percentageValue, 100).toFixed(1)}%
+                            {formatPercentage(item.achievement, item.target)}
                           </span>
                         </div>
                       </div>

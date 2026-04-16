@@ -16,7 +16,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import MetricCard from "../../../components/shared/MetricCard";
-import { designSystem, formatCurrency, formatNumber, typography } from "../../../utils/designSystem";
+import { designSystem, formatCurrency, formatNumber, formatPercentage, typography } from "../../../utils/designSystem";
 
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -87,10 +87,8 @@ const Dashboard = () => {
       const achievement = item.achieved || 0;
       const fileCountTarget = item.fileCountTarget || 0;
       const achievedFileCount = item.achievedFileCount || 0;
-      const percentage =
-        target > 0 ? Math.round((achievement / target) * 100) : 0;
-      const filePercentage =
-        fileCountTarget > 0 ? Math.round((achievedFileCount / fileCountTarget) * 100) : 0;
+      const percentage = formatPercentage(achievement, target);
+      const filePercentage = formatPercentage(achievedFileCount, fileCountTarget);
 
       return {
         month: item.month.substring(0, 3),
@@ -197,9 +195,7 @@ const Dashboard = () => {
                           : "bg-orange-100 text-orange-700"
                       }`}
                     >
-                      {currentMonthTarget.disbursementTarget > 0
-                        ? Math.round((currentMonthTarget.achievedDisbursement / currentMonthTarget.disbursementTarget) * 100)
-                        : 0}%
+                        {formatPercentage(currentMonthTarget.achievedDisbursement, currentMonthTarget.disbursementTarget)}
                     </span>
                   </div>
                 </div>
@@ -261,12 +257,12 @@ const Dashboard = () => {
                           )}
                           <span
                             className={`text-xs px-2 py-1 rounded-full ${
-                              item.percentage >= 100
+                              item.target > 0 && item.achievement >= item.target
                                 ? "bg-green-100 text-green-700"
                                 : "bg-orange-100 text-orange-700"
                             }`}
                           >
-                            {item.percentage}%
+                            {item.percentage}
                           </span>
                         </div>
                       </div>

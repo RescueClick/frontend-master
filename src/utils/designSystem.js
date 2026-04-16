@@ -116,6 +116,16 @@ export const formatNumber = (num) => {
   return Number(num).toLocaleString('en-IN');
 };
 
+// Format percentage helper with precision for small values
+export const formatPercentage = (achieved, target) => {
+  if (!target || target <= 0) return "0%";
+  const pct = (Number(achieved || 0) / Number(target)) * 100;
+  if (pct === 0) return "0%";
+  if (pct > 100) return "100%";
+  if (pct > 0 && pct < 1) return `${pct.toFixed(2)}%`;
+  return `${Math.round(pct)}%`;
+};
+
 // Typography Helper Functions - Use these for consistent font sizes
 export const typography = {
   // Headings
