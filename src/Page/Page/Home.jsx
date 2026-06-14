@@ -375,8 +375,8 @@ const Home = () => {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white mb-1">Call Us</h3>
-              <a href="tel:+918766681450" className="text-xl font-bold text-teal-400 hover:text-teal-300 transition-colors">
-                +91 8766681450
+              <a href="tel:+917057772026" className="text-xl font-bold text-teal-400 hover:text-teal-300 transition-colors">
+                +91 7057772026
               </a>
             </div>
           </div>

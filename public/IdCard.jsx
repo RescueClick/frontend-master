@@ -131,8 +131,8 @@
 //     Head Office
 //   </h4>
 //   <div className="text-[9px] leading-tight opacity-90 font-light">
-//   3rd Floor, A Wing, City Vista, Rescue click Private Limited Office No _014, Kharadi, Pune, Maharashtra 411014<br />
-//     <strong>Phone:</strong> +91 8766681450
+//   office No -31 C Wing Ashoka Nagar, Kharadi, Pune, Maharashtra 411014<br />
+//     <strong>Phone:</strong> +91 7057772026
 //   </div>
 // </div>
 
@@ -173,14 +173,20 @@ import { useLocation } from "react-router-dom";
 
 const IdCard = () => {
   const idCardRef = useRef(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const location = useLocation();
   const { employeeData } = location.state || {};
 
   // -------------------- PDF DOWNLOAD FUNCTION ------------------------
   const downloadPDF = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
     const card = idCardRef.current;
-    if (!card) return;
+    if (!card) {
+      setIsDownloading(false);
+      return;
+    }
 
     // Helper to convert all computed colors to inline RGB (fixes oklab issue)
     const convertColorsToRGB = (element) => {
@@ -291,18 +297,26 @@ const IdCard = () => {
         img.onload = resolve;
       });
 
-      // Calculate PDF dimensions in mm
-      const pdfWidth = img.width * 0.264583;
-      const pdfHeight = img.height * 0.264583;
+      // Standard US Letter page dimensions: 8.5 x 11 inches (215.9 x 279.4 mm)
+      const letterWidth = 215.9;
+      const letterHeight = 279.4;
 
       const pdf = new jsPDF({
-        orientation: pdfHeight > pdfWidth ? "portrait" : "landscape",
+        orientation: "portrait",
         unit: "mm",
-        format: [pdfWidth, pdfHeight],
+        format: "letter",
       });
 
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      // Scale to professional card dimensions (e.g. 85mm width)
+      const drawWidth = 85;
+      const drawHeight = (img.height / img.width) * drawWidth;
+
+      const x = (letterWidth - drawWidth) / 2;
+      const y = (letterHeight - drawHeight) / 2;
+
+      pdf.addImage(imgData, "PNG", x, y, drawWidth, drawHeight);
       pdf.save(`${employeeData?.name || "ID"}-IDCard.pdf`);
+      setIsDownloading(false);
     } catch (error) {
       // Clean up cloned element on error
       if (document.body.contains(clonedCard)) {
@@ -310,6 +324,7 @@ const IdCard = () => {
       }
       console.error("Error generating PDF:", error);
       alert("Failed to generate PDF. Please try again.");
+      setIsDownloading(false);
     }
   };
 
@@ -387,10 +402,10 @@ const IdCard = () => {
             Head Office
           </h4>
           <div className="text-[9px] leading-tight opacity-90 font-light">
-            3rd Floor, A Wing, City Vista, Rescue Click Private Limited Office No _014,
+            office No -31 C Wing Ashoka Nagar,
             Kharadi, Pune, Maharashtra 411014
             <br />
-            <strong>Phone:</strong> +91 8766681450
+            <strong>Phone:</strong> +91 7057772026
           </div>
         </div>
 
@@ -406,9 +421,20 @@ const IdCard = () => {
       {/* Download Button */}
       <button
         onClick={downloadPDF}
-        className="mt-5 px-6 py-2 bg-teal-500 text-white font-semibold rounded-lg shadow hover:bg-teal-600 transition"
+        disabled={isDownloading}
+        className={`mt-5 px-6 py-2 bg-teal-500 text-white font-semibold rounded-lg shadow hover:bg-teal-600 transition flex items-center gap-2 ${isDownloading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        Download ID Card PDF
+        {isDownloading ? (
+          <>
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Generating PDF...
+          </>
+        ) : (
+          "Download ID Card PDF"
+        )}
       </button>
     </div>
   );

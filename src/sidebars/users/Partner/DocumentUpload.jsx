@@ -226,9 +226,12 @@ const DocumentUpload = () => {
     );
   }
 
-  const isRejected = document?.status === "REJECTED";
-  const isUpdated = document?.status === "UPDATED";
-  const isVerified = document?.status === "VERIFIED";
+  const docStatus = document ? String(document.status || "").toUpperCase() : null;
+  const isEditable = !document || docStatus === "REJECTED";
+
+  const isRejected = docStatus === "REJECTED";
+  const isUpdated = docStatus === "UPDATED" || docStatus === "PENDING";
+  const isVerified = docStatus === "VERIFIED";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -259,6 +262,23 @@ const DocumentUpload = () => {
             {getDocumentDescription(docType)}
           </p>
 
+          {/* Show lock box if not editable */}
+          {!isEditable && (
+            <div className="bg-gray-100 border-l-4 border-gray-500 rounded p-4 mb-4">
+              <div className="flex items-start">
+                <span className="text-xl mr-2">🔒</span>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-1">
+                    Document Locked
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    This document has already been submitted and is currently {docStatus === "VERIFIED" ? "verified" : "under review"}. You can only re-upload documents if they are rejected by the Relationship Manager.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Show current status */}
           {isRejected && document?.remarks && (
             <div className="bg-red-50 border-l-4 border-red-500 rounded p-4 mb-4">
@@ -283,7 +303,7 @@ const DocumentUpload = () => {
                 <AlertCircle className="text-blue-500 mr-2 flex-shrink-0 mt-0.5" size={20} />
                 <div>
                   <h3 className="text-sm font-semibold text-blue-800 mb-1">
-                    Document Status: UPDATED
+                    Document Status: UPDATED / UNDER REVIEW
                   </h3>
                   <p className="text-sm text-blue-700">
                     This document has been uploaded/updated by you. RM verification is pending. RM will review and verify this document.
@@ -302,7 +322,7 @@ const DocumentUpload = () => {
                     Document Status: VERIFIED
                   </h3>
                   <p className="text-sm text-green-700">
-                    This document is already verified. If you update it, RM will need to verify again.
+                    This document is already verified.
                   </p>
                 </div>
               </div>
@@ -328,17 +348,19 @@ const DocumentUpload = () => {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setSelectedFile(null);
-                    // Reset file input
-                    const fileInput = document.getElementById('file-input');
-                    if (fileInput) fileInput.value = '';
-                  }}
-                  className="ml-4 p-2 hover:bg-red-100 rounded-lg transition-colors"
-                >
-                  <X size={20} className="text-red-600" />
-                </button>
+                {isEditable && (
+                  <button
+                    onClick={() => {
+                      setSelectedFile(null);
+                      // Reset file input
+                      const fileInput = document.getElementById('file-input');
+                      if (fileInput) fileInput.value = '';
+                    }}
+                    className="ml-4 p-2 hover:bg-red-100 rounded-lg transition-colors"
+                  >
+                    <X size={20} className="text-red-600" />
+                  </button>
+                )}
               </div>
             ) : (
               <div className="border-2 border-dashed border-teal-300 rounded-lg p-8 text-center bg-teal-50">
@@ -346,48 +368,52 @@ const DocumentUpload = () => {
               </div>
             )}
 
-            <div>
-              <label
-                htmlFor="file-input"
-                className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-teal-600 text-white rounded-lg font-semibold cursor-pointer hover:bg-teal-700 transition-colors"
-              >
-                <Upload size={20} />
-                <span>Choose File</span>
-              </label>
-              <input
-                id="file-input"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={handleFileChange}
-                className="hidden"
-                disabled={uploading}
-              />
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Supported formats: JPEG, PNG, GIF, PDF (Max 10MB)
-              </p>
-            </div>
+            {isEditable && (
+              <div>
+                <label
+                  htmlFor="file-input"
+                  className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-teal-600 text-white rounded-lg font-semibold cursor-pointer hover:bg-teal-700 transition-colors"
+                >
+                  <Upload size={20} />
+                  <span>Choose File</span>
+                </label>
+                <input
+                  id="file-input"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  disabled={uploading}
+                />
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Supported formats: JPEG, PNG, GIF, PDF (Max 10MB)
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Submit Button */}
-        <button
-          onClick={handleSubmit}
-          disabled={uploading || !selectedFile || !selectedFile.file}
-          className={`w-full py-4 px-6 rounded-lg font-bold text-white transition-all ${
-            uploading || !selectedFile || !selectedFile.file
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-teal-600 hover:bg-teal-700 shadow-lg hover:shadow-xl"
-          }`}
-        >
-          {uploading ? (
-            <div className="flex items-center justify-center gap-2">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              <span>Uploading...</span>
-            </div>
-          ) : (
-            "SUBMIT"
-          )}
-        </button>
+        {isEditable && (
+          <button
+            onClick={handleSubmit}
+            disabled={uploading || !selectedFile || !selectedFile.file}
+            className={`w-full py-4 px-6 rounded-lg font-bold text-white transition-all ${
+              uploading || !selectedFile || !selectedFile.file
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-teal-600 hover:bg-teal-700 shadow-lg hover:shadow-xl"
+            }`}
+          >
+            {uploading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Uploading...</span>
+              </div>
+            ) : (
+              "SUBMIT"
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

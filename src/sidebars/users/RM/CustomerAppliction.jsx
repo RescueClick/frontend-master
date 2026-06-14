@@ -941,8 +941,15 @@ const CustomerApplication = () => {
       }
     }
 
-    // ✅ If any SINGLE uploaded document is not VERIFIED, block completion.
-    return uploadedDocs.every((doc) => doc?.status === "VERIFIED");
+    // Optional/Other documents should not block unless explicitly REJECTED
+    for (const doc of uploadedDocs) {
+      const isRequired = requiredRules.some((rule) => isRuleMatchedByDoc(rule, doc));
+      if (!isRequired && doc?.status === "REJECTED") {
+        return false;
+      }
+    }
+
+    return true;
   };
 
   // Get missing or unverified documents
@@ -971,9 +978,10 @@ const CustomerApplication = () => {
       }
     }
 
-    // Include any non-required documents that are still PENDING/UPDATED/REJECTED.
+    // Include optional documents only if they are REJECTED
     uploadedDocs.forEach((doc) => {
-      if (doc?.status !== "VERIFIED") {
+      const isRequired = requiredRules.some((rule) => isRuleMatchedByDoc(rule, doc));
+      if (!isRequired && doc?.status === "REJECTED") {
         addUnverified(doc?.docType, doc?.status);
       }
     });
@@ -1210,6 +1218,14 @@ const CustomerApplication = () => {
     return matched?.status === "VERIFIED";
   }).length;
   const summaryPendingCount = Math.max(summaryRequiredCount - summaryVerifiedCount, 0);
+
+  // Optional/Other docs counts
+  const optionalDocs = docs.filter(doc => 
+    !summaryRequiredRules.some(rule => isRuleMatchedByDoc(rule, doc))
+  );
+  const summaryOptionalCount = optionalDocs.length;
+  const summaryOptionalVerifiedCount = optionalDocs.filter(doc => doc.status === "VERIFIED").length;
+  const summaryOptionalPendingCount = optionalDocs.filter(doc => ["PENDING", "UPDATED", "REJECTED"].includes(doc.status)).length;
 
   // Helper functions for rendering
   const renderFields = (fields, data) => (
@@ -1895,15 +1911,21 @@ const CustomerApplication = () => {
                   </div>
                   <div className="bg-white rounded-lg border border-gray-200 p-3">
                     <p className="text-xs text-gray-500">Uploaded</p>
-                    <p className="text-lg font-bold text-blue-700">{summaryUploadedCount}</p>
+                    <p className="text-lg font-bold text-blue-700">
+                      {summaryUploadedCount} <span className="text-xs font-normal text-gray-500">({summaryOptionalCount} optional)</span>
+                    </p>
                   </div>
                   <div className="bg-white rounded-lg border border-gray-200 p-3">
                     <p className="text-xs text-gray-500">Verified</p>
-                    <p className="text-lg font-bold text-green-700">{summaryVerifiedCount}</p>
+                    <p className="text-lg font-bold text-green-700">
+                      {summaryVerifiedCount} <span className="text-xs font-normal text-gray-500">({summaryOptionalVerifiedCount} optional)</span>
+                    </p>
                   </div>
                   <div className="bg-white rounded-lg border border-gray-200 p-3">
                     <p className="text-xs text-gray-500">Pending</p>
-                    <p className="text-lg font-bold text-amber-700">{summaryPendingCount}</p>
+                    <p className="text-lg font-bold text-amber-700">
+                      {summaryPendingCount} <span className="text-xs font-normal text-gray-500">({summaryOptionalPendingCount} optional)</span>
+                    </p>
                   </div>
                 </div>
 

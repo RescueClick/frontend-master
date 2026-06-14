@@ -22,6 +22,10 @@ import {
   X,
   Shield,
   Check,
+  ChevronRight,
+  ChevronLeft,
+  Banknote,
+  Camera,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { signupPartner } from "../feature/thunks/partnerThunks";
@@ -32,6 +36,7 @@ import {
   COMPANY_NAME,
   COMPANY_TAGLINE,
 } from "../config/branding";
+
 const PASSWORD_MIN_LEN = 8;
 const MAX_PARTNER_DOC_BYTES = 5 * 1024 * 1024;
 const PARTNER_FILE_TOO_LARGE_MSG =
@@ -48,21 +53,17 @@ const passwordRuleChecks = (pw) => ({
 const passwordMeetsRules = (pw) =>
   Object.values(passwordRuleChecks(pw)).every(Boolean);
 
-/** Avoid PDF iframes on phones/tablets — they often open full-screen and trap the user. */
 function shouldEmbedPdfInIframe() {
   if (typeof window === "undefined") return true;
   try {
     const coarse = window.matchMedia("(pointer: coarse)").matches;
-    const mobileUa = /iPhone|iPad|iPod|Android/i.test(
-      navigator.userAgent || ""
-    );
+    const mobileUa = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "");
     return !coarse && !mobileUa;
   } catch {
     return true;
   }
 }
 
-/** Read PT-… / RM-… from common query keys used in share / referral links. */
 function partnerRefFromSearchParams(searchParams) {
   if (!searchParams) return "";
   const keys = ["ref", "partnerCode", "partnerReferralCode", "code"];
@@ -71,107 +72,92 @@ function partnerRefFromSearchParams(searchParams) {
     const trimmed = (raw || "").trim();
     if (!trimmed) continue;
     const upper = trimmed.toUpperCase();
-    if (upper.startsWith("PT-") || upper.startsWith("RM-")) {
-      return upper;
-    }
+    if (upper.startsWith("PT-") || upper.startsWith("RM-")) return upper;
   }
   return "";
 }
 
-const fieldClass = (fieldName, fieldErrors) =>
-  [
-    "w-full min-w-0 max-w-full rounded-xl border-2 bg-white/80 px-3 py-3 text-base transition focus:outline-none focus:ring-2 sm:px-4 sm:py-3.5",
-    fieldErrors[fieldName]
-      ? "border-red-400 focus:border-red-500 focus:ring-red-500/25"
-      : "border-stone-200 focus:border-[#0d9488] focus:ring-[#0d9488]/25",
-  ].join(" ");
+const STEPS = [
+  { id: 1, label: "Personal Info", icon: User },
+  { id: 2, label: "KYC & Identity", icon: CreditCard },
+  { id: 3, label: "Address & Bank", icon: MapPin },
+  { id: 4, label: "Documents", icon: FileText },
+];
+
+const inputBase =
+  "w-full min-w-0 rounded-xl border-2 bg-white/90 px-4 py-3 text-sm text-stone-800 placeholder-stone-400 transition-all duration-200 focus:outline-none focus:ring-2 sm:py-3.5 sm:text-base";
+const inputOk = "border-stone-200 focus:border-[#0d9488] focus:ring-[#0d9488]/20";
+const inputErr = "border-red-400 focus:border-red-500 focus:ring-red-400/20";
+
+const fieldClass = (name, errors) =>
+  `${inputBase} ${errors[name] ? inputErr : inputOk}`;
+
+const FieldError = ({ msg }) =>
+  msg ? <p className="mt-1.5 text-xs font-medium text-red-600">{msg}</p> : null;
+
+const Label = ({ children, required }) => (
+  <label className="mb-1.5 block text-sm font-semibold text-stone-700">
+    {children}
+    {required && <span className="ml-1 text-[#0d9488]">*</span>}
+  </label>
+);
 
 const PartnerRegistrationForm = () => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [direction, setDirection] = useState("forward"); // forward | back
+  const [animating, setAnimating] = useState(false);
+
   const [successMessage, setSuccessMessage] = useState("");
   const [showPopup, setShowPopup] = useState(false);
-  const [successMessageType, setSuccessMessageType] = useState(""); // "success" or "error"
+  const [successMessageType, setSuccessMessageType] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState({
     password: false,
     confirmPassword: false,
   });
   const [fieldErrors, setFieldErrors] = useState({});
-  const [docPreview, setDocPreview] = useState({
-    open: false,
-    name: "",
-    url: "",
-    type: "",
-  });
+  const [docPreview, setDocPreview] = useState({ open: false, name: "", url: "", type: "" });
+
   const adharInputRef = useRef(null);
   const panInputRef = useRef(null);
   const selfieCameraInputRef = useRef(null);
   const selfieGalleryInputRef = useRef(null);
-  const [embedPdfInIframe, setEmbedPdfInIframe] = useState(
-    shouldEmbedPdfInIframe
-  );
+  const formCardRef = useRef(null);
+
+  const [embedPdfInIframe, setEmbedPdfInIframe] = useState(shouldEmbedPdfInIframe);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-
-
   const [formData, setFormData] = useState({
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    phone: "",
-    email: "",
-    dob: "",
-    aadharNumber: "",
-    panNumber: "",
-    region: "",
-    partnerReferralCode: "",
-    pincode: "",
+    firstName: "", middleName: "", lastName: "",
+    phone: "", email: "", dob: "",
     employmentType: "",
-    address: "",
-    homeType: "",
-    addressStability: "",
-    landmark: "",
-    adharCard: null, // assign file via input later
-    panCard: null, // assign file via input later
-    selfie: null, // assign file via input later
-    bankName: "",
-    accountNumber: "",
-    ifscCode: "",
-    password: "",
-    confirmPassword: "",
+    aadharNumber: "", panNumber: "", partnerReferralCode: "",
+    region: "", address: "", pincode: "",
+    homeType: "", addressStability: "", landmark: "",
+    bankName: "", accountNumber: "", ifscCode: "",
+    adharCard: null, panCard: null, selfie: null,
+    password: "", confirmPassword: "",
   });
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      const isFormFilled = Object.values(formData).some((val) => {
+      const filled = Object.values(formData).some((val) => {
         if (typeof val === "string") return val.trim().length > 0;
-        if (val !== null && val !== undefined) return true; // checking files
-        return false;
+        return val !== null && val !== undefined;
       });
-
-      if (isFormFilled && !isLoading && !successMessage) {
+      if (filled && !isLoading && !successMessage) {
         e.preventDefault();
         e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
-        return e.returnValue;
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [formData, isLoading, successMessage]);
 
-  const showError = (message) => {
-    setSuccessMessageType("error");
-    setSuccessMessage(message);
-    setShowPopup(true);
-    return false;
-  };
-
-  const pwdChecks = useMemo(
-    () => passwordRuleChecks(formData.password),
-    [formData.password]
-  );
+  const pwdChecks = useMemo(() => passwordRuleChecks(formData.password), [formData.password]);
 
   const maxDob = useMemo(() => {
     const d = new Date();
@@ -191,7 +177,6 @@ const PartnerRegistrationForm = () => {
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
     let nextValue;
-
     if (type === "file") {
       const f = files?.[0] ?? null;
       if (f && f.size > MAX_PARTNER_DOC_BYTES) {
@@ -203,9 +188,7 @@ const PartnerRegistrationForm = () => {
       nextValue = f;
       setFormData((prev) => ({ ...prev, [name]: nextValue }));
       clearFieldError(name);
-      if (f) {
-        toast.success(`File ${f.name} selected successfully!`, { duration: 3000 });
-      }
+      if (f) toast.success(`${f.name} selected`, { duration: 2500 });
       return;
     } else if (name === "phone") {
       nextValue = normalizeMobileDigits(value);
@@ -221,18 +204,26 @@ const PartnerRegistrationForm = () => {
       nextValue = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 11);
     } else if (name === "partnerReferralCode") {
       nextValue = value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 32);
-    } else if (name === "firstName" || name === "lastName") {
-      nextValue = value.replace(/[^A-Za-z\s.'-]/g, "").slice(0, 50);
-    } else if (name === "middleName") {
+    } else if (name === "firstName" || name === "lastName" || name === "middleName") {
       nextValue = value.replace(/[^A-Za-z\s.'-]/g, "").slice(0, 50);
     } else if (name === "bankName" || name === "region") {
       nextValue = value.slice(0, 120);
     } else if (name === "addressStability") {
       nextValue = value.replace(/\D/g, "").slice(0, 3);
+    } else if (name === "dob") {
+      // Clean non-digits
+      const d = value.replace(/\D/g, "");
+      let formatted = d;
+      if (d.length > 4) {
+        formatted = d.slice(0, 4) + "-" + d.slice(4);
+      }
+      if (d.length > 6) {
+        formatted = formatted.slice(0, 7) + "-" + d.slice(6, 8);
+      }
+      nextValue = formatted.slice(0, 10);
     } else {
       nextValue = value;
     }
-
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
     clearFieldError(name);
   };
@@ -240,204 +231,140 @@ const PartnerRegistrationForm = () => {
   const handleRemoveFile = (name) => {
     setFormData((prev) => ({ ...prev, [name]: null }));
     clearFieldError(name);
-
-    if (name === "adharCard" && adharInputRef.current) {
-      adharInputRef.current.value = "";
-    }
-    if (name === "panCard" && panInputRef.current) {
-      panInputRef.current.value = "";
-    }
+    if (name === "adharCard" && adharInputRef.current) adharInputRef.current.value = "";
+    if (name === "panCard" && panInputRef.current) panInputRef.current.value = "";
     if (name === "selfie") {
       if (selfieCameraInputRef.current) selfieCameraInputRef.current.value = "";
-      if (selfieGalleryInputRef.current)
-        selfieGalleryInputRef.current.value = "";
+      if (selfieGalleryInputRef.current) selfieGalleryInputRef.current.value = "";
     }
   };
 
-  const validateFormFields = () => {
+  // Per-step validation
+  const validateStep = (step) => {
     const err = {};
-
-    if (!formData.firstName.trim()) err.firstName = "First name is required";
-    else if (formData.firstName.trim().length < 2)
-      err.firstName = "Enter at least 2 characters";
-
-    if (!formData.lastName.trim()) err.lastName = "Last name is required";
-    else if (formData.lastName.trim().length < 2)
-      err.lastName = "Enter at least 2 characters";
-
-    if (!formData.phone) err.phone = "Mobile number is required";
-    else if (!/^\d{10}$/.test(formData.phone))
-      err.phone = "Enter exactly 10 digits (with or without +91)";
-
-    if (!formData.email.trim()) err.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))
-      err.email = "Enter a valid email address";
-
-    if (!formData.dob) err.dob = "Date of birth is required";
-    else {
-      const birth = new Date(`${formData.dob}T12:00:00`);
-      const cutoff = new Date();
-      cutoff.setFullYear(cutoff.getFullYear() - 18);
-      if (birth > cutoff) err.dob = "You must be at least 18 years old";
+    if (step === 1) {
+      if (!formData.firstName.trim()) err.firstName = "First name is required";
+      else if (formData.firstName.trim().length < 2) err.firstName = "Min 2 characters";
+      if (!formData.lastName.trim()) err.lastName = "Last name is required";
+      else if (formData.lastName.trim().length < 2) err.lastName = "Min 2 characters";
+      if (!formData.phone) err.phone = "Mobile number is required";
+      else if (!/^\d{10}$/.test(formData.phone)) err.phone = "Enter exactly 10 digits";
+      if (!formData.email.trim()) err.email = "Email is required";
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) err.email = "Enter a valid email";
+      if (!formData.dob) err.dob = "Date of birth is required";
+      else {
+        const birth = new Date(`${formData.dob}T12:00:00`);
+        const cutoff = new Date();
+        cutoff.setFullYear(cutoff.getFullYear() - 18);
+        if (birth > cutoff) err.dob = "Must be at least 18 years old";
+      }
+      if (!formData.employmentType) err.employmentType = "Select employment type";
     }
-
-    if (!formData.employmentType)
-      err.employmentType = "Select employment type";
-
-    if (!formData.aadharNumber) err.aadharNumber = "Aadhaar number is required";
-    else if (!/^\d{12}$/.test(formData.aadharNumber))
-      err.aadharNumber = "Enter 12 digits (no spaces)";
-
-    if (!formData.panNumber) err.panNumber = "PAN is required";
-    else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber))
-      err.panNumber = "Invalid PAN (format ABCDE1234F)";
-
-    if (!formData.region.trim()) err.region = "Region is required";
-
-    if (!formData.address.trim()) err.address = "Complete address is required";
-    else if (formData.address.trim().length < 10)
-      err.address = "Please enter a fuller address (min 10 characters)";
-
-    if (!formData.pincode) err.pincode = "PIN code is required";
-    else if (!/^\d{6}$/.test(formData.pincode))
-      err.pincode = "Enter a valid 6-digit PIN code";
-
-    if (!formData.homeType) err.homeType = "Select Own or Rented";
-
-    if (!formData.addressStability || !String(formData.addressStability).trim()) {
-      err.addressStability = "Enter how long you’ve stayed at this address in months";
-    } else if (!/^\d+$/.test(formData.addressStability)) {
-      err.addressStability = "Please enter numbers only (e.g., 24 for 24 months)";
-    }
-    if (!formData.bankName.trim()) err.bankName = "Bank name is required";
-    if (!formData.accountNumber.trim())
-      err.accountNumber = "Account number is required";
-    else if (!/^\d{9,18}$/.test(formData.accountNumber))
-      err.accountNumber = "Enter 9–18 digits only";
-
-    if (!formData.ifscCode.trim()) err.ifscCode = "IFSC is required";
-    else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode))
-      err.ifscCode = "Invalid IFSC (e.g. SBIN0001234)";
-
-    if (!formData.password) err.password = "Password is required";
-    else if (!passwordMeetsRules(formData.password))
-      err.password = "Password must meet all rules below";
-
-    if (!formData.confirmPassword)
-      err.confirmPassword = "Confirm your password";
-    else if (formData.password !== formData.confirmPassword)
-      err.confirmPassword = "Passwords do not match";
-
-    const docMimeOk = (file, allowPdf) => {
-      if (!file) return false;
-      const t = (file.type || "").toLowerCase();
-      if (t === "application/pdf" && allowPdf) return true;
-      if (t === "image/jpeg" || t === "image/png" || t === "image/jpg")
-        return true;
-      const n = (file.name || "").toLowerCase();
-      if (allowPdf && n.endsWith(".pdf")) return true;
-      if (/\.(jpe?g|png)$/i.test(n)) return true;
-      return false;
-    };
-
-    if (!formData.adharCard) err.adharCard = "Upload Aadhaar (PDF, JPG or PNG)";
-    else if (!docMimeOk(formData.adharCard, true))
-      err.adharCard = "Use PDF, JPG or PNG (max 5MB)";
-
-    if (!formData.panCard) err.panCard = "Upload PAN (PDF, JPG or PNG)";
-    else if (!docMimeOk(formData.panCard, true))
-      err.panCard = "Use PDF, JPG or PNG (max 5MB)";
-
-    if (!formData.selfie) err.selfie = "Upload a selfie (JPG or PNG)";
-    else if (!docMimeOk(formData.selfie, false))
-      err.selfie = "Use JPG or PNG for selfie (max 5MB)";
-
-    if (formData.partnerReferralCode && formData.partnerReferralCode.trim() !== "") {
-      const code = formData.partnerReferralCode.trim();
-      if (!/^(PT-|RM-)[A-Z0-9]+$/.test(code)) {
-        err.partnerReferralCode = "Code must start with PT- or RM- followed by alphanumeric characters";
+    if (step === 2) {
+      if (!formData.aadharNumber) err.aadharNumber = "Aadhaar number is required";
+      else if (!/^\d{12}$/.test(formData.aadharNumber)) err.aadharNumber = "Enter 12 digits";
+      if (!formData.panNumber) err.panNumber = "PAN is required";
+      else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber)) err.panNumber = "Invalid PAN (e.g. ABCDE1234F)";
+      if (formData.partnerReferralCode?.trim()) {
+        const code = formData.partnerReferralCode.trim();
+        if (!/^(PT-|RM-)[A-Z0-9]+$/.test(code)) err.partnerReferralCode = "Must start with PT- or RM-";
       }
     }
-
-    if (formData.adharCard?.size > MAX_PARTNER_DOC_BYTES)
-      err.adharCard = PARTNER_FILE_TOO_LARGE_MSG;
-    if (formData.panCard?.size > MAX_PARTNER_DOC_BYTES)
-      err.panCard = PARTNER_FILE_TOO_LARGE_MSG;
-    if (formData.selfie?.size > MAX_PARTNER_DOC_BYTES)
-      err.selfie = PARTNER_FILE_TOO_LARGE_MSG;
-
-    setFieldErrors(err);
-    if (Object.keys(err).length > 0) {
-      setTimeout(() => {
-        const firstErrorField = document.querySelector(".border-red-400");
-        if (firstErrorField) {
-          firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
-          firstErrorField.focus();
-        }
-      }, 100);
+    if (step === 3) {
+      if (!formData.region.trim()) err.region = "Region is required";
+      if (!formData.address.trim()) err.address = "Address is required";
+      else if (formData.address.trim().length < 10) err.address = "Enter a fuller address (min 10 chars)";
+      if (!formData.pincode) err.pincode = "PIN code is required";
+      else if (!/^\d{6}$/.test(formData.pincode)) err.pincode = "Enter a valid 6-digit PIN";
+      if (!formData.homeType) err.homeType = "Select Own or Rented";
+      if (!formData.addressStability?.trim()) err.addressStability = "Enter months stayed at this address";
+      else if (!/^\d+$/.test(formData.addressStability)) err.addressStability = "Numbers only (e.g. 24)";
+      if (!formData.bankName.trim()) err.bankName = "Bank name is required";
+      if (!formData.accountNumber.trim()) err.accountNumber = "Account number is required";
+      else if (!/^\d{9,18}$/.test(formData.accountNumber)) err.accountNumber = "Enter 9–18 digits";
+      if (!formData.ifscCode.trim()) err.ifscCode = "IFSC is required";
+      else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode)) err.ifscCode = "Invalid IFSC (e.g. SBIN0001234)";
     }
+    if (step === 4) {
+      const docMimeOk = (file, allowPdf) => {
+        if (!file) return false;
+        const t = (file.type || "").toLowerCase();
+        if (t === "application/pdf" && allowPdf) return true;
+        if (t === "image/jpeg" || t === "image/png" || t === "image/jpg") return true;
+        const n = (file.name || "").toLowerCase();
+        if (allowPdf && n.endsWith(".pdf")) return true;
+        if (/\.(jpe?g|png)$/i.test(n)) return true;
+        return false;
+      };
+      if (!formData.adharCard) err.adharCard = "Upload Aadhaar (PDF, JPG or PNG)";
+      else if (!docMimeOk(formData.adharCard, true)) err.adharCard = "Use PDF, JPG or PNG (max 5MB)";
+      else if (formData.adharCard.size > MAX_PARTNER_DOC_BYTES) err.adharCard = PARTNER_FILE_TOO_LARGE_MSG;
+      if (!formData.panCard) err.panCard = "Upload PAN (PDF, JPG or PNG)";
+      else if (!docMimeOk(formData.panCard, true)) err.panCard = "Use PDF, JPG or PNG (max 5MB)";
+      else if (formData.panCard.size > MAX_PARTNER_DOC_BYTES) err.panCard = PARTNER_FILE_TOO_LARGE_MSG;
+      if (!formData.selfie) err.selfie = "Upload a selfie (JPG or PNG)";
+      else if (!docMimeOk(formData.selfie, false)) err.selfie = "Use JPG or PNG for selfie (max 5MB)";
+      else if (formData.selfie.size > MAX_PARTNER_DOC_BYTES) err.selfie = PARTNER_FILE_TOO_LARGE_MSG;
+      if (!formData.password) err.password = "Password is required";
+      else if (!passwordMeetsRules(formData.password)) err.password = "Password must meet all rules";
+      if (!formData.confirmPassword) err.confirmPassword = "Please confirm your password";
+      else if (formData.password !== formData.confirmPassword) err.confirmPassword = "Passwords do not match";
+    }
+    setFieldErrors(err);
     return Object.keys(err).length === 0;
+  };
+
+  const goToStep = (next) => {
+    if (animating) return;
+    setDirection(next > currentStep ? "forward" : "back");
+    setAnimating(true);
+    setTimeout(() => {
+      setCurrentStep(next);
+      setAnimating(false);
+      formCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 180);
+  };
+
+  const handleNext = () => {
+    if (!validateStep(currentStep)) return;
+    if (currentStep < 4) goToStep(currentStep + 1);
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) goToStep(currentStep - 1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateFormFields()) {
-      return;
-    }
+    if (!validateStep(4)) return;
 
     const phoneTen = normalizeMobileDigits(formData.phone);
-
     const newFormData = {
-      firstName: formData.firstName,
-      middleName: formData.middleName || null,
-      lastName: formData.lastName || null,
-      phone: phoneTen,
-      email: formData.email,
-      dob: formData.dob || null,
-      aadharNumber: formData.aadharNumber,
-      panNumber: formData.panNumber,
-      region: formData.region || null,
+      firstName: formData.firstName, middleName: formData.middleName || null,
+      lastName: formData.lastName || null, phone: phoneTen, email: formData.email,
+      dob: formData.dob || null, aadharNumber: formData.aadharNumber,
+      panNumber: formData.panNumber, region: formData.region || null,
       partnerReferralCode: formData.partnerReferralCode?.trim() || null,
       referralCode: formData.partnerReferralCode?.trim() || null,
-      pincode: formData.pincode || null,
-      employmentType: formData.employmentType || null,
-      address: formData.address || null,
-      homeType: formData.homeType || null,
+      pincode: formData.pincode || null, employmentType: formData.employmentType || null,
+      address: formData.address || null, homeType: formData.homeType || null,
       addressStability: formData.addressStability || null,
-      landmark: formData.landmark || null,
-      bankName: formData.bankName || null,
-      accountNumber: formData.accountNumber || null,
-      ifscCode: formData.ifscCode || null,
+      landmark: formData.landmark || null, bankName: formData.bankName || null,
+      accountNumber: formData.accountNumber || null, ifscCode: formData.ifscCode || null,
       password: formData.password,
     };
 
-    // ✅ Build FormData
     const formDataToSend = new FormData();
-
-    // Append JSON as a string
     formDataToSend.append("newFormData", JSON.stringify(newFormData));
+    if (formData.adharCard) formDataToSend.append("adharCard", formData.adharCard);
+    if (formData.panCard) formDataToSend.append("panCard", formData.panCard);
+    if (formData.selfie) formDataToSend.append("selfie", formData.selfie);
 
-    // Append files if present
-    if (formData.adharCard) {
-      formDataToSend.append("adharCard", formData.adharCard);
-    }
-    if (formData.panCard) {
-      formDataToSend.append("panCard", formData.panCard);
-    }
-    if (formData.selfie) {
-      formDataToSend.append("selfie", formData.selfie);
-    }
-
-    setIsLoading(true); // start spinner
-
+    setIsLoading(true);
     try {
       const response = await dispatch(signupPartner(formDataToSend)).unwrap();
-
       setSuccessMessageType("success");
-      setSuccessMessage(
-        response?.message || "Registration successful!"
-      );
+      setSuccessMessage(response?.message || "Registration successful!");
       setShowPopup(true);
       resetFields();
       setTimeout(() => navigate("/LoginPage"), 800);
@@ -445,41 +372,24 @@ const PartnerRegistrationForm = () => {
       const payload = err?.payload;
       const backendMsg =
         (typeof payload === "string" && payload.trim()) ||
-        payload?.message ||
-        err?.message ||
+        payload?.message || err?.message ||
         "Registration failed. Please try again.";
-      showError(backendMsg);
+      setSuccessMessageType("error");
+      setSuccessMessage(backendMsg);
+      setShowPopup(true);
     } finally {
-      setIsLoading(false); // stop spinner
+      setIsLoading(false);
     }
   };
 
   const resetFields = () => {
     setFormData({
-      firstName: "",
-      middleName: "",
-      lastName: "",
-      phone: "",
-      email: "",
-      dob: "",
-      aadharNumber: "",
-      panNumber: "",
-      region: "",
-      partnerReferralCode: "",
-      pincode: "",
-      employmentType: "",
-      address: "",
-      homeType: "",
-      addressStability: "",
-      landmark: "",
-      adharCard: null, // assign file via input later
-      panCard: null, // assign file via input later
-      selfie: null, // assign file via input later
-      bankName: "",
-      accountNumber: "",
-      ifscCode: "",
-      password: "",
-      confirmPassword: "",
+      firstName: "", middleName: "", lastName: "", phone: "", email: "",
+      dob: "", employmentType: "", aadharNumber: "", panNumber: "",
+      partnerReferralCode: "", region: "", address: "", pincode: "",
+      homeType: "", addressStability: "", landmark: "", bankName: "",
+      accountNumber: "", ifscCode: "", adharCard: null, panCard: null,
+      selfie: null, password: "", confirmPassword: "",
     });
     if (adharInputRef.current) adharInputRef.current.value = "";
     if (panInputRef.current) panInputRef.current.value = "";
@@ -487,7 +397,6 @@ const PartnerRegistrationForm = () => {
     if (selfieGalleryInputRef.current) selfieGalleryInputRef.current.value = "";
   };
 
-  /* Auto-fill from referral URLs (?ref= / ?partnerCode=, often with UTM params). useLayoutEffect avoids an empty flash. */
   const searchKey = searchParams.toString();
   useLayoutEffect(() => {
     const code = partnerRefFromSearchParams(searchParams);
@@ -496,11 +405,7 @@ const PartnerRegistrationForm = () => {
   }, [searchKey]);
 
   useEffect(() => {
-    return () => {
-      if (docPreview.url) {
-        URL.revokeObjectURL(docPreview.url);
-      }
-    };
+    return () => { if (docPreview.url) URL.revokeObjectURL(docPreview.url); };
   }, [docPreview.url]);
 
   useEffect(() => {
@@ -509,1026 +414,555 @@ const PartnerRegistrationForm = () => {
     window.addEventListener("resize", sync);
     const mq = window.matchMedia("(pointer: coarse)");
     mq.addEventListener("change", sync);
-    return () => {
-      window.removeEventListener("resize", sync);
-      mq.removeEventListener("change", sync);
-    };
+    return () => { window.removeEventListener("resize", sync); mq.removeEventListener("change", sync); };
   }, []);
 
   const openDocPreview = (file) => {
     if (!file) return;
-    if (docPreview.url) {
-      URL.revokeObjectURL(docPreview.url);
-    }
-    const nextUrl = URL.createObjectURL(file);
-    const nextType = (file.type || "").toLowerCase();
-    setDocPreview({
-      open: true,
-      name: file.name || "Document preview",
-      url: nextUrl,
-      type: nextType,
-    });
+    if (docPreview.url) URL.revokeObjectURL(docPreview.url);
+    setDocPreview({ open: true, name: file.name || "Document", url: URL.createObjectURL(file), type: (file.type || "").toLowerCase() });
   };
 
   const closeDocPreview = () => {
-    if (docPreview.url) {
-      URL.revokeObjectURL(docPreview.url);
-    }
-    setDocPreview({
-      open: false,
-      name: "",
-      url: "",
-      type: "",
-    });
+    if (docPreview.url) URL.revokeObjectURL(docPreview.url);
+    setDocPreview({ open: false, name: "", url: "", type: "" });
   };
 
   const isPdfPreview = docPreview.type === "application/pdf";
 
+  // --- File upload card component ---
+  const FileUploadCard = ({ name, label, icon: Icon, accept, inputRef, allowPdf = true }) => (
+    <div className="flex flex-col gap-2">
+      <Label required>{label}</Label>
+      <div
+        className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-200 cursor-pointer hover:border-[#0d9488]/60 hover:bg-teal-50/40 ${
+          fieldErrors[name] ? "border-red-400 bg-red-50/30" : formData[name] ? "border-emerald-400 bg-emerald-50/30" : "border-stone-200 bg-white/70"
+        }`}
+        onClick={() => inputRef.current?.click()}
+      >
+        <input
+          type="file"
+          name={name}
+          ref={inputRef}
+          accept={accept}
+          onChange={handleChange}
+          className="sr-only"
+        />
+        {formData[name] ? (
+          <>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+              <Check className="h-6 w-6 text-emerald-600" />
+            </div>
+            <p className="max-w-full truncate text-sm font-semibold text-emerald-700">{formData[name].name}</p>
+            <div className="flex gap-3">
+              <button type="button" onClick={(e) => { e.stopPropagation(); openDocPreview(formData[name]); }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#0d9488]/30 bg-white px-3 py-1 text-xs font-semibold text-[#0d9488] transition hover:bg-teal-50">
+                <Eye className="h-3.5 w-3.5" /> Preview
+              </button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveFile(name); }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50">
+                <X className="h-3.5 w-3.5" /> Remove
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-50">
+              <Icon className="h-6 w-6 text-[#0d9488]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-stone-700">Click to upload</p>
+              <p className="mt-0.5 text-xs text-stone-400">{allowPdf ? "PDF, JPG or PNG" : "JPG or PNG"} · max 5MB</p>
+            </div>
+          </>
+        )}
+      </div>
+      <FieldError msg={fieldErrors[name]} />
+    </div>
+  );
+
+  const progress = ((currentStep - 1) / (STEPS.length - 1)) * 100;
+
   return (
     <>
+      {/* Doc Preview Modal */}
       {docPreview.open && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 py-6"
-          onClick={closeDocPreview}
-          role="presentation"
-        >
-          <div
-            className="relative w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
-              <p className="truncate pr-4 text-sm font-semibold text-stone-700">
-                {docPreview.name}
-              </p>
-              <button
-                type="button"
-                onClick={closeDocPreview}
-                className="rounded-md p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-red-600"
-                aria-label="Close preview"
-              >
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 py-6" onClick={closeDocPreview} role="presentation">
+          <div className="relative w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-stone-200 px-5 py-3.5">
+              <p className="truncate pr-4 text-sm font-semibold text-stone-700">{docPreview.name}</p>
+              <button type="button" onClick={closeDocPreview} className="rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-red-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
-
             <div className="max-h-[80vh] overflow-auto bg-stone-50 p-4">
               {isPdfPreview && !embedPdfInIframe ? (
-                <div className="flex flex-col items-center gap-4 px-2 py-8 text-center">
+                <div className="flex flex-col items-center gap-4 py-10 text-center">
                   <FileText className="h-14 w-14 text-stone-400" />
-                  <p className="max-w-md text-sm leading-relaxed text-stone-600">
-                    In-browser PDF preview can leave this form on a phone. Your
-                    file is still attached. Use download if you want to check it,
-                    then close to continue.
-                  </p>
-                  <p className="w-full truncate text-xs font-medium text-stone-500">
-                    {docPreview.name}
-                  </p>
-                  <a
-                    href={docPreview.url}
-                    download={docPreview.name || "document.pdf"}
-                    className="inline-flex items-center justify-center rounded-xl bg-[#0d9488] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
-                  >
+                  <p className="max-w-md text-sm text-stone-600">Your file is attached. Download to review it on mobile.</p>
+                  <a href={docPreview.url} download={docPreview.name}
+                    className="inline-flex items-center justify-center rounded-xl bg-[#0d9488] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0f766e]">
                     Download PDF
                   </a>
                 </div>
               ) : isPdfPreview ? (
-                <iframe
-                  title="Document preview"
-                  src={docPreview.url}
-                  className="h-[72vh] w-full rounded-lg border border-stone-200 bg-white"
-                />
+                <iframe title="Document preview" src={docPreview.url} className="h-[72vh] w-full rounded-lg border border-stone-200" />
               ) : (
-                <img
-                  src={docPreview.url}
-                  alt={docPreview.name}
-                  className="mx-auto max-h-[72vh] w-auto rounded-lg border border-stone-200 bg-white object-contain"
-                />
+                <img src={docPreview.url} alt={docPreview.name} className="mx-auto max-h-[72vh] rounded-lg border border-stone-200 object-contain" />
               )}
             </div>
           </div>
         </div>
       )}
 
+      {/* Success/Error Popup */}
       {showPopup && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-[2px]"
-          onClick={() => setShowPopup(false)}
-          role="presentation"
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-stone-200/80 bg-white p-6 text-center shadow-2xl shadow-teal-900/10"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
-                successMessageType === "success"
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {successMessageType === "success" ? (
-                <Shield className="h-6 w-6" strokeWidth={2} />
-              ) : (
-                <X className="h-6 w-6" />
-              )}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm" onClick={() => setShowPopup(false)} role="presentation">
+          <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full ${successMessageType === "success" ? "bg-emerald-100" : "bg-red-100"}`}>
+              {successMessageType === "success" ? <Shield className="h-8 w-8 text-emerald-600" strokeWidth={2} /> : <X className="h-8 w-8 text-red-600" />}
             </div>
-            <h2
-              className={`text-lg font-semibold ${
-                successMessageType === "success"
-                  ? "text-emerald-700"
-                  : "text-red-700"
-              }`}
-            >
-              {successMessageType === "success" ? "Application submitted" : "Something went wrong"}
+            <h2 className={`text-xl font-bold ${successMessageType === "success" ? "text-emerald-700" : "text-red-700"}`}>
+              {successMessageType === "success" ? "Application Submitted!" : "Something Went Wrong"}
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-stone-600">
-              {successMessage}
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowPopup(false)}
-              className="mt-6 w-full rounded-xl bg-[#0d9488] py-3 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
-            >
+            <p className="mt-3 text-sm leading-relaxed text-stone-600">{successMessage}</p>
+            <button type="button" onClick={() => setShowPopup(false)}
+              className="mt-6 w-full rounded-xl bg-[#0d9488] py-3 text-sm font-bold text-white transition hover:bg-[#0f766e]">
               Close
             </button>
           </div>
         </div>
       )}
 
-      <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-stone-100 via-teal-50/40 to-amber-50/35">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_0%,rgba(13,148,136,0.12),transparent)]" />
-        <div className="relative px-3 py-8 sm:px-6 sm:py-10 lg:py-14">
-        <div className="mx-auto w-full max-w-4xl min-w-0">
-          <div className="mb-8 text-center sm:mb-10">
-            <div className="mx-auto mb-4 flex h-12 max-w-[min(100%,260px)] items-center justify-center rounded-xl border border-white/40 bg-white/95 px-3 shadow-lg shadow-teal-900/10 backdrop-blur-sm sm:mb-5 sm:h-14 sm:rounded-2xl sm:px-4">
-              <img
-                src={brandLogo}
-                alt={COMPANY_NAME}
-                className="max-h-9 w-full object-contain sm:max-h-10"
-              />
+      {/* Main Page */}
+      <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 via-teal-50/30 to-stone-50">
+        {/* Background decorations */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(13,148,136,0.1),transparent)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.03] [background-image:linear-gradient(rgba(0,0,0,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.1)_1px,transparent_1px)] [background-size:40px_40px]" />
+
+        <div className="relative mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-5 inline-flex items-center justify-center rounded-2xl border border-white/60 bg-white/95 px-5 py-2.5 shadow-lg shadow-teal-900/10 backdrop-blur-sm">
+              <img src={brandLogo} alt={COMPANY_NAME} className="h-9 w-auto object-contain sm:h-10" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0d9488] sm:text-[11px] sm:tracking-[0.28em]">
-              Partner onboarding
-            </p>
-            <h1 className="mt-2 text-balance text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl md:text-4xl">
-              Become a {COMPANY_NAME} partner
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#0d9488] sm:text-[11px]">Partner Onboarding</p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+              Become a <span className="text-[#0d9488]">{COMPANY_NAME}</span> Partner
             </h1>
-            <p className="mt-2 text-stone-600">{COMPANY_TAGLINE}</p>
-            <p className="mx-auto mt-3 max-w-lg px-1 text-xs text-stone-500 sm:mt-4 sm:px-0 sm:text-sm">
-              Trusted lending marketplace: complete all sections. Fields marked * are required.
-            </p>
-            <Link
-              to="/LoginPage"
-              className="mt-4 inline-block text-sm font-medium text-[#0d9488] underline-offset-4 hover:underline"
-            >
-              Already registered? Sign in
+            <p className="mt-1.5 text-sm text-stone-500">{COMPANY_TAGLINE}</p>
+            <Link to="/LoginPage" className="mt-3 inline-block text-sm font-semibold text-[#0d9488] underline-offset-4 hover:underline">
+              Already registered? Sign in →
             </Link>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="w-full max-w-full overflow-hidden rounded-2xl border border-white/40 bg-white/80 shadow-2xl shadow-teal-900/10 backdrop-blur-md sm:rounded-3xl"
-            noValidate
-          >
-            {/* Personal Information Section */}
-            <div className="space-y-6 bg-gray-50 p-4 sm:space-y-8 sm:p-6 md:p-8 rounded-2xl shadow-md">
-              {/* Personal Information */}
-
-              <section className="space-y-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-md sm:space-y-8 sm:p-6 md:p-8">
-                {/* Header */}
-                <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] shadow-md shadow-teal-900/15 sm:h-12 sm:w-12">
-                    <User className="h-5 w-5 text-white sm:h-6 sm:w-6" />
-                  </div>
-                  <h2 className="text-xl font-bold text-stone-800 sm:text-2xl">
-                    Personal Information
-                  </h2>
-                </div>
-
-                <div className="grid gap-6">
-                  {/* Name Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="relative">
-                      <label className="mb-2 block font-semibold text-stone-700">
-                        First Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="firstName"
-                        value={formData.firstName || ""}
-                        onChange={handleChange}
-                        placeholder="Enter first name"
-                        className={fieldClass("firstName", fieldErrors)}
-                        autoComplete="given-name"
-                      />
-                      {fieldErrors.firstName && (
-                        <p className="mt-1.5 text-sm text-red-600">
-                          {fieldErrors.firstName}
-                        </p>
-                      )}
-                    </div>
-                    <div className="relative">
-                      <label className="mb-2 block font-semibold text-stone-700">
-                        Middle Name
-                      </label>
-                      <input
-                        type="text"
-                        name="middleName"
-                        value={formData.middleName || ""}
-                        onChange={handleChange}
-                        placeholder="Enter middle name (optional)"
-                        className={fieldClass("middleName", fieldErrors)}
-                        autoComplete="additional-name"
-                      />
-                      {fieldErrors.middleName && (
-                        <p className="mt-1.5 text-sm text-red-600">
-                          {fieldErrors.middleName}
-                        </p>
-                      )}
-                    </div>
-                    <div className="relative">
-                      <label className="mb-2 block font-semibold text-stone-700">
-                        Last Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        value={formData.lastName || ""}
-                        onChange={handleChange}
-                        placeholder="Enter last name"
-                        className={fieldClass("lastName", fieldErrors)}
-                        autoComplete="family-name"
-                      />
-                      {fieldErrors.lastName && (
-                        <p className="mt-1.5 text-sm text-red-600">
-                          {fieldErrors.lastName}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Contact Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="relative">
-                      <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                        <Phone className="h-4 w-4 text-[#0d9488]" /> Mobile
-                        Number *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        inputMode="numeric"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="10-digit mobile or +91…"
-                        className={fieldClass("phone", fieldErrors)}
-                        autoComplete="tel"
-                      />
-                      {fieldErrors.phone && (
-                        <p className="mt-1.5 text-sm text-red-600">
-                          {fieldErrors.phone}
-                        </p>
-                      )}
-                    </div>
-                    <div className="relative">
-                      <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                        <Mail className="h-4 w-4 text-[#0d9488]" /> Email
-                        Address *
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="example@gmail.com"
-                        className={fieldClass("email", fieldErrors)}
-                        autoComplete="email"
-                      />
-                      {fieldErrors.email && (
-                        <p className="mt-1.5 text-sm text-red-600">
-                          {fieldErrors.email}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Employment Type & DOB */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="relative">
-                      <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                        <Building2 className="h-4 w-4 text-[#0d9488]" />{" "}
-                        Employment Type *
-                      </label>
-                      <select
-                        name="employmentType"
-                        value={formData.employmentType}
-                        onChange={handleChange}
-                        className={fieldClass("employmentType", fieldErrors)}
-                      >
-                        <option value="">Select employment type</option>
-                        <option value="Fulltime">Fulltime</option>
-                        <option value="Parttime">Parttime</option>
-                      </select>
-                      {fieldErrors.employmentType && (
-                        <p className="mt-1.5 text-sm text-red-600">
-                          {fieldErrors.employmentType}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="relative">
-                      <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                        <Calendar className="h-4 w-4 text-[#0d9488]" /> Date
-                        of Birth *
-                      </label>
-                      <input
-                        type="date"
-                        name="dob"
-                        max={maxDob}
-                        value={formData.dob}
-                        onChange={handleChange}
-                        className={fieldClass("dob", fieldErrors)}
-                      />
-                      {fieldErrors.dob && (
-                        <p className="mt-1.5 text-sm text-red-600">
-                          {fieldErrors.dob}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="relative">
-                      <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                        Aadhaar Number *
-                      </label>
-                      <input
-                        type="text"
-                        name="aadharNumber"
-                        inputMode="numeric"
-                        value={formData.aadharNumber || ""}
-                        onChange={handleChange}
-                        placeholder="12-digit Aadhaar"
-                        className={fieldClass("aadharNumber", fieldErrors)}
-                        maxLength={12}
-                      />
-                      {fieldErrors.aadharNumber && (
-                        <p className="mt-1.5 text-sm text-red-600">
-                          {fieldErrors.aadharNumber}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="relative">
-                      <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                        PAN Number *
-                      </label>
-                      <input
-                        type="text"
-                        name="panNumber"
-                        value={formData.panNumber || ""}
-                        onChange={handleChange}
-                        placeholder="ABCDE1234F"
-                        className={fieldClass("panNumber", fieldErrors)}
-                        maxLength={10}
-                      />
-                      {fieldErrors.panNumber && (
-                        <p className="mt-1.5 text-sm text-red-600">
-                          {fieldErrors.panNumber}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="relative">
-                      <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                        <Lock className="h-4 w-4 text-[#0d9488]" /> Partner
-                        referral code{" "}
-                        <span className="ml-1 text-xs font-normal text-stone-400">
-                          (optional)
-                        </span>
-                      </label>
-                      <input
-                        type="text"
-                        name="partnerReferralCode"
-                        value={formData.partnerReferralCode || ""}
-                        onChange={handleChange}
-                        placeholder="e.g. PT-XXXXXXXX"
-                        className="w-full rounded-xl border-2 border-stone-200 bg-white/80 px-4 py-3.5 transition focus:border-[#0d9488] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/25"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        If another channel partner referred you, enter their{" "}
-                        <span className="font-mono">PT-</span> code so they are
-                        credited. You can use an <span className="font-mono">RM-</span>{" "}
-                        code instead if your Relationship Manager shared one.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Address Details */}
-              <section className="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-md sm:space-y-6 sm:p-6 md:p-8">
-                <h2 className="text-lg font-bold text-gray-800 sm:text-xl">
-                  Address Details
-                </h2>
-
-                {/* Region */}
-                <div className="relative">
-                  <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                    <MapPin className="h-4 w-4 text-[#0d9488]" /> Region *
-                  </label>
-                  <input
-                    type="text"
-                    name="region"
-                    value={formData.region || ""}
-                    onChange={handleChange}
-                    placeholder="Enter your region"
-                    className={fieldClass("region", fieldErrors)}
-                  />
-                  {fieldErrors.region && (
-                    <p className="mt-1.5 text-sm text-red-600">
-                      {fieldErrors.region}
-                    </p>
-                  )}
-                </div>
-
-                {/* Complete Address */}
-                <div className="relative">
-                  <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                    <MapPin className="h-4 w-4 text-[#0d9488]" /> Complete
-                    Address *
-                  </label>
-                  <textarea
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    placeholder="Enter your complete address"
-                    rows="4"
-                    className={`${fieldClass("address", fieldErrors)} resize-none`}
-                  />
-                  {fieldErrors.address && (
-                    <p className="mt-1.5 text-sm text-red-600">
-                      {fieldErrors.address}
-                    </p>
-                  )}
-                </div>
-
-                {/* Pincode & Own/Rented */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div className="relative">
-                    <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                      <MapPin className="h-4 w-4 text-[#0d9488]" /> Pincode *
-                    </label>
-                    <input
-                      type="text"
-                      name="pincode"
-                      inputMode="numeric"
-                      value={formData.pincode}
-                      onChange={handleChange}
-                      placeholder="6-digit PIN"
-                      className={fieldClass("pincode", fieldErrors)}
-                      maxLength={6}
-                    />
-                    {fieldErrors.pincode && (
-                      <p className="mt-1.5 text-sm text-red-600">
-                        {fieldErrors.pincode}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="relative">
-                    <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                      <Building2 className="h-4 w-4 text-[#0d9488]" /> Own /
-                      Rented *
-                    </label>
-                    <select
-                      name="homeType"
-                      value={formData.homeType}
-                      onChange={handleChange}
-                      className={fieldClass("homeType", fieldErrors)}
-                    >
-                      <option value="">Select</option>
-                      <option value="Own">Own</option>
-                      <option value="Rented">Rented</option>
-                    </select>
-                    {fieldErrors.homeType && (
-                      <p className="mt-1.5 text-sm text-red-600">
-                        {fieldErrors.homeType}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Address Stability & Landmark */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div className="relative">
-                    <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                      <Building2 className="h-4 w-4 text-[#0d9488]" /> Address
-                      Stability (In Months) *
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      name="addressStability"
-                      value={formData.addressStability}
-                      onChange={handleChange}
-                      placeholder="e.g., 24"
-                      className={fieldClass("addressStability", fieldErrors)}
-                    />
-                    {fieldErrors.addressStability && (
-                      <p className="mt-1.5 text-sm text-red-600">
-                        {fieldErrors.addressStability}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="relative">
-                    <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                      <MapPin className="h-4 w-4 text-[#0d9488]" /> Landmark
-                    </label>
-                    <input
-                      type="text"
-                      name="landmark"
-                      value={formData.landmark}
-                      onChange={handleChange}
-                      placeholder="Enter nearby landmark (optional)"
-                      className="w-full rounded-xl border-2 border-stone-200 bg-white/80 px-4 py-3.5 transition focus:border-[#0d9488] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/25"
-                    />
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            {/* Document Upload Section */}
-            <div className="border-b border-stone-100 p-8">
-              <div className="mb-6 flex flex-wrap items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e]">
-                  <FileText className="h-5 w-5 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-stone-800">
-                  Document Upload
-                </h2>
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
-                  Required
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="relative group">
-                  <label className=" text-slate-700 font-semibold mb-2 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-emerald-500" />
-                    Aadhaar Card <span className="text-emerald-600">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      name="adharCard"
-                      ref={adharInputRef}
-                      accept="image/jpeg,image/png,image/jpg,application/pdf"
-                      onChange={handleChange}
-                      className={`w-full min-w-0 cursor-pointer rounded-xl border-2 bg-white/80 p-3 pr-[4.5rem] text-transparent caret-transparent transition file:mr-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-[#0d9488] file:to-[#0f766e] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 sm:p-4 sm:pr-24 sm:file:mr-4 sm:file:px-4 sm:file:py-2 sm:file:text-sm ${
-                        fieldErrors.adharCard
-                          ? "border-red-400"
-                          : "border-stone-200"
-                      }`}
-                    />
-                    {formData.adharCard && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile("adharCard")}
-                        className="absolute inset-y-0 right-10 flex items-center text-slate-500 hover:text-red-600 sm:right-12"
-                        title="Remove file"
-                      >
-                        <X className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </button>
-                    )}
-                    <Upload className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 sm:right-4 sm:h-5 sm:w-5" />
-                  </div>
-                  <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
-                    <span className="min-w-0 truncate">
-                      {formData.adharCard ? (
-                        <div className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-emerald-500" />
-                          <span className="text-emerald-700 font-medium">{formData.adharCard.name}</span>
-                        </div>
-                      ) : (
-                        "No file selected"
-                      )}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      {formData.adharCard && (
-                        <button
-                          type="button"
-                          onClick={() => openDocPreview(formData.adharCard)}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0d9488] hover:text-[#0f766e]"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Preview
-                        </button>
-                      )}
-                      <span className="text-xs text-slate-500">Max 5MB</span>
-                    </div>
-                  </div>
-                  {fieldErrors.adharCard && (
-                    <p className="mt-1.5 text-sm text-red-600">
-                      {fieldErrors.adharCard}
-                    </p>
-                  )}
-                </div>
-                <div className="relative group">
-                  <label className=" text-slate-700 font-semibold mb-2 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-emerald-500" />
-                    PAN Card <span className="text-emerald-600">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      name="panCard"
-                      ref={panInputRef}
-                      accept="image/jpeg,image/png,image/jpg,application/pdf"
-                      onChange={handleChange}
-                      className={`w-full min-w-0 cursor-pointer rounded-xl border-2 bg-white/80 p-3 pr-[4.5rem] text-transparent caret-transparent transition file:mr-2 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-[#0d9488] file:to-[#0f766e] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 sm:p-4 sm:pr-24 sm:file:mr-4 sm:file:px-4 sm:file:py-2 sm:file:text-sm ${
-                        fieldErrors.panCard
-                          ? "border-red-400"
-                          : "border-stone-200"
-                      }`}
-                    />
-                    {formData.panCard && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile("panCard")}
-                        className="absolute inset-y-0 right-10 flex items-center text-slate-500 hover:text-red-600 sm:right-12"
-                        title="Remove file"
-                      >
-                        <X className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </button>
-                    )}
-                    <Upload className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 sm:right-4 sm:h-5 sm:w-5" />
-                  </div>
-                  <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
-                    <span className="min-w-0 truncate">
-                      {formData.panCard ? (
-                        <div className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-emerald-500" />
-                          <span className="text-emerald-700 font-medium">{formData.panCard.name}</span>
-                        </div>
-                      ) : (
-                        "No file selected"
-                      )}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      {formData.panCard && (
-                        <button
-                          type="button"
-                          onClick={() => openDocPreview(formData.panCard)}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0d9488] hover:text-[#0f766e]"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Preview
-                        </button>
-                      )}
-                      <span className="text-xs text-slate-500">Max 5MB</span>
-                    </div>
-                  </div>
-                  {fieldErrors.panCard && (
-                    <p className="mt-1.5 text-sm text-red-600">
-                      {fieldErrors.panCard}
-                    </p>
-                  )}
-                </div>
-                <div className="relative group">
-                  <label className=" text-slate-700 font-semibold mb-2 flex items-center gap-2">
-                    <User className="w-4 h-4 text-emerald-500" />
-                    Selfie Photo <span className="text-emerald-600">*</span>
-                  </label>
-                  <input
-                    type="file"
-                    name="selfie"
-                    ref={selfieCameraInputRef}
-                    accept="image/jpeg,image/png,image/jpg"
-                    capture="user"
-                    onChange={handleChange}
-                    className="sr-only"
-                    aria-hidden
-                    tabIndex={-1}
-                  />
-                  <input
-                    type="file"
-                    name="selfie"
-                    ref={selfieGalleryInputRef}
-                    accept="image/jpeg,image/png,image/jpg"
-                    onChange={handleChange}
-                    className="sr-only"
-                    aria-hidden
-                    tabIndex={-1}
-                  />
-                  <div
-                    className={`flex min-h-[3rem] flex-wrap items-center gap-2 rounded-xl border-2 bg-white/80 p-3 sm:min-h-[3.25rem] sm:p-4 ${
-                      fieldErrors.selfie
-                        ? "border-red-400"
-                        : "border-stone-200"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => selfieCameraInputRef.current?.click()}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#0d9488] to-[#0f766e] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 min-[400px]:flex-none sm:px-4 sm:text-sm"
-                    >
-                      <Upload className="h-4 w-4 shrink-0" />
-                      Use camera
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => selfieGalleryInputRef.current?.click()}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-[#0d9488] bg-white px-3 py-2 text-xs font-semibold text-[#0d9488] transition hover:bg-teal-50 min-[400px]:flex-none sm:px-4 sm:text-sm"
-                    >
-                      <Upload className="h-4 w-4 shrink-0" />
-                      From gallery
-                    </button>
-                    {formData.selfie && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile("selfie")}
-                        className="ml-auto inline-flex items-center text-slate-500 hover:text-red-600"
-                        title="Remove file"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-1.5 text-[11px] text-slate-500 sm:text-xs">
-                    Camera may ask for permission in the browser. Use gallery if
-                    you already have a photo.
-                  </p>
-                  <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:text-sm">
-                    <span className="min-w-0 truncate">
-                      {formData.selfie ? (
-                        <div className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-emerald-500" />
-                          <span className="text-emerald-700 font-medium">{formData.selfie.name}</span>
-                        </div>
-                      ) : (
-                        "No file selected"
-                      )}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      {formData.selfie && (
-                        <button
-                          type="button"
-                          onClick={() => openDocPreview(formData.selfie)}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0d9488] hover:text-[#0f766e]"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Preview
-                        </button>
-                      )}
-                      <span className="text-xs text-slate-500">Max 5MB</span>
-                    </div>
-                  </div>
-                  {fieldErrors.selfie && (
-                    <p className="mt-1.5 text-sm text-red-600">
-                      {fieldErrors.selfie}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Bank KYC Section */}
-            <div className="border-b border-stone-100 p-4 sm:p-6 md:p-8">
-              <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] sm:h-10 sm:w-10">
-                  <Building2 className="h-4 w-4 text-white sm:h-5 sm:w-5" />
-                </div>
-                <h2 className="text-xl font-bold text-stone-800 sm:text-2xl">
-                  Bank KYC Details
-                </h2>
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
-                  Required
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div className="relative">
-                  <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                    <Building2 className="h-4 w-4 text-[#0d9488]" />
-                    Bank Name <span className="text-[#0d9488]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="bankName"
-                    value={formData.bankName}
-                    onChange={handleChange}
-                    className={fieldClass("bankName", fieldErrors)}
-                    placeholder="Enter bank name"
-                  />
-                  {fieldErrors.bankName && (
-                    <p className="mt-1.5 text-sm text-red-600">
-                      {fieldErrors.bankName}
-                    </p>
-                  )}
-                </div>
-                <div className="relative">
-                  <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                    <CreditCard className="h-4 w-4 text-[#0d9488]" />
-                    Account Number <span className="text-[#0d9488]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="accountNumber"
-                    inputMode="numeric"
-                    value={formData.accountNumber}
-                    onChange={handleChange}
-                    className={fieldClass("accountNumber", fieldErrors)}
-                    placeholder="9–18 digits"
-                  />
-                  {fieldErrors.accountNumber && (
-                    <p className="mt-1.5 text-sm text-red-600">
-                      {fieldErrors.accountNumber}
-                    </p>
-                  )}
-                </div>
-                <div className="relative">
-                  <label className="mb-2 flex items-center gap-2 font-semibold text-stone-700">
-                    <Building2 className="h-4 w-4 text-[#0d9488]" />
-                    IFSC Code <span className="text-[#0d9488]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="ifscCode"
-                    value={formData.ifscCode}
-                    onChange={handleChange}
-                    className={fieldClass("ifscCode", fieldErrors)}
-                    placeholder="e.g. SBIN0001234"
-                    maxLength={11}
-                  />
-                  {fieldErrors.ifscCode && (
-                    <p className="mt-1.5 text-sm text-red-600">
-                      {fieldErrors.ifscCode}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Password Section */}
-            <div className="p-4 sm:p-6 md:p-8">
-              <div className="mb-4 flex items-center gap-2 sm:mb-6 sm:gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] sm:h-10 sm:w-10">
-                  <Lock className="h-4 w-4 text-white sm:h-5 sm:w-5" />
-                </div>
-                <h2 className="text-xl font-bold text-stone-800 sm:text-2xl">Security</h2>
-              </div>
-
-            <div className="grid max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <p className="text-sm text-stone-600">
-                  Password must meet every rule below ({PASSWORD_MIN_LEN}+ characters):
-                </p>
-                <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {[
-                    { key: "len", label: `At least ${PASSWORD_MIN_LEN} characters` },
-                    { key: "upper", label: "One uppercase letter (A–Z)" },
-                    { key: "lower", label: "One lowercase letter (a–z)" },
-                    { key: "num", label: "One number (0–9)" },
-                    { key: "special", label: "One special character (!@#…)" },
-                  ].map(({ key, label }) => (
-                    <li
-                      key={key}
-                      className="flex items-center gap-2 text-sm text-stone-600"
-                    >
-                      <span
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                          pwdChecks[key]
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-stone-100 text-stone-400"
-                        }`}
-                      >
-                        {pwdChecks[key] ? (
-                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                        ) : null}
+          {/* Stepper Header */}
+          <div ref={formCardRef} className="mb-6 rounded-2xl border border-white/60 bg-white/90 p-5 shadow-lg shadow-teal-900/8 backdrop-blur-sm sm:p-6">
+            {/* Step circles */}
+            <div className="flex items-center justify-between">
+              {STEPS.map((step, idx) => {
+                const Icon = step.icon;
+                const done = currentStep > step.id;
+                const active = currentStep === step.id;
+                return (
+                  <React.Fragment key={step.id}>
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 sm:h-11 sm:w-11 ${
+                        done ? "border-[#0d9488] bg-[#0d9488]" : active ? "border-[#0d9488] bg-[#0d9488]/10" : "border-stone-200 bg-stone-50"
+                      }`}>
+                        {done ? (
+                          <Check className="h-5 w-5 text-white" strokeWidth={2.5} />
+                        ) : (
+                          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${active ? "text-[#0d9488]" : "text-stone-400"}`} />
+                        )}
+                      </div>
+                      <span className={`hidden text-[10px] font-semibold sm:block ${active ? "text-[#0d9488]" : done ? "text-stone-500" : "text-stone-400"}`}>
+                        {step.label}
                       </span>
-                      {label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 font-semibold text-stone-700">
-                  <Lock className="h-4 w-4 text-[#0d9488]" />
-                  Create password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword.password ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    autoComplete="new-password"
-                    className={`${fieldClass("password", fieldErrors)} pr-12`}
-                    placeholder="Strong password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPassword((prev) => ({
-                        ...prev,
-                        password: !prev.password,
-                      }))
-                    }
-                    className="absolute inset-y-0 right-4 flex items-center text-stone-500 hover:text-stone-700"
-                  >
-                    {showPassword.password ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
+                    </div>
+                    {idx < STEPS.length - 1 && (
+                      <div className="relative mx-1 h-0.5 flex-1 overflow-hidden rounded-full bg-stone-200 sm:mx-2">
+                        <div className={`absolute inset-y-0 left-0 rounded-full bg-[#0d9488] transition-all duration-500 ${currentStep > step.id ? "w-full" : "w-0"}`} />
+                      </div>
                     )}
-                  </button>
-                </div>
-                {fieldErrors.password && (
-                  <p className="text-sm text-red-600">{fieldErrors.password}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 font-semibold text-stone-700">
-                  <Lock className="h-4 w-4 text-[#0d9488]" />
-                  Confirm password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword.confirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    autoComplete="new-password"
-                    onPaste={(e) => e.preventDefault()}
-                    className={`${fieldClass("confirmPassword", fieldErrors)} pr-12`}
-                    placeholder="Re-enter password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPassword((prev) => ({
-                        ...prev,
-                        confirmPassword: !prev.confirmPassword,
-                      }))
-                    }
-                    className="absolute inset-y-0 right-4 flex items-center text-stone-500 hover:text-stone-700"
-                  >
-                    {showPassword.confirmPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-                {fieldErrors.confirmPassword && (
-                  <p className="text-sm text-red-600">
-                    {fieldErrors.confirmPassword}
-                  </p>
-                )}
-              </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
+            {/* Progress text */}
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm font-bold text-stone-800">
+                Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1].label}
+              </p>
+              <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-[#0d9488]">{Math.round(progress)}% done</span>
             </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
+              <div className="h-full rounded-full bg-gradient-to-r from-[#0d9488] to-emerald-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
 
-            <div className="border-t border-stone-100 bg-stone-50/80 px-4 py-6 sm:px-6 sm:py-8 md:px-8">
-              <button
-                disabled={isLoading}
-                type="submit"
-                className={`flex w-full min-h-[48px] items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition min-[480px]:min-h-[52px] min-[480px]:rounded-2xl min-[480px]:px-8 min-[480px]:py-4 md:w-auto ${
-                  isLoading
-                    ? "cursor-not-allowed bg-[#0f766e]/70"
-                    : "bg-[#0d9488] hover:bg-[#0f766e] hover:shadow-xl"
-                }`}
-              >
-                {isLoading ? (
-                  <>
-                    <svg
-                      className="h-5 w-5 animate-spin text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                      />
-                    </svg>
-                    Submitting…
-                  </>
+          {/* Form Card */}
+          <form onSubmit={handleSubmit} noValidate>
+            <div className={`rounded-2xl border border-white/60 bg-white/90 shadow-xl shadow-teal-900/8 backdrop-blur-sm transition-all duration-200 ${animating ? (direction === "forward" ? "opacity-0 translate-x-4" : "opacity-0 -translate-x-4") : "opacity-100 translate-x-0"}`}>
+
+              {/* ── STEP 1: Personal Info ── */}
+              {currentStep === 1 && (
+                <div className="space-y-5 p-6 sm:p-8">
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] shadow">
+                      <User className="h-4 w-4 text-white" />
+                    </div>
+                    <h2 className="text-lg font-bold text-stone-900">Personal Information</h2>
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-3">
+                    <div>
+                      <Label required>First Name</Label>
+                      <input type="text" name="firstName" value={formData.firstName} onChange={handleChange}
+                        placeholder="First name" className={fieldClass("firstName", fieldErrors)} autoComplete="given-name" />
+                      <FieldError msg={fieldErrors.firstName} />
+                    </div>
+                    <div>
+                      <Label>Middle Name</Label>
+                      <input type="text" name="middleName" value={formData.middleName} onChange={handleChange}
+                        placeholder="Middle name (optional)" className={`${inputBase} ${inputOk}`} autoComplete="additional-name" />
+                    </div>
+                    <div>
+                      <Label required>Last Name</Label>
+                      <input type="text" name="lastName" value={formData.lastName} onChange={handleChange}
+                        placeholder="Last name" className={fieldClass("lastName", fieldErrors)} autoComplete="family-name" />
+                      <FieldError msg={fieldErrors.lastName} />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <Label required>Mobile Number</Label>
+                      <div className="relative">
+                        <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                        <input type="tel" name="phone" inputMode="numeric" value={formData.phone} onChange={handleChange}
+                          placeholder="10-digit mobile" className={`${fieldClass("phone", fieldErrors)} pl-10`} autoComplete="tel" />
+                      </div>
+                      <FieldError msg={fieldErrors.phone} />
+                    </div>
+                    <div>
+                      <Label required>Email Address</Label>
+                      <div className="relative">
+                        <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                        <input type="email" name="email" value={formData.email} onChange={handleChange}
+                          placeholder="example@gmail.com" className={`${fieldClass("email", fieldErrors)} pl-10`} autoComplete="email" />
+                      </div>
+                      <FieldError msg={fieldErrors.email} />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <Label required>Date of Birth</Label>
+                      <div className="relative">
+                        <Calendar className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                        <input type="text" name="dob" placeholder="YYYY-MM-DD" maxLength={10} value={formData.dob} onChange={handleChange}
+                           className={`${fieldClass("dob", fieldErrors)} pl-10`} />
+                      </div>
+                      <FieldError msg={fieldErrors.dob} />
+                    </div>
+                    <div>
+                      <Label required>Employment Type</Label>
+                      <div className="relative">
+                        <Building2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                        <select name="employmentType" value={formData.employmentType} onChange={handleChange}
+                          className={`${fieldClass("employmentType", fieldErrors)} pl-10 appearance-none`}>
+                          <option value="">Select type</option>
+                          <option value="Fulltime">Full-time</option>
+                          <option value="Parttime">Part-time</option>
+                        </select>
+                      </div>
+                      <FieldError msg={fieldErrors.employmentType} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 2: KYC & Identity ── */}
+              {currentStep === 2 && (
+                <div className="space-y-5 p-6 sm:p-8">
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] shadow">
+                      <CreditCard className="h-4 w-4 text-white" />
+                    </div>
+                    <h2 className="text-lg font-bold text-stone-900">KYC & Identity</h2>
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <Label required>Aadhaar Number</Label>
+                      <input type="text" name="aadharNumber" inputMode="numeric" value={formData.aadharNumber} onChange={handleChange}
+                        placeholder="12-digit Aadhaar" className={fieldClass("aadharNumber", fieldErrors)} maxLength={12} />
+                      <FieldError msg={fieldErrors.aadharNumber} />
+                    </div>
+                    <div>
+                      <Label required>PAN Number</Label>
+                      <input type="text" name="panNumber" value={formData.panNumber} onChange={handleChange}
+                        placeholder="ABCDE1234F" className={fieldClass("panNumber", fieldErrors)} maxLength={10} />
+                      <FieldError msg={fieldErrors.panNumber} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Partner Referral Code <span className="ml-1 text-xs font-normal text-stone-400">(optional)</span></Label>
+                    <div className="relative">
+                      <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                      <input type="text" name="partnerReferralCode" value={formData.partnerReferralCode} onChange={handleChange}
+                        placeholder="e.g. PT-XXXXXXXX" className={`${fieldClass("partnerReferralCode", fieldErrors)} pl-10`} />
+                    </div>
+                    <p className="mt-1.5 text-xs text-stone-400">
+                      If a partner referred you, enter their <span className="font-mono font-semibold">PT-</span> or <span className="font-mono font-semibold">RM-</span> code.
+                    </p>
+                    <FieldError msg={fieldErrors.partnerReferralCode} />
+                  </div>
+
+                  <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4">
+                    <div className="flex gap-3">
+                      <Shield className="mt-0.5 h-5 w-5 shrink-0 text-[#0d9488]" />
+                      <div>
+                        <p className="text-sm font-semibold text-stone-800">Your data is secure</p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-stone-500">KYC details are encrypted and used only for partner verification. We never share your data with third parties.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 3: Address & Bank ── */}
+              {currentStep === 3 && (
+                <div className="space-y-5 p-6 sm:p-8">
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] shadow">
+                      <MapPin className="h-4 w-4 text-white" />
+                    </div>
+                    <h2 className="text-lg font-bold text-stone-900">Address & Bank Details</h2>
+                  </div>
+
+                  <div>
+                    <Label required>Region / City</Label>
+                    <div className="relative">
+                      <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                      <input type="text" name="region" value={formData.region} onChange={handleChange}
+                        placeholder="Enter your region or city" className={`${fieldClass("region", fieldErrors)} pl-10`} />
+                    </div>
+                    <FieldError msg={fieldErrors.region} />
+                  </div>
+
+                  <div>
+                    <Label required>Complete Address</Label>
+                    <textarea name="address" value={formData.address} onChange={handleChange}
+                      placeholder="House/Flat No., Street, Area, City, State"
+                      rows={3}
+                      className={`${fieldClass("address", fieldErrors)} resize-none`} />
+                    <FieldError msg={fieldErrors.address} />
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-3">
+                    <div>
+                      <Label required>Pincode</Label>
+                      <input type="text" name="pincode" inputMode="numeric" value={formData.pincode} onChange={handleChange}
+                        placeholder="6-digit PIN" className={fieldClass("pincode", fieldErrors)} maxLength={6} />
+                      <FieldError msg={fieldErrors.pincode} />
+                    </div>
+                    <div>
+                      <Label required>Home Type</Label>
+                      <select name="homeType" value={formData.homeType} onChange={handleChange}
+                        className={`${fieldClass("homeType", fieldErrors)} appearance-none`}>
+                        <option value="">Select</option>
+                        <option value="Own">Own</option>
+                        <option value="Rented">Rented</option>
+                      </select>
+                      <FieldError msg={fieldErrors.homeType} />
+                    </div>
+                    <div>
+                      <Label required>Stability (months)</Label>
+                      <input type="text" inputMode="numeric" name="addressStability" value={formData.addressStability} onChange={handleChange}
+                        placeholder="e.g. 24" className={fieldClass("addressStability", fieldErrors)} />
+                      <FieldError msg={fieldErrors.addressStability} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Landmark <span className="ml-1 text-xs font-normal text-stone-400">(optional)</span></Label>
+                    <input type="text" name="landmark" value={formData.landmark} onChange={handleChange}
+                      placeholder="Nearby landmark" className={`${inputBase} ${inputOk}`} />
+                  </div>
+
+                  <div className="border-t border-stone-100 pt-5">
+                    <div className="mb-4 flex items-center gap-2">
+                      <Banknote className="h-5 w-5 text-[#0d9488]" />
+                      <p className="font-bold text-stone-800">Bank Details</p>
+                    </div>
+                    <div className="grid gap-5 sm:grid-cols-3">
+                      <div>
+                        <Label required>Bank Name</Label>
+                        <input type="text" name="bankName" value={formData.bankName} onChange={handleChange}
+                          placeholder="e.g. State Bank of India" className={fieldClass("bankName", fieldErrors)} />
+                        <FieldError msg={fieldErrors.bankName} />
+                      </div>
+                      <div>
+                        <Label required>Account Number</Label>
+                        <input type="text" name="accountNumber" inputMode="numeric" value={formData.accountNumber} onChange={handleChange}
+                          placeholder="9–18 digits" className={fieldClass("accountNumber", fieldErrors)} />
+                        <FieldError msg={fieldErrors.accountNumber} />
+                      </div>
+                      <div>
+                        <Label required>IFSC Code</Label>
+                        <input type="text" name="ifscCode" value={formData.ifscCode} onChange={handleChange}
+                          placeholder="e.g. SBIN0001234" className={fieldClass("ifscCode", fieldErrors)} />
+                        <FieldError msg={fieldErrors.ifscCode} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 4: Documents & Password ── */}
+              {currentStep === 4 && (
+                <div className="space-y-6 p-6 sm:p-8">
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0f766e] shadow">
+                      <FileText className="h-4 w-4 text-white" />
+                    </div>
+                    <h2 className="text-lg font-bold text-stone-900">Documents & Password</h2>
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-3">
+                    <FileUploadCard name="adharCard" label="Aadhaar Card" icon={FileText} accept="image/jpeg,image/png,image/jpg,application/pdf" inputRef={adharInputRef} allowPdf />
+                    <FileUploadCard name="panCard" label="PAN Card" icon={CreditCard} accept="image/jpeg,image/png,image/jpg,application/pdf" inputRef={panInputRef} allowPdf />
+                    <FileUploadCard name="selfie" label="Selfie Photo" icon={Camera} accept="image/jpeg,image/png,image/jpg" inputRef={selfieCameraInputRef} allowPdf={false} />
+                  </div>
+
+                  <div className="border-t border-stone-100 pt-5">
+                    <div className="mb-4 flex items-center gap-2">
+                      <Lock className="h-5 w-5 text-[#0d9488]" />
+                      <p className="font-bold text-stone-800">Set Your Password</p>
+                    </div>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <Label required>Password</Label>
+                        <div className="relative">
+                          <input
+                            type={showPassword.password ? "text" : "password"}
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            placeholder="Create a strong password"
+                            className={`${fieldClass("password", fieldErrors)} pr-12`}
+                            autoComplete="new-password"
+                          />
+                          <button type="button" onClick={() => setShowPassword((p) => ({ ...p, password: !p.password }))}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                            {showPassword.password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        <FieldError msg={fieldErrors.password} />
+                        {/* Password strength checklist */}
+                        <div className="mt-3 grid grid-cols-2 gap-1.5">
+                          {[
+                            { key: "len", label: "8+ characters" },
+                            { key: "upper", label: "Uppercase letter" },
+                            { key: "lower", label: "Lowercase letter" },
+                            { key: "num", label: "Number" },
+                            { key: "special", label: "Special character" },
+                          ].map(({ key, label }) => (
+                            <div key={key} className={`flex items-center gap-1.5 text-xs font-medium ${pwdChecks[key] ? "text-emerald-600" : "text-stone-400"}`}>
+                              <div className={`h-3 w-3 rounded-full ${pwdChecks[key] ? "bg-emerald-500" : "bg-stone-200"}`} />
+                              {label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <Label required>Confirm Password</Label>
+                        <div className="relative">
+                          <input
+                            type={showPassword.confirmPassword ? "text" : "password"}
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            placeholder="Repeat your password"
+                            className={`${fieldClass("confirmPassword", fieldErrors)} pr-12`}
+                            autoComplete="new-password"
+                          />
+                          <button type="button" onClick={() => setShowPassword((p) => ({ ...p, confirmPassword: !p.confirmPassword }))}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                            {showPassword.confirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        <FieldError msg={fieldErrors.confirmPassword} />
+                        {formData.confirmPassword && formData.password === formData.confirmPassword && (
+                          <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                            <Check className="h-3.5 w-3.5" /> Passwords match
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex items-center justify-between gap-3 border-t border-stone-100 px-6 py-5 sm:px-8">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  disabled={currentStep === 1}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Back
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {STEPS.map((s) => (
+                    <div key={s.id} className={`h-2 rounded-full transition-all duration-300 ${currentStep === s.id ? "w-6 bg-[#0d9488]" : currentStep > s.id ? "w-2 bg-emerald-400" : "w-2 bg-stone-200"}`} />
+                  ))}
+                </div>
+
+                {currentStep < 4 ? (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[#0d9488] px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-teal-900/20 transition hover:bg-[#0f766e] hover:shadow-lg active:scale-[0.98]"
+                  >
+                    Next <ChevronRight className="h-4 w-4" />
+                  </button>
                 ) : (
-                  "Submit application"
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-gradient-to-r from-[#0d9488] to-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-teal-900/20 transition hover:from-[#0f766e] hover:to-emerald-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98]"
+                  >
+                    {isLoading ? (
+                      <>
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Submitting…
+                      </>
+                    ) : (
+                      <>Submit Application <Check className="h-4 w-4" /></>
+                    )}
+                  </button>
                 )}
-              </button>
+              </div>
             </div>
           </form>
-        </div>
+
+          {/* Bottom trust badges */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-stone-400">
+            <span className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-[#0d9488]" /> Secure & encrypted</span>
+            <span className="h-3.5 w-px bg-stone-200" />
+            <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-[#0d9488]" /> Free to join</span>
+            <span className="h-3.5 w-px bg-stone-200" />
+            <span className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-[#0d9488]" /> 100+ active partners</span>
+          </div>
         </div>
       </div>
     </>

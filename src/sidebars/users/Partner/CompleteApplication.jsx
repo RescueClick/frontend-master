@@ -74,12 +74,27 @@ const CompleteApplication = () => {
 
       // Get pending/rejected/updated documents (documents that need to be uploaded/re-uploaded)
       const allDocs = response.data.docs || [];
-      const pending = allDocs.filter((doc) =>
+      const effectiveRules = getEffectiveRules(response.data.loanType, rules);
+
+      // 1. Required docs that are pending, rejected, or updated
+      const pendingRequired = allDocs.filter((doc) =>
+        effectiveRules.some((rule) => {
+          const accepted = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
+          return accepted.some((docType) => normalizeDocType(docType) === normalizeDocType(doc.docType));
+        }) &&
         ["REJECTED", "PENDING", "UPDATED"].includes(doc.status)
       );
 
-      // Also check for required documents that might not exist yet
-      const effectiveRules = getEffectiveRules(response.data.loanType, rules);
+      // 2. Optional/Other docs that are explicitly REJECTED
+      const pendingOptional = allDocs.filter((doc) =>
+        !effectiveRules.some((rule) => {
+          const accepted = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
+          return accepted.some((docType) => normalizeDocType(docType) === normalizeDocType(doc.docType));
+        }) &&
+        doc.status === "REJECTED"
+      );
+
+      // 3. Required docs that are completely missing
       const missingDocs = effectiveRules
         .filter((rule) => !hasRuleUpload(rule, allDocs))
         .map((rule) => ({
@@ -89,8 +104,8 @@ const CompleteApplication = () => {
           remarks: "",
         }));
 
-      // Combine pending/rejected docs with missing docs
-      const allPendingDocs = [...pending, ...missingDocs];
+      // Combine required (pending/rejected/updated), rejected optional, and missing required docs
+      const allPendingDocs = [...pendingRequired, ...pendingOptional, ...missingDocs];
 
       // Remove duplicates and treat SELFIE / CO_APPLICANT_SELFIE as PHOTO
       const seenTypes = new Set();
@@ -317,23 +332,35 @@ const CompleteApplication = () => {
     );
   }
 
-  const progress = calculateProgress();
   const effectiveRules = applicationData
     ? getEffectiveRules(applicationData.loanType, requiredDocRules)
     : [];
   const allDocs = applicationData?.docs || [];
-  
-  // Calculate completed (verified) docs
-  const completedSteps = effectiveRules.filter((rule) => hasRuleVerified(rule, allDocs)).length;
+
+  // Calculate mandatory progress
+  const totalMandatory = effectiveRules.length;
+  const completedMandatory = effectiveRules.filter((rule) => hasRuleVerified(rule, allDocs)).length;
+  const progress = totalMandatory > 0 ? Math.round((completedMandatory / totalMandatory) * 100) : 0;
+
+  // Optional/Other docs counts
+  const optionalDocs = allDocs.filter(doc => 
+    !effectiveRules.some(rule => {
+      const accepted = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
+      return accepted.some((docType) => normalizeDocType(docType) === normalizeDocType(doc.docType));
+    })
+  );
+  const totalOptional = optionalDocs.length;
+  const completedOptional = optionalDocs.filter(doc => doc.status === "VERIFIED").length;
+
   const requiredDocsCount = effectiveRules.length;
   const uploadedSteps = effectiveRules.filter((rule) => hasRuleUpload(rule, allDocs)).length;
-  const pendingRequiredDocsCount = Math.max(requiredDocsCount - completedSteps, 0);
-  
-  // Calculate pending docs count (including missing and rejected/updated)
+  const pendingRequiredDocsCount = Math.max(requiredDocsCount - completedMandatory, 0);
+
+  // Calculate pending docs count (including missing required + rejected optional)
   const pendingDocsCount = pendingDocuments.length;
 
-  // Total documents considered in progress = verified + pending
-  const totalSteps = completedSteps + pendingDocsCount;
+  // Total documents considered in progress = totalMandatory length
+  const totalSteps = totalMandatory;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -391,9 +418,16 @@ const CompleteApplication = () => {
             <span className="text-base font-bold text-teal-600">
               {progress}% Complete
             </span>
-            <span className="text-sm text-gray-600 font-medium">
-              {completedSteps}/{totalSteps} documents verified
-            </span>
+            <div className="text-right">
+              <p className="text-xs text-gray-600 font-medium">
+                Mandatory: {completedMandatory}/{totalMandatory} verified
+              </p>
+              {totalOptional > 0 && (
+                <p className="text-xs text-gray-600 font-medium mt-1">
+                  Optional: {completedOptional}/{totalOptional} verified
+                </p>
+              )}
+            </div>
           </div>
           {pendingDocsCount > 0 && (
             <div className="mt-3 pt-3 border-t border-green-200">
@@ -520,9 +554,13 @@ const CompleteApplication = () => {
                   </div>
                   <button
                     onClick={() => handleDocumentClick(document)}
-                    className="ml-4 px-5 py-2.5 bg-teal-600 text-white rounded-lg font-semibold text-sm hover:bg-teal-700 transition-colors whitespace-nowrap"
+                    className={`ml-4 px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap ${
+                      document.status === "UPDATED"
+                        ? "bg-gray-200 text-gray-500 hover:bg-gray-200 cursor-pointer"
+                        : "bg-teal-600 text-white hover:bg-teal-700"
+                    }`}
                   >
-                    Click Here
+                    {document.status === "UPDATED" ? "Reviewing" : "Click Here"}
                   </button>
                 </div>
               );

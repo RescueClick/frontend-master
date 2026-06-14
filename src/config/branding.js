@@ -60,7 +60,7 @@ export function rewriteLegacyTrustlineUrl(url) {
  */
 export const PARTNER_APP_PLAY_STORE_URL = String(
   import.meta.env.VITE_PARTNER_APP_PLAY_STORE_URL ||
-    "https://play.google.com/store/apps/details?id=com.dhansourcecapital.partner"
+    "https://play.google.com/store/apps/details?id=com.dhansourcecapital.partner&hl=en_IN"
 ).trim();
 
 /** Match backend `appendPartnerShareUtm` for client-built fallback URLs */

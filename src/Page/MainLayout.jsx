@@ -74,8 +74,8 @@ const MainLayout = () => {
               {/* Call Us */}
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-brand-primary" />
-                <a href="tel:+918766681450" className="font-semibold hover:text-brand-primary">
-                  Call Us : <span className="text-gray-400">+91 8766681450</span>
+                <a href="tel:+917057772026" className="font-semibold hover:text-brand-primary">
+                  Call Us : <span className="text-gray-400">+91 7057772026</span>
                 </a>
               </div>
 
@@ -278,11 +278,11 @@ const MainLayout = () => {
                 </button>
               )}
               <a
-                href="tel:+918766681450"
+                href="tel:+917057772026"
                 className="flex items-center justify-center gap-2 pt-1 text-xs font-medium text-slate-500 transition hover:text-brand-primary"
               >
                 <Phone className="h-3.5 w-3.5 text-brand-primary" />
-                +91 8766681450
+                +91 7057772026
               </a>
             </div>
           </div>
@@ -328,26 +328,29 @@ const MainLayout = () => {
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-4">Social</h2>
             <div className="flex flex-wrap items-center gap-3">
               <a
-                href="https://www.facebook.com/profile.php?id=61578373723382"
+                href="https://www.facebook.com/share/195ACzoPLK/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-slate-400 transition hover:border-white/25 hover:bg-white/5 hover:text-white"
+                aria-label="DhanSource Capital on Facebook"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-slate-400 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-400"
               >
                 <FaFacebookF size={18} />
               </a>
               <a
-                href="https://www.instagram.com/dhansourcecapital"
+                href="https://www.instagram.com/dhansource_capital?igsh=MWR5c21uZWIwMnp4bw=="
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-slate-400 transition hover:border-white/25 hover:bg-white/5 hover:text-white"
+                aria-label="DhanSource Capital on Instagram"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-slate-400 transition hover:border-pink-400/40 hover:bg-pink-500/10 hover:text-pink-400"
               >
                 <FaInstagram size={20} />
               </a>
               <a
-                href="https://wa.me/918766681450"
+                href="https://wa.me/917057772026"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-slate-400 transition hover:border-white/25 hover:bg-white/5 hover:text-white"
+                aria-label="WhatsApp DhanSource Capital"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-slate-400 transition hover:border-green-400/40 hover:bg-green-500/10 hover:text-green-400"
               >
                 <FaWhatsapp size={20} />
               </a>
@@ -383,8 +386,8 @@ const MainLayout = () => {
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-slate-500">
                   <FaPhoneAlt size={16} />
                 </span>
-                <a href="tel:+918766681450" className="transition-colors hover:text-white">
-                  +91 8766681450
+                <a href="tel:+917057772026" className="transition-colors hover:text-white">
+                  +91 7057772026
                 </a>
               </li>
               <li className="flex items-start gap-3">
@@ -392,11 +395,9 @@ const MainLayout = () => {
                   <FaMapMarkerAlt size={16} />
                 </span>
                 <span className="leading-relaxed">
-                  SR.No.53/2A/1, Office No. 014,<br />
-                  A Wing, 3rd Floor,<br />
-                  City Vista, Fountain Road,<br />
-                  Ashoka Nagar,<br />
-                  Kharadi, Pune - 411014
+                  office No -31, C Wing,<br />
+                  Ashoka Nagar, Kharadi,<br />
+                  Pune, Maharashtra 411014
                 </span>
               </li>
             </ul>

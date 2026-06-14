@@ -251,10 +251,10 @@ const Contact = () => {
                 <div className="p-6 sm:p-8">
                   <h3 className="text-lg font-semibold sm:text-xl">Direct contact</h3>
                   <div className="mt-6 space-y-5 text-sm">
-                    <a href="tel:+918766681450" className="flex items-start gap-3 transition hover:text-brand-primary-light">
+                    <a href="tel:+917057772026" className="flex items-start gap-3 transition hover:text-brand-primary-light">
                       <Phone className="mt-0.5 h-5 w-5 shrink-0 text-brand-primary-light" />
                       <span>
-                        <span className="font-semibold">+91 8766681450</span>
+                        <span className="font-semibold">+91 7057772026</span>
                         <span className="mt-0.5 block text-xs text-slate-400">Mon–Fri, 9:00 AM – 6:00 PM</span>
                       </span>
                     </a>

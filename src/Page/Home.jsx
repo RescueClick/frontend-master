@@ -2,9 +2,9 @@ import React, { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
 import { FaHandshake, FaLaptop, FaBolt, FaHeadset } from "react-icons/fa";
-import { Users, Building, MapPin, Shield, Phone, Mail, Wallet, BriefcaseBusiness, Home as HomeIcon, Store, ArrowRight, Target } from "lucide-react";
+import { Users, Building, MapPin, Shield, Phone, Mail, Wallet, BriefcaseBusiness, Home as HomeIcon, Store, ArrowRight, Target, ClipboardList, Zap, CheckCircle2, Smartphone } from "lucide-react";
 
-import { COMPANY_NAME, COMPANY_TAGLINE, CONTACT_EMAIL } from "../config/branding";
+import { COMPANY_NAME, COMPANY_TAGLINE, CONTACT_EMAIL, PARTNER_APP_PLAY_STORE_URL } from "../config/branding";
 import { PARTNER_REGISTRATION_ROUTE } from "../config/publicReferral.js";
 import { useNavigate } from 'react-router-dom';
 import sbiLogo from "../assets/SBI_bank.png";
@@ -192,11 +192,31 @@ const Home = () => {
                   Become a partner
                 </button>
                 <a
-                  href="/DhanSource_v2.apk"
-                  download
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-white/15 bg-white/[0.03] px-8 py-3 text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/[0.07] sm:text-[15px]"
+                  href={PARTNER_APP_PLAY_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Get it on Google Play"
+                  className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-white/20 bg-white/[0.04] px-5 py-2 transition hover:border-white/35 hover:bg-white/[0.09] hover:shadow-lg"
                 >
-                  Download app
+                  {/* Google Play badge */}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 646 190" aria-hidden="true" className="h-[38px] w-auto">
+                    {/* Badge background is transparent – white text on dark hero */}
+                    <g fill="none">
+                      {/* Play triangle icon */}
+                      <path d="M30 10 L30 180 L170 95 Z" fill="url(#pgPlay)" />
+                      <defs>
+                        <linearGradient id="pgPlay" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#00d2ff" />
+                          <stop offset="50%" stopColor="#a0f76a" />
+                          <stop offset="100%" stopColor="#ffbc00" />
+                        </linearGradient>
+                      </defs>
+                      {/* "GET IT ON" small label */}
+                      <text x="200" y="62" fontFamily="'Arial',sans-serif" fontSize="34" fontWeight="400" letterSpacing="2" fill="#c8d6e5">GET IT ON</text>
+                      {/* "Google Play" large label */}
+                      <text x="198" y="142" fontFamily="'Arial',sans-serif" fontSize="78" fontWeight="600" fill="#ffffff">Google Play</text>
+                    </g>
+                  </svg>
                 </a>
               </div>
 
@@ -327,6 +347,89 @@ const Home = () => {
         </div>
       </section>
 
+      {/* ── How It Works ── */}
+      <section className="relative overflow-hidden border-t border-slate-200/70 bg-gradient-to-b from-white via-slate-50/60 to-white py-16 px-3 sm:py-24 sm:px-6">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(13,148,136,0.07),transparent_65%)]" aria-hidden />
+        <div className="relative z-10 mx-auto max-w-7xl">
+          <div className="mb-14 text-center">
+            <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/15 bg-white/80 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary shadow-sm backdrop-blur-sm sm:text-xs">
+              Simple process
+            </span>
+            <h2 className="mb-3 text-balance text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
+              Get a loan in{" "}
+              <span className="bg-gradient-to-r from-brand-primary via-teal-600 to-emerald-600 bg-clip-text text-transparent">3 easy steps</span>
+            </h2>
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500 sm:text-lg">
+              Our digital-first process makes applying for a loan fast, transparent, and completely hassle-free.
+            </p>
+          </div>
+
+          <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
+            {/* Connector line for desktop */}
+            <div className="pointer-events-none absolute left-1/3 right-1/3 top-10 hidden h-px bg-gradient-to-r from-brand-primary/30 via-brand-primary/60 to-brand-primary/30 sm:block" aria-hidden />
+
+            {[
+              {
+                step: "01",
+                icon: ClipboardList,
+                title: "Fill the application",
+                desc: "Complete a simple digital form with your personal, employment, and financial details. Takes under 10 minutes.",
+                color: "from-teal-500 to-brand-primary",
+                bg: "from-teal-50 to-emerald-50/80",
+              },
+              {
+                step: "02",
+                icon: Zap,
+                title: "Get matched instantly",
+                desc: "Our system matches your profile with the best-fit lenders from our 100+ bank & NBFC network in real time.",
+                color: "from-brand-primary to-teal-700",
+                bg: "from-teal-50/80 to-cyan-50",
+              },
+              {
+                step: "03",
+                icon: CheckCircle2,
+                title: "Receive disbursement",
+                desc: "Once approved, funds are credited directly to your account within 24–72 hours. No physical visits needed.",
+                color: "from-emerald-500 to-teal-600",
+                bg: "from-emerald-50 to-teal-50/80",
+              },
+            ].map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={idx}
+                  className="group relative flex flex-col items-center rounded-2xl border border-slate-200/80 bg-white px-6 py-8 text-center shadow-[0_2px_16px_-4px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-primary/20 hover:shadow-[0_12px_40px_-8px_rgba(13,148,136,0.15)] sm:px-8"
+                >
+                  {/* Step number badge */}
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className={`inline-flex items-center rounded-full bg-gradient-to-r ${item.color} px-3 py-0.5 text-[11px] font-bold tracking-widest text-white shadow-md`}>
+                      STEP {item.step}
+                    </span>
+                  </div>
+                  {/* Icon */}
+                  <div className={`mb-5 mt-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br ${item.bg} ring-1 ring-brand-primary/10`}>
+                    <Icon className="h-8 w-8 text-brand-primary" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="mb-2.5 text-lg font-bold text-slate-900">{item.title}</h3>
+                  <p className="text-sm leading-relaxed text-slate-500">{item.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* CTA below */}
+          <div className="mt-12 text-center">
+            <button
+              type="button"
+              onClick={() => navigate(PARTNER_REGISTRATION_ROUTE)}
+              className="inline-flex min-h-[50px] items-center gap-2.5 rounded-full bg-brand-primary px-9 py-3 text-sm font-bold text-white shadow-lg shadow-brand-primary/25 transition hover:bg-brand-primary-hover hover:shadow-xl sm:text-base"
+            >
+              Start your application <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section className="relative overflow-x-hidden overflow-y-visible bg-gradient-to-br from-amber-600 via-amber-700 to-amber-950 py-12 sm:py-16 md:py-20 lg:flex lg:min-h-[min(90vh,920px)] lg:items-center">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_20%_30%,rgba(255,255,255,0.12),transparent_55%)]"
@@ -423,10 +526,54 @@ const Home = () => {
                   Apply as partner
                 </button>
                 <a
-                  href="tel:+918766681450"
+                  href="tel:+917057772026"
                   className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-white/35 bg-white/10 px-8 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/50 hover:bg-white/20 sm:text-base"
                 >
                   Talk to us
+                </a>
+              </div>
+
+              {/* ── Download the Partner App ── */}
+              <div className="mt-10 rounded-2xl border border-white/20 bg-black/30 px-5 py-5 backdrop-blur-sm sm:px-6">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200/80 sm:text-[11px]">
+                  Manage on the go
+                </p>
+                <p className="mb-4 text-sm font-medium text-white/90 sm:text-base">
+                  Download the <span className="font-semibold text-white">DhanSource Partner App</span> — track leads, payouts &amp; applications from your phone.
+                </p>
+                <a
+                  href={PARTNER_APP_PLAY_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Get it on Google Play"
+                  className="inline-flex items-center gap-3 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 transition hover:border-white/40 hover:bg-white/20 hover:shadow-lg"
+                >
+                  {/* Play Store icon + text */}
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-7 w-7 shrink-0">
+                    <defs>
+                      <linearGradient id="ps-a" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#00bcd4" />
+                        <stop offset="100%" stopColor="#00e676" />
+                      </linearGradient>
+                      <linearGradient id="ps-b" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#ffd600" />
+                        <stop offset="100%" stopColor="#ff6d00" />
+                      </linearGradient>
+                      <linearGradient id="ps-c" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#ff1744" />
+                        <stop offset="100%" stopColor="#d500f9" />
+                      </linearGradient>
+                    </defs>
+                    {/* Stylised Play triangle split into 4 segments */}
+                    <path d="M3 21.5 L14.5 12 L3 2.5 Z" fill="url(#ps-a)" />
+                    <path d="M3 2.5 L14.5 12 L19.5 9.2 L7.5 2.1 Z" fill="url(#ps-b)" />
+                    <path d="M3 21.5 L14.5 12 L19.5 14.8 L7.5 21.9 Z" fill="url(#ps-c)" />
+                    <path d="M14.5 12 L19.5 9.2 L21.5 10.4 L21.5 13.6 L19.5 14.8 Z" fill="#ffd600" />
+                  </svg>
+                  <div className="text-left">
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-white/70">Get it on</p>
+                    <p className="text-base font-bold leading-tight text-white">Google Play</p>
+                  </div>
                 </a>
               </div>
             </div>
@@ -579,7 +726,7 @@ const Home = () => {
             <h3 className="mb-8 text-center text-xl font-semibold text-slate-900 sm:text-2xl">Get in touch</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
               <a
-                href="tel:+918766681450"
+                href="tel:+917057772026"
                 className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-primary/30 hover:shadow-md"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-primary-hover">
@@ -587,7 +734,7 @@ const Home = () => {
                 </div>
                 <div className="min-w-0 text-left">
                   <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Phone</p>
-                  <p className="text-lg font-semibold text-slate-900 transition group-hover:text-brand-primary">+91 8766681450</p>
+                  <p className="text-lg font-semibold text-slate-900 transition group-hover:text-brand-primary">+91 7057772026</p>
                 </div>
               </a>
               <a

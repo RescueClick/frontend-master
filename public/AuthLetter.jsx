@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import domtoimage from "dom-to-image";
 import jsPDF from "jspdf";
 import { useLocation } from "react-router-dom";
@@ -15,23 +15,29 @@ const AuthLetter = () => {
   const { name } = location.state || {};
 
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const downloadPDF = () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
     const input = certificateRef.current;
 
     // Convert DOM to Image
     domtoimage.toPng(input, { quality: 1 })
       .then((dataUrl) => {
         // Create PDF
-        const pdf = new jsPDF("landscape", "mm", "a4");
+        const pdf = new jsPDF("landscape", "mm", "letter");
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
 
         // Add image to PDF
         pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
         pdf.save(`${name}-Certificate.pdf`);
+        setIsDownloading(false);
       })
       .catch((error) => {
         console.error("Error generating PDF:", error);
+        setIsDownloading(false);
       });
   };
 
@@ -40,7 +46,7 @@ const AuthLetter = () => {
       {/* Certificate */}
       <div
         ref={certificateRef}
-        className="relative w-full max-w-[800px] h-[520px] bg-white border-[12px] border-teal-500 p-10 overflow-hidden"
+        className="relative w-full max-w-[800px] h-[560px] bg-white border-[12px] border-teal-500 p-10 overflow-hidden"
       >
         {/* Corner Triangles */}
         <div className="absolute top-5 left-5 w-0 h-0 border-l-[40px] border-l-teal-500 border-b-[40px] border-b-transparent"></div>
@@ -78,7 +84,7 @@ const AuthLetter = () => {
         </div>
 
         {/* Signatures Section */}
-        <div className="flex justify-between items-end mt-10 relative">
+        <div className="flex justify-between items-end mt-20 relative">
           {/* Left Signature */}
           <div className="text-center flex-1">
             <div className="w-48 border-b-2 border-gray-800 mx-auto mb-2"></div>
@@ -114,9 +120,20 @@ const AuthLetter = () => {
       {/* Download Button */}
       <button
         onClick={downloadPDF}
-        className="mt-5 px-6 py-2 bg-teal-500 text-white font-semibold rounded-lg shadow hover:bg-teal-600 transition"
+        disabled={isDownloading}
+        className={`mt-5 px-6 py-2 bg-teal-500 text-white font-semibold rounded-lg shadow hover:bg-teal-600 transition flex items-center gap-2 ${isDownloading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        Download PDF
+        {isDownloading ? (
+          <>
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Generating PDF...
+          </>
+        ) : (
+          "Download PDF"
+        )}
       </button>
     </div>
   );
