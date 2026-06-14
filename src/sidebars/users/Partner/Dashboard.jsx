@@ -793,7 +793,7 @@ const Dashboard = () => {
                         </div>
                       </div>
                       <span className="text-sm font-medium text-gray-900">
-                        {item.achievement}K / {item.target}K
+                        {formatCurrency(item.achievement)} / {formatCurrency(item.target)}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">

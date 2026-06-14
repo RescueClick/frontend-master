@@ -48,6 +48,7 @@ const AdminPendingPayout = () => {
 
   const [customerID, setCustomerID] = useState(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [isPayoutPercentageEditable, setIsPayoutPercentageEditable] = useState(true);
 
   const dispatch = useDispatch();
 
@@ -83,6 +84,13 @@ const AdminPendingPayout = () => {
   useEffect(() => {
     if (customerID && customerPartnersPayout && customerPartnersPayout.partners?.length) {
       const partner = customerPartnersPayout.partners[0];
+      const hasPct = !!(partner.payoutAmount && partner.payoutAmount > 0);
+      setIsPayoutPercentageEditable(!hasPct);
+
+      const proposedPct = partner.payoutAmount && payoutData.approvalAmount
+        ? Math.round((Number(partner.payoutAmount) / Number(payoutData.approvalAmount)) * 100)
+        : "";
+
       setPayoutData((prev) => ({
         ...prev,
         applicationId: partner.applicationId || prev.applicationId || "",
@@ -90,13 +98,13 @@ const AdminPendingPayout = () => {
         partnerId: partner._id?.toString() || prev.partnerId || "",
         // approvalAmount is sourced from list row click; keep existing if already set
         approvalAmount: prev.approvalAmount || "",
-        payoutPercentage: prev.payoutPercentage || "",
+        payoutPercentage: prev.payoutPercentage || proposedPct || "",
         // backend returns existing payoutAmount & payoutStatus if any
         totalPayout: partner.payoutAmount ?? prev.totalPayout ?? "",
         payOutStatus: partner.payoutStatus || prev.payOutStatus || "PENDING",
       }));
     }
-  }, [customerID, customerPartnersPayout]);
+  }, [customerID, customerPartnersPayout, payoutData.approvalAmount]);
 
   useEffect(() => {
     dispatch(fetchAdminCustomersPayOutPending());
@@ -429,13 +437,26 @@ const AdminPendingPayout = () => {
                                     payoutPercentage: e.target.value,
                                   }))
                                 }
-                                className="w-full pr-8 pl-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                onWheel={(e) => e.target.blur()}
+                                readOnly={!isPayoutPercentageEditable}
+                                className={`w-full pr-8 pl-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary ${
+                                  !isPayoutPercentageEditable ? "bg-gray-100 cursor-not-allowed" : "bg-white"
+                                }`}
                                 placeholder="Enter %"
                               />
                               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brand-primary font-bold">
                                 %
                               </span>
                             </div>
+                            {!isPayoutPercentageEditable && (
+                              <button
+                                type="button"
+                                onClick={() => setIsPayoutPercentageEditable(true)}
+                                className="mt-1 text-xs font-semibold text-brand-primary hover:underline"
+                              >
+                                Edit Payout Percentage
+                              </button>
+                            )}
                           </div>
 
                           {/* Disbursed / Total Payout Display */}

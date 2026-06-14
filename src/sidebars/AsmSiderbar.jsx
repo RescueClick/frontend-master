@@ -32,6 +32,7 @@ import Profile from "./users/userProfile/Profile";
 import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
 import DhanSourceLoader from "../components/DhanSourceLoader";
+import { useSidebarNotifications } from "../hooks/useSidebarNotifications";
 
 // Admin sidebar component
 const AsmSiderbar = () => {
@@ -64,6 +65,21 @@ const AsmSiderbar = () => {
   const { parentUser } = getAuthData();
   const isImpersonating = !!parentUser;
   const originalRole = getOriginalRole();
+
+  const counts = useSidebarNotifications();
+
+  const getBadgeCount = (name) => {
+    switch (name) {
+      case "Payouts":
+        return counts.payout;
+      case "Incentives":
+        return counts.incentive;
+      case "Applications":
+        return counts.application;
+      default:
+        return 0;
+    }
+  };
 
   // Sidebar navigation items with icons and routes
 
@@ -108,6 +124,7 @@ const AsmSiderbar = () => {
           {sidebarItems.map((item, index) => {
             const active = location.pathname === item.path;
             const isHighlight = item.highlight;
+            const count = getBadgeCount(item.name);
 
             const baseClasses = isHighlight
               ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
@@ -121,15 +138,33 @@ const AsmSiderbar = () => {
               <Link
                 key={index}
                 to={item.path}
-                className={`w-full flex items-center space-x-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${
-                  active ? activeClasses : baseClasses
-                }`}
+                className={`w-full flex items-center mb-2 rounded-xl transition-all duration-200 ${
+                  sidebarOpen ? "space-x-3 px-4 py-3" : "justify-center px-2 py-3"
+                } ${active ? activeClasses : baseClasses}`}
               >
-                <item.icon size={22} className={active ? "text-white" : ""} />
+                <div className="relative flex items-center">
+                  <item.icon size={22} className={active ? "text-white" : ""} />
+                  {!sidebarOpen && count > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                  )}
+                </div>
                 {sidebarOpen && (
-                  <span className="text-sm font-medium truncate">
-                    {item.name}
-                  </span>
+                  <div className="flex-1 flex items-center justify-between min-w-0">
+                    <span className="text-sm font-medium truncate">
+                      {item.name}
+                    </span>
+                    {count > 0 && (
+                      <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        active 
+                          ? "bg-white text-teal-600" 
+                          : isHighlight 
+                            ? "bg-amber-500 text-white shadow-sm" 
+                            : "bg-rose-500 text-white shadow-sm"
+                      }`}>
+                        {count}
+                      </span>
+                    )}
+                  </div>
                 )}
               </Link>
             );

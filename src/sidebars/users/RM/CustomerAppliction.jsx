@@ -75,6 +75,55 @@ const businessFields = [
   { label: "Years in Business", value: (b) => b?.yearsInBusiness },
 ];
 
+const toIndianWords = (num) => {
+  if (isNaN(num) || num <= 0) return "";
+  const n = Math.floor(num);
+  if (n === 0) return "Zero Rupees";
+
+  const units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+  const formatGroup = (v) => {
+    let s = "";
+    if (v >= 100) {
+      s += units[Math.floor(v / 100)] + " Hundred ";
+      v %= 100;
+    }
+    if (v >= 20) {
+      s += tens[Math.floor(v / 10)] + " ";
+      v %= 10;
+    }
+    if (v > 0) {
+      s += units[v] + " ";
+    }
+    return s.trim();
+  };
+
+  let res = "";
+  let crores = Math.floor(n / 10000000);
+  let remaining = n % 10000000;
+  let lakhs = Math.floor(remaining / 100000);
+  remaining %= 100000;
+  let thousands = Math.floor(remaining / 1000);
+  remaining %= 1000;
+  let hundreds = remaining;
+
+  if (crores > 0) {
+    res += formatGroup(crores) + " Crore ";
+  }
+  if (lakhs > 0) {
+    res += formatGroup(lakhs) + " Lakh ";
+  }
+  if (thousands > 0) {
+    res += formatGroup(thousands) + " Thousand ";
+  }
+  if (hundreds > 0) {
+    res += formatGroup(hundreds) + " ";
+  }
+
+  return res.trim() + " Rupees Only";
+};
+
 const CustomerApplication = () => {
   // State for API data
   
@@ -83,7 +132,7 @@ const CustomerApplication = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewLoadingDoc, setPreviewLoadingDoc] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
@@ -93,6 +142,8 @@ const CustomerApplication = () => {
   const [docStatusRemark, setDocStatusRemark] = useState("");
   const [docNewStatus, setDocNewStatus] = useState("PENDING");
   const [updateStatusLoading, setUpdateStatusLoading] = useState(false);
+  const [previewRejectMode, setPreviewRejectMode] = useState(false);
+  const [previewRejectRemark, setPreviewRejectRemark] = useState("");
 
   const location = useLocation();
   const { customerId, applicationId } = location.state || {};
@@ -148,7 +199,7 @@ const CustomerApplication = () => {
   
 
   const handleView = async (doc) => {
-    setPreviewLoading(true);
+    setPreviewLoadingDoc(doc.docType);
     try {
       const { rmToken } = getAuthData();
   
@@ -259,7 +310,7 @@ const CustomerApplication = () => {
       setShowModal(true);
       setSelectedDoc(null);
     } finally {
-      setPreviewLoading(false);
+      setPreviewLoadingDoc(null);
     }
   };
   
@@ -553,20 +604,24 @@ const CustomerApplication = () => {
     }
   };
 
-  const handleUpdateDocStatus = async () => {
-    if (!selectedDocForStatus || !docNewStatus) {
-      toast.error("Please select a status");
+  const handleUpdateDocStatus = async (docObj, forcedStatus, forcedRemark) => {
+    const targetDoc = docObj || selectedDocForStatus;
+    const targetStatus = forcedStatus || docNewStatus;
+    const targetRemark = forcedRemark !== undefined ? forcedRemark : docStatusRemark;
+
+    if (!targetDoc || !targetStatus) {
+      toast.error("Please select a document and status");
       return;
     }
 
-    if (docNewStatus === "REJECTED" && !docStatusRemark.trim()) {
+    if (targetStatus === "REJECTED" && !targetRemark.trim()) {
       toast.error("Please add a remark when rejecting a document");
       return;
     }
 
     setUpdateStatusLoading(true);
     const { rmToken } = getAuthData();
-    const updatingDocType = selectedDocForStatus.docType;
+    const updatingDocType = targetDoc.docType;
     const docTypeParam = encodeURIComponent(updatingDocType);
     
     // Optimistic update - update UI immediately for fast response
@@ -577,8 +632,8 @@ const CustomerApplication = () => {
       if (doc.docType === updatingDocType) {
         return {
           ...doc,
-          status: docNewStatus,
-          remarks: docStatusRemark.trim() || doc.remarks || "",
+          status: targetStatus,
+          remarks: targetRemark.trim() || doc.remarks || "",
           updatedAt: new Date().toISOString(),
         };
       }
@@ -615,8 +670,8 @@ const CustomerApplication = () => {
         response = await axios.put(
           `${backendurl}/rm/applications/${applicationData._id}/docs/${docTypeParam}`,
           {
-            status: docNewStatus,
-            remarks: docStatusRemark.trim() || "",
+            status: targetStatus,
+            remarks: targetRemark.trim() || "",
           },
           {
             headers: {
@@ -632,8 +687,8 @@ const CustomerApplication = () => {
           response = await axios.post(
             `${backendurl}/rm/applications/${applicationData._id}/docs/${docTypeParam}/update-status`,
             {
-              status: docNewStatus,
-              remarks: docStatusRemark.trim() || "",
+              status: targetStatus,
+              remarks: targetRemark.trim() || "",
             },
             {
               headers: {
@@ -669,8 +724,17 @@ const CustomerApplication = () => {
         );
       }
       
+      // Also update selectedDoc if it is the one being updated
+      setSelectedDoc((prev) =>
+        prev && prev.docType === updatingDocType
+          ? { ...prev, status: response.data?.document?.status || targetStatus, remarks: response.data?.document?.remarks || targetRemark.trim() || "" }
+          : prev
+      );
+      setPreviewRejectMode(false);
+      setPreviewRejectRemark("");
+      
       // Show success toast
-      toast.success(`Document status updated to ${docNewStatus} successfully!`, {
+      toast.success(`Document status updated to ${targetStatus} successfully!`, {
         duration: 3000,
         position: "top-right",
       });
@@ -1036,10 +1100,21 @@ const CustomerApplication = () => {
         }
       }
 
-      if (status === "DISBURSED" && (!approvalAmount || approvalAmount <= 0)) {
-        toast.error("Please enter a valid approval amount for DISBURSED status");
-        setSubmitLoading(false);
-        return;
+      if (status === "DISBURSED") {
+        const approvedAmt = parseInt(approvalAmount);
+        const requestedAmt = applicationData.customer?.loanAmount || applicationData.loan?.amount || 0;
+        
+        if (!approvalAmount || approvedAmt <= 0) {
+          toast.error("Please enter a valid approval amount for DISBURSED status");
+          setSubmitLoading(false);
+          return;
+        }
+        
+        if (requestedAmt > 0 && approvedAmt > requestedAmt) {
+          toast.error(`Approved loan amount cannot exceed the requested loan amount of ₹${requestedAmt.toLocaleString("en-IN")}`);
+          setSubmitLoading(false);
+          return;
+        }
       }
 
       const { rmToken } = getAuthData();
@@ -1304,12 +1379,14 @@ const CustomerApplication = () => {
 
       {/* Document Status Management Modal */}
       {docStatusModal && selectedDocForStatus && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 bg-opacity-40 z-50">
-          <div className="bg-white rounded-xl p-6 w-[500px] max-h-[90vh] shadow-lg overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Manage Document Status
-              </h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all duration-300">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100/80 overflow-hidden transform scale-100 transition-all">
+            {/* Header banner */}
+            <div className="bg-gradient-to-r from-red-500 to-rose-600 px-6 py-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-white" />
+                <h3 className="text-lg font-bold">Reject Document</h3>
+              </div>
               <button
                 onClick={() => {
                   setDocStatusModal(false);
@@ -1317,98 +1394,75 @@ const CustomerApplication = () => {
                   setDocStatusRemark("");
                   setDocNewStatus("PENDING");
                 }}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                className="text-white/80 hover:text-white text-2xl font-bold transition-colors"
               >
                 ×
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  Document Type:
+            <div className="p-6 space-y-6">
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                  Document Type
                 </p>
-                <p className="font-semibold text-gray-900">
+                <p className="text-base font-bold text-slate-800">
                   {toDocLabelByRule(selectedDocForStatus.docType)}
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Document Status
-                </label>
-                <select
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
-                  value={docNewStatus}
-                  onChange={(e) => setDocNewStatus(e.target.value)}
-                >
-                        <option value="PENDING">PENDING</option>
-                        <option value="VERIFIED">VERIFIED</option>
-                        <option value="REJECTED">REJECTED</option>
-                        <option value="UPDATED" disabled>UPDATED (Set automatically when partner re-uploads)</option>
-                </select>
-                {selectedDocForStatus?.status === "UPDATED" && (
-                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>ℹ️ This document has been uploaded/updated by the partner.</strong> Verification is pending. Please review and verify or reject as appropriate.
-                    </p>
-                    {selectedDocForStatus?.updatedAt && (
-                      <p className="text-xs text-blue-600 mt-1">
-                        Uploaded/Updated on: {new Date(selectedDocForStatus.updatedAt).toLocaleString()}
-                      </p>
-                    )}
+              {selectedDocForStatus?.status === "UPDATED" && (
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-3">
+                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   </div>
-                )}
-              </div>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800">New partner upload</p>
+                    <p className="text-xs text-blue-600/90 mt-0.5">Verification is currently pending review.</p>
+                  </div>
+                </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Remarks {docNewStatus === "REJECTED" && <span className="text-red-500">*</span>}
-                </label>
-                <textarea
-                  placeholder={
-                    docNewStatus === "REJECTED"
-                      ? "Please specify why this document is being rejected..."
-                      : "Add any remarks about this document..."
-                  }
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 resize-none h-24"
-                  value={docStatusRemark}
-                  onChange={(e) => setDocStatusRemark(e.target.value)}
-                  required={docNewStatus === "REJECTED"}
-                />
-                {docNewStatus === "REJECTED" && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Remarks are required when rejecting a document. Partner will see this and need to re-upload.
-                  </p>
-                )}
-              </div>
+              {/* Remarks & Submit Rejection directly */}
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">
+                    Reason for Rejection <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    placeholder="Provide a clear explanation for the partner (e.g. details are blurry, incorrect document uploaded)..."
+                    className="w-full border border-slate-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all duration-300 resize-none h-28 text-sm bg-slate-50/50 hover:bg-slate-50 focus:bg-white"
+                    value={docStatusRemark}
+                    onChange={(e) => setDocStatusRemark(e.target.value)}
+                    required
+                  />
+                </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setDocStatusModal(false);
-                    setSelectedDocForStatus(null);
-                    setDocStatusRemark("");
-                    setDocNewStatus("PENDING");
-                  }}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpdateDocStatus}
-                  disabled={updateStatusLoading || (docNewStatus === "REJECTED" && !docStatusRemark.trim())}
-                  className="flex-1 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white py-3 px-6 rounded-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {updateStatusLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Updating...</span>
-                    </>
-                  ) : (
-                    "Update Status"
-                  )}
-                </button>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDocStatusModal(false);
+                      setSelectedDocForStatus(null);
+                      setDocStatusRemark("");
+                      setDocNewStatus("PENDING");
+                    }}
+                    className="flex-1 px-5 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-semibold text-slate-600 text-sm text-center"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateDocStatus(selectedDocForStatus, "REJECTED", docStatusRemark)}
+                    disabled={updateStatusLoading || !docStatusRemark.trim()}
+                    className="flex-1 py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+                  >
+                    {updateStatusLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    ) : (
+                      "Submit Rejection"
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1417,46 +1471,51 @@ const CustomerApplication = () => {
 
       {/* Document Preview Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 bg-opacity-40 z-50">
-          <div className="bg-white rounded-xl p-6 w-[800px] max-h-[90vh] shadow-lg overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">
-                {selectedDoc ? toDocLabelByRule(selectedDoc.docType) : "Document Preview"}
-              </h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all duration-300">
+          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[95vh] shadow-2xl border border-slate-100 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  {selectedDoc ? toDocLabelByRule(selectedDoc.docType) : "Document Preview"}
+                </h3>
+              </div>
               <button
                 onClick={() => {
                   setShowModal(false);
-                  // Clean up preview URL to prevent memory leaks
+                  setPreviewRejectMode(false);
+                  setPreviewRejectRemark("");
                   if (selectedDoc?.previewUrl) {
                     window.URL.revokeObjectURL(selectedDoc.previewUrl);
                   }
                   setSelectedDoc(null);
                 }}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                className="text-slate-400 hover:text-slate-600 text-2xl font-bold transition-colors"
               >
                 ×
               </button>
             </div>
 
             {selectedDoc ? (
-              <div className="space-y-4">
-                {/* Document Preview */}
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">
-                      Document Type: {toDocLabelByRule(selectedDoc.docType)}
-                    </span>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${getDocStatusColor(
-                        selectedDoc.status
-                      )}`}
-                    >
+              <div className="flex-1 flex flex-col min-h-0">
+                {/* Meta details bar */}
+                <div className="px-6 py-3 bg-slate-50/30 border-b border-slate-100 flex items-center justify-between text-sm">
+                  <span className="font-semibold text-slate-500">
+                    File Type: <span className="text-slate-800 font-bold">{selectedDoc.contentType || "Document"}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 font-bold">
+                    Status: 
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getDocStatusColor(selectedDoc.status)}`}>
                       {selectedDoc.status}
                     </span>
-                  </div>
+                  </span>
+                </div>
+
+                {/* Document Preview Content */}
+                <div className="flex-1 min-h-[45vh] bg-slate-100/50 p-6 flex flex-col justify-center items-center overflow-y-auto">
 
                   {/* Loading state */}
-                  {previewLoading && (
+                  {previewLoadingDoc !== null && (
                     <div className="w-full h-96 flex items-center justify-center bg-gray-100">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
@@ -1466,7 +1525,7 @@ const CustomerApplication = () => {
                   )}
 
                   {/* Document Preview */}
-                  {!previewLoading && selectedDoc.previewUrl && (
+                  {previewLoadingDoc === null && selectedDoc.previewUrl && (
                     <div className="w-full h-96 border rounded overflow-hidden bg-gray-50">
                       {selectedDoc.isImage ? (
                         // Image preview
@@ -1493,59 +1552,144 @@ const CustomerApplication = () => {
                           }}
                         />
                       )}
+                    </div>
+                  )}
 
-                      {/* Fallback message */}
-                      <div
-                        className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500"
-                        style={{ display: "none" }}
-                      >
-                        <div className="text-center">
-                          <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                          <p className="text-lg font-medium">
-                            Preview not available
-                          </p>
-                          <p className="text-sm">
-                            Click Download to view the document
-                          </p>
-                          <p className="text-xs text-gray-400 mt-2">
-                            Content Type: {selectedDoc.contentType || "Unknown"}
-                          </p>
-                        </div>
+                  {/* Fallback message */}
+                  <div
+                    className="w-full h-96 flex items-center justify-center bg-gray-50 text-gray-500 rounded-xl border border-slate-200"
+                    style={{ display: "none" }}
+                  >
+                    <div className="text-center p-8">
+                      <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-bold text-slate-800">
+                        Preview not available
+                      </p>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Please download this file type to view its contents
+                      </p>
+                      <p className="text-xs text-slate-400 mt-3 bg-slate-100 px-3 py-1.5 rounded-full inline-block">
+                        Content-Type: {selectedDoc.contentType || "Unknown"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Controls Area */}
+                <div className="px-6 py-5 border-t border-slate-100 bg-slate-50/50">
+                  {/* Rejection input inline in preview */}
+                  {previewRejectMode ? (
+                    <div className="space-y-4">
+                      <div className="bg-red-50/50 border border-red-100 p-4 rounded-2xl space-y-3">
+                        <label className="block text-sm font-bold text-rose-700">
+                          Rejection Remark <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          placeholder="Why is this document invalid? (e.g. Blurry photo, mismatched names)..."
+                          className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 resize-none h-20 text-sm bg-white"
+                          value={previewRejectRemark}
+                          onChange={(e) => setPreviewRejectRemark(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-3 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewRejectMode(false);
+                            setPreviewRejectRemark("");
+                          }}
+                          className="px-5 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition font-semibold text-slate-600 text-sm"
+                        >
+                          Cancel Rejection
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleUpdateDocStatus(selectedDoc, "REJECTED", previewRejectRemark);
+                          }}
+                          disabled={updateStatusLoading || !previewRejectRemark.trim()}
+                          className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition text-sm disabled:opacity-50"
+                        >
+                          {updateStatusLoading ? "Submitting..." : "Submit Rejection"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Main Action Buttons Grid */
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                      {/* Left: Verification controls */}
+                      <div className="flex flex-wrap gap-2.5">
+                        {selectedDoc.status !== "VERIFIED" && (
+                          <button
+                            onClick={() => {
+                              handleUpdateDocStatus(selectedDoc, "VERIFIED", "");
+                            }}
+                            disabled={updateStatusLoading}
+                            className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold rounded-xl transition shadow-md hover:shadow-lg disabled:opacity-50 text-sm flex items-center gap-1.5"
+                          >
+                            <span>Approve ✓</span>
+                          </button>
+                        )}
+                        {selectedDoc.status !== "REJECTED" && (
+                          <button
+                            onClick={() => {
+                              setPreviewRejectMode(true);
+                              setPreviewRejectRemark(selectedDoc.remarks || "");
+                            }}
+                            className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold rounded-xl transition shadow-md hover:shadow-lg text-sm flex items-center gap-1.5"
+                          >
+                            <span>Reject ✗</span>
+                          </button>
+                        )}
+                        {(selectedDoc.status === "VERIFIED" || selectedDoc.status === "REJECTED") && (
+                          <button
+                            onClick={() => {
+                              handleUpdateDocStatus(selectedDoc, "PENDING", "");
+                            }}
+                            disabled={updateStatusLoading}
+                            className="px-5 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-100 transition disabled:opacity-50 text-sm flex items-center gap-1.5"
+                          >
+                            <span>Mark Pending</span>
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Right: Actions and close */}
+                      <div className="flex gap-2.5 sm:self-auto self-end">
+                        <button
+                          onClick={() => handleDownload(selectedDoc)}
+                          className="px-5 py-2.5 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white rounded-xl hover:from-brand-primary-hover hover:to-brand-primary transition flex items-center gap-2 text-sm font-semibold shadow-md"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>Download</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowModal(false);
+                            setPreviewRejectMode(false);
+                            setPreviewRejectRemark("");
+                            if (selectedDoc?.previewUrl) {
+                              window.URL.revokeObjectURL(selectedDoc.previewUrl);
+                            }
+                            setSelectedDoc(null);
+                          }}
+                          className="px-5 py-2.5 bg-slate-500 hover:bg-slate-600 text-white rounded-xl transition text-sm font-semibold shadow-sm"
+                        >
+                          Close
+                        </button>
                       </div>
                     </div>
                   )}
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => handleDownload(selectedDoc)}
-                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowModal(false);
-                      if (selectedDoc?.previewUrl) {
-                        window.URL.revokeObjectURL(selectedDoc.previewUrl);
-                      }
-                      setSelectedDoc(null);
-                    }}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
-                  >
-                    Close
-                  </button>
-                </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                <p className="text-gray-600">{modalMessage}</p>
+              <div className="text-center py-12 px-6">
+                <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-4" />
+                <p className="text-slate-600 text-base font-semibold">{modalMessage}</p>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="mt-4 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition"
+                  className="mt-6 px-6 py-2.5 bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover transition font-bold shadow-md"
                 >
                   Close
                 </button>
@@ -2075,10 +2219,10 @@ const CustomerApplication = () => {
 
                             <button
                               onClick={() => handleView(doc)}
-                              disabled={previewLoading}
+                              disabled={previewLoadingDoc !== null}
                               className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-100 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {previewLoading ? (
+                              {previewLoadingDoc === doc.docType ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
                               ) : (
                                 "View"
@@ -2086,21 +2230,90 @@ const CustomerApplication = () => {
                             </button>
                           </div>
                           
-                          <button
-                            onClick={() => {
-                              setSelectedDocForStatus(doc);
-                              setDocStatusRemark(doc.remarks || "");
-                              setDocNewStatus(doc.status === "UPDATED" ? "PENDING" : (doc.status || "PENDING"));
-                              setDocStatusModal(true);
-                            }}
-                            className={`w-full flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
-                              doc.status === "UPDATED"
-                                ? "bg-blue-600 text-white border-2 border-blue-700 hover:bg-blue-700 shadow-lg font-bold"
-                                : "text-blue-600 border border-blue-200 hover:bg-blue-50"
-                            }`}
-                          >
-                            {doc.status === "UPDATED" ? "⚠️ VERIFY NOW" : "Manage Status"}
-                          </button>
+                          {doc.status === "VERIFIED" ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedDocForStatus(doc);
+                                  setDocStatusRemark(doc.remarks || "");
+                                  setDocNewStatus("REJECTED");
+                                  setDocStatusModal(true);
+                                }}
+                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-all duration-300"
+                              >
+                                Reject ✗
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleUpdateDocStatus(doc, "PENDING", "");
+                                }}
+                                disabled={updateStatusLoading}
+                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-300"
+                              >
+                                {updateStatusLoading && selectedDocForStatus?.docType === doc.docType ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                                ) : (
+                                  "Mark Pending"
+                                )}
+                              </button>
+                            </div>
+                          ) : doc.status === "REJECTED" ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  handleUpdateDocStatus(doc, "VERIFIED", "");
+                                }}
+                                disabled={updateStatusLoading}
+                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all duration-300 shadow-sm disabled:opacity-50"
+                              >
+                                {updateStatusLoading && selectedDocForStatus?.docType === doc.docType ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                ) : (
+                                  "Approve ✓"
+                                )}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleUpdateDocStatus(doc, "PENDING", "");
+                                }}
+                                disabled={updateStatusLoading}
+                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-300"
+                              >
+                                {updateStatusLoading && selectedDocForStatus?.docType === doc.docType ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                                ) : (
+                                  "Mark Pending"
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  handleUpdateDocStatus(doc, "VERIFIED", "");
+                                }}
+                                disabled={updateStatusLoading}
+                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all duration-300 shadow-sm disabled:opacity-50"
+                              >
+                                {updateStatusLoading && selectedDocForStatus?.docType === doc.docType ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                ) : (
+                                  "Approve ✓"
+                                )}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedDocForStatus(doc);
+                                  setDocStatusRemark(doc.remarks || "");
+                                  setDocNewStatus("REJECTED");
+                                  setDocStatusModal(true);
+                                }}
+                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-300 shadow-sm"
+                              >
+                                Reject ✗
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -2330,19 +2543,54 @@ const CustomerApplication = () => {
 
                     {/* Approval Amount Field - Only show when DISBURSED is selected */}
                     {status === "DISBURSED" && (
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-3">
-                          Approved Loan Amount (₹) *
-                        </label>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Approved Loan Amount (₹) *
+                          </label>
+                          <span className="text-xs text-gray-500 font-medium bg-slate-100 px-2 py-1 rounded-md">
+                            Requested: ₹{(applicationData.customer?.loanAmount || applicationData.loan?.amount || 0).toLocaleString("en-IN")}
+                          </span>
+                        </div>
                         <input
                           type="number"
                           placeholder="Enter approved loan amount"
-                          className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
+                          className={`w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 ${
+                            approvalAmount && (
+                              parseInt(approvalAmount) <= 0 || 
+                              parseInt(approvalAmount) > (applicationData.customer?.loanAmount || applicationData.loan?.amount || 0)
+                            ) ? "border-red-500 ring-2 ring-red-200" : "border-gray-300"
+                          }`}
                           value={approvalAmount}
                           onChange={(e) => setApprovalAmount(e.target.value)}
-                          min="0"
+                          min="1"
                           required
                         />
+                        {approvalAmount && (
+                          <div className="mt-2 space-y-1">
+                            {parseInt(approvalAmount) > (applicationData.customer?.loanAmount || applicationData.loan?.amount || 0) && (
+                              <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                Approved amount cannot exceed requested amount
+                              </p>
+                            )}
+                            {parseInt(approvalAmount) <= 0 && (
+                              <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                Approved amount must be greater than zero
+                              </p>
+                            )}
+                            {parseInt(approvalAmount) > 0 && parseInt(approvalAmount) <= (applicationData.customer?.loanAmount || applicationData.loan?.amount || 0) && (
+                              <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                Valid approved amount
+                              </p>
+                            )}
+                            <p className="text-xs font-medium text-brand-primary italic mt-1 bg-brand-primary/5 px-2.5 py-1.5 rounded-lg border border-brand-primary/10">
+                              In words: {toIndianWords(parseInt(approvalAmount))}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
 

@@ -10,6 +10,13 @@ import { SocketProvider } from "./components/SocketProvider";
 import { AppLoaderProvider } from "./components/AppLoaderProvider";
 import { antdThemeConfig } from "./config/antdTheme";
 
+// Disable wheel/scroll changes on number inputs globally to prevent accidental edits
+document.addEventListener("wheel", function (e) {
+  if (document.activeElement && document.activeElement.type === "number") {
+    document.activeElement.blur();
+  }
+});
+
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ConfigProvider theme={antdThemeConfig}>

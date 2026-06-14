@@ -25,8 +25,18 @@ const AdminEligibleIncentive = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIncentive, setSelectedIncentive] = useState(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [overrideAmount, setOverrideAmount] = useState("");
+  const [isIncentiveEditable, setIsIncentiveEditable] = useState(false);
   const [year, setYear] = useState(location.state?.year || new Date().getFullYear());
   const [month, setMonth] = useState(location.state?.month || new Date().getMonth() + 1);
+
+  // Sync override amount and edit status when modal incentive opens
+  useEffect(() => {
+    if (selectedIncentive) {
+      setOverrideAmount(selectedIncentive.amount || "");
+      setIsIncentiveEditable(false);
+    }
+  }, [selectedIncentive]);
 
   const { data = [], loading, error } = useSelector(
     (state) =>
@@ -60,7 +70,7 @@ const AdminEligibleIncentive = () => {
   const handlePay = async (id) => {
     try {
       setIsPaying(true);
-      await dispatch(payAdminIncentive(id)).unwrap();
+      await dispatch(payAdminIncentive({ id, amount: Number(overrideAmount) })).unwrap();
       toast.success("Incentive marked as paid");
       dispatch(fetchAdminIncentives({ status: "PENDING", year, month }));
       setSelectedIncentive(null);
@@ -88,7 +98,14 @@ const AdminEligibleIncentive = () => {
       {
         title: "ASM",
         key: "asm",
-        render: () => <span className="text-xs text-gray-500">—</span>,
+        render: (_, row) => (
+          <div>
+            <p className="font-medium text-xs">{row.asmName || "—"}</p>
+            {row.asmEmployeeId && (
+              <p className="text-[10px] text-gray-500">{row.asmEmployeeId}</p>
+            )}
+          </div>
+        ),
       },
       {
         title: "Month",
@@ -359,10 +376,35 @@ const AdminEligibleIncentive = () => {
                 </div>
 
                 <div>
-                  <p className="text-gray-500 mb-1">Final Incentive Amount</p>
-                  <p className="text-2xl font-bold text-emerald-600">
-                    {formatCurrency(selectedIncentive.amount)}
-                  </p>
+                  <p className="text-gray-500 mb-1 font-medium">Final Incentive Amount</p>
+                  {isIncentiveEditable ? (
+                    <div className="relative mt-1 max-w-[200px]">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        value={overrideAmount}
+                        onChange={(e) => setOverrideAmount(e.target.value)}
+                        onWheel={(e) => e.target.blur()}
+                        className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-lg font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-primary bg-white"
+                        placeholder="Amount"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 mt-1">
+                      <p className="text-2xl font-bold text-emerald-600">
+                        {formatCurrency(overrideAmount)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsIncentiveEditable(true)}
+                        className="text-xs font-semibold text-brand-primary hover:underline"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

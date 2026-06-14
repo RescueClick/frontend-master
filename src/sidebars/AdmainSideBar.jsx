@@ -27,6 +27,7 @@ import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from
 import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
 import DhanSourceLoader from "../components/DhanSourceLoader";
+import { useSidebarNotifications } from "../hooks/useSidebarNotifications";
 
 // Admin sidebar component
 const AdminSideBar = () => {
@@ -60,6 +61,21 @@ const AdminSideBar = () => {
   const { parentUser } = getAuthData();
   const isImpersonating = !!parentUser;
   const originalRole = getOriginalRole();
+
+  const counts = useSidebarNotifications();
+
+  const getBadgeCount = (name) => {
+    switch (name) {
+      case "Partner":
+        return counts.partner;
+      case "Payout":
+        return counts.payout;
+      case "Delete Requests":
+        return counts.delete_request;
+      default:
+        return 0;
+    }
+  };
 
   // Sidebar navigation items with icons and routes
   const sidebarItems = [
@@ -137,6 +153,7 @@ const AdminSideBar = () => {
           {sidebarItems.map((item, index) => {
             const active = location.pathname === item.path;
             const isHighlight = item.highlight;
+            const count = getBadgeCount(item.name);
 
             const baseClasses = isHighlight
               ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
@@ -155,14 +172,32 @@ const AdminSideBar = () => {
                   sidebarOpen ? "space-x-3 px-3 py-3" : "justify-center px-2 py-3"
                 } ${active ? activeClasses : baseClasses}`}
               >
-                <item.icon
-                  size={22}
-                  className={`shrink-0 ${active ? "text-white" : ""}`}
-                />
+                <div className="relative flex items-center">
+                  <item.icon
+                    size={22}
+                    className={`shrink-0 ${active ? "text-white" : ""}`}
+                  />
+                  {!sidebarOpen && count > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                  )}
+                </div>
                 {sidebarOpen && (
-                  <span className="text-sm font-medium truncate min-w-0">
-                    {item.name}
-                  </span>
+                  <div className="flex-1 flex items-center justify-between min-w-0">
+                    <span className="text-sm font-medium truncate min-w-0">
+                      {item.name}
+                    </span>
+                    {count > 0 && (
+                      <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        active 
+                          ? "bg-white text-teal-600" 
+                          : isHighlight 
+                            ? "bg-amber-500 text-white shadow-sm" 
+                            : "bg-rose-500 text-white shadow-sm"
+                      }`}>
+                        {count}
+                      </span>
+                    )}
+                  </div>
                 )}
               </Link>
             );

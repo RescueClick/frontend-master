@@ -418,6 +418,7 @@ const AsmPendingPayout = () => {
                                     payoutPercentage: e.target.value,
                                   }))
                                 }
+                                onWheel={(e) => e.target.blur()}
                                 className="w-full pr-8 pl-4 py-3 border-2 border-gray-200 rounded-xl text-[#111827] font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
                                 placeholder="Enter %"
                               />

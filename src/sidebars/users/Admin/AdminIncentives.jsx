@@ -26,12 +26,12 @@ const AdminIncentives = () => {
   // - Pending Incentive  = partners who are NOT yet eligible for incentive
   // - Eligible Incentive = partners who are eligible but incentive is NOT paid
   // - Done Incentive     = partners who are eligible and incentive is PAID
-  const pendingCount = incentives.filter((i) => !i.eligibleForIncentive).length;
+  const pendingCount = incentives.filter((i) => !i.eligibleForIncentive && i.status !== "PENDING" && i.status !== "PAID").length;
   const eligibleCount = incentives.filter(
-    (i) => i.eligibleForIncentive && !i.incentivePaid
+    (i) => i.status === "PENDING"
   ).length;
   const doneCount = incentives.filter(
-    (i) => i.eligibleForIncentive && i.incentivePaid
+    (i) => i.status === "PAID"
   ).length;
 
   const IncentiveCard = ({ title, count, iconName, bgGradient, path }) => {

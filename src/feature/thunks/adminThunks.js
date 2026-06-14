@@ -754,15 +754,16 @@ export const fetchAdminIncentives = createAsyncThunk(
   }
 );
 
-// Mark incentive as PAID (Admin)
 export const payAdminIncentive = createAsyncThunk(
   "admin/payIncentive",
-  async (incentiveId, { rejectWithValue, dispatch }) => {
+  async (payload, { rejectWithValue, dispatch }) => {
     try {
       const { adminToken } = getAuthData();
+      const id = typeof payload === "string" ? payload : payload?.id;
+      const amount = typeof payload === "object" ? payload?.amount : undefined;
       const response = await axios.post(
-        `${backendurl}/admin/incentives/${incentiveId}/pay`,
-        {},
+        `${backendurl}/admin/incentives/${id}/pay`,
+        { amount },
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,

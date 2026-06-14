@@ -76,6 +76,55 @@ const businessFields = [
   { label: "Years in Business", value: (b) => b?.yearsInBusiness },
 ];
 
+const toIndianWords = (num) => {
+  if (isNaN(num) || num <= 0) return "";
+  const n = Math.floor(num);
+  if (n === 0) return "Zero Rupees";
+
+  const units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+  const formatGroup = (v) => {
+    let s = "";
+    if (v >= 100) {
+      s += units[Math.floor(v / 100)] + " Hundred ";
+      v %= 100;
+    }
+    if (v >= 20) {
+      s += tens[Math.floor(v / 10)] + " ";
+      v %= 10;
+    }
+    if (v > 0) {
+      s += units[v] + " ";
+    }
+    return s.trim();
+  };
+
+  let res = "";
+  let crores = Math.floor(n / 10000000);
+  let remaining = n % 10000000;
+  let lakhs = Math.floor(remaining / 100000);
+  remaining %= 100000;
+  let thousands = Math.floor(remaining / 1000);
+  remaining %= 1000;
+  let hundreds = remaining;
+
+  if (crores > 0) {
+    res += formatGroup(crores) + " Crore ";
+  }
+  if (lakhs > 0) {
+    res += formatGroup(lakhs) + " Lakh ";
+  }
+  if (thousands > 0) {
+    res += formatGroup(thousands) + " Thousand ";
+  }
+  if (hundreds > 0) {
+    res += formatGroup(hundreds) + " ";
+  }
+
+  return res.trim() + " Rupees Only";
+};
+
 const RsmApplicationView = () => {
   const [applicationData, setApplicationData] = useState(null);
   const [requiredDocRules, setRequiredDocRules] = useState([]);
@@ -1188,19 +1237,51 @@ const RsmApplicationView = () => {
 
                     {/* Approval Amount Field - Only show when APPROVED is selected */}
                     {status === "APPROVED" && (
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-3">
-                          Approved Loan Amount (₹) *
-                        </label>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Approved Loan Amount (₹) *
+                          </label>
+                          <span className="text-xs text-gray-500 font-medium bg-slate-100 px-2 py-1 rounded-md">
+                            Requested: ₹{(applicationData.customer?.loanAmount || applicationData.loan?.amount || 0).toLocaleString("en-IN")}
+                          </span>
+                        </div>
                         <input
                           type="number"
                           placeholder="Enter approved loan amount"
-                          className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
+                          className={`w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 ${
+                            approvalAmount && parseInt(approvalAmount) <= 0 ? "border-red-500 ring-2 ring-red-200" : "border-gray-300"
+                          }`}
                           value={approvalAmount}
                           onChange={(e) => setApprovalAmount(e.target.value)}
-                          min="0"
+                          min="1"
                           required
                         />
+                        {approvalAmount && (
+                          <div className="mt-2 space-y-1">
+                            {parseInt(approvalAmount) > (applicationData.customer?.loanAmount || applicationData.loan?.amount || 0) && (
+                              <p className="text-xs font-semibold text-amber-600 flex items-center gap-1 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                Note: Approved amount exceeds requested amount. RSM has authority to override.
+                              </p>
+                            )}
+                            {parseInt(approvalAmount) <= 0 && (
+                              <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                Approved amount must be greater than zero
+                              </p>
+                            )}
+                            {parseInt(approvalAmount) > 0 && parseInt(approvalAmount) <= (applicationData.customer?.loanAmount || applicationData.loan?.amount || 0) && (
+                              <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                                Valid approved amount
+                              </p>
+                            )}
+                            <p className="text-xs font-medium text-brand-primary italic mt-1 bg-brand-primary/5 px-2.5 py-1.5 rounded-lg border border-brand-primary/10">
+                              In words: {toIndianWords(parseInt(approvalAmount))}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
 

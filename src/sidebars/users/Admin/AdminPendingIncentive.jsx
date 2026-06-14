@@ -47,8 +47,10 @@ const AdminPendingIncentive = () => {
 
   const incentives = Array.isArray(data) ? data : [];
   
-  // Only show NOT eligible partners in Pending
-  const pendingIncentives = incentives.filter((i) => !i.eligibleForIncentive);
+  // Only show NOT eligible partners in Pending, and exclude if they already have proposed/paid manual incentives
+  const pendingIncentives = incentives.filter(
+    (i) => !i.eligibleForIncentive && i.status !== "PENDING" && i.status !== "PAID"
+  );
 
   // Filter list by search term
   const filteredIncentives = pendingIncentives.filter((incentive) => {
