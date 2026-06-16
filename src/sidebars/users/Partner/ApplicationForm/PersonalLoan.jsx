@@ -1316,12 +1316,16 @@ export default function PersonalLoan({ embed = false } = {}) {
                       name="maritalStatus"
                       value={formData.maritalStatus}
                       onChange={handleInputChange}
-                      className={fieldClass("maritalStatus", fieldErrors)}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: fieldErrors.maritalStatus ? "#EF4444" : "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
                     >
                       <option value="">Select Status</option>
-                      <option value="Single">Single</option>
-                      <option value="Married">Married</option>
-                      <option value="Widow">Widow</option>
+                      <option value="single">Single</option>
+                      <option value="married">Married</option>
+                      <option value="widow">Widow</option>
                     </select>
                     {renderError("maritalStatus")}
                   </div>
