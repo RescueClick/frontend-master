@@ -125,6 +125,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
 
     password: "",
     confirmPassword: "",
+    bankStatementPassword: "",
     partnerReferralCode: "",
   });
 
@@ -681,6 +682,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
           permanentAddressStability: formData.permanentStability,
           loanAmount: formData.loanAmount || 0,
           password: formData.password,
+          bankStatementPassword: formData.bankStatementPassword,
         },
         product: {
           companyName: formData.companyName,
@@ -1831,7 +1833,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                           onChange={handleFileChange}
                           className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                           style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
-                          accept=".pdf,.jpg,.jpeg,.png"
+                          accept=".pdf,application/pdf"
                           required
                         />
                         {formData[name] ? "" : renderError(name)}
@@ -2134,7 +2136,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                           borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
-                        accept=".pdf,.jpg,.jpeg,.png"
+                        accept=".pdf,application/pdf"
                         required
                       />
 
@@ -2222,7 +2224,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                           borderColor: "var(--color-brand-primary)",
                           backgroundColor: "#F8FAFC",
                         }}
-                        accept=".pdf,.jpg,.jpeg,.png"
+                        accept=".pdf,application/pdf"
                       />
 
                       {/* Action Buttons */}
@@ -2287,6 +2289,29 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                         <span>✓</span> {formData.bankStatement2.name}
                       </p>
                     )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Bank Statement Password (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      name="bankStatementPassword"
+                      value={formData.bankStatementPassword}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      placeholder="Password (if protected)"
+                    />
                   </div>
                 </div>
               </section>

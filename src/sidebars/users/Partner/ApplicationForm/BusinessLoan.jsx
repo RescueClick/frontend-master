@@ -114,6 +114,7 @@ export default function BusinessLoan({ embed = false } = {}) {
     otherDocs: null,
     annualTurnover: "",
     partnerReferralCode: "",
+    bankStatementPassword: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);
@@ -695,6 +696,8 @@ const handleSubmit = async () => {
         permanentAddressLandmark: formData.permanentAddressLandmark,
         permanentAddressStability: formData.permanentAddressStability,
         loanAmount: formData.loanAmount || 0,
+        password: formData.password,
+        bankStatementPassword: formData.bankStatementPassword,
       },
       product: {
         businessName: formData.businessName,
@@ -2300,7 +2303,7 @@ const handleSubmit = async () => {
                       borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
-                    accept=".pdf,.jpg,.jpeg,.png"
+                    accept=".pdf,application/pdf"
                     required
                   />
                   <p
@@ -2328,9 +2331,32 @@ const handleSubmit = async () => {
                       borderColor: "var(--color-brand-primary)",
                       backgroundColor: "#F8FAFC",
                     }}
-                    accept=".pdf,.jpg,.jpeg,.png"
+                    accept=".pdf,application/pdf"
                   />
                   {renderPreviewLink("bankStatementFile2")}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: "#111827" }}
+                  >
+                    Bank Statement Password (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    name="bankStatementPassword"
+                    value={formData.bankStatementPassword}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                    style={{
+                      borderColor: "var(--color-brand-primary)",
+                      backgroundColor: "#F8FAFC",
+                    }}
+                    placeholder="Password (if protected)"
+                  />
                 </div>
               </div>
             </section>
