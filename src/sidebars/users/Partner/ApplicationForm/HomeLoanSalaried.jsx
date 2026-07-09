@@ -592,7 +592,6 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     if (!formData.salarySlip1) errors.salarySlip1 = "Salary slip 1 is required";
     if (!formData.salarySlip2) errors.salarySlip2 = "Salary slip 2 is required";
     if (!formData.salarySlip3) errors.salarySlip3 = "Salary slip 3 is required";
-    if (!formData.form16_26as) errors.form16_26as = "Form 16 / 26AS is required";
 
     // Reference 1
     if (!formData.reference1Name)
@@ -628,7 +627,6 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     
 
     if (!formData.bankStatement1) errors.bankStatement1 = "Bank Statement 1 is required.";
-    if (!formData.bankStatement2) errors.bankStatement2 = "Bank Statement 2 is required.";
 
     return errors;
   }
@@ -992,6 +990,22 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     }
     return true;
   };
+
+  if (true) {
+    return (
+      <div className={embed ? "py-4" : "min-h-screen py-12"} style={{ backgroundColor: embed ? "transparent" : "#F8FAFC" }}>
+        <div className="max-w-4xl mx-auto flex items-center justify-center bg-white rounded-2xl shadow-xl p-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-slate-800 mb-4">Home Loan (Salaried)</h2>
+            <div className="inline-block px-4 py-2 rounded-full mb-4 font-semibold" style={{ backgroundColor: "var(--color-brand-primary)", color: "#fff", opacity: 0.9 }}>
+              Coming Soon
+            </div>
+            <p className="text-slate-600 text-lg">We are currently building this feature. Please check back later!</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

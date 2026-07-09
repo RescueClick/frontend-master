@@ -123,6 +123,14 @@ export function isImagesOnlyLoanField(fieldName) {
   );
 }
 
+export function isPdfOnlyLoanField(fieldName) {
+  return [
+    "salarySlip1", "salarySlip2", "salarySlip3", "salarySlip",
+    "bankStatement1", "bankStatement2", "bankStatement3", "bankStatement",
+    "statement1", "statement2"
+  ].includes(fieldName);
+}
+
 export function fileMatchesLoanPdfJpegPng(file) {
   if (!file) return false;
   const t = (file.type || "").toLowerCase();
@@ -143,6 +151,15 @@ export function fileMatchesLoanJpegPngOnly(file) {
   return false;
 }
 
+export function fileMatchesLoanPdfOnly(file) {
+  if (!file) return false;
+  const t = (file.type || "").toLowerCase();
+  const n = (file.name || "").toLowerCase();
+  if (t === "application/pdf") return true;
+  if (n.endsWith(".pdf")) return true;
+  return false;
+}
+
 /**
  * @param {File} file
  * @param {string} fieldName input name attribute
@@ -154,6 +171,10 @@ export function validateLoanDocumentUpload(file, fieldName) {
   if (isImagesOnlyLoanField(fieldName)) {
     if (!fileMatchesLoanJpegPngOnly(file)) {
       return "This field only accepts JPG or PNG images (no PDF).";
+    }
+  } else if (isPdfOnlyLoanField(fieldName)) {
+    if (!fileMatchesLoanPdfOnly(file)) {
+      return "This field only accepts PDF documents (no images).";
     }
   } else if (!fileMatchesLoanPdfJpegPng(file)) {
     return "Invalid file type. Use PDF, JPG, or PNG.";
@@ -175,6 +196,6 @@ export function loanDocumentFieldHint(fieldName) {
   const docType = normalizeDocTypeForLimits(rawType);
   const label = DOC_LABEL[docType] || docType.replace(/_/g, " ");
   const mb = maxUploadMbForDocType(docType);
-  const formats = isImagesOnlyLoanField(fieldName) ? "JPG, PNG only" : "PDF, JPG, PNG";
+  const formats = isImagesOnlyLoanField(fieldName) ? "JPG, PNG only" : isPdfOnlyLoanField(fieldName) ? "PDF only" : "PDF, JPG, PNG";
   return `Stored as “${label}” (${docType}) · ${formats} · max ${mb}MB`;
 }

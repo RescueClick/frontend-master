@@ -1083,6 +1083,22 @@ export default function HomeLoanSelfEmployee({ embed = false } = {}) {
     return true;
   };
 
+  if (true) {
+    return (
+      <div className={embed ? "py-4" : "min-h-screen py-12"} style={{ backgroundColor: embed ? "transparent" : "#F8FAFC" }}>
+        <div className="max-w-4xl mx-auto flex items-center justify-center bg-white rounded-2xl shadow-xl p-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-slate-800 mb-4">Home Loan (Self Employed)</h2>
+            <div className="inline-block px-4 py-2 rounded-full mb-4 font-semibold" style={{ backgroundColor: "var(--color-brand-primary)", color: "#fff", opacity: 0.9 }}>
+              Coming Soon
+            </div>
+            <p className="text-slate-600 text-lg">We are currently building this feature. Please check back later!</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={

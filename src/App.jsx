@@ -15,8 +15,35 @@ const AppRoutes = lazy(() =>
   ]).then(([mod]) => mod)
 );
 
+import axios from "axios";
+
 function App() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Add global axios interceptor for 401 errors
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          // Clear auth data and redirect to login
+          localStorage.removeItem("admin_token");
+          localStorage.removeItem("partner_token");
+          localStorage.removeItem("asm_token");
+          localStorage.removeItem("rsm_token");
+          localStorage.removeItem("rm_token");
+          localStorage.removeItem("customer_token");
+          localStorage.removeItem("impersonation_stack");
+          navigate("/login", { replace: true });
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, [navigate]);
 
   useEffect(() => {
     const handlePopState = () => {

@@ -439,7 +439,6 @@ export default function PersonalLoan({ embed = false } = {}) {
     if (!formData.salarySlip1) errors.salarySlip1 = "salarySlip1 is required.";
     if (!formData.salarySlip2) errors.salarySlip2 = "salarySlip2 is required.";
     if (!formData.salarySlip3) errors.salarySlip3 = "salarySlip3 is required.";
-    if (!formData.form16_26as) errors.form16_26as = "Form 16 / 26AS is required.";
 
     if (!formData.addressProof) {
       errors.addressProof = "Address proof document is required.";
@@ -447,7 +446,6 @@ export default function PersonalLoan({ embed = false } = {}) {
 
     // Bank Statement
     if (!formData.bankStatement1) errors.bankStatement1 = "Bank Statement 1 is required.";
-    if (!formData.bankStatement2) errors.bankStatement2 = "Bank Statement 2 is required.";
 
     // References
     if (!formData.reference1Name) errors.reference1Name = "Reference 1 name is required.";
