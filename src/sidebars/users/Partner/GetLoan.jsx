@@ -28,7 +28,8 @@ const GetLoan = () => {
       subtitle: "For Salaried Person",
       description: "Affordable home loans with attractive interest rates for salaried individuals",
       icon: "🏠",
-      route: "/partner/home-loan-salaried"
+      route: "/partner/home-loan-salaried",
+      isComingSoon: true
     },
     {
       id: "home-business",
@@ -36,14 +37,15 @@ const GetLoan = () => {
       subtitle: "For Self Employed",
       description: "Home financing options tailored for self-employed professionals and business owners",
       icon: "🏡",
-      route: "/partner/home-loan-self-employee"
+      route: "/partner/home-loan-self-employee",
+      isComingSoon: true
     }
   ];
 
   const handleLoanSelection = (loan) => {
+    if (loan.isComingSoon) return; // Prevent navigation if coming soon
     setSelectedLoan(loan.id);
-      navigate(loan.route);
-
+    navigate(loan.route);
   };
 
   return (
@@ -78,7 +80,8 @@ const GetLoan = () => {
               key={loan.id}
               onClick={() => handleLoanSelection(loan)}
               className={`
-                relative cursor-pointer group transition-all duration-300 transform hover:scale-105 hover:-translate-y-2
+                relative group transition-all duration-300 transform 
+                ${loan.isComingSoon ? 'cursor-not-allowed opacity-70 grayscale' : 'cursor-pointer hover:scale-105 hover:-translate-y-2'}
                 ${selectedLoan === loan.id ? 'scale-105 -translate-y-2' : ''}
               `}
             >
@@ -139,6 +142,15 @@ const GetLoan = () => {
                     style={{ backgroundColor: 'var(--color-brand-primary)' }}
                   >
                     <span className="text-white text-sm">✓</span>
+                  </div>
+                )}
+
+                {/* Coming Soon Badge */}
+                {loan.isComingSoon && (
+                  <div 
+                    className="absolute top-4 -right-2 transform rotate-12 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tl-lg shadow-lg"
+                  >
+                    Coming Soon
                   </div>
                 )}
               </div>
