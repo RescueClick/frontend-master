@@ -897,7 +897,6 @@ const CustomerApplication = () => {
       return [
         ...baseDocs.map((docType) => ({ key: docType, acceptedDocTypes: [docType] })),
         { key: "BANK_STATEMENT_1", acceptedDocTypes: ["BANK_STATEMENT_1", "BANK_STATEMENT"] },
-        { key: "GST_DOCUMENT", acceptedDocTypes: ["GST_DOCUMENT", "GST_CERTIFICATE"] },
       ];
     }
     return baseDocs.map((docType) => ({ key: docType, acceptedDocTypes: [docType] }));
