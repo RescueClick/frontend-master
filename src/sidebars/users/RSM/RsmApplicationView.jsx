@@ -467,6 +467,7 @@ const RsmApplicationView = () => {
     e.preventDefault();
     setSubmitLoading(true);
     setError("");
+    const previousAppData = applicationData ? { ...applicationData } : null;
 
     try {
       if (!status) {
@@ -518,8 +519,6 @@ const RsmApplicationView = () => {
         setSubmitLoading(false);
         return;
       }
-
-      const previousAppData = applicationData ? { ...applicationData } : null;
 
       if (applicationData) {
         setApplicationData({

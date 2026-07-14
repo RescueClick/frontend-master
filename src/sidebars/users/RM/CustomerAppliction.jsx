@@ -360,12 +360,12 @@ const CustomerApplication = () => {
 
     setApprovalLoading(true);
     setError("");
+    const previousAppData = applicationData ? { ...applicationData } : null;
 
     try {
       const { rmToken } = getAuthData();
       
       // Optimistic update
-      const previousAppData = applicationData ? { ...applicationData } : null;
       if (applicationData) {
         setApplicationData({
           ...applicationData,
@@ -1057,6 +1057,7 @@ const CustomerApplication = () => {
     e.preventDefault();
     setSubmitLoading(true);
     setError("");
+    const previousAppData = applicationData ? { ...applicationData } : null;
 
     try {
       // Validation
@@ -1118,9 +1119,6 @@ const CustomerApplication = () => {
       }
 
       const { rmToken } = getAuthData();
-
-      // Save previous state for error rollback
-      const previousAppData = applicationData ? { ...applicationData } : null;
 
       // Optimistic update - update UI immediately for fast response
       if (applicationData) {
