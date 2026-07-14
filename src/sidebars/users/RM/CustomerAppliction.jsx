@@ -1073,6 +1073,33 @@ const CustomerApplication = () => {
         return;
       }
 
+      // ✅ Validate DOC_COMPLETE - all documents must be verified
+      if (status === "DOC_COMPLETE") {
+        const allVerified = areAllDocumentsVerified();
+        if (!allVerified) {
+          const issues = getDocumentIssues();
+          let errorMsg = "Cannot set DOC_COMPLETE status. ";
+          
+          if (issues.missing.length > 0) {
+            errorMsg += `Missing documents: ${issues.missing.map(toDocLabel).join(", ")}. `;
+          }
+          if (issues.unverified.length > 0) {
+            const unverifiedList = issues.unverified
+              .map((u) => `${toDocLabel(u.docType)} (${u.status})`)
+              .join(", ");
+            errorMsg += `Unverified documents: ${unverifiedList}. `;
+          }
+          errorMsg +=
+            "Please verify all documents first (no PENDING/UPDATED/REJECTED allowed) or change status to DOC_INCOMPLETE.";
+          
+          toast.error(errorMsg, {
+            duration: 6000,
+            position: "top-right",
+          });
+          setSubmitLoading(false);
+          return;
+        }
+      }
 
       if (status === "DISBURSED") {
         const approvedAmt = parseInt(approvalAmount);
