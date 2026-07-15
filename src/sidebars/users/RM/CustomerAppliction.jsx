@@ -1501,9 +1501,9 @@ const CustomerApplication = () => {
                     <span className="font-semibold text-slate-500">
                       File Type: <span className="text-slate-800 font-bold">{selectedDoc.contentType || "Document"}</span>
                     </span>
-                    {selectedDoc?.docType?.includes("BANK_STATEMENT") && (applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) && (
+                    {selectedDoc?.docType?.includes("BANK_STATEMENT") && (
                       <span className="font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
-                        Password: <span className="font-bold tracking-wider">{applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword}</span>
+                        Password: <span className="font-bold tracking-wider">{(applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) || "Not Provided"}</span>
                       </span>
                     )}
                   </div>
@@ -2184,9 +2184,9 @@ const CustomerApplication = () => {
                                   Updated: {new Date(doc.uploadedAt).toLocaleDateString()}
                                 </p>
                               )}
-                              {doc.docType && doc.docType.includes("BANK_STATEMENT") && (applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) && (
+                              {doc.docType && doc.docType.includes("BANK_STATEMENT") && (
                                 <p className="text-sm font-semibold text-gray-700 mt-2">
-                                  Password: {applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword}
+                                  Password: {(applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) || "Not Provided"}
                                 </p>
                               )}
                             </div>

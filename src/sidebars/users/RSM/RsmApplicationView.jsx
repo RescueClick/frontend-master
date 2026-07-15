@@ -743,9 +743,9 @@ const RsmApplicationView = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-gray-600">Document Type: {toDocLabelByRule(selectedDoc.docType)}</span>
-                      {selectedDoc?.docType?.includes("BANK_STATEMENT") && (applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) && (
+                      {selectedDoc?.docType?.includes("BANK_STATEMENT") && (
                         <span className="text-sm font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
-                          Password: <span className="font-bold tracking-wider">{applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword}</span>
+                          Password: <span className="font-bold tracking-wider">{(applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) || "Not Provided"}</span>
                         </span>
                       )}
                     </div>
@@ -1114,9 +1114,9 @@ const RsmApplicationView = () => {
                                   Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
                                 </p>
                               )}
-                              {doc.docType && doc.docType.includes("BANK_STATEMENT") && (applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) && (
+                              {doc.docType && doc.docType.includes("BANK_STATEMENT") && (
                                 <p className="text-sm font-semibold text-gray-700 mt-2">
-                                  Password: {applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword}
+                                  Password: {(applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) || "Not Provided"}
                                 </p>
                               )}
                             </div>
