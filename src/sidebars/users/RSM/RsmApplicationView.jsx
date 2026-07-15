@@ -741,7 +741,14 @@ const RsmApplicationView = () => {
               <div className="space-y-4">
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">Document Type: {toDocLabelByRule(selectedDoc.docType)}</span>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-gray-600">Document Type: {toDocLabelByRule(selectedDoc.docType)}</span>
+                      {selectedDoc?.docType?.includes("BANK_STATEMENT") && (applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) && (
+                        <span className="text-sm font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                          Password: <span className="font-bold tracking-wider">{applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword}</span>
+                        </span>
+                      )}
+                    </div>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${getDocStatusColor(selectedDoc.status)}`}>
                       {selectedDoc.status}
                     </span>
@@ -1105,6 +1112,11 @@ const RsmApplicationView = () => {
                               {doc.uploadedAt && (
                                 <p className="text-xs text-gray-500 mt-1">
                                   Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
+                                </p>
+                              )}
+                              {doc.docType && doc.docType.includes("BANK_STATEMENT") && (applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) && (
+                                <p className="text-sm font-semibold text-gray-700 mt-2">
+                                  Password: {applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword}
                                 </p>
                               )}
                             </div>

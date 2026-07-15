@@ -1497,9 +1497,16 @@ const CustomerApplication = () => {
               <div className="flex-1 flex flex-col min-h-0">
                 {/* Meta details bar */}
                 <div className="px-6 py-3 bg-slate-50/30 border-b border-slate-100 flex items-center justify-between text-sm">
-                  <span className="font-semibold text-slate-500">
-                    File Type: <span className="text-slate-800 font-bold">{selectedDoc.contentType || "Document"}</span>
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <span className="font-semibold text-slate-500">
+                      File Type: <span className="text-slate-800 font-bold">{selectedDoc.contentType || "Document"}</span>
+                    </span>
+                    {selectedDoc?.docType?.includes("BANK_STATEMENT") && (applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) && (
+                      <span className="font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                        Password: <span className="font-bold tracking-wider">{applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword}</span>
+                      </span>
+                    )}
+                  </div>
                   <span className="flex items-center gap-1.5 font-bold">
                     Status: 
                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getDocStatusColor(selectedDoc.status)}`}>
@@ -2175,6 +2182,11 @@ const CustomerApplication = () => {
                               {doc.uploadedAt && doc.status !== "UPDATED" && (
                                 <p className="text-xs text-gray-500 mt-1">
                                   Updated: {new Date(doc.uploadedAt).toLocaleDateString()}
+                                </p>
+                              )}
+                              {doc.docType && doc.docType.includes("BANK_STATEMENT") && (applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) && (
+                                <p className="text-sm font-semibold text-gray-700 mt-2">
+                                  Password: {applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword}
                                 </p>
                               )}
                             </div>
