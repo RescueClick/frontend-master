@@ -42,6 +42,7 @@ const maskText = (text) => {
 const Banks = () => {
   const dispatch = useDispatch();
   const fileInputRef = useRef(null);
+  const csvInputRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState("add");
   const [toast, setToast] = useState({ visible: false, message: "", type: "success" });
@@ -54,6 +55,7 @@ const Banks = () => {
     loginId: "",
     password: "",
     link: "",
+    serviceablePincodes: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [loanTypeSearch, setLoanTypeSearch] = useState("");
@@ -106,8 +108,10 @@ const Banks = () => {
       loginId: "",
       password: "",
       link: "",
+      serviceablePincodes: "",
     });
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (csvInputRef.current) csvInputRef.current.value = "";
     setShowAddPassword(false);
   };
 
@@ -130,6 +134,7 @@ const Banks = () => {
       formData.append("portalLoginId", bank.loginId);
       formData.append("portalPassword", bank.password);
       formData.append("portalLink", bank.link);
+      formData.append("serviceablePincodes", bank.serviceablePincodes);
 
       await dispatch(createBank(formData)).unwrap();
       setToast({ visible: true, message: "Bank added successfully.", type: "success" });
@@ -400,6 +405,53 @@ const Banks = () => {
                         placeholder="https://portal.bank.com/login"
                       />
                     </label>
+                    {/* Serviceable Pincodes */}
+                    <div className="col-span-1 lg:col-span-3 mt-2">
+                      <label className="group block mb-1.5">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-gray-700">
+                          Serviceable Pincodes (Optional)
+                        </span>
+                        <p className="text-[10px] text-gray-500 mb-2 leading-tight">
+                          Enter comma-separated pincodes, or upload a CSV file containing them.
+                        </p>
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <textarea
+                          name="serviceablePincodes"
+                          value={bank.serviceablePincodes}
+                          onChange={handleChange}
+                          rows={2}
+                          className="flex-1 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                          placeholder="e.g. 110001, 110002, 560001"
+                        />
+                        <div className="flex flex-col gap-2 shrink-0 justify-center">
+                          <label className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition border border-emerald-200">
+                            <ExternalLink size={16} />
+                            Upload CSV
+                            <input
+                              type="file"
+                              accept=".csv"
+                              className="hidden"
+                              ref={csvInputRef}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = (evt) => {
+                                  const text = evt.target.result;
+                                  const matches = text.match(/\d{6}/g) || text.split(/[\s,]+/).filter(Boolean);
+                                  const current = bank.serviceablePincodes ? bank.serviceablePincodes.split(',').map(s=>s.trim()).filter(Boolean) : [];
+                                  const combined = Array.from(new Set([...current, ...matches]));
+                                  setBank(p => ({ ...p, serviceablePincodes: combined.join(', ') }));
+                                  setToast({ visible: true, message: "Pincodes extracted from CSV", type: "success" });
+                                };
+                                reader.readAsText(file);
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </section>
                 </div>

@@ -194,6 +194,7 @@ const Application = () => {
                 <option value="DOC_INCOMPLETE">Document Incomplete</option>
                 <option value="DOC_COMPLETE">Document Complete</option>
                 <option value="DOC_SUBMITTED">Document Submitted</option>
+                <option value="LOGIN">Login</option>
                 <option value="UNDER_REVIEW">Under Review</option>
                 <option value="APPROVED">Approved</option>
                 <option value="AGREEMENT">Agreement</option>

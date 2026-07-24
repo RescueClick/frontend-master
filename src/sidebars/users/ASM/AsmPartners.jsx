@@ -38,6 +38,7 @@ export default function AsmPartner() {
   const [replacementSearch, setReplacementSearch] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [stateFilter, setStateFilter] = useState("All");
   const [Partners, setPartners] = useState([]);
   console.log("Partners", Partners)
 
@@ -51,31 +52,45 @@ export default function AsmPartner() {
   }, [id]);
 
   // Filtered list
+  const stateOptions = useMemo(() => {
+    const set = new Set();
+    (Partners || []).forEach((c) => {
+      const region = String(c.region || "").trim();
+      if (region) set.add(region);
+    });
+    return ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [Partners]);
+
   const filteredCustomers = useMemo(() => {
     if (!Partners || Partners.length === 0) return [];
     const term = searchQuery?.trim().toLowerCase();
-    if (!term) return Partners;
+    const selectedState = stateFilter === "All" ? "" : stateFilter.trim().toLowerCase();
 
     return Partners.filter((c) => {
+      const partnerRegion = String(c.region || "").trim().toLowerCase();
+      const matchesState = !selectedState || partnerRegion === selectedState;
+      if (!matchesState) return false;
+      if (!term) return true;
+
       const name = (c.name || "").toLowerCase();
       const phone = (c.phone || "").toLowerCase();
       const id = (c.id || "").toString().toLowerCase();
       const email = (c.email || "").toLowerCase();
       const rmId = (c.Partners || "").toLowerCase();
       const employeeId= (c.employeeId|| "" ).toLowerCase();
-      // const profilePic = (c.profilePic)
+      const region = partnerRegion;
 
-      
       return (
         name.includes(term) ||
         phone.includes(term) ||
         id.includes(term) ||
         email.includes(term) ||
         rmId.includes(term) ||
-        employeeId.includes(term)
+        employeeId.includes(term) ||
+        region.includes(term)
       );
     });
-  }, [Partners, searchQuery]);
+  }, [Partners, searchQuery, stateFilter]);
 
   const sortedFilteredCustomers = sortNewestFirst(filteredCustomers, { dateKeys: ["createdAt"] });
 
@@ -85,6 +100,7 @@ export default function AsmPartner() {
       "Employee ID": c.employeeId || "",
       Phone: c.phone || "",
       Email: c.email || "",
+      "State / Region": c.region || "",
       Status: c.activation || "",
       "RM Name": c.assignTo?.rmName || "",
       "Created On": c.createdOn || "",
@@ -138,6 +154,7 @@ export default function AsmPartner() {
         name: `${p.firstName || ""} ${p.lastName || ""}`.trim(),
         phone: p.phone || "-",
         email: p.email || "-",
+        region: p.region || "",
         Partners: p.rmId,
         PartnersID: p._id,
         employeeId: p.employeeId,
@@ -266,6 +283,11 @@ loginAsUser(userId, navigate);
       ),
     },
     {
+      title: "State / Region",
+      key: "region",
+      render: (_, c) => <span className="text-sm">{c.region || "—"}</span>,
+    },
+    {
       title: "Created on",
       key: "createdOn",
       render: (_, c) => formatDate(c.createdOn),
@@ -354,6 +376,18 @@ loginAsUser(userId, navigate);
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <select
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              value={stateFilter}
+              onChange={(e) => setStateFilter(e.target.value)}
+              aria-label="Filter by state"
+            >
+              {stateOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt === "All" ? "All states" : opt}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               onClick={handleExport}

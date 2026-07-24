@@ -34,7 +34,7 @@ import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import { formatCurrency } from "../../../utils/designSystem";
 import toast from "react-hot-toast";
-import { getLoanStatusLabel } from "../../../utils/loanStatus";
+import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
@@ -84,17 +84,7 @@ const displayCustomerName = (customer) => {
   return customer.customerName || "—";
 };
 
-const RM_STATUS_FILTER_OPTIONS = [
-  "All",
-  "DOC_INCOMPLETE",
-  "DOC_COMPLETE",
-  "UNDER_REVIEW",
-  "SUBMITTED",
-  "APPROVED",
-  "AGREEMENT",
-  "DISBURSED",
-  "REJECTED",
-];
+const RM_STATUS_FILTER_OPTIONS = ["All", ...LOAN_STATUS_FILTER_OPTIONS];
 
 const Customers = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -550,7 +540,7 @@ const Customers = () => {
               >
                 {RM_STATUS_FILTER_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
-                    {opt === "All" ? "All status" : opt}
+                    {opt === "All" ? "All status" : getLoanStatusLabel(opt)}
                   </option>
                 ))}
               </select>

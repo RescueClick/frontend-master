@@ -359,6 +359,25 @@ export const fetchRsmPartnerTargets = createAsyncThunk(
   }
 );
 
+export const fetchRsmPartners = createAsyncThunk(
+  "rsm/fetchPartners",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { rsmToken } = getAuthData();
+      const response = await axios.get(`${backendurl}/rsm/get-partners`, {
+        headers: {
+          Authorization: `Bearer ${rsmToken}`,
+        },
+      });
+      return unwrapApiData(response.data);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch partners"
+      );
+    }
+  }
+);
+
 // get bank details
 
 export const fetchBanks = createAsyncThunk("rsm/fetchBanks", async (_, { rejectWithValue}) => {

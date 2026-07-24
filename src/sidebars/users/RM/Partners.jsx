@@ -37,6 +37,7 @@ const Partners = () => {
   const [selectedTab, setSelectedTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [stateFilter, setStateFilter] = useState("All");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState(null);
@@ -111,15 +112,34 @@ const Partners = () => {
     }
   };
 
+  const stateOptions = useMemo(() => {
+    const set = new Set();
+    (data || []).forEach((p) => {
+      const region = String(p.region || "").trim();
+      if (region) set.add(region);
+    });
+    return ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [data]);
+
   const filteredPartners = useMemo(() => {
     if (!data) return [];
 
     return data.filter((partner) => {
-      const matchesSearch = matchesSearchTerm(searchTerm, [partner.name, partner.type]);
+      const matchesSearch = matchesSearchTerm(searchTerm, [
+        partner.name,
+        partner.type,
+        partner.region,
+        partner.employeeId,
+        partner.phone,
+        partner.email,
+      ]);
       const matchesFilter = matchesStatusFilter(partner.status, selectedFilter);
-      return matchesSearch && matchesFilter;
+      const selectedState = stateFilter === "All" ? "" : stateFilter.trim().toLowerCase();
+      const partnerRegion = String(partner.region || "").trim().toLowerCase();
+      const matchesState = !selectedState || partnerRegion === selectedState;
+      return matchesSearch && matchesFilter && matchesState;
     });
-  }, [data, searchTerm, selectedFilter]);
+  }, [data, searchTerm, selectedFilter, stateFilter]);
 
   const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
@@ -199,6 +219,7 @@ const Partners = () => {
       "Partner Name": item.name,
       "Email": item.email,
       "Phone": item.phone,
+      "State / Region": item.region || "",
       "Status": item.status,
       "Rating": item.rating,
       "Deals This Month": item.dealsThisMonth,
@@ -315,6 +336,13 @@ const Partners = () => {
       dataIndex: "phone",
       key: "contact",
       render: (phone) => <span className="text-sm">{phone || "—"}</span>,
+    },
+    {
+      title: "State / Region",
+      key: "region",
+      render: (_, partner) => (
+        <span className="text-sm">{partner.region || "—"}</span>
+      ),
     },
     {
       title: "Status",
@@ -505,12 +533,24 @@ const Partners = () => {
               </div>
               <select
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={stateFilter}
+                onChange={(e) => setStateFilter(e.target.value)}
+                aria-label="Filter by state"
+              >
+                {stateOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt === "All" ? "All states" : opt}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
               >
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="all">All status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="SUSPENDED">Suspended</option>
               </select>
             </div>
           </div>

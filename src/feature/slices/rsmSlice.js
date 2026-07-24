@@ -8,6 +8,7 @@ import {
   fetchRsmProfile,
   updateRsmProfile,
   fetchRsmPartnerTargets,
+  fetchRsmPartners,
   fetchRmAnalytics,
   fetchRmFollowUps,
   recordRmFollowUp,
@@ -60,6 +61,13 @@ const initialState = {
   },
   // Partner Targets state
   partnerTargets: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+  },
+  // Partners directory
+  partners: {
     loading: false,
     error: null,
     success: false,
@@ -288,6 +296,22 @@ const rsmSlice = createSlice({
         state.partnerTargets.loading = false;
         state.partnerTargets.error = action.payload;
         state.partnerTargets.success = false;
+      })
+      // Fetch Partners directory
+      .addCase(fetchRsmPartners.pending, (state) => {
+        state.partners.loading = true;
+        state.partners.error = null;
+        state.partners.success = false;
+      })
+      .addCase(fetchRsmPartners.fulfilled, (state, action) => {
+        state.partners.loading = false;
+        state.partners.data = Array.isArray(action.payload) ? action.payload : [];
+        state.partners.success = true;
+      })
+      .addCase(fetchRsmPartners.rejected, (state, action) => {
+        state.partners.loading = false;
+        state.partners.error = action.payload;
+        state.partners.success = false;
       })
       // Fetch RM Analytics (RSM viewing RM analytics)
       .addCase(fetchRmAnalytics.pending, (state) => {

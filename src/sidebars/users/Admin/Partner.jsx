@@ -76,6 +76,7 @@ export default function PartnerTable() {
   const [PartneractiveModel, setPartneractiveModel] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [stateFilter, setStateFilter] = useState("All");
 
   /** null | { mode: 'single', partner } | { mode: 'all', partners: [] } */
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -182,15 +183,27 @@ export default function PartnerTable() {
     }, 100);
   };
 
+  const stateOptions = useMemo(() => {
+    const set = new Set();
+    (data || []).forEach((p) => {
+      const region = String(p.region || "").trim();
+      if (region) set.add(region);
+    });
+    return ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [data]);
+
   const filteredPartners = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    console.log(JSON.stringify(data));
-
     const term = searchQuery.trim().toLowerCase();
-    if (!term) return data;
+    const selectedState = stateFilter === "All" ? "" : stateFilter.trim().toLowerCase();
 
     return data.filter((partner) => {
+      const partnerRegion = String(partner.region || "").trim().toLowerCase();
+      const matchesState = !selectedState || partnerRegion === selectedState;
+      if (!matchesState) return false;
+      if (!term) return true;
+
       const fullName = `${partner.firstName || ""} ${
         partner.middleName || ""
       } ${partner.lastName || ""}`.toLowerCase();
@@ -205,6 +218,7 @@ export default function PartnerTable() {
       const asmEmployeeId = (partner.asmEmployeeId || "").toLowerCase();
       const rmId = (partner.rmId || "").toLowerCase();
       const asmId = (partner.asmId || "").toLowerCase();
+      const region = partnerRegion;
 
       return (
         fullName.includes(term) ||
@@ -218,10 +232,11 @@ export default function PartnerTable() {
         asmName.includes(term) ||
         asmEmployeeId.includes(term) ||
         rmId.includes(term) ||
-        asmId.includes(term)
+        asmId.includes(term) ||
+        region.includes(term)
       );
     });
-  }, [data, searchQuery]);
+  }, [data, searchQuery, stateFilter]);
 
   const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
@@ -345,6 +360,11 @@ loginAsUser(userId, navigate);
       title: "Contact",
       key: "phone",
       render: (_, p) => <div className="text-sm">{p.phone}</div>,
+    },
+    {
+      title: "State / Region",
+      key: "region",
+      render: (_, p) => <span className="text-sm">{p.region || "—"}</span>,
     },
     {
       title: "Created on",
@@ -526,7 +546,18 @@ loginAsUser(userId, navigate);
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-             
+              <select
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary bg-white"
+                value={stateFilter}
+                onChange={(e) => setStateFilter(e.target.value)}
+                aria-label="Filter by state"
+              >
+                {stateOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt === "All" ? "All states" : opt}
+                  </option>
+                ))}
+              </select>
               <button
                 type="button"
                 className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center"

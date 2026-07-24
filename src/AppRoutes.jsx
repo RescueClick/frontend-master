@@ -60,6 +60,7 @@ import AdminIncentives from "./sidebars/users/Admin/AdminIncentives";
 import AdminEligibleIncentive from "./sidebars/users/Admin/AdminEligibleIncentive";
 import AdminDoneIncentive from "./sidebars/users/Admin/AdminDoneIncentive";
 import AdminPendingIncentive from "./sidebars/users/Admin/AdminPendingIncentive";
+import AdminWithdrawals from "./sidebars/users/Admin/AdminWithdrawals";
 import AdminSettings from "./sidebars/users/Admin/AdminSettings";
 import AdminPublicLoanReferral from "./sidebars/users/Admin/AdminPublicLoanReferral";
 import AdminReferralRewardAmounts from "./sidebars/users/Admin/AdminReferralRewardAmounts";
@@ -78,7 +79,9 @@ import AsmEligibleIncentive from "./sidebars/users/ASM/AsmEligibleIncentive";
 import AsmFollowUps from "./sidebars/users/ASM/AsmFollowUps";
 import AsmPendingPayout from "./sidebars/users/ASM/AsmPendingPayout";
 import AsmDonePayout from "./sidebars/users/ASM/AsmDonePayout";
+import AsmWithdrawals from "./sidebars/users/ASM/AsmWithdrawals";
 import AsmPartnerTargets from "./sidebars/users/ASM/AsmPartnerTargets";
+import AsmPartners from "./sidebars/users/ASM/AsmPartners";
 import Settings from "./sidebars/users/ASM/Settings";
 import ASManalytics from "./sidebars/users/ASM/ASManalytics";
 import EditProfile from "./sidebars/users/userProfile/EditProfile";
@@ -90,6 +93,7 @@ import RsmApplications from "./sidebars/users/RSM/RsmApplications";
 import RsmFollowUps from "./sidebars/users/RSM/RsmFollowUps";
 import RsmApplicationView from "./sidebars/users/RSM/RsmApplicationView";
 import RsmPartnerTargets from "./sidebars/users/RSM/RsmPartnerTargets";
+import RsmPartners from "./sidebars/users/RSM/RsmPartners";
 import RsmAnalytics from "./sidebars/users/RSM/RsmAnalytics";
 import Banks from "./sidebars/users/RSM/Banks";
 
@@ -145,6 +149,7 @@ import ProtectedRoute from "./utils/ProtectedRoute.jsx";
 
 // import PersonalLoan from "./sidebars/users/Partner/ApplicationForm/PersonalLoan";
 // import BusinessLoan from "./sidebars/users/Partner/ApplicationForm/BusinessLoan";
+import CibilAuditLog from "./sidebars/users/Admin/CibilAuditLog";
 // import HomeLoanSalaried from "./sidebars/users/Partner/ApplicationForm/HomeLoanSalaried";
 // import HomeLoanSelfEmployee from "./sidebars/users/Partner/ApplicationForm/HomeLoanSelfEmployee";
 
@@ -273,6 +278,8 @@ const AppRoutes = () => {
         <Route path="incentives/pending" element={<AdminPendingIncentive />} />
         <Route path="incentives/eligible" element={<AdminEligibleIncentive />} />
         <Route path="incentives/done" element={<AdminDoneIncentive />} />
+        <Route path="withdrawals" element={<AdminWithdrawals />} />
+        <Route path="cibil-audit" element={<CibilAuditLog />} />
         
       </Route>
       </Route>
@@ -285,6 +292,7 @@ const AppRoutes = () => {
         <Route path="rsms" element={<AsmRSM />} />
         <Route path="rms" element={<AsmRM />} /> 
         <Route path="applications" element={<Applications />} />
+        <Route path="partners" element={<AsmPartners />} />
         <Route path="payouts" element={<AsmPayouts />} />
         <Route path="pending-payout" element={<AsmPendingPayout />} />
         <Route path="done-payout" element={<AsmDonePayout />} />
@@ -292,6 +300,7 @@ const AppRoutes = () => {
         <Route path="pending-incentive" element={<AsmPendingIncentive />} />
         <Route path="eligible-incentive" element={<AsmEligibleIncentive />} />
         <Route path="done-incentive" element={<AsmDoneIncentive />} />
+        <Route path="withdrawals" element={<AsmWithdrawals />} />
         <Route path="follow-ups" element={<AsmFollowUps />} />
         <Route path="partner-targets" element={<AsmPartnerTargets />} />
         <Route path="settings" element={<PasswordSettings  />} />
@@ -307,6 +316,7 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<RsmDashboard />} />
         <Route path="rms" element={<RsmRMs />} />
+        <Route path="partners" element={<RsmPartners />} />
         <Route path="applications" element={<RsmApplications />} />
         <Route path="applications/view" element={<RsmApplicationView />} />
         <Route path="analytics" element={<RsmAnalytics />} />

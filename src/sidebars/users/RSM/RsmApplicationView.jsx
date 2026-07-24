@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { getAuthData } from "../../../utils/localStorage";
 import toast from "react-hot-toast";
@@ -12,16 +12,25 @@ import {
   Mail,
   MessageSquare,
   Send,
-  Clock,
+  Plus,
   Download,
   Camera,
   Building2,
   Receipt,
+  FileImage,
+  ChevronDown,
+  CheckCircle,
   AlertCircle,
   Loader2,
-  CheckCircle,
   Eye,
   Lock,
+  ExternalLink,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  RefreshCw,
+  Maximize
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
@@ -131,15 +140,53 @@ const RsmApplicationView = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewLoadingDoc, setPreviewLoadingDoc] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(null);
+  
+  // Document Viewer State
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const imageContainerRef = useRef(null);
+  
+  useEffect(() => {
+    const container = imageContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e) => {
+      // Allow native scrolling (panning) if Ctrl is not held
+      if (!e.ctrlKey && !e.metaKey) return;
+      
+      e.preventDefault();
+      
+      const now = Date.now();
+      if (now - (window.lastZoomTime || 0) < 50) return; 
+      window.lastZoomTime = now;
+      
+      const direction = Math.sign(e.deltaY);
+      setZoomLevel(prev => {
+        const step = 0.1; 
+        let nextZoom = direction < 0 ? prev + step : prev - step;
+        return Math.min(Math.max(nextZoom, 0.1), 5); 
+      });
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [showModal, selectedDoc, previewLoadingDoc]);
+  
   const [status, setStatus] = useState("");
   const [remark, setRemark] = useState("");
   const [approvalAmount, setApprovalAmount] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submittedStatus, setSubmittedStatus] = useState(null);
+  
+  // Bank Matcher State
+  const [eligibleBanks, setEligibleBanks] = useState([]);
+  const [fetchingBanks, setFetchingBanks] = useState(false);
+  const [banksFetched, setBanksFetched] = useState(false);
+  const [searchPincode, setSearchPincode] = useState("");
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -301,6 +348,9 @@ const RsmApplicationView = () => {
         const rules = await fetchRequiredDocRules(result.payload);
         setRequiredDocRules(rules);
         setStatus(result.payload.status || "");
+        if (result.payload.customer?.currentAddressPinCode) {
+          setSearchPincode(result.payload.customer.currentAddressPinCode);
+        }
       } else {
         setError(result.payload || "Failed to fetch application data");
       }
@@ -311,6 +361,34 @@ const RsmApplicationView = () => {
       setLoading(false);
     }
   };
+
+  const fetchEligibleBanks = async () => {
+    if (!searchPincode || !applicationData?.loanType) return;
+    setFetchingBanks(true);
+    try {
+      const { rsmToken } = getAuthData();
+      const response = await axios.get(`${backendurl}/rsm/banks`, {
+        params: {
+          pincode: searchPincode,
+          loanType: applicationData.loanType,
+        },
+        headers: { Authorization: `Bearer ${rsmToken}` },
+      });
+      setEligibleBanks(response.data || []);
+      setBanksFetched(true);
+    } catch (err) {
+      console.error("Error fetching eligible banks:", err);
+      toast.error("Failed to fetch eligible banks");
+    } finally {
+      setFetchingBanks(false);
+    }
+  };
+
+  useEffect(() => {
+    if (searchPincode && applicationData?.loanType && !banksFetched) {
+      fetchEligibleBanks();
+    }
+  }, [searchPincode, applicationData?.loanType, banksFetched]);
 
   useEffect(() => {
     if (applicationId) {
@@ -329,7 +407,9 @@ const RsmApplicationView = () => {
   }, [selectedDoc]);
 
   const handleView = async (doc) => {
-    setPreviewLoading(true);
+    setPreviewLoadingDoc(doc.docType);
+    setZoomLevel(1);
+    setRotation(0);
     try {
       const { rsmToken } = getAuthData();
       const response = await axios.get(
@@ -387,7 +467,7 @@ const RsmApplicationView = () => {
       setShowModal(true);
       setSelectedDoc(null);
     } finally {
-      setPreviewLoading(false);
+      setPreviewLoadingDoc(null);
     }
   };
 
@@ -616,23 +696,23 @@ const RsmApplicationView = () => {
 
   // Helper functions for rendering
   const renderFields = (fields, data) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
       {fields.map((field, idx) => (
-        <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
-          <p className="text-sm font-medium text-gray-500 mb-1">{field.label}</p>
-          <p className="font-bold text-gray-900">{field.value(data) || "N/A"}</p>
+        <div key={idx} className="bg-white rounded-lg border border-gray-100 p-2.5 shadow-sm hover:shadow-md transition">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5 truncate" title={field.label}>{field.label}</p>
+          <p className="text-sm font-bold text-gray-900 break-words leading-tight">{field.value(data) || "N/A"}</p>
         </div>
       ))}
     </div>
   );
 
   const renderReferences = (references = []) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
       {references.map((ref, idx) => (
-        <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
-          <p className="text-sm font-medium text-gray-500 mb-1">Reference {idx + 1}</p>
-          <p className="font-bold text-gray-900">{ref.name || "N/A"}</p>
-          <p className="text-gray-600">{ref.phone || "N/A"}</p>
+        <div key={idx} className="bg-white rounded-lg border border-gray-100 p-2.5 shadow-sm hover:shadow-md transition">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Reference {idx + 1}</p>
+          <p className="text-sm font-bold text-gray-900">{ref.name || "N/A"}</p>
+          <p className="text-[13px] font-medium text-brand-primary">{ref.phone || "N/A"}</p>
         </div>
       ))}
     </div>
@@ -717,12 +797,63 @@ const RsmApplicationView = () => {
 
       {/* Document Preview Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 bg-opacity-40 z-50">
-          <div className="bg-white rounded-xl p-6 w-[800px] max-h-[90vh] shadow-lg overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">
-                {selectedDoc ? toDocLabelByRule(selectedDoc.docType) : "Document Preview"}
-              </h3>
+        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-2 md:p-4 z-50 transition-all duration-300">
+          <div className="bg-white rounded-xl w-full max-w-[96vw] h-[96vh] shadow-2xl flex flex-col overflow-hidden border border-slate-200/60 ring-1 ring-slate-900/5">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-6">
+                <h3 className="text-lg font-bold text-slate-800">
+                  {selectedDoc ? toDocLabelByRule(selectedDoc.docType) : "Document Preview"}
+                </h3>
+                
+                {/* Viewer Tools (Only if image) */}
+                {selectedDoc?.isImage && (
+                  <div className="flex items-center gap-3">
+                    <span className="hidden sm:flex items-center text-[11px] text-slate-400 font-medium">
+                      <span className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded shadow-sm mr-1">Ctrl</span> + Scroll to zoom
+                    </span>
+                    <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm space-x-1">
+                      <button 
+                      onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 5))}
+                      title="Zoom In"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 0.1))}
+                      title="Zoom Out"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <ZoomOut className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                    <button 
+                      onClick={() => setRotation(prev => prev - 90)}
+                      title="Rotate Left"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setRotation(prev => prev + 90)}
+                      title="Rotate Right"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <RotateCw className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                    <button 
+                      onClick={() => { setZoomLevel(1); setRotation(0); }}
+                      title="Reset View"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <Maximize className="w-4 h-4" />
+                    </button>
+                  </div>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => {
                   setShowModal(false);
@@ -731,31 +862,36 @@ const RsmApplicationView = () => {
                   }
                   setSelectedDoc(null);
                 }}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                className="text-slate-400 hover:text-slate-600 text-2xl font-bold transition-colors"
               >
                 ×
               </button>
             </div>
 
             {selectedDoc ? (
-              <div className="space-y-4">
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-center justify-between mb-2">
+              <div className="flex-1 flex flex-col min-h-0 space-y-0">
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="px-6 py-3 bg-slate-50/30 border-b border-slate-100 flex items-center justify-between text-sm">
                     <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-600">Document Type: {toDocLabelByRule(selectedDoc.docType)}</span>
+                      <span className="font-semibold text-slate-500">
+                        File Type: <span className="text-slate-800 font-bold">{selectedDoc.contentType || "Document"}</span>
+                      </span>
                       {selectedDoc?.docType?.includes("BANK_STATEMENT") && (
-                        <span className="text-sm font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                        <span className="font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
                           Password: <span className="font-bold tracking-wider">{(applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) || "Not Provided"}</span>
                         </span>
                       )}
                     </div>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getDocStatusColor(selectedDoc.status)}`}>
-                      {selectedDoc.status}
+                    <span className="flex items-center gap-1.5 font-bold">
+                      Status: 
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getDocStatusColor(selectedDoc.status)}`}>
+                        {selectedDoc.status}
+                      </span>
                     </span>
                   </div>
 
-                  {previewLoading && (
-                    <div className="w-full h-96 flex items-center justify-center bg-gray-100">
+                  {previewLoadingDoc === selectedDoc.docType && (
+                    <div className="w-full flex-1 flex items-center justify-center bg-gray-100">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
                         <p className="text-gray-600">Loading preview...</p>
@@ -763,14 +899,41 @@ const RsmApplicationView = () => {
                     </div>
                   )}
 
-                  {!previewLoading && selectedDoc.previewUrl && (
-                    <div className="w-full h-96 border rounded overflow-hidden bg-gray-50">
+                  {previewLoadingDoc !== selectedDoc.docType && selectedDoc.previewUrl && (
+                    <div className="w-full flex-1 border rounded bg-gray-100 overflow-hidden relative flex flex-col">
                       {selectedDoc.isImage ? (
-                        <img
-                          src={selectedDoc.previewUrl}
-                          alt={`Preview of ${selectedDoc.docType}`}
-                          className="w-full h-full object-contain bg-white"
-                        />
+                        <div 
+                          ref={imageContainerRef}
+                          className="w-full flex-1 overflow-auto p-4"
+                        >
+                          <div style={{
+                            width: `${zoomLevel * 100}%`,
+                            height: `${zoomLevel * 100}%`,
+                            minWidth: '100%',
+                            minHeight: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'width 0.1s ease-out, height 0.1s ease-out'
+                          }}>
+                            <img
+                              src={selectedDoc.previewUrl}
+                              alt={`Preview of ${selectedDoc.docType}`}
+                              className="shadow-md"
+                              style={{ 
+                                transform: `rotate(${rotation}deg)`,
+                                transformOrigin: 'center center',
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain'
+                              }}
+                              onError={(e) => {
+                                console.error("Image preview failed:", e);
+                                e.target.style.display = "none";
+                              }}
+                            />
+                          </div>
+                        </div>
                       ) : (
                         <iframe
                           src={selectedDoc.previewUrl}
@@ -782,13 +945,13 @@ const RsmApplicationView = () => {
                   )}
                 </div>
 
-                <div className="flex gap-3 justify-center">
+                <div className="px-6 py-5 border-t border-slate-100 bg-slate-50/50 flex gap-3 justify-center">
                   <button
                     onClick={() => handleDownload(selectedDoc)}
-                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition flex items-center gap-2"
+                    className="px-6 py-2.5 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary-hover shadow-md hover:shadow-lg transition flex items-center gap-2"
                   >
                     <Download className="w-4 h-4" />
-                    Download
+                    Download Document
                   </button>
                   <button
                     onClick={() => {
@@ -798,9 +961,9 @@ const RsmApplicationView = () => {
                       }
                       setSelectedDoc(null);
                     }}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+                    className="px-6 py-2.5 bg-gray-500 text-white font-bold rounded-xl hover:bg-gray-600 shadow-md hover:shadow-lg transition"
                   >
-                    Close
+                    Close Preview
                   </button>
                 </div>
               </div>
@@ -820,50 +983,44 @@ const RsmApplicationView = () => {
         </div>
       )}
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+      <div className="min-h-screen bg-slate-50">
+        <div className="w-full max-w-[98%] mx-auto py-4">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
             {/* Header */}
-            <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover px-6 sm:px-8 py-6 sm:py-8">
-              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-                <div className="text-white">
-                  <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+            <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover px-4 py-3 border-b border-brand-primary">
+              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-2">
+                <div className="text-white flex items-center gap-3">
+                  <h1 className="text-lg sm:text-xl font-bold">
                     Loan Application #{applicationData.appNo}
                   </h1>
-                  <p className="text-teal-100 text-sm sm:text-base opacity-90">
-                    Application ID: {applicationData._id}
+                  <span className="text-white/50">|</span>
+                  <p className="text-teal-100 text-xs sm:text-sm opacity-90">
+                    ID: {applicationData._id}
                   </p>
                 </div>
-                <div className="text-white text-right">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30">
-                    <p className="text-sm font-medium opacity-90 mb-1">Applied Date</p>
-                    <div className="flex items-center justify-end">
-                      <Clock className="w-4 h-4 mr-2" />
-                      <span className="text-sm font-semibold">
-                        {formatDate(applicationData.createdAt)}
-                      </span>
-                    </div>
+                <div className="text-white text-right flex items-center gap-2">
+                  <span className="text-xs font-medium opacity-90">Applied:</span>
+                  <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-md border border-white/30">
+                    <Clock className="w-3.5 h-3.5 mr-1.5" />
+                    <span className="text-sm font-semibold">{formatDate(applicationData.createdAt)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Main Content */}
-            <div className="p-6 sm:p-8">
-              {/* Customer, Partner, Loan Summary Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                {/* Customer Information */}
-                <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 border border-gray-100 shadow-sm">
-                  <div className="flex items-center mb-6">
-                    <div className="p-2 rounded-lg bg-brand-primary/10">
-                      <User className="w-6 h-6 text-brand-primary" />
+            <div className="p-4">
+              {/* Compact Summary Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                {/* Customer Compact */}
+                <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded bg-brand-primary/10">
+                      <User className="w-5 h-5 text-brand-primary" />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 ml-3">Customer Details</h2>
-                  </div>
-                  <div className="space-y-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Full Name</p>
-                      <p className="font-semibold text-gray-900">
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase">Customer</p>
+                      <p className="font-bold text-sm text-gray-900 truncate max-w-[150px]">
                         {applicationData.customerId?.firstName
                           ? `${applicationData.customerId.firstName} ${applicationData.customerId.lastName || ""}`.trim()
                           : applicationData.customer?.firstName
@@ -871,134 +1028,93 @@ const RsmApplicationView = () => {
                           : "N/A"}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Email Address</p>
-                      <p className="font-medium text-gray-700 flex items-center">
-                        <Mail className="w-4 h-4 mr-2 text-brand-primary" />
-                        {applicationData.customerId?.email || applicationData.customer?.email || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Phone Number</p>
-                      <p className="font-medium text-gray-700 flex items-center">
-                        <Phone className="w-4 h-4 mr-2 text-brand-primary" />
-                        {applicationData.customerId?.phone || applicationData.customer?.phone || "N/A"}
-                      </p>
-                    </div>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1"><Mail className="w-3 h-3 text-brand-primary"/> {applicationData.customerId?.email || applicationData.customer?.email || "N/A"}</p>
+                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1 mt-0.5"><Phone className="w-3 h-3 text-brand-primary"/> {applicationData.customerId?.phone || applicationData.customer?.phone || "N/A"}</p>
                   </div>
                 </div>
 
-                {/* Partner Information */}
-                <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl p-6 border border-gray-100 shadow-sm">
-                  <div className="flex items-center mb-6">
-                    <div className="p-2 rounded-lg bg-amber-100">
-                      <User className="w-6 h-6 text-amber-600" />
+                {/* Partner Compact */}
+                <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded bg-amber-100">
+                      <User className="w-5 h-5 text-amber-600" />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 ml-3">Partner Details</h2>
-                  </div>
-                  <div className="space-y-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Partner Name</p>
-                      <p className="font-semibold text-gray-900">
+                      <p className="text-[11px] font-semibold text-amber-700/70 uppercase">Partner</p>
+                      <p className="font-bold text-sm text-gray-900 truncate max-w-[150px]">
                         {applicationData.partnerId?.firstName || applicationData.partner?.firstName || "N/A"}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Email Address</p>
-                      <p className="font-medium text-gray-700 flex items-center">
-                        <Mail className="w-4 h-4 mr-2 text-amber-600" />
-                        {applicationData.partnerId?.email || applicationData.partner?.email || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Phone Number</p>
-                      <p className="font-medium text-gray-700 flex items-center">
-                        <Phone className="w-4 h-4 mr-2 text-amber-600" />
-                        {applicationData.partnerId?.phone || applicationData.partner?.phone || "N/A"}
-                      </p>
-                    </div>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1"><Mail className="w-3 h-3 text-amber-600"/> {applicationData.partnerId?.email || applicationData.partner?.email || "N/A"}</p>
+                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1 mt-0.5"><Phone className="w-3 h-3 text-amber-600"/> {applicationData.partnerId?.phone || applicationData.partner?.phone || "N/A"}</p>
                   </div>
                 </div>
 
-                {/* Loan Summary */}
-                <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-6 border border-gray-100 shadow-sm">
-                  <div className="flex items-center mb-6">
-                    <div className="p-2 rounded-lg bg-blue-100">
-                      <CreditCard className="w-6 h-6 text-blue-600" />
+                {/* Loan Summary Compact */}
+                <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded bg-blue-100">
+                      <CreditCard className="w-5 h-5 text-blue-600" />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 ml-3">Loan Summary</h2>
-                  </div>
-                  <div className="space-y-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Loan Type</p>
-                      <p className="font-semibold text-gray-900">
+                      <p className="text-[11px] font-semibold text-blue-600/70 uppercase">Loan Type</p>
+                      <p className="font-bold text-sm text-gray-900 truncate max-w-[150px]">
                         {applicationData.loanType || "N/A"}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Loan Amount</p>
-                      <p className="font-bold text-3xl text-brand-primary">
-                        {formatCurrency(applicationData.customer?.loanAmount || 0)}
-                      </p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-[11px] font-semibold text-blue-600/70 uppercase">Amount</p>
+                    <p className="font-bold text-lg text-brand-primary leading-none">
+                      {formatCurrency(applicationData.customer?.loanAmount || 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Grids */}
+              <div className="space-y-4">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                  <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2"><User className="w-4 h-4 text-slate-500"/> Customer Details</h2>
+                  {renderFields(
+                    customerFields,
+                    applicationData.customer || applicationData.customerId
+                  )}
+                </div>
+
+                <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
+                  <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-emerald-600"/>
+                    {applicationData.loanType === "PERSONAL" ? "Employment Information" : "Business Information"}
+                  </h2>
+                  {applicationData.loanType === "PERSONAL"
+                    ? renderFields(employmentFields, applicationData.employmentInfo)
+                    : renderFields(businessFields, applicationData.businessInfo)}
+                </div>
+
+                <div className="bg-purple-50/50 rounded-xl p-4 border border-purple-100">
+                  <h2 className="text-sm font-bold text-purple-800 uppercase tracking-wider mb-3 flex items-center gap-2"><User className="w-4 h-4 text-purple-600"/> References</h2>
+                  {renderReferences(applicationData.references)}
+                </div>
+
+                {/* Address Information */}
+                <div className="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100">
+                  <h2 className="text-sm font-bold text-indigo-800 uppercase tracking-wider mb-3 flex items-center gap-2"><MapPin className="w-4 h-4 text-indigo-600"/> Address Information</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-white rounded border border-gray-100 p-2.5 shadow-sm hover:shadow-md transition">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Current Address</p>
+                      <p className="text-sm font-bold text-gray-900 mb-1">{applicationData.customer?.currentAddress || "N/A"}</p>
+                      <p className="text-[11px] text-gray-500">PIN: <span className="font-semibold text-gray-700">{applicationData?.customer?.currentAddressPinCode || "N/A"}</span></p>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Customer Section */}
-              <div className="mb-8 bg-gradient-to-r from-slate-50 to-white rounded-xl p-6 border border-gray-100">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Customer Details</h2>
-                {renderFields(customerFields, applicationData.customer || applicationData.customerId)}
-              </div>
-
-              {/* Loan Type Conditional Section */}
-              <div className="mb-8 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-gray-100">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
-                  {applicationData.loanType === "PERSONAL" ? "Employment Information" : "Business Information"}
-                </h2>
-                {applicationData.loanType === "PERSONAL"
-                  ? renderFields(employmentFields, applicationData.employmentInfo)
-                  : renderFields(businessFields, applicationData.businessInfo)}
-              </div>
-
-              {/* References Section */}
-              <div className="mb-8 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-gray-100">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">References</h2>
-                {renderReferences(applicationData.references)}
-              </div>
-
-              {/* Address Information */}
-              <div className="mb-8 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-gray-100">
-                <div className="flex items-center mb-6">
-                  <div className="p-2 rounded-lg bg-purple-100">
-                    <MapPin className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-900 ml-3">Address Information</h2>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-lg p-5 shadow-sm">
-                    <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                      <MapPin className="w-4 h-4 mr-2 text-purple-600" />
-                      Current Address
-                    </p>
-                    <p className="font-medium text-gray-900 mb-2">
-                      {applicationData.customer?.currentAddress || "N/A"}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      PIN: <span className="font-medium">{applicationData?.customer?.currentAddressPinCode || "N/A"}</span>
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-lg p-5 shadow-sm">
-                    <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                      <MapPin className="w-4 h-4 mr-2 text-purple-600" />
-                      Permanent Address
-                    </p>
-                    <p className="font-medium text-gray-900 mb-2">
-                      {applicationData.customer?.permanentAddress || "N/A"}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      PIN: <span className="font-medium">{applicationData.customer?.permanentAddressPinCode || "N/A"}</span>
-                    </p>
+                    <div className="bg-white rounded border border-gray-100 p-2.5 shadow-sm hover:shadow-md transition">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Permanent Address</p>
+                      <p className="text-sm font-bold text-gray-900 mb-1">{applicationData.customer?.permanentAddress || "N/A"}</p>
+                      <p className="text-[11px] text-gray-500">PIN: <span className="font-semibold text-gray-700">{applicationData.customer?.permanentAddressPinCode || "N/A"}</span></p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1077,7 +1193,7 @@ const RsmApplicationView = () => {
                   );
                 })()}
 
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 transition-all duration-300">
                   {(applicationData.docs || []).map((doc, index) => {
                     const getDocIcon = (docType) => {
                       const docTypeLower = docType?.toLowerCase() || "";
@@ -1095,15 +1211,15 @@ const RsmApplicationView = () => {
                     return (
                       <div
                         key={index}
-                        className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm"
+                        className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm flex flex-col group hover:shadow-md transition"
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center flex-1">
-                            <div className="p-2 rounded-lg bg-gray-100">
-                              <IconComponent className="w-5 h-5 text-gray-600" />
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <div className="flex items-start flex-1 min-w-0">
+                            <div className="p-1.5 rounded-lg bg-gray-100 group-hover:bg-orange-100 transition-colors shrink-0">
+                              <IconComponent className="w-4 h-4 text-gray-600 group-hover:text-orange-600 transition-colors" />
                             </div>
-                            <div className="ml-3 flex-1">
-                              <h3 className="font-semibold text-gray-900 text-sm">
+                            <div className="ml-2 flex-1 min-w-0">
+                              <h3 className="font-semibold text-gray-900 text-xs truncate" title={toDocLabelByRule(doc.docType)}>
                                 {toDocLabelByRule(doc.docType)}
                               </h3>
                               {doc.remarks && (
@@ -1115,47 +1231,51 @@ const RsmApplicationView = () => {
                                 </p>
                               )}
                               {doc.docType && doc.docType.includes("BANK_STATEMENT") && (
-                                <p className="text-sm font-semibold text-gray-700 mt-2">
-                                  Password: {(applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) || "Not Provided"}
+                                <p className="text-[10px] font-semibold text-gray-700 mt-1">
+                                  Pwd: {(applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) || "Not Provided"}
                                 </p>
                               )}
                             </div>
                           </div>
-                          <div className={`flex items-center px-3 py-1.5 rounded-md text-xs font-bold border-2 ml-2 ${getDocStatusColor(doc.status)}`}>
+                          <div 
+                            title={doc.status}
+                            className={`flex items-center justify-center p-1.5 rounded-md border shrink-0 ${getDocStatusColor(doc.status)}`}
+                          >
                             {getDocStatusIcon(doc.status)}
-                            <span className="ml-1">{doc.status}</span>
                           </div>
                         </div>
 
-                        <p className="text-xs text-gray-500 mb-4 truncate">
+                        <p className="text-[10px] text-gray-500 mb-2 truncate">
                           {doc.url ? doc.url.split(/[\\\/]/).pop() : "No file"}
                         </p>
 
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleDownload(doc)}
-                            disabled={downloading}
-                            className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {downloading ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            ) : (
-                              <Download className="w-4 h-4 mr-2" />
-                            )}
-                            {downloading ? "Downloading..." : "Download"}
-                          </button>
-                          <button
-                            onClick={() => handleView(doc)}
-                            disabled={previewLoading}
-                            className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-100 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {previewLoading ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
-                            ) : (
-                              <Eye className="w-4 h-4 mr-2" />
-                            )}
-                            View
-                          </button>
+                        <div className="flex flex-col gap-2 mt-auto">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleDownload(doc)}
+                              disabled={downloading}
+                              title="Download"
+                              className="flex-1 flex items-center justify-center py-2 text-white bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {downloading ? (
+                                <Loader2 className="animate-spin w-4 h-4" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleView(doc)}
+                              disabled={previewLoadingDoc !== null}
+                              title="View"
+                              className="flex-1 flex items-center justify-center py-2 text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-100 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {previewLoadingDoc === doc.docType ? (
+                                <Loader2 className="animate-spin w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1173,17 +1293,156 @@ const RsmApplicationView = () => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Update Application Status
+                  {/* 1. Current Status */}
+                  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+                      <Clock className="w-5 h-5 mr-2 text-blue-500" />
+                      Current Status
+                    </h3>
+                    <div className="space-y-4">
+                      {submittedStatus ? (
+                        <div className="space-y-3">
+                          <LoanStatusBadge
+                            status={submittedStatus.status}
+                            className="!px-4 !py-2 !rounded-xl !text-sm"
+                          />
+                          {submittedStatus.remark && (
+                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                              <p className="text-sm font-semibold text-gray-700 mb-1">Latest Remark:</p>
+                              <p className="text-gray-600 text-sm">{submittedStatus.remark}</p>
+                            </div>
+                          )}
+                          {submittedStatus.approvedLoanAmount && (
+                            <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                              <p className="text-sm font-semibold text-emerald-800 mb-1">Approved Loan Amount:</p>
+                              <p className="text-emerald-700 font-bold text-lg">
+                                ₹{formatCurrency(submittedStatus.approvedLoanAmount)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 bg-gray-50 rounded-xl border border-gray-100">
+                          <LoanStatusBadge
+                            status={applicationData.status}
+                            className="mx-auto !px-4 !py-2 !rounded-xl !text-sm mb-3"
+                          />
+                          {applicationData.approvedLoanAmount && (
+                            <p className="text-sm font-semibold text-gray-800 mb-2">
+                              Approved: ₹{formatCurrency(applicationData.approvedLoanAmount)}
+                            </p>
+                          )}
+                          
+                          {applicationData.stageHistory && applicationData.stageHistory.length > 0 && (
+                            <div className="mt-4 text-left border-t border-gray-200 pt-4 px-4">
+                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Timeline</p>
+                              <div className="space-y-3">
+                                {applicationData.stageHistory.map((stage, index) => (
+                                  <div key={index} className="relative pl-4 border-l-2 border-blue-200">
+                                    <div className="absolute w-2 h-2 bg-blue-500 rounded-full -left-[5px] top-1.5"></div>
+                                    <p className="text-xs font-semibold text-gray-900">{stage.to}</p>
+                                    <p className="text-[11px] text-gray-500 mt-0.5">{new Date(stage.at).toLocaleDateString()} - {stage.note}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Bank Matcher Panel (Smart Auto-Fetch) */}
+                  <div className="bg-white rounded-xl border border-emerald-200 shadow-sm overflow-hidden">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
+                      <h3 className="text-base font-bold text-white flex items-center">
+                        <Building2 className="w-5 h-5 mr-2 text-emerald-100" />
+                        Smart Bank Matcher
+                      </h3>
+                      <p className="text-emerald-100 text-xs mt-1 opacity-90">Auto-matching eligible banks for this applicant.</p>
+                    </div>
+                    
+                    <div className="p-5">
+                      <div className="flex gap-2 mb-2 relative">
+                        <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                        <input
+                          type="text"
+                          value={searchPincode}
+                          onChange={(e) => setSearchPincode(e.target.value)}
+                          placeholder="Search Pincode"
+                          className="flex-1 border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500 font-medium"
+                        />
+                        <button
+                          onClick={fetchEligibleBanks}
+                          disabled={fetchingBanks || !searchPincode}
+                          className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
+                        >
+                          {fetchingBanks ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
+                        </button>
+                      </div>
+
+                      {fetchingBanks && !banksFetched ? (
+                        <div className="py-8 flex flex-col items-center justify-center text-emerald-600">
+                          <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                          <p className="text-sm font-medium">Finding best matches...</p>
+                        </div>
+                      ) : banksFetched && (
+                        <div className="space-y-3 mt-4 max-h-[280px] overflow-y-auto pr-1">
+                          {eligibleBanks.length > 0 ? (
+                            eligibleBanks.map(bank => (
+                              <div key={bank._id} className="border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all rounded-xl p-3 flex items-center justify-between group">
+                                <div className="flex items-center gap-3">
+                                  {bank.bankLogoUrl ? (
+                                    <img src={bank.bankLogoUrl} alt={bank.bankName} className="w-10 h-10 rounded-full object-contain bg-white border border-gray-100 shadow-sm" />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shadow-sm">
+                                      <Building2 className="w-5 h-5 text-emerald-600" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-bold text-gray-900 text-sm leading-tight">{bank.bankName}</p>
+                                    <span className="inline-block mt-1 bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                                      {bank.loanType}
+                                    </span>
+                                  </div>
+                                </div>
+                                <a 
+                                  href={bank.portalLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-emerald-600 hover:text-white hover:bg-emerald-600 p-2.5 bg-emerald-50 rounded-lg transition-colors"
+                                  title="Open Bank Portal"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                              <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm font-semibold text-gray-700">No matching banks</p>
+                              <p className="text-xs text-gray-500 mt-1">Try a different pincode or check bank configurations.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3. Update Application Status */}
+                  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-5">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <Send className="w-5 h-5 mr-2 text-brand-primary" />
+                      Update Status
                     </h3>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Select New Status
                       </label>
                       <select
-                        className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 font-medium text-gray-700 bg-gray-50 hover:bg-white"
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
                         disabled={allowedStatuses.length === 0}
@@ -1197,70 +1456,55 @@ const RsmApplicationView = () => {
                       </select>
                       
                       {allowedStatuses.length === 0 && (
-                        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                          <div className="flex items-start">
-                            <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-yellow-800">
-                                No status transitions available
-                              </p>
-                              <p className="text-xs text-yellow-700 mt-1">
-                                Current status: {getLoanStatusLabel(applicationData.status)}. No further transitions are allowed from this status.
-                              </p>
-                            </div>
-                          </div>
+                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start">
+                          <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 shrink-0" />
+                          <p className="text-xs text-yellow-800 font-medium">
+                            No further transitions are allowed from {getLoanStatusLabel(applicationData.status)}.
+                          </p>
                         </div>
                       )}
 
                       {status && allowedStatuses.includes(status) && (
-                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="flex items-start">
-                            <AlertCircle className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-blue-800">
-                                Transitioning to {status}
-                              </p>
-                              <p className="text-xs text-blue-700 mt-1">
-                                {status === "DISBURSED" 
-                                  ? "Please enter the approved loan amount below."
-                                  : "Please add a remark explaining this status change."}
-                              </p>
-                            </div>
-                          </div>
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
+                          <AlertCircle className="w-5 h-5 text-blue-600 mr-2 shrink-0" />
+                          <p className="text-xs text-blue-800 font-medium">
+                            {status === "DISBURSED" 
+                              ? "Please enter the approved loan amount below."
+                              : "Please add a remark explaining this status change."}
+                          </p>
                         </div>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Add Remark
                       </label>
                       <div className="relative">
-                        <MessageSquare className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                         <textarea
                           placeholder="Enter your remarks here..."
-                          className="w-full border border-gray-300 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 resize-none h-20"
+                          className="w-full border border-gray-300 rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 resize-none h-20 text-sm"
                           value={remark}
                           onChange={(e) => setRemark(e.target.value)}
                         />
                       </div>
                     </div>
 
-                    {/* Approval Amount Field - Only show when APPROVED is selected */}
                     {status === "APPROVED" && (
                       <div className="space-y-2">
                         <div className="flex justify-between items-center mb-1">
                           <label className="block text-sm font-semibold text-gray-700">
                             Approved Loan Amount (₹) *
                           </label>
-                          <span className="text-xs text-gray-500 font-medium bg-slate-100 px-2 py-1 rounded-md">
+                          <span className="text-xs text-gray-600 font-medium bg-slate-100 px-2 py-1 rounded-md">
                             Requested: ₹{(applicationData.customer?.loanAmount || applicationData.loan?.amount || 0).toLocaleString("en-IN")}
                           </span>
                         </div>
                         <input
                           type="number"
                           placeholder="Enter approved loan amount"
-                          className={`w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 ${
+                          className={`w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all duration-300 font-medium ${
                             approvalAmount && parseInt(approvalAmount) <= 0 ? "border-red-500 ring-2 ring-red-200" : "border-gray-300"
                           }`}
                           value={approvalAmount}
@@ -1271,24 +1515,12 @@ const RsmApplicationView = () => {
                         {approvalAmount && (
                           <div className="mt-2 space-y-1">
                             {parseInt(approvalAmount) > (applicationData.customer?.loanAmount || applicationData.loan?.amount || 0) && (
-                              <p className="text-xs font-semibold text-amber-600 flex items-center gap-1 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
-                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                Note: Approved amount exceeds requested amount. RSM has authority to override.
+                              <p className="text-[11px] font-semibold text-amber-600 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3 shrink-0" />
+                                Amount exceeds requested amount.
                               </p>
                             )}
-                            {parseInt(approvalAmount) <= 0 && (
-                              <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
-                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                Approved amount must be greater than zero
-                              </p>
-                            )}
-                            {parseInt(approvalAmount) > 0 && parseInt(approvalAmount) <= (applicationData.customer?.loanAmount || applicationData.loan?.amount || 0) && (
-                              <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                                Valid approved amount
-                              </p>
-                            )}
-                            <p className="text-xs font-medium text-brand-primary italic mt-1 bg-brand-primary/5 px-2.5 py-1.5 rounded-lg border border-brand-primary/10">
+                            <p className="text-[11px] font-medium text-brand-primary italic">
                               In words: {toIndianWords(parseInt(approvalAmount))}
                             </p>
                           </div>
@@ -1299,7 +1531,7 @@ const RsmApplicationView = () => {
                     <button
                       onClick={handleSubmit}
                       disabled={submitLoading || !status || !remark.trim() || (status === "APPROVED" && !approvalAmount)}
-                      className="w-full flex items-center justify-center bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white py-3 px-6 rounded-xl shadow-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 hover:shadow-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center bg-gray-900 text-white py-3 px-6 rounded-xl shadow-md hover:bg-gray-800 transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {submitLoading ? (
                         <>
@@ -1308,66 +1540,12 @@ const RsmApplicationView = () => {
                         </>
                       ) : (
                         <>
-                          <Send className="w-5 h-5 mr-2" />
-                          <span>Update Application Status</span>
+                          <span>Submit Update</span>
                         </>
                       )}
                     </button>
                   </div>
 
-                  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-6">Current Status</h3>
-                    <div className="space-y-4">
-                      {submittedStatus ? (
-                        <div className="space-y-3">
-                          <LoanStatusBadge
-                            status={submittedStatus.status}
-                            className="!px-4 !py-2 !rounded-xl !text-sm"
-                          />
-                          {submittedStatus.remark && (
-                            <div className="bg-gray-50 p-2 rounded-lg">
-                              <p className="text-sm font-medium text-gray-700 mb-1">Latest Remark:</p>
-                              <p className="text-gray-600">{submittedStatus.remark}</p>
-                            </div>
-                          )}
-                          {submittedStatus.approvedLoanAmount && (
-                            <div className="bg-green-50 p-2 rounded-lg border border-green-200">
-                              <p className="text-sm font-medium text-green-700 mb-1">Approved Loan Amount:</p>
-                              <p className="text-green-800 font-semibold text-lg">
-                                ₹{formatCurrency(submittedStatus.approvedLoanAmount)}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Clock className="w-8 h-8 text-gray-400" />
-                          </div>
-                          <p className="text-gray-500 font-medium">
-                            Current Status: {getLoanStatusLabel(applicationData.status) || "N/A"}
-                          </p>
-                          <p className="text-gray-500 font-medium">
-                            Approved Loan Amount: {applicationData.approvedLoanAmount ? formatCurrency(applicationData.approvedLoanAmount) : "N/A"}
-                          </p>
-                          {applicationData.stageHistory && applicationData.stageHistory.length > 0 && (
-                            <div className="mt-4 text-left">
-                              <p className="text-sm font-medium text-gray-700 mb-2">Stage History:</p>
-                              <div className="space-y-2">
-                                {applicationData.stageHistory.map((stage, index) => (
-                                  <div key={index} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                                    <span className="font-medium">{stage.from} → {stage.to}</span>
-                                    <br />
-                                    <span>{stage.note} - {new Date(stage.at).toLocaleDateString()}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>

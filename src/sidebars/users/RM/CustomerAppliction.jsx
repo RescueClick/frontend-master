@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { getAuthData } from "../../../utils/localStorage";
 import toast from "react-hot-toast";
@@ -24,6 +24,14 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  Eye,
+  XCircle,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  RefreshCw,
+  Maximize
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
@@ -140,6 +148,38 @@ const CustomerApplication = () => {
   const [docStatusModal, setDocStatusModal] = useState(false);
   const [selectedDocForStatus, setSelectedDocForStatus] = useState(null);
   const [docStatusRemark, setDocStatusRemark] = useState("");
+  
+  // Document Viewer State
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const imageContainerRef = useRef(null);
+  
+  useEffect(() => {
+    const container = imageContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e) => {
+      // Allow native scrolling (panning) if Ctrl is not held
+      if (!e.ctrlKey && !e.metaKey) return;
+      
+      e.preventDefault();
+      
+      // Throttle zoom events to prevent trackpad runaway zooming
+      const now = Date.now();
+      if (now - (window.lastZoomTime || 0) < 50) return; 
+      window.lastZoomTime = now;
+      
+      const direction = Math.sign(e.deltaY);
+      setZoomLevel(prev => {
+        const step = 0.1; // 10% zoom step
+        let nextZoom = direction < 0 ? prev + step : prev - step;
+        return Math.min(Math.max(nextZoom, 0.1), 5); // Allow zooming down to 10% and up to 500%
+      });
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [showModal, selectedDoc, previewLoadingDoc]);
   const [docNewStatus, setDocNewStatus] = useState("PENDING");
   const [updateStatusLoading, setUpdateStatusLoading] = useState(false);
   const [previewRejectMode, setPreviewRejectMode] = useState(false);
@@ -200,6 +240,8 @@ const CustomerApplication = () => {
 
   const handleView = async (doc) => {
     setPreviewLoadingDoc(doc.docType);
+    setZoomLevel(1);
+    setRotation(0);
     try {
       const { rmToken } = getAuthData();
   
@@ -1301,23 +1343,23 @@ const CustomerApplication = () => {
 
   // Helper functions for rendering
   const renderFields = (fields, data) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
       {fields.map((field, idx) => (
-        <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
-          <p className="text-sm font-medium text-gray-500 mb-1">{field.label}</p>
-          <p className="font-bold text-gray-900">{field.value(data) || "N/A"}</p>
+        <div key={idx} className="bg-white rounded-lg border border-gray-100 p-2.5 shadow-sm hover:shadow-md transition">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5 truncate" title={field.label}>{field.label}</p>
+          <p className="text-sm font-bold text-gray-900 break-words leading-tight">{field.value(data) || "N/A"}</p>
         </div>
       ))}
     </div>
   );
 
   const renderReferences = (references = []) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
       {references.map((ref, idx) => (
-        <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
-          <p className="text-sm font-medium text-gray-500 mb-1">Reference {idx + 1}</p>
-          <p className="font-bold text-gray-900">{ref.name || "N/A"}</p>
-          <p className="text-gray-600">{ref.phone || "N/A"}</p>
+        <div key={idx} className="bg-white rounded-lg border border-gray-100 p-2.5 shadow-sm hover:shadow-md transition">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Reference {idx + 1}</p>
+          <p className="text-sm font-bold text-gray-900">{ref.name || "N/A"}</p>
+          <p className="text-[13px] font-medium text-brand-primary">{ref.phone || "N/A"}</p>
         </div>
       ))}
     </div>
@@ -1468,14 +1510,62 @@ const CustomerApplication = () => {
 
       {/* Document Preview Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all duration-300">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[95vh] shadow-2xl border border-slate-100 flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-2 md:p-4 z-50 transition-all duration-300">
+          <div className="bg-white rounded-xl w-full max-w-[96vw] h-[96vh] shadow-2xl flex flex-col overflow-hidden border border-slate-200/60 ring-1 ring-slate-900/5">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div>
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-6">
                 <h3 className="text-lg font-bold text-slate-800">
                   {selectedDoc ? toDocLabelByRule(selectedDoc.docType) : "Document Preview"}
                 </h3>
+                
+                {/* Viewer Tools (Only if image) */}
+                {selectedDoc?.isImage && (
+                  <div className="flex items-center gap-3">
+                    <span className="hidden sm:flex items-center text-[11px] text-slate-400 font-medium">
+                      <span className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded shadow-sm mr-1">Ctrl</span> + Scroll to zoom
+                    </span>
+                    <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm space-x-1">
+                      <button 
+                      onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 5))}
+                      title="Zoom In"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 0.1))}
+                      title="Zoom Out"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <ZoomOut className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                    <button 
+                      onClick={() => setRotation(prev => prev - 90)}
+                      title="Rotate Left"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setRotation(prev => prev + 90)}
+                      title="Rotate Right"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <RotateCw className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                    <button 
+                      onClick={() => { setZoomLevel(1); setRotation(0); }}
+                      title="Reset View"
+                      className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-brand-primary rounded transition-colors"
+                    >
+                      <Maximize className="w-4 h-4" />
+                    </button>
+                  </div>
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => {
@@ -1516,7 +1606,7 @@ const CustomerApplication = () => {
                 </div>
 
                 {/* Document Preview Content */}
-                <div className="flex-1 min-h-[45vh] bg-slate-100/50 p-6 flex flex-col justify-center items-center overflow-y-auto">
+                <div className="flex-1 min-h-0 bg-slate-100/50 p-2 sm:p-6 flex flex-col overflow-hidden">
 
                   {/* Loading state */}
                   {previewLoadingDoc !== null && (
@@ -1530,19 +1620,44 @@ const CustomerApplication = () => {
 
                   {/* Document Preview */}
                   {previewLoadingDoc === null && selectedDoc.previewUrl && (
-                    <div className="w-full h-96 border rounded overflow-hidden bg-gray-50">
+                    <div className="w-full flex-1 border rounded bg-gray-100 overflow-hidden relative flex flex-col">
                       {selectedDoc.isImage ? (
-                        // Image preview
-                        <img
-                          src={selectedDoc.previewUrl}
-                          alt={`Preview of ${selectedDoc.docType}`}
-                          className="w-full h-full object-contain bg-white"
-                          onError={(e) => {
-                            console.error("Image preview failed:", e);
-                            e.target.style.display = "none";
-                            e.target.nextSibling.style.display = "flex";
-                          }}
-                        />
+                        // Image preview with zoom/rotate
+                        <div 
+                          ref={imageContainerRef}
+                          className="w-full flex-1 overflow-auto p-4"
+                        >
+                          <div style={{
+                            width: `${zoomLevel * 100}%`,
+                            height: `${zoomLevel * 100}%`,
+                            minWidth: '100%',
+                            minHeight: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'width 0.1s ease-out, height 0.1s ease-out'
+                          }}>
+                            <img
+                              src={selectedDoc.previewUrl}
+                              alt={`Preview of ${selectedDoc.docType}`}
+                              className="shadow-md"
+                              style={{ 
+                                transform: `rotate(${rotation}deg)`,
+                                transformOrigin: 'center center',
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain'
+                              }}
+                              onError={(e) => {
+                                console.error("Image preview failed:", e);
+                                e.target.style.display = "none";
+                                if (e.target.parentElement.parentElement.nextSibling) {
+                                  e.target.parentElement.parentElement.nextSibling.style.display = "flex";
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
                       ) : (
                         // PDF or other document preview
                         <iframe
@@ -1703,323 +1818,165 @@ const CustomerApplication = () => {
         </div>
       )}
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+      <div className="min-h-screen bg-slate-50">
+        <div className="w-full max-w-[98%] mx-auto py-4">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
             {/* Enhanced Header with Gradient */}
 
-            <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover px-6 sm:px-8 py-6 sm:py-8">
-              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-                <div className="text-white">
-                  <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+            <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover px-4 py-3 border-b border-brand-primary">
+              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-2">
+                <div className="text-white flex items-center gap-3">
+                  <h1 className="text-lg sm:text-xl font-bold">
                     Loan Application #{applicationData.appNo}
                   </h1>
-
-                  <p className="text-teal-100 text-sm sm:text-base opacity-90">
-                    Application ID: {applicationData._id}
+                  <span className="text-white/50">|</span>
+                  <p className="text-teal-100 text-xs sm:text-sm opacity-90">
+                    ID: {applicationData._id}
                   </p>
                 </div>
 
-                <div className="text-white text-right">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30">
-                    <p className="text-sm font-medium opacity-90 mb-1">
-                      Applied Date
-                    </p>
-
-                    <div className="flex items-center justify-end">
-                      <Clock className="w-4 h-4 mr-2" />
-
-                      <span className="text-sm font-semibold">
-                        {formatDate(applicationData.createdAt)}
-                      </span>
-                    </div>
+                <div className="text-white text-right flex items-center gap-2">
+                  <span className="text-xs font-medium opacity-90">Applied:</span>
+                  <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-md border border-white/30">
+                    <Clock className="w-3.5 h-3.5 mr-1.5" />
+                    <span className="text-sm font-semibold">{formatDate(applicationData.createdAt)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Main Content */}
-
-            <div className="p-6 sm:p-8">
-              {/* Customer, Partner, Loan Summary Grid */}
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                {/* Customer Information */}
-
-                <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-                  <div className="flex items-center mb-6">
-                    <div className="p-2 rounded-lg bg-brand-primary/10">
-                      <User className="w-6 h-6 text-brand-primary" />
+            <div className="p-4">
+              {/* Compact Summary Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                {/* Customer Compact */}
+                <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded bg-brand-primary/10">
+                      <User className="w-5 h-5 text-brand-primary" />
                     </div>
-
-                    <h2 className="text-xl font-bold text-gray-900 ml-3">
-                      Customer Details
-                    </h2>
-                  </div>
-
-                  <div className="space-y-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">
-                        Full Name
-                      </p>
-
-                      <p className="font-semibold text-gray-900">
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase">Customer</p>
+                      <p className="font-bold text-sm text-gray-900 truncate max-w-[150px]">
                         {applicationData.customer?.firstName
-                          ? `${applicationData.customer.firstName} ${
-                              applicationData.customer.lastName || ""
-                            }`.trim()
+                          ? `${applicationData.customer.firstName} ${applicationData.customer.lastName || ""}`.trim()
                           : applicationData.customer?.name || "N/A"}
                       </p>
                     </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">
-                        Email Address
-                      </p>
-
-                      <p className="font-medium text-gray-700 flex items-center">
-                        <Mail className="w-4 h-4 mr-2 text-brand-primary" />
-
-                        {applicationData.customer?.email || "N/A"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">
-                        Phone Number
-                      </p>
-
-                      <p className="font-medium text-gray-700 flex items-center">
-                        <Phone className="w-4 h-4 mr-2 text-brand-primary" />
-
-                        {applicationData.customer?.phone || "N/A"}
-                      </p>
-                    </div>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1"><Mail className="w-3 h-3 text-brand-primary"/> {applicationData.customer?.email || "N/A"}</p>
+                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1 mt-0.5"><Phone className="w-3 h-3 text-brand-primary"/> {applicationData.customer?.phone || "N/A"}</p>
                   </div>
                 </div>
 
-                {/* Partner Information */}
-
-                <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-                  <div className="flex items-center mb-6">
-                    <div className="p-2 rounded-lg bg-amber-100">
-                      <User className="w-6 h-6 text-amber-600" />
+                {/* Partner Compact */}
+                <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded bg-amber-100">
+                      <User className="w-5 h-5 text-amber-600" />
                     </div>
-
-                    <h2 className="text-xl font-bold text-gray-900 ml-3">
-                      Partner Details
-                    </h2>
+                    <div>
+                      <p className="text-[11px] font-semibold text-amber-700/70 uppercase">Partner</p>
+                      <p className="font-bold text-sm text-gray-900 truncate max-w-[150px]">
+                        {applicationData.partner?.firstName || "N/A"}
+                      </p>
+                    </div>
                   </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">
-                        Partner Name
-                      </p>
-
-                      <p className="font-semibold text-gray-900">
-                        {applicationData.partnerId?.firstName ||
-                          applicationData.partner?.firstName ||
-                          "N/A"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">
-                        Email Address
-                      </p>
-
-                      <p className="font-medium text-gray-700 flex items-center">
-                        <Mail className="w-4 h-4 mr-2 text-amber-600" />
-
-                        {applicationData.partnerId?.email ||
-                          applicationData.partner?.email ||
-                          "N/A"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">
-                        Phone Number
-                      </p>
-
-                      <p className="font-medium text-gray-700 flex items-center">
-                        <Phone className="w-4 h-4 mr-2 text-amber-600" />
-
-                        {applicationData.partnerId?.phone ||
-                          applicationData.partner?.phone ||
-                          "N/A"}
-                      </p>
-                    </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1"><Mail className="w-3 h-3 text-amber-600"/> {applicationData.partner?.email || "N/A"}</p>
+                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1 mt-0.5"><Phone className="w-3 h-3 text-amber-600"/> {applicationData.partner?.phone || "N/A"}</p>
                   </div>
                 </div>
 
-                {/* Loan Summary */}
-
-                <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-                  <div className="flex items-center mb-6">
-                    <div className="p-2 rounded-lg bg-blue-100">
-                      <CreditCard className="w-6 h-6 text-blue-600" />
+                {/* Loan Summary Compact */}
+                <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded bg-blue-100">
+                      <CreditCard className="w-5 h-5 text-blue-600" />
                     </div>
-
-                    <h2 className="text-xl font-bold text-gray-900 ml-3">
-                      Loan Summary
-                    </h2>
+                    <div>
+                      <p className="text-[11px] font-semibold text-blue-600/70 uppercase">Loan Type</p>
+                      <p className="font-bold text-sm text-gray-900 truncate max-w-[150px]">
+                        {applicationData.loanType || "N/A"}
+                      </p>
+                    </div>
                   </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">
-                        Loan Type
-                      </p>
-
-                      <p className="font-semibold text-gray-900">
-                        {applicationData.loanType ||
-                          applicationData.loan?.type ||
-                          "N/A"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">
-                        Loan Amount
-                      </p>
-
-                      <p className="font-bold text-3xl text-brand-primary">
-                        {formatCurrency(
-                          applicationData.customer?.loanAmount ||
-                            applicationData.loan?.amount ||
-                            0
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* <div>
-                        <p className="text-xs font-medium text-gray-500 mb-1">
-                          Tenure
-                        </p>
-
-                        <p className="font-semibold text-gray-900">
-  {applicationData.loan?.tenorMonths || 'N/A'} months
-</p>
-
-
-
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 mb-1">
-                          Interest Rate
-                        </p>
-
-                        <p className="font-semibold text-gray-900">
-                          {applicationData.loan?.roiPercent || 'N/A'}%
-                        </p>
-                      </div> */}
-                    </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-[11px] font-semibold text-blue-600/70 uppercase">Amount</p>
+                    <p className="font-bold text-lg text-brand-primary leading-none">
+                      {formatCurrency(applicationData.customer?.loanAmount || 0)}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Company Details */}
-
-
-
-{/* Customer Section */}
-<div className="mb-8 bg-gradient-to-r from-slate-50 to-white rounded-xl p-6 border border-gray-100">
-  <h2 className="text-xl font-bold text-gray-900 mb-4">Customer Details</h2>
-  {renderFields(customerFields, applicationData.customer)}
-</div>
-
-{/* Loan Type Conditional Section */}
-<div className="mb-8 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-gray-100">
-  <h2 className="text-xl font-bold text-gray-900 mb-4">
-    {applicationData.loanType === "PERSONAL" ? "Employment Information" : "Business Information"}
-  </h2>
-  {applicationData.loanType === "PERSONAL"
-    ? renderFields(employmentFields, applicationData.employmentInfo)
-    : renderFields(businessFields, applicationData.businessInfo)}
-</div>
-
-{/* References Section */}
-<div className="mb-8 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-gray-100">
-  <h2 className="text-xl font-bold text-gray-900 mb-4">References</h2>
-  {renderReferences(applicationData.references)}
-</div>
-
-{/* Co-Applicant Section (only if Female + Business loan) */}
-{applicationData.customer?.gender === "Female" &&
-  applicationData.loanType === "BUSINESS" &&
-  applicationData.coApplicant && (
-    <div className="mb-8 bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl p-6 border border-gray-100">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Co-Applicant Details</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <p className="text-sm font-medium text-gray-500 mb-1">Phone</p>
-          <p className="font-bold text-gray-900">
-            {applicationData.coApplicant.phone || "N/A"}
-          </p>
-        </div>
-      </div>
-    </div>
-  )}
-
-
-              {/* Address Information */}
-
-              <div className="mb-8 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-gray-100">
-                <div className="flex items-center mb-6">
-                  <div className="p-2 rounded-lg bg-purple-100">
-                    <MapPin className="w-6 h-6 text-purple-600" />
-                  </div>
-
-                  <h2 className="text-xl font-bold text-gray-900 ml-3">
-                    Address Information
+              {/* Data Grids */}
+              <div className="space-y-4">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                  <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2"><User className="w-4 h-4 text-slate-500"/> Customer Details</h2>
+                  {renderFields(
+                    customerFields,
+                    applicationData.customer
+                  )}
+                </div>
+                <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
+                  <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-emerald-600"/>
+                    {applicationData.loanType === "PERSONAL" ? "Employment Information" : "Business Information"}
                   </h2>
+                  {applicationData.loanType === "PERSONAL"
+                    ? renderFields(employmentFields, applicationData.employmentInfo)
+                    : renderFields(businessFields, applicationData.businessInfo)}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-lg p-5 shadow-sm">
-                    <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                      <MapPin className="w-4 h-4 mr-2 text-purple-600" />
-                      Current Address
-                    </p>
+                {/* References Section */}
+                <div className="bg-purple-50/50 rounded-xl p-4 border border-purple-100">
+                  <h2 className="text-sm font-bold text-purple-800 uppercase tracking-wider mb-3 flex items-center gap-2"><User className="w-4 h-4 text-purple-600"/> References</h2>
+                  {renderReferences(applicationData.references)}
+                </div>
 
-                    <p className="font-medium text-gray-900 mb-2">
-                      {applicationData.customer?.currentAddress ||
-                        applicationData.product?.currentAddress ||
-                        applicationData.loan?.currentAddress ||
-                        "N/A"}
-                    </p>
+                {/* Co-Applicant Section (only if Female + Business loan) */}
+                {applicationData.customer?.gender === "Female" &&
+                  applicationData.loanType === "BUSINESS" &&
+                  applicationData.coApplicant && (
+                    <div className="bg-pink-50/50 rounded-xl p-4 border border-pink-100">
+                      <h2 className="text-sm font-bold text-pink-800 uppercase tracking-wider mb-3 flex items-center gap-2"><User className="w-4 h-4 text-pink-600"/> Co-Applicant Details</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="bg-white rounded border border-gray-100 p-2.5 shadow-sm">
+                          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Phone</p>
+                          <p className="text-sm font-bold text-gray-900 mb-1">
+                            {applicationData.coApplicant.phone || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                    <p className="text-sm text-gray-600">
-                      PIN:{" "}
-                      <span className="font-medium">
-                        {applicationData?.customer?.currentAddressPinCode || "N/A"}
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="bg-white rounded-lg p-5 shadow-sm">
-                    <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                      <MapPin className="w-4 h-4 mr-2 text-purple-600" />
-                      Permanent Address
-                    </p>
-
-                    <p className="font-medium text-gray-900 mb-2">
-                      {applicationData.customer?.permanentAddress ||
-                        applicationData.product?.permanentAddress ||
-                        applicationData.loan?.permanentAddress ||
-                        "N/A"}
-                    </p>
-
-                    <p className="text-sm text-gray-600">
-                      PIN:{" "}
-                      <span className="font-medium">
-                        {applicationData.customer?.permanentAddressPinCode || "N/A"}
-                      </span>
-                    </p>
+                {/* Address Information */}
+                <div className="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100">
+                  <h2 className="text-sm font-bold text-indigo-800 uppercase tracking-wider mb-3 flex items-center gap-2"><MapPin className="w-4 h-4 text-indigo-600"/> Address Information</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-white rounded border border-gray-100 p-2.5 shadow-sm hover:shadow-md transition">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Current Address</p>
+                      <p className="text-sm font-bold text-gray-900 mb-1">
+                        {applicationData.customer?.currentAddress ||
+                          applicationData.product?.currentAddress ||
+                          applicationData.loan?.currentAddress ||
+                          "N/A"}
+                      </p>
+                      <p className="text-[11px] text-gray-500">PIN: <span className="font-semibold text-gray-700">{applicationData?.customer?.currentAddressPinCode || "N/A"}</span></p>
+                    </div>
+                    <div className="bg-white rounded border border-gray-100 p-2.5 shadow-sm hover:shadow-md transition">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Permanent Address</p>
+                      <p className="text-sm font-bold text-gray-900 mb-1">
+                        {applicationData.customer?.permanentAddress ||
+                          applicationData.product?.permanentAddress ||
+                          applicationData.loan?.permanentAddress ||
+                          "N/A"}
+                      </p>
+                      <p className="text-[11px] text-gray-500">PIN: <span className="font-semibold text-gray-700">{applicationData.customer?.permanentAddressPinCode || "N/A"}</span></p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2108,7 +2065,7 @@ const CustomerApplication = () => {
                   </div>
                 </div>
 
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 transition-all duration-300">
+                <div className="grid gap-3 grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 transition-all duration-300">
                   {(() => {
                     // Sort: UPDATED documents first
                     const sortedDocs = [...docs].sort((a, b) => {
@@ -2143,7 +2100,7 @@ const CustomerApplication = () => {
                     return (
                       <div
                         key={index}
-                        className={`relative bg-white p-5 rounded-xl border shadow-sm hover:shadow-md transition-all duration-300 group ${
+                        className={`relative bg-white p-3 rounded-lg border shadow-sm hover:shadow-md transition-all duration-300 group flex flex-col ${
                           doc.status === "UPDATED" 
                             ? "border-blue-500 border-2 bg-gradient-to-br from-blue-50 to-blue-100 ring-2 ring-blue-300" 
                             : "border-gray-200"
@@ -2154,14 +2111,14 @@ const CustomerApplication = () => {
                             NEW
                           </div>
                         )}
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center flex-1">
-                            <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-orange-100 transition-colors">
-                              <IconComponent className="w-5 h-5 text-gray-600 group-hover:text-orange-600 transition-colors" />
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <div className="flex items-start flex-1 min-w-0">
+                            <div className="p-1.5 rounded-lg bg-gray-100 group-hover:bg-orange-100 transition-colors shrink-0">
+                              <IconComponent className="w-4 h-4 text-gray-600 group-hover:text-orange-600 transition-colors" />
                             </div>
 
-                            <div className="ml-3 flex-1">
-                              <h3 className="font-semibold text-gray-900 text-sm">
+                            <div className="ml-2 flex-1 min-w-0">
+                              <h3 className="font-semibold text-gray-900 text-xs truncate" title={toDocLabelByRule(doc.docType)}>
                                 {toDocLabelByRule(doc.docType)}
                               </h3>
                               {doc.status === "UPDATED" && (
@@ -2175,34 +2132,32 @@ const CustomerApplication = () => {
                                 </p>
                               )}
                               {doc.updatedAt && doc.status === "UPDATED" && (
-                                <p className="text-xs text-blue-600 mt-1 font-medium">
+                                <p className="text-[10px] text-blue-600 mt-1 font-medium truncate">
                                   Re-uploaded: {new Date(doc.updatedAt).toLocaleDateString()} {new Date(doc.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </p>
                               )}
                               {doc.uploadedAt && doc.status !== "UPDATED" && (
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-[10px] text-gray-500 mt-1 truncate">
                                   Updated: {new Date(doc.uploadedAt).toLocaleDateString()}
                                 </p>
                               )}
                               {doc.docType && doc.docType.includes("BANK_STATEMENT") && (
-                                <p className="text-sm font-semibold text-gray-700 mt-2">
-                                  Password: {(applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) || "Not Provided"}
+                                <p className="text-[10px] font-semibold text-gray-700 mt-1">
+                                  Pwd: {(applicationData?.customer?.bankStatementPassword || applicationData?.bankStatementPassword) || "Not Provided"}
                                 </p>
                               )}
                             </div>
                           </div>
 
                           <div
-                            className={`flex items-center px-3 py-1.5 rounded-md text-xs font-bold border-2 ml-2 ${
+                            title={doc.status === "UPDATED" ? "UPDATED" : doc.status}
+                            className={`flex items-center justify-center p-1.5 rounded-md border shrink-0 ${
                               doc.status === "UPDATED" 
-                                ? "bg-blue-600 text-white border-blue-700 shadow-lg animate-pulse" 
+                                ? "bg-blue-600 text-white border-blue-700 shadow-sm animate-pulse" 
                                 : getDocStatusColor(doc.status)
                             }`}
                           >
                             {getDocStatusIcon(doc.status)}
-                            <span className="ml-1">
-                              {doc.status === "UPDATED" ? "UPDATED - VERIFY NOW" : doc.status}
-                            </span>
                           </div>
                         </div>
 
@@ -2211,30 +2166,31 @@ const CustomerApplication = () => {
                         </p>
 
                         {/* Action buttons (Download + View + Manage) */}
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2 mt-auto">
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleDownload(doc)}
                               disabled={downloading}
-                              className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Download"
+                              className="flex-1 flex items-center justify-center py-2 text-white bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-lg hover:from-brand-primary-hover hover:to-brand-primary transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {downloading ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                <Loader2 className="animate-spin w-4 h-4" />
                               ) : (
-                                <Download className="w-4 h-4 mr-2" />
+                                <Download className="w-4 h-4" />
                               )}
-                              {downloading ? "Downloading..." : "Download"}
                             </button>
 
                             <button
                               onClick={() => handleView(doc)}
                               disabled={previewLoadingDoc !== null}
-                              className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-100 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="View"
+                              className="flex-1 flex items-center justify-center py-2 text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-100 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {previewLoadingDoc === doc.docType ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+                                <Loader2 className="animate-spin w-4 h-4" />
                               ) : (
-                                "View"
+                                <Eye className="w-4 h-4" />
                               )}
                             </button>
                           </div>
@@ -2248,21 +2204,23 @@ const CustomerApplication = () => {
                                   setDocNewStatus("REJECTED");
                                   setDocStatusModal(true);
                                 }}
-                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-all duration-300"
+                                title="Reject"
+                                className="flex-1 flex items-center justify-center py-2 text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-all duration-300"
                               >
-                                Reject ✗
+                                <XCircle className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => {
                                   handleUpdateDocStatus(doc, "PENDING", "");
                                 }}
                                 disabled={updateStatusLoading}
-                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-300"
+                                title="Mark Pending"
+                                className="flex-1 flex items-center justify-center py-2 text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-300"
                               >
                                 {updateStatusLoading && selectedDocForStatus?.docType === doc.docType ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                                  <Loader2 className="animate-spin w-4 h-4" />
                                 ) : (
-                                  "Mark Pending"
+                                  <RotateCcw className="w-4 h-4" />
                                 )}
                               </button>
                             </div>
@@ -2273,12 +2231,13 @@ const CustomerApplication = () => {
                                   handleUpdateDocStatus(doc, "VERIFIED", "");
                                 }}
                                 disabled={updateStatusLoading}
-                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all duration-300 shadow-sm disabled:opacity-50"
+                                title="Approve"
+                                className="flex-1 flex items-center justify-center py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all duration-300 shadow-sm disabled:opacity-50"
                               >
                                 {updateStatusLoading && selectedDocForStatus?.docType === doc.docType ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  <Loader2 className="animate-spin w-4 h-4" />
                                 ) : (
-                                  "Approve ✓"
+                                  <CheckCircle className="w-4 h-4" />
                                 )}
                               </button>
                               <button
@@ -2286,12 +2245,13 @@ const CustomerApplication = () => {
                                   handleUpdateDocStatus(doc, "PENDING", "");
                                 }}
                                 disabled={updateStatusLoading}
-                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-300"
+                                title="Mark Pending"
+                                className="flex-1 flex items-center justify-center py-2 text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-300"
                               >
                                 {updateStatusLoading && selectedDocForStatus?.docType === doc.docType ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                                  <Loader2 className="animate-spin w-4 h-4" />
                                 ) : (
-                                  "Mark Pending"
+                                  <RotateCcw className="w-4 h-4" />
                                 )}
                               </button>
                             </div>
@@ -2302,12 +2262,13 @@ const CustomerApplication = () => {
                                   handleUpdateDocStatus(doc, "VERIFIED", "");
                                 }}
                                 disabled={updateStatusLoading}
-                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all duration-300 shadow-sm disabled:opacity-50"
+                                title="Approve"
+                                className="flex-1 flex items-center justify-center py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all duration-300 shadow-sm disabled:opacity-50"
                               >
                                 {updateStatusLoading && selectedDocForStatus?.docType === doc.docType ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  <Loader2 className="animate-spin w-4 h-4" />
                                 ) : (
-                                  "Approve ✓"
+                                  <CheckCircle className="w-4 h-4" />
                                 )}
                               </button>
                               <button
@@ -2317,9 +2278,10 @@ const CustomerApplication = () => {
                                   setDocNewStatus("REJECTED");
                                   setDocStatusModal(true);
                                 }}
-                                className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-300 shadow-sm"
+                                title="Reject"
+                                className="flex-1 flex items-center justify-center py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-300 shadow-sm"
                               >
-                                Reject ✗
+                                <XCircle className="w-4 h-4" />
                               </button>
                             </div>
                           )}

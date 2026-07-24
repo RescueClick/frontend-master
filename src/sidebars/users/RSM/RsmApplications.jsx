@@ -267,6 +267,7 @@ export default function RsmApplications() {
               >
                 <option value="All">All Status</option>
                 <option value="DOC_COMPLETE">Document Complete</option>
+                <option value="LOGIN">Login</option>
                 <option value="UNDER_REVIEW">Under Review</option>
                 <option value="APPROVED">Approved</option>
                 <option value="AGREEMENT">Agreement</option>

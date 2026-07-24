@@ -77,6 +77,7 @@ const RsmSidebar = () => {
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: "/rsm/dashboard" },
     { name: "My RMs", icon: Users, path: "/rsm/rms" },
+    { name: "Partners", icon: UserCheck, path: "/rsm/partners" },
     { name: "Applications", icon: FileText, path: "/rsm/applications" },
     { name: "Follow Up", icon: CalendarCheck, path: "/rsm/follow-ups" },
     // highlight banks for RSM

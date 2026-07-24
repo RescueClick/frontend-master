@@ -10,7 +10,7 @@ import { backendurl } from "../../../feature/urldata";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
-import { getLoanStatusLabel } from "../../../utils/loanStatus";
+import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
  
@@ -31,6 +31,7 @@ export default function CustomerTable() {
   const [deleteConfirm, setDeleteConfirm] = useState(null) // Customer to delete
   const [deleting, setDeleting] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("All")
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -52,8 +53,16 @@ export default function CustomerTable() {
   const filteredCustomers = useMemo(() => {
     if (!sortedData.length) return [];
     const term = searchQuery.trim().toLowerCase();
-    if (!term) return sortedData;
+    const selectedStatus =
+      statusFilter === "All" ? "" : String(statusFilter).trim().toUpperCase();
+
     return sortedData.filter((c) => {
+      const normalizedStatus = String(c.status || "").trim().toUpperCase();
+      const statusForMatch =
+        normalizedStatus === "DRAFT" ? "SUBMITTED" : normalizedStatus;
+      if (selectedStatus && statusForMatch !== selectedStatus) return false;
+      if (!term) return true;
+
       const fullName = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
       const employeeId = (c.employeeId || "").toLowerCase();
       const phone = String(c.phone || "").toLowerCase();
@@ -79,7 +88,7 @@ export default function CustomerTable() {
         status.includes(term)
       );
     });
-  }, [sortedData, searchQuery]);
+  }, [sortedData, searchQuery, statusFilter]);
 
   useEffect(() => {
     dispatch(getAllCustomers());
@@ -501,6 +510,19 @@ export default function CustomerTable() {
               aria-label="Search customers"
             />
           </div>
+          <select
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filter by loan status"
+          >
+            <option value="All">All status</option>
+            {LOAN_STATUS_FILTER_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {getLoanStatusLabel(opt)}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center"

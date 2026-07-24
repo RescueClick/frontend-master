@@ -367,7 +367,6 @@ const PartnerRegistrationForm = () => {
       setSuccessMessage(response?.message || "Registration successful!");
       setShowPopup(true);
       resetFields();
-      setTimeout(() => navigate("/LoginPage"), 800);
     } catch (err) {
       const payload = err?.payload;
       const backendMsg =
@@ -517,7 +516,14 @@ const PartnerRegistrationForm = () => {
 
       {/* Success/Error Popup */}
       {showPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm" onClick={() => setShowPopup(false)} role="presentation">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm"
+          onClick={() => {
+            setShowPopup(false);
+            if (successMessageType === "success") navigate("/LoginPage");
+          }}
+          role="presentation"
+        >
           <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full ${successMessageType === "success" ? "bg-emerald-100" : "bg-red-100"}`}>
               {successMessageType === "success" ? <Shield className="h-8 w-8 text-emerald-600" strokeWidth={2} /> : <X className="h-8 w-8 text-red-600" />}
@@ -526,9 +532,15 @@ const PartnerRegistrationForm = () => {
               {successMessageType === "success" ? "Application Submitted!" : "Something Went Wrong"}
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-stone-600">{successMessage}</p>
-            <button type="button" onClick={() => setShowPopup(false)}
-              className="mt-6 w-full rounded-xl bg-[#0d9488] py-3 text-sm font-bold text-white transition hover:bg-[#0f766e]">
-              Close
+            <button
+              type="button"
+              onClick={() => {
+                setShowPopup(false);
+                if (successMessageType === "success") navigate("/LoginPage");
+              }}
+              className="mt-6 w-full rounded-xl bg-[#0d9488] py-3 text-sm font-bold text-white transition hover:bg-[#0f766e]"
+            >
+              {successMessageType === "success" ? "Go to Login" : "Close"}
             </button>
           </div>
         </div>

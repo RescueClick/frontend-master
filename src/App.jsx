@@ -26,15 +26,25 @@ function App() {
       (response) => response,
       (error) => {
         if (error.response && error.response.status === 401) {
-          // Clear auth data and redirect to login
-          localStorage.removeItem("admin_token");
-          localStorage.removeItem("partner_token");
-          localStorage.removeItem("asm_token");
-          localStorage.removeItem("rsm_token");
-          localStorage.removeItem("rm_token");
-          localStorage.removeItem("customer_token");
-          localStorage.removeItem("impersonation_stack");
-          navigate("/login", { replace: true });
+          const url = String(error.config?.url || "");
+          // Let login/Google/signup show their own errors — do not bounce to a 404 `/login`
+          const isAuthAttempt =
+            /\/auth\/(login|google-login)\b/i.test(url) ||
+            /\/partner\/signup-partner\b/i.test(url) ||
+            /\/auth\/(request-password-reset|reset-password|confirm-email-change)\b/i.test(
+              url
+            );
+
+          if (!isAuthAttempt) {
+            localStorage.removeItem("admin_token");
+            localStorage.removeItem("partner_token");
+            localStorage.removeItem("asm_token");
+            localStorage.removeItem("rsm_token");
+            localStorage.removeItem("rm_token");
+            localStorage.removeItem("customer_token");
+            localStorage.removeItem("impersonation_stack");
+            navigate("/LoginPage", { replace: true });
+          }
         }
         return Promise.reject(error);
       }

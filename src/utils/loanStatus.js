@@ -30,6 +30,22 @@ export const LOAN_STATUS_LABELS = {
   DISBURSED: "Disbursed",
 };
 
+/** Shared dropdown values for customer / application list filters (includes LOGIN). */
+export const LOAN_STATUS_FILTER_OPTIONS = [
+  "SUBMITTED",
+  "DOC_INCOMPLETE",
+  "DOC_COMPLETE",
+  "DOC_SUBMITTED",
+  "LOGIN",
+  "UNDER_REVIEW",
+  "KYC_PENDING",
+  "KYC_COMPLETE",
+  "APPROVED",
+  "AGREEMENT",
+  "REJECTED",
+  "DISBURSED",
+];
+
 export function normalizeLoanStatus(status) {
   if (!status) return "";
   const normalized = String(status).trim().toUpperCase().replace(/\s+/g, "_");

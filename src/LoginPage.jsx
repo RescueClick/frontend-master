@@ -1,17 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Lock, User, Shield, AlertCircle, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff, Lock, User, Shield, AlertCircle, X, UserPlus, ChevronRight } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { GoogleLogin } from '@react-oauth/google';
 import { loginUser } from './feature/thunks/adminThunks';
-import { getAuthData } from './utils/localStorage';
+import { clearAuthData, getAuthData, saveAuthData } from './utils/localStorage';
+import {
+  isGoogleLoginConfigured,
+  loginWithGoogleIdToken,
+} from './utils/googleAuth';
 import {
   brandLogo,
   loginBanner,
   COMPANY_NAME,
   COMPANY_TAGLINE,
 } from "./config/branding";
+import { PARTNER_REGISTRATION_ROUTE } from "./config/publicReferral";
 import { PARTNER_REF_SESSION_KEY } from "./feature/publicLoanReferral";
 
+/** Google's button needs a pixel width — % / forcing all nested divs to 100% stretches the G logo. */
+const GoogleSignInButton = ({ onSuccess, onError, disabled }) => {
+  const wrapRef = useRef(null);
+  const [width, setWidth] = useState(360);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return undefined;
+    const update = () => {
+      const next = Math.floor(el.getBoundingClientRect().width);
+      if (next > 0) setWidth(Math.min(400, Math.max(240, next)));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={wrapRef}
+      className={`w-full ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+    >
+      {/* Stretch only the direct GIS wrapper — never nested logo/text nodes */}
+      <div className="flex w-full justify-center overflow-hidden rounded-lg [&>div]:w-full [&>div]:flex [&>div]:justify-center">
+        <GoogleLogin
+          onSuccess={onSuccess}
+          onError={onError}
+          useOneTap={false}
+          theme="outline"
+          size="large"
+          shape="rectangular"
+          text="continue_with"
+          width={String(width)}
+          logo_alignment="left"
+        />
+      </div>
+    </div>
+  );
+};
 
 const ErrorModal = ({ isOpen, onClose, error }) => {
   if (!isOpen) return null;
@@ -253,6 +299,48 @@ const LoginPage = () => {
     setErrors({});
   };
 
+  const completeLogin = (token, user) => {
+    clearAuthData();
+    saveAuthData(token, user);
+    const path = routeForRole(user?.role);
+    if (path) {
+      navigate(path, { replace: true });
+      return;
+    }
+    setModalError(
+      `Your account role (${user?.role || "unknown"}) is not supported for web login. Please contact support.`
+    );
+    setShowErrorModal(true);
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    const idToken = credentialResponse?.credential;
+    if (!idToken) {
+      setModalError("Google did not return a credential. Please try again.");
+      setShowErrorModal(true);
+      return;
+    }
+    try {
+      setLoading(true);
+      const { token, user } = await loginWithGoogleIdToken(idToken);
+      completeLogin(token, user);
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Google sign-in failed. Please try again.";
+      setModalError(message);
+      setShowErrorModal(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setModalError("Google sign-in was cancelled or failed. Please try again.");
+    setShowErrorModal(true);
+  };
+
 
   return (
     <>
@@ -338,7 +426,7 @@ const LoginPage = () => {
 
           {/* Right: form + logo — scrolls inside column only */}
           <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-white/90 lg:bg-white">
-            <div className="m-auto flex w-full max-w-md flex-col gap-5 px-5 py-6 sm:px-8 sm:py-8 lg:py-6">
+            <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-5 py-6 sm:px-8 sm:py-8 lg:py-6">
               <div className="text-center lg:text-left">
                 {/* Desktop: logo on form side (mobile uses top strip only to stay within viewport) */}
                 <div className="mb-4 hidden justify-center lg:flex lg:justify-start">
@@ -463,6 +551,58 @@ const LoginPage = () => {
                   <p className="mt-2 text-sm text-red-600 text-center">{reduxLoginError}</p>
                 )}
               </div>
+
+              {isGoogleLoginConfigured() && (
+                <div className="pt-1">
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center" aria-hidden>
+                      <div className="w-full border-t border-stone-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-white px-3 font-medium uppercase tracking-wide text-stone-400">
+                        or continue with
+                      </span>
+                    </div>
+                  </div>
+                  <GoogleSignInButton
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    disabled={loading}
+                  />
+                  <p className="mt-2 text-center text-[11px] text-stone-500">
+                    Use the same Google email as your registered account.
+                  </p>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => navigate(PARTNER_REGISTRATION_ROUTE)}
+                className="mt-4 flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors hover:bg-teal-50/80"
+                style={{
+                  borderColor: "rgba(13, 122, 95, 0.18)",
+                  backgroundColor: "rgba(13, 148, 136, 0.08)",
+                }}
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white"
+                    style={{ backgroundColor: "var(--color-brand-primary)" }}
+                  >
+                    <UserPlus className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  </span>
+                  <span className="truncate text-sm font-semibold text-stone-800">
+                    New Partner?
+                  </span>
+                </span>
+                <span
+                  className="flex shrink-0 items-center gap-0.5 text-sm font-bold"
+                  style={{ color: "var(--color-brand-primary)" }}
+                >
+                  Register Now
+                  <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+                </span>
+              </button>
                 </div>
               </form>
             </div>
