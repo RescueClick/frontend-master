@@ -20,7 +20,8 @@ const GetLoan = () => {
       subtitle: "For Entrepreneurs",
       description: "Flexible business financing solutions for growing enterprises",
       icon: "💼",
-      route: "/partner/bussiness-loan"
+      route: "/partner/bussiness-loan",
+      isComingSoon: true
     },
     {
       id: "home-salaried",
