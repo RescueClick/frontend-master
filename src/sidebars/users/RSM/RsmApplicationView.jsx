@@ -1011,71 +1011,93 @@ const RsmApplicationView = () => {
 
             {/* Main Content */}
             <div className="p-4">
-              {/* Compact Summary Row */}
+              {/* Compact Summary Row — stacked fields so name/email never overlap */}
+              {(() => {
+                const customerInfo =
+                  applicationData.customer ||
+                  (applicationData.customerId && typeof applicationData.customerId === "object"
+                    ? applicationData.customerId
+                    : null);
+                const partnerInfo =
+                  (applicationData.partnerId && typeof applicationData.partnerId === "object"
+                    ? applicationData.partnerId
+                    : null) || applicationData.partner || null;
+                const customerName = customerInfo?.firstName
+                  ? `${customerInfo.firstName} ${customerInfo.lastName || ""}`.trim()
+                  : customerInfo?.name || "N/A";
+                const partnerName = partnerInfo?.firstName
+                  ? `${partnerInfo.firstName} ${partnerInfo.lastName || ""}`.trim()
+                  : "N/A";
+
+                return (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
                 {/* Customer Compact */}
-                <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 rounded bg-brand-primary/10">
+                <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 min-w-0 overflow-hidden">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="p-1.5 rounded bg-brand-primary/10 shrink-0">
                       <User className="w-5 h-5 text-brand-primary" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-semibold text-slate-500 uppercase">Customer</p>
-                      <p className="font-bold text-sm text-gray-900 truncate max-w-[150px]">
-                        {applicationData.customerId?.firstName
-                          ? `${applicationData.customerId.firstName} ${applicationData.customerId.lastName || ""}`.trim()
-                          : applicationData.customer?.firstName
-                          ? `${applicationData.customer.firstName} ${applicationData.customer.lastName || ""}`.trim()
-                          : "N/A"}
+                      <p className="font-bold text-sm text-gray-900 truncate" title={customerName}>
+                        {customerName}
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-1.5 min-w-0">
+                        <Mail className="w-3 h-3 text-brand-primary shrink-0"/>
+                        <span className="truncate">{customerInfo?.email || "N/A"}</span>
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3 h-3 text-brand-primary shrink-0"/>
+                        <span>{customerInfo?.phone || "N/A"}</span>
                       </p>
                     </div>
-                  </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1"><Mail className="w-3 h-3 text-brand-primary"/> {applicationData.customerId?.email || applicationData.customer?.email || "N/A"}</p>
-                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1 mt-0.5"><Phone className="w-3 h-3 text-brand-primary"/> {applicationData.customerId?.phone || applicationData.customer?.phone || "N/A"}</p>
                   </div>
                 </div>
 
                 {/* Partner Compact */}
-                <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 rounded bg-amber-100">
+                <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100 min-w-0 overflow-hidden">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="p-1.5 rounded bg-amber-100 shrink-0">
                       <User className="w-5 h-5 text-amber-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-semibold text-amber-700/70 uppercase">Partner</p>
-                      <p className="font-bold text-sm text-gray-900 truncate max-w-[150px]">
-                        {applicationData.partnerId?.firstName || applicationData.partner?.firstName || "N/A"}
+                      <p className="font-bold text-sm text-gray-900 truncate" title={partnerName}>
+                        {partnerName}
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-1.5 min-w-0">
+                        <Mail className="w-3 h-3 text-amber-600 shrink-0"/>
+                        <span className="truncate">{partnerInfo?.email || "N/A"}</span>
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3 h-3 text-amber-600 shrink-0"/>
+                        <span>{partnerInfo?.phone || "N/A"}</span>
                       </p>
                     </div>
-                  </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1"><Mail className="w-3 h-3 text-amber-600"/> {applicationData.partnerId?.email || applicationData.partner?.email || "N/A"}</p>
-                    <p className="text-xs font-medium text-slate-500 flex items-center justify-start sm:justify-end gap-1 mt-0.5"><Phone className="w-3 h-3 text-amber-600"/> {applicationData.partnerId?.phone || applicationData.partner?.phone || "N/A"}</p>
                   </div>
                 </div>
 
                 {/* Loan Summary Compact */}
-                <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 rounded bg-blue-100">
+                <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100 min-w-0 overflow-hidden">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="p-1.5 rounded bg-blue-100 shrink-0">
                       <CreditCard className="w-5 h-5 text-blue-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-semibold text-blue-600/70 uppercase">Loan Type</p>
-                      <p className="font-bold text-sm text-gray-900 truncate max-w-[150px]">
+                      <p className="font-bold text-sm text-gray-900 truncate">
                         {applicationData.loanType || "N/A"}
+                      </p>
+                      <p className="text-[11px] font-semibold text-blue-600/70 uppercase mt-1.5">Amount</p>
+                      <p className="font-bold text-lg text-brand-primary leading-none">
+                        {formatCurrency(applicationData.customer?.loanAmount || 0)}
                       </p>
                     </div>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-[11px] font-semibold text-blue-600/70 uppercase">Amount</p>
-                    <p className="font-bold text-lg text-brand-primary leading-none">
-                      {formatCurrency(applicationData.customer?.loanAmount || 0)}
-                    </p>
-                  </div>
                 </div>
               </div>
+                );
+              })()}
 
               {/* Data Grids */}
               <div className="space-y-4">
