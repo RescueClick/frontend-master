@@ -1227,6 +1227,29 @@ export const deleteBank = createAsyncThunk(
   }
 );
 
+export const updateBank = createAsyncThunk(
+  "admin/updateBank",
+  async ({ bankId, formData }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.put(
+        `${backendurl}/admin/banks/${bankId}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update bank"
+      );
+    }
+  }
+);
+
 
 
 

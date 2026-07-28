@@ -10,6 +10,7 @@ import {
   ImagePlus,
   KeyRound,
   Lock,
+  Pencil,
   Trash2,
 } from "lucide-react";
 
@@ -19,6 +20,7 @@ import {
   createBank,
   deleteBank,
   fetchAdminBanks,
+  updateBank,
 } from "../../../feature/thunks/adminThunks";
 
 
@@ -46,6 +48,8 @@ const Banks = () => {
 
   const [activeTab, setActiveTab] = useState("add");
   const [toast, setToast] = useState({ visible: false, message: "", type: "success" });
+  const [editingBankId, setEditingBankId] = useState(null);
+  const [existingLogoUrl, setExistingLogoUrl] = useState("");
 
   const [bank, setBank] = useState({
     name: "",
@@ -63,6 +67,8 @@ const Banks = () => {
 
   const [showPassword, setShowPassword] = useState({});
   const [showId, setShowId] = useState({});
+
+  const isEditing = Boolean(editingBankId);
 
   const { data: banks = [], loading: banksLoading, error: banksError } = useSelector(
     (state) => state.admin?.fetchBanksData || { data: [], loading: false, error: null }
@@ -110,9 +116,45 @@ const Banks = () => {
       link: "",
       serviceablePincodes: "",
     });
+    setEditingBankId(null);
+    setExistingLogoUrl("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (csvInputRef.current) csvInputRef.current.value = "";
     setShowAddPassword(false);
+  };
+
+  const extractPincodesFromText = (text) => {
+    const matches = String(text || "").match(/\d{6}/g) || [];
+    return Array.from(new Set(matches.map((p) => p.trim()).filter(Boolean)));
+  };
+
+  const startEdit = (b) => {
+    const id = b?._id || b?.id;
+    if (!id) return;
+    const pins = Array.isArray(b.serviceablePincodes)
+      ? b.serviceablePincodes.map((p) => String(p).trim()).filter(Boolean)
+      : [];
+    const rsm =
+      Array.isArray(b.rsmTypes) && b.rsmTypes.length
+        ? b.rsmTypes[0]
+        : b.rsmType || "";
+
+    setEditingBankId(id);
+    setExistingLogoUrl(b.bankLogoUrl || b.logoUrl || "");
+    setBank({
+      name: b.bankName || b.name || "",
+      logo: null,
+      loanType: b.loanType || "",
+      rsmType: rsm,
+      loginId: b.portalLoginId || "",
+      password: b.portalPassword || "",
+      link: b.portalLink || "",
+      serviceablePincodes: pins.join(", "),
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (csvInputRef.current) csvInputRef.current.value = "";
+    setShowAddPassword(false);
+    setActiveTab("add");
   };
 
   const handleSubmit = async (e) => {
@@ -121,6 +163,11 @@ const Banks = () => {
 
     if (!bank.name || !bank.loanType || !bank.rsmType || !bank.loginId || !bank.password || !bank.link) {
       setToast({ visible: true, message: "Please fill all required fields.", type: "error" });
+      return;
+    }
+
+    if (!isEditing && !bank.logo) {
+      setToast({ visible: true, message: "Bank logo is required.", type: "error" });
       return;
     }
 
@@ -134,15 +181,24 @@ const Banks = () => {
       formData.append("portalLoginId", bank.loginId);
       formData.append("portalPassword", bank.password);
       formData.append("portalLink", bank.link);
-      formData.append("serviceablePincodes", bank.serviceablePincodes);
+      formData.append("serviceablePincodes", bank.serviceablePincodes || "");
 
-      await dispatch(createBank(formData)).unwrap();
-      setToast({ visible: true, message: "Bank added successfully.", type: "success" });
+      if (isEditing) {
+        await dispatch(updateBank({ bankId: editingBankId, formData })).unwrap();
+        setToast({ visible: true, message: "Bank updated successfully.", type: "success" });
+      } else {
+        await dispatch(createBank(formData)).unwrap();
+        setToast({ visible: true, message: "Bank added successfully.", type: "success" });
+      }
       resetForm();
       setActiveTab("list");
       dispatch(fetchAdminBanks());
     } catch (err) {
-      setToast({ visible: true, message: err?.toString?.() || "Failed to add bank.", type: "error" });
+      setToast({
+        visible: true,
+        message: err?.toString?.() || (isEditing ? "Failed to update bank." : "Failed to add bank."),
+        type: "error",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -177,12 +233,15 @@ const Banks = () => {
           <div className="inline-flex w-full shrink-0 rounded-xl border border-gray-200 bg-gray-50 p-1 sm:w-auto">
             <button
               type="button"
-              onClick={() => setActiveTab("add")}
+              onClick={() => {
+                if (!isEditing) resetForm();
+                setActiveTab("add");
+              }}
               className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition ${
                 activeTab === "add" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-700 hover:bg-white"
               }`}
             >
-              Add Bank
+              {isEditing ? "Edit Bank" : "Add Bank"}
             </button>
             <button
               type="button"
@@ -211,9 +270,13 @@ const Banks = () => {
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5 sm:py-4">
                 <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <h2 className="text-base font-bold tracking-tight text-gray-900">Add new bank</h2>
+                  <h2 className="text-base font-bold tracking-tight text-gray-900">
+                    {isEditing ? "Edit bank" : "Add new bank"}
+                  </h2>
                   <p className="mt-0.5 text-xs text-gray-500">
-                    Required fields are marked with <span className="font-semibold text-red-500">*</span>
+                    {isEditing
+                      ? "Update portal details and serviceable pincodes (CSV supported)."
+                      : <>Required fields are marked with <span className="font-semibold text-red-500">*</span></>}
                   </p>
                 </div>
 
@@ -303,7 +366,12 @@ const Banks = () => {
                     <div className="sm:col-span-2 lg:col-span-3">
                       <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gray-700">
                         <ImagePlus className="h-3.5 w-3.5 text-emerald-600" />
-                        Bank logo <span className="font-normal text-gray-400">(optional)</span>
+                        Bank logo{" "}
+                        {isEditing ? (
+                          <span className="font-normal text-gray-400">(leave empty to keep current)</span>
+                        ) : (
+                          <span className="text-red-500">*</span>
+                        )}
                       </span>
                       <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-white/80 px-3 py-3 transition hover:border-emerald-300 hover:bg-emerald-50/30 sm:flex-row sm:justify-between sm:py-2.5">
                         <div className="mb-2 text-center sm:mb-0 sm:text-left">
@@ -322,11 +390,20 @@ const Banks = () => {
                           Choose file
                         </span>
                       </label>
-                      {bank.logo && (
+                      {bank.logo ? (
                         <p className="mt-2 truncate text-xs text-emerald-700">
                           Selected: <span className="font-medium">{bank.logo.name}</span>
                         </p>
-                      )}
+                      ) : isEditing && existingLogoUrl ? (
+                        <div className="mt-2 flex items-center gap-2">
+                          <img
+                            src={existingLogoUrl}
+                            alt="Current logo"
+                            className="h-8 w-8 rounded object-contain border border-gray-200 bg-white"
+                          />
+                          <p className="truncate text-xs text-gray-500">Current logo kept unless you choose a new file</p>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </section>
@@ -409,10 +486,10 @@ const Banks = () => {
                     <div className="col-span-1 lg:col-span-3 mt-2">
                       <label className="group block mb-1.5">
                         <span className="flex items-center gap-1 text-xs font-semibold text-gray-700">
-                          Serviceable Pincodes (Optional)
+                          Serviceable Pincodes
                         </span>
                         <p className="text-[10px] text-gray-500 mb-2 leading-tight">
-                          Enter comma-separated pincodes, or upload a CSV file containing them.
+                          Enter comma-separated pincodes, or upload a CSV. Banks with no pincodes will not appear in RSM Manage Loan pincode search.
                         </p>
                       </label>
                       <div className="flex flex-col sm:flex-row gap-3">
@@ -430,7 +507,7 @@ const Banks = () => {
                             Upload CSV
                             <input
                               type="file"
-                              accept=".csv"
+                              accept=".csv,.txt"
                               className="hidden"
                               ref={csvInputRef}
                               onChange={(e) => {
@@ -438,19 +515,48 @@ const Banks = () => {
                                 if (!file) return;
                                 const reader = new FileReader();
                                 reader.onload = (evt) => {
-                                  const text = evt.target.result;
-                                  const matches = text.match(/\d{6}/g) || text.split(/[\s,]+/).filter(Boolean);
-                                  const current = bank.serviceablePincodes ? bank.serviceablePincodes.split(',').map(s=>s.trim()).filter(Boolean) : [];
-                                  const combined = Array.from(new Set([...current, ...matches]));
-                                  setBank(p => ({ ...p, serviceablePincodes: combined.join(', ') }));
-                                  setToast({ visible: true, message: "Pincodes extracted from CSV", type: "success" });
+                                  const extracted = extractPincodesFromText(evt.target.result);
+                                  const current = bank.serviceablePincodes
+                                    ? bank.serviceablePincodes.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean)
+                                    : [];
+                                  const combined = Array.from(new Set([...current, ...extracted]));
+                                  setBank((p) => ({ ...p, serviceablePincodes: combined.join(", ") }));
+                                  setToast({
+                                    visible: true,
+                                    message: `${extracted.length} pincode(s) loaded from CSV (total ${combined.length})`,
+                                    type: "success",
+                                  });
                                 };
                                 reader.readAsText(file);
                               }}
                             />
                           </label>
+                          {isEditing ? (
+                            <button
+                              type="button"
+                              onClick={() => setBank((p) => ({ ...p, serviceablePincodes: "" }))}
+                              className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                            >
+                              Clear pincodes
+                            </button>
+                          ) : null}
                         </div>
                       </div>
+                      <p className="mt-1.5 text-[11px] text-gray-500">
+                        Current count:{" "}
+                        <span className="font-semibold text-gray-800">
+                          {bank.serviceablePincodes
+                            ? Array.from(
+                                new Set(
+                                  bank.serviceablePincodes
+                                    .split(/[\s,]+/)
+                                    .map((s) => s.trim())
+                                    .filter((s) => /^\d{6}$/.test(s))
+                                )
+                              ).length
+                            : 0}
+                        </span>
+                      </p>
                     </div>
                   </div>
                 </section>
@@ -463,7 +569,7 @@ const Banks = () => {
                     onClick={resetForm}
                     className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
                   >
-                    Reset form
+                    {isEditing ? "Cancel edit" : "Reset form"}
                   </button>
                   <button
                     type="submit"
@@ -474,7 +580,7 @@ const Banks = () => {
                         : "bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-600/25 hover:from-emerald-700 hover:to-teal-700"
                     }`}
                   >
-                    {submitting ? "Saving…" : "Add bank"}
+                    {submitting ? "Saving…" : isEditing ? "Update bank" : "Add bank"}
                   </button>
                 </div>
               </div>
@@ -540,17 +646,46 @@ const Banks = () => {
                             </div>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(b)}
-                            className="shrink-0 inline-flex items-center justify-center p-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                            title="Delete bank"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(b)}
+                              className="inline-flex items-center justify-center p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                              title="Edit bank"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(b)}
+                              className="inline-flex items-center justify-center p-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                              title="Delete bank"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
 
                         <div className="h-px bg-gray-100" />
+
+                        {(() => {
+                          const pinCount = Array.isArray(b.serviceablePincodes)
+                            ? b.serviceablePincodes.filter((p) => String(p || "").trim()).length
+                            : 0;
+                          return (
+                            <div
+                              className={`text-[10px] font-semibold px-2 py-1 rounded-md w-fit ${
+                                pinCount > 0
+                                  ? "bg-teal-50 text-teal-800 border border-teal-100"
+                                  : "bg-amber-50 text-amber-800 border border-amber-100"
+                              }`}
+                            >
+                              {pinCount > 0
+                                ? `${pinCount} pincode${pinCount === 1 ? "" : "s"}`
+                                : "No pincodes — hidden in RSM pincode search"}
+                            </div>
+                          );
+                        })()}
 
                         <div className="space-y-2">
                           <div className="space-y-1">

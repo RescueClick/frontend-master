@@ -47,6 +47,7 @@ import {
   createBank,
   fetchAdminBanks,
   deleteBank,
+  updateBank,
 } from "../thunks/adminThunks";
 
 import { saveAuthData } from "../../utils/localStorage";
@@ -313,6 +314,13 @@ const initialState = {
 
   // delete bank (soft delete)
   deleteBank: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
+
+  updateBank: {
     loading: false,
     error: null,
     success: false,
@@ -1526,6 +1534,29 @@ const adminSlice = createSlice({
         state.deleteBank.loading = false;
         state.deleteBank.error = action.payload;
         state.deleteBank.success = false;
+      })
+
+      .addCase(updateBank.pending, (state) => {
+        state.updateBank.loading = true;
+        state.updateBank.error = null;
+        state.updateBank.success = false;
+      })
+      .addCase(updateBank.fulfilled, (state, action) => {
+        state.updateBank.loading = false;
+        state.updateBank.success = true;
+        state.updateBank.data = action.payload;
+        const updated = action.payload?.bank;
+        const updatedId = updated?._id || action.meta?.arg?.bankId;
+        if (updatedId && Array.isArray(state.fetchBanksData.data)) {
+          state.fetchBanksData.data = state.fetchBanksData.data.map((b) =>
+            b?._id === updatedId ? { ...b, ...updated } : b
+          );
+        }
+      })
+      .addCase(updateBank.rejected, (state, action) => {
+        state.updateBank.loading = false;
+        state.updateBank.error = action.payload;
+        state.updateBank.success = false;
       });
   },
 });
