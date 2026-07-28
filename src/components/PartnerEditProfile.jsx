@@ -16,6 +16,7 @@ import {
   updatePartnerProfile,
   uploadPartnerAvatar,
 } from "../feature/thunks/partnerThunks";
+import { statesWithLegacy } from "../utils/indianStates";
 
 export default function PartnerEditProfile() {
   const navigate = useNavigate();
@@ -85,7 +86,7 @@ export default function PartnerEditProfile() {
     if (!form.address?.trim() || form.address.trim().length < 10)
       e.address = "Enter full address (min 10 characters)";
     if (!form.experience?.trim()) e.experience = "Select experience";
-    if (!form.region?.trim()) e.region = "Region is required";
+    if (!form.region?.trim()) e.region = "State is required";
     setErrors(e);
     return { ok: Object.keys(e).length === 0, first: Object.keys(e)[0] };
   };
@@ -365,16 +366,23 @@ export default function PartnerEditProfile() {
                     <div>
                       <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
                         <MapPin className="w-4 h-4 text-brand-primary" />
-                        Region *
+                        State *
                       </label>
-                      <input
+                      <select
                         name="region"
                         value={form.region}
                         onChange={(e) => handleChange("region", e.target.value)}
                         className={`w-full px-3 py-2.5 border rounded-xl ${
                           errors.region ? "border-red-400" : "border-slate-200"
                         }`}
-                      />
+                      >
+                        <option value="">Select state</option>
+                        {statesWithLegacy(form.region).map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
                       {errors.region && (
                         <p className="text-red-500 text-xs mt-1">{errors.region}</p>
                       )}

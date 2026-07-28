@@ -19,6 +19,7 @@ import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import { INDIAN_STATE_FILTER_OPTIONS } from "../../../utils/indianStates";
 
 
 const colors = {
@@ -112,14 +113,7 @@ const Partners = () => {
     }
   };
 
-  const stateOptions = useMemo(() => {
-    const set = new Set();
-    (data || []).forEach((p) => {
-      const region = String(p.region || "").trim();
-      if (region) set.add(region);
-    });
-    return ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [data]);
+  const stateOptions = INDIAN_STATE_FILTER_OPTIONS;
 
   const filteredPartners = useMemo(() => {
     if (!data) return [];

@@ -17,6 +17,7 @@ import { createPartner } from "../../../../feature/thunks/rmThunks";
 import { getAuthData } from "../../../../utils/localStorage";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { INDIAN_STATES } from "../../../../utils/indianStates";
 
 const AddPartnerPage = () => {
   // const navigate = useNavigate(); // This line was removed to fix the error
@@ -99,7 +100,7 @@ const AddPartnerPage = () => {
     if (!formData.password.trim()) newErrors.password = "Password is required";
     else if (formData.password.length < 6)
       newErrors.password = "Password must be at least 6 characters";
-    if (!formData.region.trim()) newErrors.region = "Region is required";
+    if (!formData.region.trim()) newErrors.region = "State is required";
     if (!formData.pincode.trim()) newErrors.pincode = "Pincode is required";
     else if (!/^\d{6}$/.test(formData.pincode))
       newErrors.pincode = "Pincode must be 6 digits";
@@ -500,17 +501,22 @@ const AddPartnerPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className={labelStyle} style={{ color: "#111827" }}>
-                  Region *
+                  State *
                 </label>
-                <input
-                  type="text"
+                <select
                   name="region"
                   value={formData.region}
                   onChange={handleInputChange}
                   className={inputStyle(errors.region)}
                   style={inputRingColor}
-                  placeholder="Enter region"
-                />
+                >
+                  <option value="">Select state</option>
+                  {INDIAN_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
                 {errors.region && (
                   <p className="text-red-500 text-sm mt-1">{errors.region}</p>
                 )}

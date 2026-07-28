@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData } from "../../../../utils/localStorage";
 import { createRSM, fetchAsms } from "../../../../feature/thunks/adminThunks";
+import { INDIAN_STATES } from "../../../../utils/indianStates";
 
 const AddRSMPage = () => {
   const navigate = useNavigate();
@@ -102,7 +103,7 @@ const AddRSMPage = () => {
       newErrors.dob = "Date of birth is required";
     }
     if (!formData.region.trim()) {
-      newErrors.region = "Region is required";
+      newErrors.region = "State is required";
     }
     if (!formData.password.trim()) {
       newErrors.password = "Password is required";
@@ -406,19 +407,24 @@ const AddRSMPage = () => {
                 )}
               </div>
 
-              {/* Region */}
+              {/* State */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Region *
+                  State *
                 </label>
-                <input
-                  type="text"
+                <select
                   name="region"
                   value={formData.region}
                   onChange={handleInputChange}
                   className={inputClassName("region")}
-                  placeholder="Enter region"
-                />
+                >
+                  <option value="">Select state</option>
+                  {INDIAN_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
                 {errors.region && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
                     <AlertCircle className="w-4 h-4 mr-1" /> {errors.region}

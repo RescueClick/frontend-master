@@ -13,6 +13,7 @@ import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
 import toast from "react-hot-toast";
+import { INDIAN_STATES } from "../../../utils/indianStates";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -701,18 +702,24 @@ const [searchRsm, setSearchRsm] = useState("");
                   )}
                 </div>
 
-                {/* Region */}
+                {/* State */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Region
+                    State
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="region"
                     value={formData.region}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
+                  >
+                    <option value="">Select state</option>
+                    {INDIAN_STATES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* ASM Selection */}

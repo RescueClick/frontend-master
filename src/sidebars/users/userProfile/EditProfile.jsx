@@ -15,6 +15,7 @@ import { getAuthData } from "../../../utils/localStorage";
 import { fetchAsmProfile, updateAsmProfile } from "../../../feature/thunks/asmThunks";
 import { fetchRsmProfile, updateRsmProfile } from "../../../feature/thunks/rsmThunks";
 import { fetchRmProfile, updateRmProfile } from "../../../feature/thunks/rmThunks";
+import { statesWithLegacy } from "../../../utils/indianStates";
 
 function roleFromPath(pathname) {
   if (pathname.startsWith("/rsm")) return "rsm";
@@ -125,9 +126,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
     }
 
     if (!formData.region?.trim()) {
-      newErrors.region = "Region is required";
-    } else if (formData.region.trim().length < 2) {
-      newErrors.region = "Region must be at least 2 characters";
+      newErrors.region = "State is required";
     }
 
     setErrors(newErrors);
@@ -350,17 +349,23 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                     <div>
                       <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
                         <MapPin className="w-4 h-4 text-brand-primary" />
-                        Region *
+                        State *
                       </label>
-                      <input
+                      <select
                         name="region"
                         value={formData.region}
                         onChange={(e) => handleInputChange("region", e.target.value)}
-                        placeholder="Your region / territory"
                         className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 ${
                           errors.region ? "border-red-400" : "border-slate-200"
                         }`}
-                      />
+                      >
+                        <option value="">Select state</option>
+                        {statesWithLegacy(formData.region).map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
                       {errors.region && (
                         <p className="text-red-500 text-xs mt-1">{errors.region}</p>
                       )}

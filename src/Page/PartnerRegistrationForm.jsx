@@ -36,6 +36,7 @@ import {
   COMPANY_NAME,
   COMPANY_TAGLINE,
 } from "../config/branding";
+import { INDIAN_STATES } from "../utils/indianStates";
 
 const PASSWORD_MIN_LEN = 8;
 const MAX_PARTNER_DOC_BYTES = 5 * 1024 * 1024;
@@ -206,8 +207,10 @@ const PartnerRegistrationForm = () => {
       nextValue = value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 32);
     } else if (name === "firstName" || name === "lastName" || name === "middleName") {
       nextValue = value.replace(/[^A-Za-z\s.'-]/g, "").slice(0, 50);
-    } else if (name === "bankName" || name === "region") {
+    } else if (name === "bankName") {
       nextValue = value.slice(0, 120);
+    } else if (name === "region") {
+      nextValue = value;
     } else if (name === "addressStability") {
       nextValue = value.replace(/\D/g, "").slice(0, 3);
     } else if (name === "dob") {
@@ -271,7 +274,7 @@ const PartnerRegistrationForm = () => {
       }
     }
     if (step === 3) {
-      if (!formData.region.trim()) err.region = "Region is required";
+      if (!formData.region.trim()) err.region = "State is required";
       if (!formData.address.trim()) err.address = "Address is required";
       else if (formData.address.trim().length < 10) err.address = "Enter a fuller address (min 10 chars)";
       if (!formData.pincode) err.pincode = "PIN code is required";
@@ -756,11 +759,22 @@ const PartnerRegistrationForm = () => {
                   </div>
 
                   <div>
-                    <Label required>Region / City</Label>
+                    <Label required>State</Label>
                     <div className="relative">
                       <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-                      <input type="text" name="region" value={formData.region} onChange={handleChange}
-                        placeholder="Enter your region or city" className={`${fieldClass("region", fieldErrors)} pl-10`} />
+                      <select
+                        name="region"
+                        value={formData.region}
+                        onChange={handleChange}
+                        className={`${fieldClass("region", fieldErrors)} appearance-none pl-10`}
+                      >
+                        <option value="">Select state</option>
+                        {INDIAN_STATES.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <FieldError msg={fieldErrors.region} />
                   </div>
@@ -768,7 +782,7 @@ const PartnerRegistrationForm = () => {
                   <div>
                     <Label required>Complete Address</Label>
                     <textarea name="address" value={formData.address} onChange={handleChange}
-                      placeholder="House/Flat No., Street, Area, City, State"
+                      placeholder="House/Flat No., Street, Area, City"
                       rows={3}
                       className={`${fieldClass("address", fieldErrors)} resize-none`} />
                     <FieldError msg={fieldErrors.address} />

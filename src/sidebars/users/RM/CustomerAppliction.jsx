@@ -31,7 +31,8 @@ import {
   ZoomOut,
   RotateCw,
   RefreshCw,
-  Maximize
+  Maximize,
+  Upload,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
@@ -148,6 +149,9 @@ const CustomerApplication = () => {
   const [docStatusModal, setDocStatusModal] = useState(false);
   const [selectedDocForStatus, setSelectedDocForStatus] = useState(null);
   const [docStatusRemark, setDocStatusRemark] = useState("");
+  const [uploadingDocType, setUploadingDocType] = useState(null);
+  const docFileInputRef = useRef(null);
+  const pendingUploadDocTypeRef = useRef(null);
   
   // Document Viewer State
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -643,6 +647,90 @@ const CustomerApplication = () => {
       setError(errorMessage);
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const canRmUploadDocs = Boolean(
+    applicationData &&
+      !applicationData.rsmId &&
+      applicationData.status !== "DOC_COMPLETE"
+  );
+
+  const openDocUploadPicker = (docType) => {
+    if (!canRmUploadDocs) {
+      toast.error(
+        applicationData?.status === "DOC_COMPLETE"
+          ? "Set status to DOC_INCOMPLETE before uploading documents"
+          : "Cannot upload — application transferred to RSM"
+      );
+      return;
+    }
+    pendingUploadDocTypeRef.current = docType;
+    if (docFileInputRef.current) {
+      docFileInputRef.current.value = "";
+      docFileInputRef.current.click();
+    }
+  };
+
+  const handleRmDocFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    const docType = pendingUploadDocTypeRef.current;
+    e.target.value = "";
+    pendingUploadDocTypeRef.current = null;
+
+    if (!file || !docType || !applicationData?._id) return;
+
+    try {
+      setUploadingDocType(docType);
+      const { rmToken } = getAuthData();
+      if (!rmToken) {
+        toast.error("Authentication required");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadUrl = `${backendurl}/rm/applications/${applicationData._id}/documents?docType=${encodeURIComponent(docType)}`;
+      const response = await axios.post(uploadUrl, formData, {
+        headers: {
+          Authorization: `Bearer ${rmToken}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const uploadedDoc = response.data?.document;
+      if (uploadedDoc) {
+        setApplicationData((prev) => {
+          if (!prev) return prev;
+          const existing = prev.docs || [];
+          const idx = existing.findIndex(
+            (d) => d.docType?.toUpperCase() === uploadedDoc.docType?.toUpperCase()
+          );
+          const nextDocs =
+            idx >= 0
+              ? existing.map((d, i) => (i === idx ? uploadedDoc : d))
+              : [...existing, uploadedDoc];
+          return {
+            ...prev,
+            docs: nextDocs,
+            status: response.data?.applicationStatus || prev.status,
+          };
+        });
+      } else {
+        await fetchApplicationData();
+      }
+
+      toast.success(
+        response.data?.isUpdate
+          ? "Document updated successfully"
+          : "Document uploaded successfully"
+      );
+    } catch (err) {
+      console.error("RM document upload error:", err);
+      toast.error(err.response?.data?.message || "Failed to upload document");
+    } finally {
+      setUploadingDocType(null);
     }
   };
 
@@ -2033,6 +2121,14 @@ const CustomerApplication = () => {
                   </div>
                 )}
 
+                {canRmUploadDocs && (
+                  <div className="mb-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                    <p className="text-sm text-teal-800">
+                      You can upload missing documents or replace existing ones. Files you upload are marked as verified.
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                   <div className="bg-white rounded-lg border border-gray-200 p-3">
                     <p className="text-xs text-gray-500">Required</p>
@@ -2071,23 +2167,53 @@ const CustomerApplication = () => {
                         : isUploaded
                         ? "text-blue-700 bg-blue-100"
                         : "text-amber-700 bg-amber-100";
+                      const uploadKey = matchedDoc?.docType || rule?.key;
+                      const isUploadingThis =
+                        uploadingDocType &&
+                        String(uploadingDocType).toUpperCase() === String(uploadKey || "").toUpperCase();
 
                       return (
                         <div
                           key={`${rule?.key || "rule"}-${idx}`}
-                          className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2"
+                          className="flex items-center justify-between gap-2 border border-gray-200 rounded-lg px-3 py-2"
                         >
                           <span className="text-sm font-medium text-gray-800">
                             {toDocLabel(rule?.key)}
                           </span>
-                          <span className={`text-xs font-semibold px-2 py-1 rounded ${stateClass}`}>
-                            {stateText}
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`text-xs font-semibold px-2 py-1 rounded ${stateClass}`}>
+                              {stateText}
+                            </span>
+                            {canRmUploadDocs && (
+                              <button
+                                type="button"
+                                onClick={() => openDocUploadPicker(uploadKey)}
+                                disabled={Boolean(uploadingDocType)}
+                                title={isUploaded ? "Replace document" : "Upload document"}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 disabled:opacity-50"
+                              >
+                                {isUploadingThis ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Upload className="w-3.5 h-3.5" />
+                                )}
+                                {isUploaded ? "Replace" : "Upload"}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
                 </div>
+
+                <input
+                  ref={docFileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                  className="hidden"
+                  onChange={handleRmDocFileSelected}
+                />
 
                 <div className="grid gap-3 grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 transition-all duration-300">
                   {(() => {
@@ -2189,7 +2315,7 @@ const CustomerApplication = () => {
                           {doc.url ? doc.url.split(/[\\\/]/).pop() : "No file"}
                         </p>
 
-                        {/* Action buttons (Download + View + Manage) */}
+                        {/* Action buttons (Download + View + Upload/Replace + Manage) */}
                         <div className="flex flex-col gap-2 mt-auto">
                           <div className="flex gap-2">
                             <button
@@ -2217,6 +2343,24 @@ const CustomerApplication = () => {
                                 <Eye className="w-4 h-4" />
                               )}
                             </button>
+
+                            {canRmUploadDocs && (
+                              <button
+                                type="button"
+                                onClick={() => openDocUploadPicker(doc.docType)}
+                                disabled={Boolean(uploadingDocType)}
+                                title="Upload / Replace"
+                                className="flex-1 flex items-center justify-center py-2 text-teal-700 border border-teal-200 rounded-lg hover:bg-teal-50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {uploadingDocType &&
+                                String(uploadingDocType).toUpperCase() ===
+                                  String(doc.docType || "").toUpperCase() ? (
+                                  <Loader2 className="animate-spin w-4 h-4" />
+                                ) : (
+                                  <Upload className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
                           </div>
                           
                           {doc.status === "VERIFIED" ? (

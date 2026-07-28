@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { INDIAN_STATES } from "../../../utils/indianStates";
 
 // NOTE: ASM can NO LONGER create RM directly.
 // ASM should create RSM, and RSM will create RM.
@@ -341,20 +342,25 @@ const handleSubmit = async (e) => {
                   )}
                 </div>
 
-                {/* Region */}
+                {/* State */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Region *
+                    State *
                   </label>
                   <div className="relative">
-                    <input
-                      type="text"
+                    <select
                       name="region"
                       value={formData.region || ""}
                       onChange={handleInputChange}
                       className={`${inputClassName("region")} pl-3`}
-                      placeholder="Enter region"
-                    />
+                    >
+                      <option value="">Select state</option>
+                      {INDIAN_STATES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   {errors.region && (
                     <p className="mt-1 text-sm text-red-600 flex items-center">

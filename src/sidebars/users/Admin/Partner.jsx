@@ -20,6 +20,7 @@ import ActivationConfirmModal from "../../../components/shared/ActivationConfirm
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import toast from "react-hot-toast";
+import { INDIAN_STATE_FILTER_OPTIONS } from "../../../utils/indianStates";
 
 
 const colors = {
@@ -183,14 +184,7 @@ export default function PartnerTable() {
     }, 100);
   };
 
-  const stateOptions = useMemo(() => {
-    const set = new Set();
-    (data || []).forEach((p) => {
-      const region = String(p.region || "").trim();
-      if (region) set.add(region);
-    });
-    return ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [data]);
+  const stateOptions = INDIAN_STATE_FILTER_OPTIONS;
 
   const filteredPartners = useMemo(() => {
     if (!data || data.length === 0) return [];

@@ -8,6 +8,7 @@ import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
 import toast from "react-hot-toast";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
+import { INDIAN_STATE_FILTER_OPTIONS } from "../../../utils/indianStates";
 
 export default function RsmPartners() {
   const dispatch = useDispatch();
@@ -22,14 +23,7 @@ export default function RsmPartners() {
     dispatch(fetchRsmPartners());
   }, [dispatch]);
 
-  const stateOptions = useMemo(() => {
-    const set = new Set();
-    (data || []).forEach((p) => {
-      const region = String(p.region || "").trim();
-      if (region) set.add(region);
-    });
-    return ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [data]);
+  const stateOptions = INDIAN_STATE_FILTER_OPTIONS;
 
   const filteredPartners = useMemo(() => {
     const term = searchQuery.trim().toLowerCase();

@@ -22,6 +22,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getAuthData } from "../../../../utils/localStorage";
 import { createRm, fetchRSMs } from "../../../../feature/thunks/adminThunks";
 import { resetCreateRmState } from "../../../../feature/slices/adminSlice";
+import { INDIAN_STATES } from "../../../../utils/indianStates";
 
 const AddRMPage = () => {
   const navigate = useNavigate();
@@ -169,7 +170,7 @@ const AddRMPage = () => {
       newErrors.dob = "Date of birth is required";
     }
     if (!formData.region.trim()) {
-      newErrors.region = "Region is required";
+      newErrors.region = "State is required";
     }
 
     if (!formData.password.trim()) {
@@ -524,17 +525,22 @@ const handleSubmit = async (e) => {
                 {/* Region */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Region *
+                    State *
                   </label>
                   <div className="relative">
-                    <input
-                      type="text"
+                    <select
                       name="region"
                       value={formData.region || ""}
                       onChange={handleInputChange}
                       className={`${inputClassName("region")} pl-3`}
-                      placeholder="Enter region"
-                    />
+                    >
+                      <option value="">Select state</option>
+                      {INDIAN_STATES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   {errors.region && (
                     <p className="mt-1 text-sm text-red-600 flex items-center">
