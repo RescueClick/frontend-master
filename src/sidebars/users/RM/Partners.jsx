@@ -344,6 +344,36 @@ const Partners = () => {
       render: (_, partner) => <EntityStatusBadge status={partner.status} />,
     },
     {
+      title: "Forms filled",
+      key: "formsFilled",
+      render: (_, partner) => (
+        <span className="text-sm font-semibold text-teal-700">
+          {partner.formsFilled ?? partner.applicationCount ?? 0}
+        </span>
+      ),
+    },
+    {
+      title: "More info required",
+      key: "moreInfo",
+      render: (_, partner) =>
+        partner.moreInfoRequired ? (
+          <div className="max-w-[200px]">
+            <span className="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-900">
+              {partner.appsNeedingMoreInfoCount || 0} app
+              {(partner.appsNeedingMoreInfoCount || 0) !== 1 ? "s" : ""} ·{" "}
+              {partner.pendingDocsCount || 0} docs
+            </span>
+            <p className="mt-1 truncate text-[11px] text-orange-700" title={(partner.remainingDocTypes || []).join(", ")}>
+              {(partner.remainingDocTypes || []).slice(0, 3).join(", ") ||
+                "Docs pending"}
+              {(partner.remainingDocTypes || []).length > 3 ? "…" : ""}
+            </p>
+          </div>
+        ) : (
+          <span className="text-xs font-semibold text-emerald-700">Complete</span>
+        ),
+    },
+    {
       title: "Deals",
       key: "deals",
       render: (_, partner) => (

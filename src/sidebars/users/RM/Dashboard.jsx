@@ -76,11 +76,18 @@ const Dashboard = () => {
         subtitle: "Partners under you",
       },
       {
-        title: "Total Customers",
-        value: data?.totals?.totalCustomers ?? 0,
-        icon: UserCheck,
-        onClick: () => navigate("/rm/customers"),
-        subtitle: "Customer base",
+        title: "Forms filled",
+        value: data?.totals?.formsFilledTotal ?? 0,
+        icon: FileText,
+        onClick: () => navigate("/rm/partners"),
+        subtitle: "Total loan forms",
+      },
+      {
+        title: "More info needed",
+        value: data?.totals?.partnersNeedingMoreInfo ?? 0,
+        icon: AlertTriangle,
+        onClick: () => navigate("/rm/Follow-up"),
+        subtitle: "Partners with pending docs",
       },
       {
         title: "Active Pipeline",
@@ -342,6 +349,32 @@ const Dashboard = () => {
       render: (_, p) => <EntityStatusBadge status={p.status} />,
     },
     {
+      title: "Forms filled",
+      key: "forms",
+      render: (_, p) => (
+        <span className="font-semibold text-teal-700">
+          {p.formsFilled ?? p.applicationCount ?? 0}
+        </span>
+      ),
+    },
+    {
+      title: "Pending docs",
+      key: "pending",
+      render: (_, p) =>
+        p.moreInfoRequired ? (
+          <div className="max-w-[180px]">
+            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-900">
+              {p.appsNeedingMoreInfoCount || 0} apps · {p.pendingDocsCount || 0} docs
+            </span>
+            <p className="mt-1 truncate text-[11px] text-orange-700" title={(p.remainingDocTypes || []).join(", ")}>
+              {(p.remainingDocTypes || []).slice(0, 2).join(", ") || "Incomplete"}
+            </p>
+          </div>
+        ) : (
+          <span className="text-xs font-semibold text-emerald-700">OK</span>
+        ),
+    },
+    {
       title: "Deals (month)",
       dataIndex: "dealsThisMonth",
       key: "deals",
@@ -469,7 +502,7 @@ const Dashboard = () => {
                   Partner snapshot
                 </h3>
                 <p className="text-sm text-gray-500">
-                  Disbursement and completed payout by partner (top {data.partnerPayoutSummary.length})
+                  Disbursement, forms filled, and pending docs by partner (top {data.partnerPayoutSummary.length})
                   {partnerSnapshotQuery.trim()
                     ? ` — showing ${filteredPartnerSnapshot.length} match${filteredPartnerSnapshot.length !== 1 ? "es" : ""}`
                     : null}

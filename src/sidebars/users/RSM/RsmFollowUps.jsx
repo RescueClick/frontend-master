@@ -46,8 +46,8 @@ const RsmFollowUps = () => {
     (state) => state.rsm.rmFollowUps || {}
   );
 
-  const [year, setYear] = useState(String(currentYear));
-  const [month, setMonth] = useState(String(new Date().getMonth() + 1));
+  const [year, setYear] = useState("");
+  const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [performance, setPerformance] = useState("");
@@ -206,7 +206,7 @@ const RsmFollowUps = () => {
             </div>
           </div>
           <div className="flex gap-2 mt-4">
-            <button type="button" className="px-3 py-2 text-sm rounded-lg border" onClick={() => { setYear(String(currentYear)); setMonth(String(new Date().getMonth() + 1)); setDate(""); setStatusFilter(""); setPerformance(""); setSearchTerm(""); }}>Reset</button>
+            <button type="button" className="px-3 py-2 text-sm rounded-lg border" onClick={() => { setYear(""); setMonth(""); setDate(""); setStatusFilter(""); setPerformance(""); setSearchTerm(""); }}>Reset</button>
             <button type="button" className="px-3 py-2 text-sm rounded-lg border inline-flex items-center gap-2" onClick={exportCsv}><Download className="w-4 h-4" /> Export</button>
           </div>
         </div>
@@ -220,7 +220,7 @@ const RsmFollowUps = () => {
                   <th className="px-3 py-3 text-left text-sm">ID</th>
                   <th className="px-3 py-3 text-left text-sm">Contact</th>
                   <th className="px-3 py-3 text-left text-sm">Partners filled / not</th>
-                  <th className="px-3 py-3 text-left text-sm">Apps</th>
+                  <th className="px-3 py-3 text-left text-sm">Total loans</th>
                   <th className="px-3 py-3 text-left text-sm">Performance</th>
                   <th className="px-3 py-3 text-left text-sm">Call status</th>
                   <th className="px-3 py-3 text-left text-sm">Last call</th>

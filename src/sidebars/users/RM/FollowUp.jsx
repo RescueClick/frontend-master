@@ -11,8 +11,6 @@ import {
   Users,
   FileCheck2,
   FileX2,
-  TrendingUp,
-  TrendingDown,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -58,8 +56,8 @@ const FollowUp = () => {
     (state) => state.rm.partnersWithFollowUp
   );
 
-  const [year, setYear] = useState(String(currentYear));
-  const [month, setMonth] = useState(String(new Date().getMonth() + 1));
+  const [year, setYear] = useState("");
+  const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [performance, setPerformance] = useState(""); // "" | working | non_working | filled | not_filled
@@ -106,8 +104,14 @@ const FollowUp = () => {
     applicationCount: item.applicationCount || 0,
     hasFilledForm: Boolean(item.hasFilledForm),
     performance: item.performance || "non_working",
+    moreInfoRequired: Boolean(item.moreInfoRequired),
+    appsNeedingMoreInfoCount: item.appsNeedingMoreInfoCount || 0,
+    pendingDocsCount: item.pendingDocsCount || 0,
+    remainingDocTypes: item.remainingDocTypes || [],
+    appsNeedingMoreInfo: item.appsNeedingMoreInfo || [],
   }));
 
+  const [expandedId, setExpandedId] = useState(null);
   const formatDate = (isoDate) => {
     if (!isoDate) return "";
     const d = new Date(isoDate);
@@ -194,6 +198,14 @@ const FollowUp = () => {
     dateKeys: ["lastCall"],
   });
 
+  const totalLoans =
+    summary?.totalLoans ??
+    followUps.reduce((s, f) => s + (Number(f.applicationCount) || 0), 0);
+  const partnersFilled =
+    summary?.filledPartners ??
+    summary?.filled ??
+    followUps.filter((f) => f.hasFilledForm).length;
+
   const cards = [
     {
       label: "Partners",
@@ -202,8 +214,9 @@ const FollowUp = () => {
       tone: "bg-slate-50 text-slate-800 border-slate-200",
     },
     {
+      // Same scope as Manage Loans — total applications, not partners
       label: "Filled loan form",
-      value: summary?.filled ?? followUps.filter((f) => f.hasFilledForm).length,
+      value: totalLoans,
       icon: FileCheck2,
       tone: "bg-emerald-50 text-emerald-800 border-emerald-200",
       onClick: () => setPerformance(performance === "filled" ? "" : "filled"),
@@ -221,25 +234,20 @@ const FollowUp = () => {
       active: performance === "not_filled" || performance === "non_working",
     },
     {
-      label: "Working",
-      value:
-        summary?.working ??
-        followUps.filter((f) => f.performance === "working").length,
-      icon: TrendingUp,
+      label: "Working partners",
+      value: partnersFilled,
+      icon: FileCheck2,
       tone: "bg-teal-50 text-teal-900 border-teal-200",
       onClick: () => setPerformance(performance === "working" ? "" : "working"),
       active: performance === "working",
     },
     {
-      label: "Non-working",
+      label: "More info needed",
       value:
-        summary?.nonWorking ??
-        followUps.filter((f) => f.performance === "non_working").length,
-      icon: TrendingDown,
-      tone: "bg-rose-50 text-rose-900 border-rose-200",
-      onClick: () =>
-        setPerformance(performance === "non_working" ? "" : "non_working"),
-      active: performance === "non_working",
+        summary?.moreInfoRequired ??
+        followUps.filter((f) => f.moreInfoRequired).length,
+      icon: FileX2,
+      tone: "bg-orange-50 text-orange-900 border-orange-200",
     },
   ];
 
@@ -396,11 +404,11 @@ const FollowUp = () => {
           </div>
 
           <div className="flex flex-wrap gap-2 mt-4">
-            <button
+              <button
               type="button"
               onClick={() => {
-                setYear(String(currentYear));
-                setMonth(String(new Date().getMonth() + 1));
+                setYear("");
+                setMonth("");
                 setDate("");
                 setStatusFilter("");
                 setPerformance("");
@@ -432,10 +440,10 @@ const FollowUp = () => {
                   <th className="px-3 py-3 text-left text-sm font-semibold">Partner</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold">ID</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold">Contact</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold">Forms</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold">Total loans</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold">Pending docs</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold">Performance</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold">Call status</th>
-                  <th className="px-3 py-3 text-left text-sm font-semibold">Remarks</th>
                   <th className="px-3 py-3 text-left text-sm font-semibold">Last call</th>
                   <th className="px-3 py-3 text-center text-sm font-semibold">Action</th>
                 </tr>
@@ -454,9 +462,10 @@ const FollowUp = () => {
                 {!loading &&
                   sortedFilteredFollowUps.map((followUp, index) => {
                     const statusStyle = getFollowUpStatusStyle(followUp.status);
+                    const isOpen = expandedId === followUp.partnerId;
                     return (
+                      <React.Fragment key={`${followUp.partnerId}-${index}`}>
                       <tr
-                        key={`${followUp.partnerId}-${index}`}
                         className={index % 2 === 0 ? "bg-white" : "bg-slate-50/60"}
                       >
                         <td className="px-3 py-3 text-sm font-semibold text-slate-800">
@@ -481,9 +490,36 @@ const FollowUp = () => {
                                 : "bg-amber-100 text-amber-900"
                             }`}
                           >
-                            {followUp.applicationCount}{" "}
-                            {followUp.hasFilledForm ? "filled" : "not filled"}
+                          {followUp.applicationCount}{" "}
+                          {followUp.hasFilledForm ? "loans" : "not filled"}
                           </span>
+                        </td>
+                        <td className="px-3 py-3 text-sm">
+                          {followUp.moreInfoRequired ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedId(isOpen ? null : followUp.partnerId)
+                              }
+                              className="text-left"
+                            >
+                              <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-900">
+                                {followUp.appsNeedingMoreInfoCount} app
+                                {followUp.appsNeedingMoreInfoCount !== 1 ? "s" : ""} ·{" "}
+                                {followUp.pendingDocsCount} docs
+                              </span>
+                              <p className="text-[11px] text-orange-700 mt-1 max-w-[220px] truncate">
+                                {(followUp.remainingDocTypes || []).slice(0, 3).join(", ")}
+                                {(followUp.remainingDocTypes || []).length > 3
+                                  ? "…"
+                                  : ""}
+                              </p>
+                            </button>
+                          ) : (
+                            <span className="text-xs font-semibold text-emerald-700">
+                              Complete
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-3 text-sm capitalize">
                           {followUp.performance === "working" ? (
@@ -498,12 +534,6 @@ const FollowUp = () => {
                           >
                             {followUp.status || "N/A"}
                           </span>
-                        </td>
-                        <td
-                          className="px-3 py-3 text-sm text-slate-600 max-w-[180px] truncate"
-                          title={followUp.remarks}
-                        >
-                          {followUp.remarks || "—"}
                         </td>
                         <td className="px-3 py-3 text-sm text-slate-600 whitespace-nowrap">
                           {followUp.lastCall || "—"}
@@ -520,6 +550,43 @@ const FollowUp = () => {
                           </button>
                         </td>
                       </tr>
+                      {isOpen && followUp.moreInfoRequired ? (
+                        <tr key={`${followUp.partnerId}-docs`} className="bg-orange-50/70">
+                          <td colSpan={9} className="px-4 py-3">
+                            <p className="text-xs font-bold text-orange-900 mb-2">
+                              Remaining docs partner must upload / complete
+                            </p>
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {(followUp.remainingDocTypes || []).map((d) => (
+                                <span
+                                  key={d}
+                                  className="px-2 py-1 rounded-md bg-white border border-orange-200 text-[11px] font-medium text-orange-900"
+                                >
+                                  {d}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="space-y-1.5">
+                              {(followUp.appsNeedingMoreInfo || []).map((app) => (
+                                <div
+                                  key={app.appId || app.appNo}
+                                  className="text-xs text-slate-700"
+                                >
+                                  <span className="font-semibold">{app.appNo || "App"}</span>
+                                  <span className="text-slate-400"> · </span>
+                                  <span>{app.status}</span>
+                                  <span className="text-slate-400"> · </span>
+                                  <span className="text-orange-800">
+                                    {(app.remainingDocTypes || []).join(", ") ||
+                                      "Docs incomplete"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                      </React.Fragment>
                     );
                   })}
               </tbody>
