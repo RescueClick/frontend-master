@@ -13,7 +13,6 @@ import { saveAs } from "file-saver";
 import axios from "axios";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
-import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
@@ -39,6 +38,7 @@ const Partners = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("All");
+  const [activityFilter, setActivityFilter] = useState("all"); // all | with_loans | more_info | no_loans
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState(null);
@@ -131,12 +131,50 @@ const Partners = () => {
       const selectedState = stateFilter === "All" ? "" : stateFilter.trim().toLowerCase();
       const partnerRegion = String(partner.region || "").trim().toLowerCase();
       const matchesState = !selectedState || partnerRegion === selectedState;
-      return matchesSearch && matchesFilter && matchesState;
+      const forms = Number(partner.formsFilled ?? partner.applicationCount ?? 0);
+      const matchesActivity =
+        activityFilter === "all" ||
+        (activityFilter === "with_loans" && forms > 0) ||
+        (activityFilter === "more_info" && partner.moreInfoRequired) ||
+        (activityFilter === "no_loans" && forms === 0);
+      return matchesSearch && matchesFilter && matchesState && matchesActivity;
     });
-  }, [data, searchTerm, selectedFilter, stateFilter]);
+  }, [data, searchTerm, selectedFilter, stateFilter, activityFilter]);
 
-  const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
+  // Partners with loans / pending docs first so RM sees main activity up top
+  const sortedFilteredPartners = useMemo(() => {
+    const list = [...filteredPartners];
+    list.sort((a, b) => {
+      const aForms = Number(a.formsFilled ?? a.applicationCount ?? 0);
+      const bForms = Number(b.formsFilled ?? b.applicationCount ?? 0);
+      if (bForms !== aForms) return bForms - aForms;
+      const aInfo = a.moreInfoRequired ? 1 : 0;
+      const bInfo = b.moreInfoRequired ? 1 : 0;
+      if (bInfo !== aInfo) return bInfo - aInfo;
+      const aDate = new Date(a.createdAt || 0).getTime();
+      const bDate = new Date(b.createdAt || 0).getTime();
+      return bDate - aDate;
+    });
+    return list;
+  }, [filteredPartners]);
 
+  const partnerSummary = useMemo(() => {
+    const rows = data || [];
+    const formsTotal = rows.reduce(
+      (s, p) => s + Number(p.formsFilled ?? p.applicationCount ?? 0),
+      0
+    );
+    const withLoans = rows.filter(
+      (p) => Number(p.formsFilled ?? p.applicationCount ?? 0) > 0
+    ).length;
+    const moreInfo = rows.filter((p) => p.moreInfoRequired).length;
+    return {
+      partners: rows.length,
+      formsTotal,
+      withLoans,
+      moreInfo,
+    };
+  }, [data]);
 
   const toggleActivation = (partner) => {
     if (partner.status === "ACTIVE") {
@@ -216,6 +254,10 @@ const Partners = () => {
       "State / Region": item.region || "",
       "Status": item.status,
       "Rating": item.rating,
+      "Forms Filled": item.formsFilled ?? item.applicationCount ?? 0,
+      "More Info Required": item.moreInfoRequired ? "Yes" : "No",
+      "Loans This Month": item.appsThisMonth ?? item.dealsThisMonth ?? 0,
+      "Disbursed Files": item.disbursedFilesLifetime ?? 0,
       "Deals This Month": item.dealsThisMonth,
       "Revenue Generated": item.totalDisbursed,
       "Success Rate": item.successRate,
@@ -369,16 +411,27 @@ const Partners = () => {
               {(partner.remainingDocTypes || []).length > 3 ? "…" : ""}
             </p>
           </div>
-        ) : (
+        ) : Number(partner.formsFilled ?? partner.applicationCount ?? 0) > 0 ? (
           <span className="text-xs font-semibold text-emerald-700">Complete</span>
+        ) : (
+          <span className="text-xs text-slate-400">No forms yet</span>
         ),
     },
     {
-      title: "Deals",
+      title: "Loans (this month)",
       key: "deals",
       render: (_, partner) => (
         <span className="text-sm font-medium text-blue-600">
-          {partner.dealsClosedThisMonth ?? partner.dealsThisMonth ?? 0}
+          {partner.appsThisMonth ?? partner.dealsThisMonth ?? 0}
+        </span>
+      ),
+    },
+    {
+      title: "Disbursed",
+      key: "disbursed",
+      render: (_, partner) => (
+        <span className="text-sm font-medium text-indigo-700">
+          {partner.disbursedFilesLifetime ?? partner.dealsClosedThisMonth ?? 0}
         </span>
       ),
     },
@@ -515,7 +568,7 @@ const Partners = () => {
       />
       <DashboardTablePage
         title="Partner Directory"
-        subtitle={`${sortedFilteredPartners.length} partner${sortedFilteredPartners.length !== 1 ? "s" : ""}`}
+        subtitle={`${sortedFilteredPartners.length} partner${sortedFilteredPartners.length !== 1 ? "s" : ""} · ${partnerSummary.formsTotal} loan form${partnerSummary.formsTotal !== 1 ? "s" : ""} total`}
         headerRight={
           <>
             <button
@@ -540,42 +593,95 @@ const Partners = () => {
           </>
         }
         toolbar={
-          <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-              <div className="relative flex-1 sm:max-w-xs">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 transform text-gray-400"
-                  size={16}
-                />
-                <input
-                  type="text"
-                  placeholder="Search partners..."
-                  className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Partners</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900">{partnerSummary.partners}</p>
               </div>
-              <select
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={stateFilter}
-                onChange={(e) => setStateFilter(e.target.value)}
-                aria-label="Filter by state"
+              <button
+                type="button"
+                onClick={() =>
+                  setActivityFilter(activityFilter === "with_loans" ? "all" : "with_loans")
+                }
+                className={`rounded-xl border p-3 text-left ${
+                  activityFilter === "with_loans"
+                    ? "border-teal-500 bg-teal-50 ring-2 ring-teal-400"
+                    : "border-slate-200 bg-white"
+                }`}
               >
-                {stateOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt === "All" ? "All states" : opt}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={selectedFilter}
-                onChange={(e) => setSelectedFilter(e.target.value)}
+                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Forms filled</p>
+                <p className="mt-1 text-2xl font-bold text-teal-900">{partnerSummary.formsTotal}</p>
+                <p className="text-[11px] text-teal-700">{partnerSummary.withLoans} partners with loans</p>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setActivityFilter(activityFilter === "more_info" ? "all" : "more_info")
+                }
+                className={`rounded-xl border p-3 text-left ${
+                  activityFilter === "more_info"
+                    ? "border-orange-500 bg-orange-50 ring-2 ring-orange-400"
+                    : "border-slate-200 bg-white"
+                }`}
               >
-                <option value="all">All status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="SUSPENDED">Suspended</option>
-              </select>
+                <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">More info needed</p>
+                <p className="mt-1 text-2xl font-bold text-orange-900">{partnerSummary.moreInfo}</p>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setActivityFilter(activityFilter === "no_loans" ? "all" : "no_loans")
+                }
+                className={`rounded-xl border p-3 text-left ${
+                  activityFilter === "no_loans"
+                    ? "border-amber-500 bg-amber-50 ring-2 ring-amber-400"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">No forms yet</p>
+                <p className="mt-1 text-2xl font-bold text-amber-900">
+                  {Math.max(partnerSummary.partners - partnerSummary.withLoans, 0)}
+                </p>
+              </button>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <div className="relative flex-1 sm:max-w-xs">
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 transform text-gray-400"
+                    size={16}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search partners..."
+                    className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={stateFilter}
+                  onChange={(e) => setStateFilter(e.target.value)}
+                  aria-label="Filter by state"
+                >
+                  {stateOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt === "All" ? "All states" : opt}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={selectedFilter}
+                  onChange={(e) => setSelectedFilter(e.target.value)}
+                >
+                  <option value="all">All status</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="SUSPENDED">Suspended</option>
+                </select>
+              </div>
             </div>
           </div>
         }
