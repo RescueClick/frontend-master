@@ -354,6 +354,7 @@ const CompleteApplication = () => {
 
   const requiredDocsCount = effectiveRules.length;
   const uploadedSteps = effectiveRules.filter((rule) => hasRuleUpload(rule, allDocs)).length;
+  const completedSteps = completedMandatory;
   const pendingRequiredDocsCount = Math.max(requiredDocsCount - completedMandatory, 0);
 
   // Calculate pending docs count (including missing required + rejected optional)
