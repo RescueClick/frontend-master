@@ -132,10 +132,13 @@ const Partners = () => {
     });
   }, [data, searchTerm, selectedFilter, stateFilter, activityFilter]);
 
-  // Partners with loans / pending docs first so RM sees main activity up top
+  // Partners with strongest loan book first so RM can judge performance
   const sortedFilteredPartners = useMemo(() => {
     const list = [...filteredPartners];
     list.sort((a, b) => {
+      const aFiled = Number(a.filedAmount || 0);
+      const bFiled = Number(b.filedAmount || 0);
+      if (bFiled !== aFiled) return bFiled - aFiled;
       const aForms = Number(a.formsFilled ?? a.applicationCount ?? 0);
       const bForms = Number(b.formsFilled ?? b.applicationCount ?? 0);
       if (bForms !== aForms) return bForms - aForms;
@@ -159,11 +162,23 @@ const Partners = () => {
       (p) => Number(p.formsFilled ?? p.applicationCount ?? 0) > 0
     ).length;
     const moreInfo = rows.filter((p) => p.moreInfoRequired).length;
+    const filedAmount = rows.reduce((s, p) => s + Number(p.filedAmount || 0), 0);
+    const approvedAmount = rows.reduce(
+      (s, p) => s + Number(p.approvedAmount || 0),
+      0
+    );
+    const disbursedAmount = rows.reduce(
+      (s, p) => s + Number(p.disbursedAmount ?? p.totalDisbursed ?? 0),
+      0
+    );
     return {
       partners: rows.length,
       formsTotal,
       withLoans,
       moreInfo,
+      filedAmount,
+      approvedAmount,
+      disbursedAmount,
     };
   }, [data]);
 
@@ -246,9 +261,13 @@ const Partners = () => {
       "Status": item.status,
       "Rating": item.rating,
       "Forms Filled": item.formsFilled ?? item.applicationCount ?? 0,
+      "Filed Amount": item.filedAmount ?? 0,
+      "Approved Count": item.approvedCount ?? 0,
+      "Approved Amount": item.approvedAmount ?? 0,
+      "Disbursed Count": item.disbursedCount ?? item.disbursedFilesLifetime ?? 0,
+      "Disbursed Amount": item.disbursedAmount ?? item.totalDisbursed ?? 0,
       "More Info Required": item.moreInfoRequired ? "Yes" : "No",
       "Loans This Month": item.appsThisMonth ?? item.dealsThisMonth ?? 0,
-      "Disbursed Files": item.disbursedFilesLifetime ?? 0,
       "Deals This Month": item.dealsThisMonth,
       "Revenue Generated": item.totalDisbursed,
       "Success Rate": item.successRate,
@@ -335,7 +354,7 @@ const Partners = () => {
     {
       title: "Partner",
       key: "partner",
-      width: "32%",
+      width: "34%",
       ellipsis: true,
       render: (_, partner) => {
         const region = String(partner.region || "").trim();
@@ -379,17 +398,49 @@ const Partners = () => {
       },
     },
     {
-      title: "Forms",
-      key: "forms",
-      width: "10%",
-      align: "center",
+      title: "Loan book",
+      key: "loanBook",
+      width: "28%",
       render: (_, partner) => {
         const forms = Number(partner.formsFilled ?? partner.applicationCount ?? 0);
-        const month = Number(partner.appsThisMonth ?? partner.dealsThisMonth ?? 0);
+        const filed = Number(partner.filedAmount || 0);
+        const approvedAmt = Number(partner.approvedAmount || 0);
+        const approvedCnt = Number(partner.approvedCount || 0);
+        const disbursedAmt = Number(
+          partner.disbursedAmount ?? partner.totalDisbursed ?? 0
+        );
+        const disbursedCnt = Number(
+          partner.disbursedCount ?? partner.disbursedFilesLifetime ?? 0
+        );
         return (
-          <div className="text-center">
-            <p className="text-base font-bold text-teal-700">{forms}</p>
-            <p className="text-[10px] text-slate-500">mo {month}</p>
+          <div className="min-w-0 space-y-1 text-[11px] leading-snug">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-slate-500">Filed</span>
+              <span className="text-right font-semibold text-slate-900">
+                {formatCurrency(filed)}
+                <span className="ml-1 font-normal text-slate-400">
+                  · {forms}
+                </span>
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-slate-500">Approved</span>
+              <span className="text-right font-semibold text-blue-700">
+                {formatCurrency(approvedAmt)}
+                <span className="ml-1 font-normal text-slate-400">
+                  · {approvedCnt}
+                </span>
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-slate-500">Disbursed</span>
+              <span className="text-right font-semibold text-emerald-700">
+                {formatCurrency(disbursedAmt)}
+                <span className="ml-1 font-normal text-slate-400">
+                  · {disbursedCnt}
+                </span>
+              </span>
+            </div>
           </div>
         );
       },
@@ -397,7 +448,7 @@ const Partners = () => {
     {
       title: "Docs",
       key: "docs",
-      width: "18%",
+      width: "16%",
       render: (_, partner) => {
         const forms = Number(partner.formsFilled ?? partner.applicationCount ?? 0);
         if (partner.moreInfoRequired) {
@@ -427,36 +478,9 @@ const Partners = () => {
       },
     },
     {
-      title: "Earnings",
-      key: "earnings",
-      width: "16%",
-      render: (_, partner) => (
-        <div className="space-y-0.5 text-[11px] leading-tight">
-          <p className="text-slate-600">
-            Rev{" "}
-            <span className="font-semibold text-emerald-700">
-              {formatCurrency(partner.totalDisbursed || 0)}
-            </span>
-          </p>
-          <p className="text-slate-600">
-            Pay{" "}
-            <span className="font-semibold text-purple-700">
-              {formatCurrency(partner.totalPayout ?? partner.payoutDone ?? 0)}
-            </span>
-          </p>
-          <p className="text-slate-600">
-            Inc{" "}
-            <span className="font-semibold text-teal-700">
-              {formatCurrency(partner.incentivePaid ?? 0)}
-            </span>
-          </p>
-        </div>
-      ),
-    },
-    {
       title: "Actions",
       key: "actions",
-      width: "24%",
+      width: "22%",
       render: (_, partner) => (
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -560,10 +584,13 @@ const Partners = () => {
         }
         toolbar={
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <div className="rounded-xl border border-slate-200 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Partners</p>
                 <p className="mt-1 text-2xl font-bold text-slate-900">{partnerSummary.partners}</p>
+                <p className="text-[11px] text-slate-500">
+                  {partnerSummary.withLoans} with loans · {partnerSummary.moreInfo} need docs
+                </p>
               </div>
               <button
                 type="button"
@@ -576,40 +603,29 @@ const Partners = () => {
                     : "border-slate-200 bg-white"
                 }`}
               >
-                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Forms filled</p>
-                <p className="mt-1 text-2xl font-bold text-teal-900">{partnerSummary.formsTotal}</p>
-                <p className="text-[11px] text-teal-700">{partnerSummary.withLoans} partners with loans</p>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setActivityFilter(activityFilter === "more_info" ? "all" : "more_info")
-                }
-                className={`rounded-xl border p-3 text-left ${
-                  activityFilter === "more_info"
-                    ? "border-orange-500 bg-orange-50 ring-2 ring-orange-400"
-                    : "border-slate-200 bg-white"
-                }`}
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">More info needed</p>
-                <p className="mt-1 text-2xl font-bold text-orange-900">{partnerSummary.moreInfo}</p>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setActivityFilter(activityFilter === "no_loans" ? "all" : "no_loans")
-                }
-                className={`rounded-xl border p-3 text-left ${
-                  activityFilter === "no_loans"
-                    ? "border-amber-500 bg-amber-50 ring-2 ring-amber-400"
-                    : "border-slate-200 bg-white"
-                }`}
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">No forms yet</p>
-                <p className="mt-1 text-2xl font-bold text-amber-900">
-                  {Math.max(partnerSummary.partners - partnerSummary.withLoans, 0)}
+                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Filed amount</p>
+                <p className="mt-1 text-xl font-bold text-teal-900">
+                  {formatCurrency(partnerSummary.filedAmount)}
+                </p>
+                <p className="text-[11px] text-teal-700">
+                  {partnerSummary.formsTotal} forms filed
                 </p>
               </button>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Approved</p>
+                <p className="mt-1 text-xl font-bold text-blue-900">
+                  {formatCurrency(partnerSummary.approvedAmount)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Disbursed</p>
+                <p className="mt-1 text-xl font-bold text-emerald-900">
+                  {formatCurrency(partnerSummary.disbursedAmount)}
+                </p>
+                <p className="text-[11px] text-orange-700">
+                  {partnerSummary.moreInfo} need more docs
+                </p>
+              </div>
             </div>
             <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
