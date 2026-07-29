@@ -90,18 +90,24 @@ const Partners = () => {
 
 
   const formatCurrency = (amount) => {
-    if (amount >= 10000000) {
-      // 1 Crore = 1,00,00,000
-      return `₹${(amount / 10000000).toFixed(2)}C`;
-    } else if (amount >= 100000) {
-      // 1 Lakh = 1,00,000
-      return `₹${(amount / 100000).toFixed(2)}L`;
-    } else if (amount >= 1000) {
-      // 1 Thousand = 1,000
-      return `₹${(amount / 1000).toFixed(2)}K`;
-    } else {
-      return `₹${amount}`;
+    const n = Number(amount);
+    if (!Number.isFinite(n) || n <= 0) return "₹0";
+    if (n >= 10000000) {
+      return `₹${(n / 10000000).toFixed(2)}Cr`;
     }
+    if (n >= 100000) {
+      return `₹${(n / 100000).toFixed(2)}L`;
+    }
+    if (n >= 1000) {
+      return `₹${(n / 1000).toFixed(1)}K`;
+    }
+    return `₹${n.toLocaleString("en-IN")}`;
+  };
+
+  const formatCurrencyFull = (amount) => {
+    const n = Number(amount);
+    if (!Number.isFinite(n) || n <= 0) return "₹0";
+    return `₹${n.toLocaleString("en-IN")}`;
   };
 
   const stateOptions = INDIAN_STATE_FILTER_OPTIONS;
@@ -354,7 +360,7 @@ const Partners = () => {
     {
       title: "Partner",
       key: "partner",
-      width: "34%",
+      width: "26%",
       ellipsis: true,
       render: (_, partner) => {
         const region = String(partner.region || "").trim();
@@ -398,12 +404,29 @@ const Partners = () => {
       },
     },
     {
-      title: "Loan book",
-      key: "loanBook",
-      width: "28%",
+      title: "Submitted loan",
+      key: "submittedLoan",
+      width: "18%",
       render: (_, partner) => {
         const forms = Number(partner.formsFilled ?? partner.applicationCount ?? 0);
         const filed = Number(partner.filedAmount || 0);
+        return (
+          <div className="min-w-0" title={formatCurrencyFull(filed)}>
+            <p className="text-sm font-bold text-teal-800">
+              {formatCurrency(filed)}
+            </p>
+            <p className="text-[10px] text-slate-500">
+              {forms} form{forms !== 1 ? "s" : ""} · required amount
+            </p>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Approved / Disbursed",
+      key: "loanBook",
+      width: "22%",
+      render: (_, partner) => {
         const approvedAmt = Number(partner.approvedAmount || 0);
         const approvedCnt = Number(partner.approvedCount || 0);
         const disbursedAmt = Number(
@@ -415,17 +438,11 @@ const Partners = () => {
         return (
           <div className="min-w-0 space-y-1 text-[11px] leading-snug">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-slate-500">Filed</span>
-              <span className="text-right font-semibold text-slate-900">
-                {formatCurrency(filed)}
-                <span className="ml-1 font-normal text-slate-400">
-                  · {forms}
-                </span>
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between gap-2">
               <span className="text-slate-500">Approved</span>
-              <span className="text-right font-semibold text-blue-700">
+              <span
+                className="text-right font-semibold text-blue-700"
+                title={formatCurrencyFull(approvedAmt)}
+              >
                 {formatCurrency(approvedAmt)}
                 <span className="ml-1 font-normal text-slate-400">
                   · {approvedCnt}
@@ -434,7 +451,10 @@ const Partners = () => {
             </div>
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-slate-500">Disbursed</span>
-              <span className="text-right font-semibold text-emerald-700">
+              <span
+                className="text-right font-semibold text-emerald-700"
+                title={formatCurrencyFull(disbursedAmt)}
+              >
                 {formatCurrency(disbursedAmt)}
                 <span className="ml-1 font-normal text-slate-400">
                   · {disbursedCnt}
@@ -448,7 +468,7 @@ const Partners = () => {
     {
       title: "Docs",
       key: "docs",
-      width: "16%",
+      width: "14%",
       render: (_, partner) => {
         const forms = Number(partner.formsFilled ?? partner.applicationCount ?? 0);
         if (partner.moreInfoRequired) {
@@ -480,7 +500,7 @@ const Partners = () => {
     {
       title: "Actions",
       key: "actions",
-      width: "22%",
+      width: "20%",
       render: (_, partner) => (
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -603,12 +623,17 @@ const Partners = () => {
                     : "border-slate-200 bg-white"
                 }`}
               >
-                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Filed amount</p>
-                <p className="mt-1 text-xl font-bold text-teal-900">
+                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+                  Submitted loan
+                </p>
+                <p
+                  className="mt-1 text-xl font-bold text-teal-900"
+                  title={formatCurrencyFull(partnerSummary.filedAmount)}
+                >
                   {formatCurrency(partnerSummary.filedAmount)}
                 </p>
                 <p className="text-[11px] text-teal-700">
-                  {partnerSummary.formsTotal} forms filed
+                  {partnerSummary.formsTotal} forms · required amount total
                 </p>
               </button>
               <div className="rounded-xl border border-slate-200 bg-white p-3">
