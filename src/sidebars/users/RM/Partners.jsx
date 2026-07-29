@@ -20,15 +20,6 @@ import ReassignmentDeactivateModal from "../../../components/shared/Reassignment
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 import { INDIAN_STATE_FILTER_OPTIONS } from "../../../utils/indianStates";
 
-
-const colors = {
-  primary: "var(--color-brand-primary)",
-  secondary: "#1E3A8A",
-  background: "#F8FAFC",
-  accent: "#F59E0B",
-  text: "#111827",
-};
-
 const Partners = () => {
 
 
@@ -342,191 +333,166 @@ const Partners = () => {
 
   const partnerColumns = [
     {
-      title: "Partner name",
-      key: "name",
-      render: (_, partner) => (
-        <div className="flex items-center gap-2 align-top">
-          {partner?.profilePic ? (
-            <img
-              src={partner.profilePic}
-              alt={partner.name || "Partner"}
-              className="h-8 w-8 rounded-full object-cover"
-              onError={(e) => {
-                e.target.style.display = "none";
-              }}
-            />
-          ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200">
-              <User className="h-4 w-4 text-gray-500" />
+      title: "Partner",
+      key: "partner",
+      width: "32%",
+      ellipsis: true,
+      render: (_, partner) => {
+        const region = String(partner.region || "").trim();
+        const shortRegion =
+          region.length > 28 ? `${region.slice(0, 28)}…` : region;
+        return (
+          <div className="flex min-w-0 items-start gap-2.5">
+            {partner?.profilePic ? (
+              <img
+                src={partner.profilePic}
+                alt=""
+                className="mt-0.5 h-9 w-9 shrink-0 rounded-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100">
+                <User className="h-4 w-4 text-slate-500" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="truncate text-sm font-semibold text-slate-900">
+                  {partner.name}
+                </span>
+                <EntityStatusBadge status={partner.status} />
+              </div>
+              <p className="mt-0.5 truncate text-xs text-slate-500">
+                {partner.phone || "—"}
+                {shortRegion ? ` · ${shortRegion}` : ""}
+              </p>
+              {partner.employeeId ? (
+                <p className="truncate text-[11px] text-slate-400">
+                  {partner.employeeId}
+                </p>
+              ) : null}
             </div>
-          )}
-          <div>
-            <span className="text-sm font-semibold">{partner.name}</span>
-            <p className="text-xs text-gray-500">{partner.type || "Partner"}</p>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
-      title: "Contact",
-      dataIndex: "phone",
-      key: "contact",
-      render: (phone) => <span className="text-sm">{phone || "—"}</span>,
+      title: "Forms",
+      key: "forms",
+      width: "10%",
+      align: "center",
+      render: (_, partner) => {
+        const forms = Number(partner.formsFilled ?? partner.applicationCount ?? 0);
+        const month = Number(partner.appsThisMonth ?? partner.dealsThisMonth ?? 0);
+        return (
+          <div className="text-center">
+            <p className="text-base font-bold text-teal-700">{forms}</p>
+            <p className="text-[10px] text-slate-500">mo {month}</p>
+          </div>
+        );
+      },
     },
     {
-      title: "State / Region",
-      key: "region",
-      render: (_, partner) => (
-        <span className="text-sm">{partner.region || "—"}</span>
-      ),
-    },
-    {
-      title: "Status",
-      key: "status",
-      render: (_, partner) => <EntityStatusBadge status={partner.status} />,
-    },
-    {
-      title: "Forms filled",
-      key: "formsFilled",
-      render: (_, partner) => (
-        <span className="text-sm font-semibold text-teal-700">
-          {partner.formsFilled ?? partner.applicationCount ?? 0}
-        </span>
-      ),
-    },
-    {
-      title: "More info required",
-      key: "moreInfo",
-      render: (_, partner) =>
-        partner.moreInfoRequired ? (
-          <div className="max-w-[200px]">
-            <span className="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-900">
-              {partner.appsNeedingMoreInfoCount || 0} app
-              {(partner.appsNeedingMoreInfoCount || 0) !== 1 ? "s" : ""} ·{" "}
-              {partner.pendingDocsCount || 0} docs
+      title: "Docs",
+      key: "docs",
+      width: "18%",
+      render: (_, partner) => {
+        const forms = Number(partner.formsFilled ?? partner.applicationCount ?? 0);
+        if (partner.moreInfoRequired) {
+          const docs = (partner.remainingDocTypes || []).join(", ");
+          return (
+            <div className="min-w-0" title={docs || "Documents pending"}>
+              <span className="inline-flex rounded-md bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-900">
+                {partner.appsNeedingMoreInfoCount || 0} app ·{" "}
+                {partner.pendingDocsCount || 0} docs
+              </span>
+              <p className="mt-1 truncate text-[10px] text-orange-700">
+                {(partner.remainingDocTypes || []).slice(0, 2).join(", ") ||
+                  "Pending"}
+                {(partner.remainingDocTypes || []).length > 2 ? "…" : ""}
+              </p>
+            </div>
+          );
+        }
+        if (forms > 0) {
+          return (
+            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+              Complete
             </span>
-            <p className="mt-1 truncate text-[11px] text-orange-700" title={(partner.remainingDocTypes || []).join(", ")}>
-              {(partner.remainingDocTypes || []).slice(0, 3).join(", ") ||
-                "Docs pending"}
-              {(partner.remainingDocTypes || []).length > 3 ? "…" : ""}
-            </p>
-          </div>
-        ) : Number(partner.formsFilled ?? partner.applicationCount ?? 0) > 0 ? (
-          <span className="text-xs font-semibold text-emerald-700">Complete</span>
-        ) : (
-          <span className="text-xs text-slate-400">No forms yet</span>
-        ),
+          );
+        }
+        return <span className="text-[11px] text-slate-400">No forms</span>;
+      },
     },
     {
-      title: "Loans (this month)",
-      key: "deals",
+      title: "Earnings",
+      key: "earnings",
+      width: "16%",
       render: (_, partner) => (
-        <span className="text-sm font-medium text-blue-600">
-          {partner.appsThisMonth ?? partner.dealsThisMonth ?? 0}
-        </span>
-      ),
-    },
-    {
-      title: "Disbursed",
-      key: "disbursed",
-      render: (_, partner) => (
-        <span className="text-sm font-medium text-indigo-700">
-          {partner.disbursedFilesLifetime ?? partner.dealsClosedThisMonth ?? 0}
-        </span>
-      ),
-    },
-    {
-      title: "Revenue",
-      key: "revenue",
-      render: (_, partner) => (
-        <span className="text-sm font-medium text-green-600">
-          {formatCurrency(partner.totalDisbursed || 0)}
-        </span>
-      ),
-    },
-    {
-      title: "Payout",
-      key: "payout",
-      render: (_, partner) => (
-        <span className="text-sm font-medium text-purple-700">
-          {formatCurrency(partner.totalPayout ?? partner.payoutDone ?? 0)}
-        </span>
-      ),
-    },
-    {
-      title: "Incentive",
-      key: "incentive",
-      render: (_, partner) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-semibold text-emerald-700">
-            {formatCurrency(partner.incentivePaid ?? 0)}
-          </span>
-          <span className="text-[10px] leading-tight text-slate-500">
-            Pending {formatCurrency(partner.incentivePending ?? 0)}
-          </span>
+        <div className="space-y-0.5 text-[11px] leading-tight">
+          <p className="text-slate-600">
+            Rev{" "}
+            <span className="font-semibold text-emerald-700">
+              {formatCurrency(partner.totalDisbursed || 0)}
+            </span>
+          </p>
+          <p className="text-slate-600">
+            Pay{" "}
+            <span className="font-semibold text-purple-700">
+              {formatCurrency(partner.totalPayout ?? partner.payoutDone ?? 0)}
+            </span>
+          </p>
+          <p className="text-slate-600">
+            Inc{" "}
+            <span className="font-semibold text-teal-700">
+              {formatCurrency(partner.incentivePaid ?? 0)}
+            </span>
+          </p>
         </div>
       ),
     },
     {
-      title: "Login as",
-      key: "login",
+      title: "Actions",
+      key: "actions",
+      width: "24%",
       render: (_, partner) => (
-        <button
-          type="button"
-          className="rounded border px-2 py-1 text-xs"
-          style={{ borderColor: colors.secondary, color: colors.secondary }}
-          onClick={() => handleLoginAs(partner?.id)}
-        >
-          Login
-        </button>
-      ),
-    },
-    {
-      title: "Activation",
-      key: "activation",
-      render: (_, partner) =>
-        partner.status === "ACTIVE" ? (
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            className="rounded-lg bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
-            onClick={() => toggleActivation(partner)}
+            className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+            onClick={() => handleLoginAs(partner?.id)}
           >
-            Deactivate
+            Login
           </button>
-        ) : (
-          <button
-            type="button"
-            className="rounded-lg bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-700"
-            onClick={() => {
-              setActivateModel(true);
-              setSelectedPartner(partner);
-            }}
-          >
-            Activate
-          </button>
-        ),
-    },
-    {
-      title: "Action",
-      key: "action",
-      render: (_, partner) => (
-        <div className="flex items-center gap-3">
+          {partner.status === "ACTIVE" ? (
+            <button
+              type="button"
+              className="rounded-md bg-red-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-red-700"
+              onClick={() => toggleActivation(partner)}
+            >
+              Deactivate
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
+              onClick={() => {
+                setActivateModel(true);
+                setSelectedPartner(partner);
+              }}
+            >
+              Activate
+            </button>
+          )}
           <button
             type="button"
             onClick={() => openPartnerAnalytics(partner)}
-            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+            className="rounded-md px-2 py-1 text-[11px] font-medium text-teal-700 hover:bg-teal-50"
           >
             Analytics
           </button>
-          {partner.status === "SUSPENDED" && (
-            <button
-              type="button"
-              onClick={() => handleDeletePartner(partner.id)}
-              className="flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-red-700"
-            >
-              Delete
-            </button>
-          )}
         </div>
       ),
     },
@@ -691,6 +657,9 @@ const Partners = () => {
           dataSource={sortedFilteredPartners}
           rowKey="id"
           loading={loading}
+          scroll={{}}
+          tableLayout="fixed"
+          className="rm-partners-table"
           locale={{ emptyText: "No partners found" }}
         />
       </DashboardTablePage>

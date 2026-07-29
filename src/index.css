@@ -85,6 +85,18 @@
   margin-top: 0.5rem !important;
 }
 
+/* RM Partners: fit viewport — no horizontal scrollbar */
+.rm-partners-table.ant-table-wrapper,
+.rm-partners-table .ant-table,
+.rm-partners-table .ant-table-container,
+.rm-partners-table .ant-table-content {
+  overflow-x: hidden !important;
+}
+.rm-partners-table .ant-table-cell {
+  overflow: hidden;
+  vertical-align: top;
+}
+
 /* DashboardTablePage — same shell as Admin RSM for every list/table screen */
 .app-list-page {
   box-sizing: border-box;
