@@ -73,6 +73,8 @@ const initialState = {
     error: null,
     success: false,
     data: [],
+    summary: null,
+    period: null,
   },
 
   
@@ -367,13 +369,24 @@ const rmSlice = createSlice({
         state.partnersWithFollowUp.loading = false;
         state.partnersWithFollowUp.error = null;
         state.partnersWithFollowUp.success = true;
-        state.partnersWithFollowUp.data = action.payload; // API array response
+        const payload = action.payload;
+        if (Array.isArray(payload)) {
+          state.partnersWithFollowUp.data = payload;
+          state.partnersWithFollowUp.summary = null;
+          state.partnersWithFollowUp.period = null;
+        } else {
+          state.partnersWithFollowUp.data = payload?.items || [];
+          state.partnersWithFollowUp.summary = payload?.summary || null;
+          state.partnersWithFollowUp.period = payload?.period || null;
+        }
       })
       .addCase(fetchPartnersWithFollowUp.rejected, (state, action) => {
         state.partnersWithFollowUp.loading = false;
         state.partnersWithFollowUp.error = action.payload;
         state.partnersWithFollowUp.success = false;
         state.partnersWithFollowUp.data = [];
+        state.partnersWithFollowUp.summary = null;
+        state.partnersWithFollowUp.period = null;
       });
 
       builder

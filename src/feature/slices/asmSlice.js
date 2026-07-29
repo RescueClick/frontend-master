@@ -17,6 +17,8 @@ import {
   fetchIncentives,
   fetchRsmFollowUps,
   recordRsmFollowUp,
+  fetchAsmRmFollowUps,
+  recordAsmRmFollowUp,
   fetchAsmCustomersPayOutPending,
   fetchAsmCustomersPayOutDone,
   fetchAsmCustomerPartnersPayout,
@@ -124,6 +126,16 @@ const initialState = {
     error: null,
     success: false,
     data: [],
+    summary: null,
+    period: null,
+  },
+  rmFollowUps: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+    summary: null,
+    period: null,
   },
   // Payout Management (Pending/Done)
   pendingPayout: {
@@ -705,14 +717,54 @@ const asmSlice = createSlice({
       })
       .addCase(fetchRsmFollowUps.fulfilled, (state, action) => {
         state.followUps.loading = false;
-        state.followUps.data = action.payload;
+        const payload = action.payload;
+        if (Array.isArray(payload)) {
+          state.followUps.data = payload;
+          state.followUps.summary = null;
+          state.followUps.period = null;
+        } else {
+          state.followUps.data = payload?.items || [];
+          state.followUps.summary = payload?.summary || null;
+          state.followUps.period = payload?.period || null;
+        }
         state.followUps.success = true;
       })
       .addCase(fetchRsmFollowUps.rejected, (state, action) => {
         state.followUps.loading = false;
         state.followUps.error = action.payload;
+        state.followUps.data = [];
+        state.followUps.summary = null;
+        state.followUps.period = null;
       })
       .addCase(recordRsmFollowUp.fulfilled, (state) => {
+        // Refresh follow-ups after recording
+      })
+      .addCase(fetchAsmRmFollowUps.pending, (state) => {
+        state.rmFollowUps.loading = true;
+        state.rmFollowUps.error = null;
+      })
+      .addCase(fetchAsmRmFollowUps.fulfilled, (state, action) => {
+        state.rmFollowUps.loading = false;
+        const payload = action.payload;
+        if (Array.isArray(payload)) {
+          state.rmFollowUps.data = payload;
+          state.rmFollowUps.summary = null;
+          state.rmFollowUps.period = null;
+        } else {
+          state.rmFollowUps.data = payload?.items || [];
+          state.rmFollowUps.summary = payload?.summary || null;
+          state.rmFollowUps.period = payload?.period || null;
+        }
+        state.rmFollowUps.success = true;
+      })
+      .addCase(fetchAsmRmFollowUps.rejected, (state, action) => {
+        state.rmFollowUps.loading = false;
+        state.rmFollowUps.error = action.payload;
+        state.rmFollowUps.data = [];
+        state.rmFollowUps.summary = null;
+        state.rmFollowUps.period = null;
+      })
+      .addCase(recordAsmRmFollowUp.fulfilled, (state) => {
         // Refresh follow-ups after recording
       })
 

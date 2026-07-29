@@ -478,18 +478,90 @@ export const recordRsmFollowUp = createAsyncThunk(
 // Fetch RSM Follow-ups (ASM role)
 export const fetchRsmFollowUps = createAsyncThunk(
   "asm/fetchRsmFollowUps",
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     try {
       const { asmToken } = getAuthData();
+      const params = {};
+      if (filters.year) params.year = filters.year;
+      if (filters.month) params.month = filters.month;
+      if (filters.date) params.date = filters.date;
+      if (filters.status) params.status = filters.status;
+
       const response = await axios.get(`${backendurl}/asm/rsms/follow-ups`, {
         headers: {
           Authorization: `Bearer ${asmToken}`,
         },
+        params,
       });
-      return unwrapApiData(response.data);
+      const body = response.data || {};
+      const items = Array.isArray(body) ? body : body.items || body.data || [];
+      return {
+        items,
+        summary: body.summary || null,
+        period: body.period || null,
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RSM follow-ups"
+      );
+    }
+  }
+);
+
+// Record RM Follow-up (ASM → RM)
+export const recordAsmRmFollowUp = createAsyncThunk(
+  "asm/recordAsmRmFollowUp",
+  async ({ rmId, status, remarks }, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/asm/rm/${rmId}/follow-up`,
+        { status, remarks },
+        {
+          headers: {
+            Authorization: `Bearer ${asmToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return unwrapApiData(response.data);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to record RM follow-up"
+      );
+    }
+  }
+);
+
+// Fetch RM Follow-ups (ASM → RM)
+export const fetchAsmRmFollowUps = createAsyncThunk(
+  "asm/fetchAsmRmFollowUps",
+  async (filters = {}, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const params = {};
+      if (filters.year) params.year = filters.year;
+      if (filters.month) params.month = filters.month;
+      if (filters.date) params.date = filters.date;
+      if (filters.status) params.status = filters.status;
+      if (filters.performance) params.performance = filters.performance;
+
+      const response = await axios.get(`${backendurl}/asm/rms/follow-ups`, {
+        headers: {
+          Authorization: `Bearer ${asmToken}`,
+        },
+        params,
+      });
+      const body = response.data || {};
+      const items = Array.isArray(body) ? body : body.items || body.data || [];
+      return {
+        items,
+        summary: body.summary || null,
+        period: body.period || null,
+      };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch RM follow-ups"
       );
     }
   }

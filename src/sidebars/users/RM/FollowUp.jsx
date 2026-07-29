@@ -1,52 +1,98 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Plus,
-  Edit3,
-  Trash2,
   Search,
   Filter,
   Download,
-  ChevronDown,
-  User,
-  Hash,
+  Edit3,
   Phone,
-  MessageSquare,
   Save,
   X,
   Calendar,
+  Users,
+  FileCheck2,
+  FileX2,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchPartnersWithFollowUp, updateFollowUp } from "../../../feature/thunks/rmThunks";
+import {
+  fetchPartnersWithFollowUp,
+  updateFollowUp,
+} from "../../../feature/thunks/rmThunks";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import {
   FOLLOW_UP_STATUS_OPTIONS,
   getFollowUpStatusStyle,
 } from "../../../utils/followUpStatusConfig";
 import TableLoader from "../../../components/shared/TableLoader";
+import toast from "react-hot-toast";
 
+const MONTHS = [
+  { value: "", label: "All months" },
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
+
+const currentYear = new Date().getFullYear();
+const YEARS = [
+  { value: "", label: "All years" },
+  ...Array.from({ length: 6 }, (_, i) => {
+    const y = String(currentYear - i);
+    return { value: y, label: y };
+  }),
+];
 
 const FollowUp = () => {
-
-    // ✅ Add this
-  const [formData, setFormData] = useState({
-    partnerName: "",
-    partnerId: "",
-    employeeId :"",
-    partnerContact: "",
-    status: "",
-    remarks: "",
-    lastCall: "",
-  });
-  // follow up
   const dispatch = useDispatch();
-  const { data, loading, error, success } = useSelector(
+  const { data, loading, summary, period } = useSelector(
     (state) => state.rm.partnersWithFollowUp
   );
 
+  const [year, setYear] = useState(String(currentYear));
+  const [month, setMonth] = useState(String(new Date().getMonth() + 1));
+  const [date, setDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [performance, setPerformance] = useState(""); // "" | working | non_working | filled | not_filled
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    partnerName: "",
+    partnerId: "",
+    employeeId: "",
+    partnerContact: "",
+    status: "Connected",
+    remarks: "",
+    lastCall: "",
+  });
+
+  const apiFilters = useMemo(() => {
+    const f = {};
+    if (date) {
+      f.date = date;
+    } else {
+      if (year) f.year = year;
+      if (month) f.month = month;
+    }
+    if (statusFilter) f.status = statusFilter;
+    if (performance) f.performance = performance;
+    return f;
+  }, [year, month, date, statusFilter, performance]);
+
   useEffect(() => {
-    dispatch(fetchPartnersWithFollowUp());
-  }, [dispatch]);
-  // directly map Redux API data into followUps for display
+    dispatch(fetchPartnersWithFollowUp(apiFilters));
+  }, [dispatch, apiFilters]);
 
   const followUps = (data || []).map((item, index) => ({
     id: index + 1,
@@ -57,45 +103,50 @@ const FollowUp = () => {
     status: item.status,
     remarks: item.remarks,
     lastCall: item.lastCall,
+    applicationCount: item.applicationCount || 0,
+    hasFilledForm: Boolean(item.hasFilledForm),
+    performance: item.performance || "non_working",
   }));
 
-
-
   const formatDate = (isoDate) => {
-  if (!isoDate) return "";
-
-  const date = new Date(isoDate);
-
-  return date.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  }).replace(",", ""); 
-};
+    if (!isoDate) return "";
+    const d = new Date(isoDate);
+    return d
+      .toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .replace(",", "");
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-
-  const formattedLastCall = formatDate(formData.lastCall || new Date().toISOString());
-
-  const handleSubmit = () => {
-    if (editingId) {
-      dispatch(
-        updateFollowUp({
-          partnerId: formData.partnerId,
-          employeeId:formData.employeeId,
-          status: formData.status,
-          remarks: formData.remarks,
-          lastCall:formattedLastCall ,
-        })
-      );
+  const handleSubmit = async () => {
+    if (!formData.status) {
+      toast.error("Select a call status");
+      return;
     }
+    const formattedLastCall = formatDate(
+      formData.lastCall || new Date().toISOString()
+    );
+    await dispatch(
+      updateFollowUp({
+        partnerId: formData.partnerId,
+        employeeId: formData.employeeId,
+        status: formData.status,
+        remarks: formData.remarks,
+        lastCall: formattedLastCall,
+        filters: apiFilters,
+      })
+    );
+    toast.success("Follow-up saved");
     resetForm();
   };
 
@@ -103,409 +154,444 @@ const FollowUp = () => {
     setFormData({
       partnerName: followUp.partnerName,
       partnerId: followUp.partnerId,
-      employeeId:followUp.employeeId,
+      employeeId: followUp.employeeId,
       partnerContact: followUp.partnerContact,
-      status: followUp.status,
-      remarks: followUp.remarks,
+      status: followUp.status === "N/A" ? "Connected" : followUp.status,
+      remarks: followUp.remarks || "",
+      lastCall: "",
     });
     setEditingId(followUp.id);
     setShowModal(true);
   };
 
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-
-
-
-  // No hard delete for partners from follow-up screen; RM only manages follow-ups here.
-
   const resetForm = () => {
     setFormData({
       partnerName: "",
       partnerId: "",
-      employeeId:"",
+      employeeId: "",
       partnerContact: "",
-      status: "",
+      status: "Connected",
       remarks: "",
+      lastCall: "",
     });
     setEditingId(null);
     setShowModal(false);
   };
 
   const filteredFollowUps = followUps.filter((followUp) => {
-    const matchesSearch =
-      followUp.partnerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      followUp.partnerId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      followUp.partnerContact.includes(searchTerm);
-    const matchesStatus =
-      statusFilter === "" || followUp.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const q = searchTerm.toLowerCase();
+    return (
+      !q ||
+      followUp.partnerName?.toLowerCase().includes(q) ||
+      String(followUp.employeeId || "")
+        .toLowerCase()
+        .includes(q) ||
+      String(followUp.partnerContact || "").includes(searchTerm)
+    );
   });
 
-  const sortedFilteredFollowUps = sortNewestFirst(filteredFollowUps, { dateKeys: ["lastCall"] });
+  const sortedFilteredFollowUps = sortNewestFirst(filteredFollowUps, {
+    dateKeys: ["lastCall"],
+  });
+
+  const cards = [
+    {
+      label: "Partners",
+      value: summary?.total ?? followUps.length,
+      icon: Users,
+      tone: "bg-slate-50 text-slate-800 border-slate-200",
+    },
+    {
+      label: "Filled loan form",
+      value: summary?.filled ?? followUps.filter((f) => f.hasFilledForm).length,
+      icon: FileCheck2,
+      tone: "bg-emerald-50 text-emerald-800 border-emerald-200",
+      onClick: () => setPerformance(performance === "filled" ? "" : "filled"),
+      active: performance === "filled" || performance === "working",
+    },
+    {
+      label: "Not filled yet",
+      value:
+        summary?.notFilled ??
+        followUps.filter((f) => !f.hasFilledForm).length,
+      icon: FileX2,
+      tone: "bg-amber-50 text-amber-900 border-amber-200",
+      onClick: () =>
+        setPerformance(performance === "not_filled" ? "" : "not_filled"),
+      active: performance === "not_filled" || performance === "non_working",
+    },
+    {
+      label: "Working",
+      value:
+        summary?.working ??
+        followUps.filter((f) => f.performance === "working").length,
+      icon: TrendingUp,
+      tone: "bg-teal-50 text-teal-900 border-teal-200",
+      onClick: () => setPerformance(performance === "working" ? "" : "working"),
+      active: performance === "working",
+    },
+    {
+      label: "Non-working",
+      value:
+        summary?.nonWorking ??
+        followUps.filter((f) => f.performance === "non_working").length,
+      icon: TrendingDown,
+      tone: "bg-rose-50 text-rose-900 border-rose-200",
+      onClick: () =>
+        setPerformance(performance === "non_working" ? "" : "non_working"),
+      active: performance === "non_working",
+    },
+  ];
+
+  const exportCsv = () => {
+    const rows = [
+      [
+        "Partner",
+        "Employee ID",
+        "Phone",
+        "Apps",
+        "Filled",
+        "Performance",
+        "Call Status",
+        "Remarks",
+        "Last Call",
+      ],
+      ...sortedFilteredFollowUps.map((r) => [
+        r.partnerName,
+        r.employeeId,
+        r.partnerContact,
+        r.applicationCount,
+        r.hasFilledForm ? "Yes" : "No",
+        r.performance,
+        r.status,
+        r.remarks,
+        r.lastCall || "",
+      ]),
+    ];
+    const csv = rows
+      .map((row) =>
+        row.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")
+      )
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rm-partner-followups.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-20 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-amber-400/10 rounded-full blur-xl"></div>
-        <div className="absolute bottom-20 left-20 w-24 h-24 bg-gradient-to-br from-amber-400/10 to-emerald-400/10 rounded-full blur-xl"></div>
-      </div>
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+            Partner Follow-up
+          </h1>
+          <p className="text-slate-600 mt-1 text-sm">
+            Track who filled loan forms and call working vs non-working partners.
+            {period?.label ? (
+              <span className="ml-2 text-teal-700 font-medium">
+                Period: {period.label}
+              </span>
+            ) : null}
+          </p>
+        </div>
 
-      <div className="max-w-7xl mx-auto relative">
-        {/* Header */}
-        {/* <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-800 mb-2">
-                Follow Up Management
-              </h1>
-              <p className="text-gray-600">
-                Track and manage partner communications
-              </p>
-            </div>
-            <div className="mt-4 md:mt-0">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          {cards.map((c) => {
+            const Icon = c.icon;
+            return (
               <button
-                onClick={() => setShowModal(true)}
-                className=" text-black px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform flex items-center border-2 border-gray-200"
+                key={c.label}
+                type="button"
+                onClick={c.onClick}
+                className={`rounded-xl border p-4 text-left transition ${c.tone} ${
+                  c.active ? "ring-2 ring-teal-500" : ""
+                } ${c.onClick ? "hover:shadow-md cursor-pointer" : "cursor-default"}`}
               >
-                <Plus className="w-5 h-5 mr-2" />
-                Add Follow Up
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                    {c.label}
+                  </span>
+                  <Icon className="w-4 h-4 opacity-70" />
+                </div>
+                <p className="text-2xl font-bold">{c.value}</p>
               </button>
-            </div>
-          </div>
-        </div> */}
+            );
+          })}
+        </div>
 
-        {/* Controls */}
-        <div className="bg-white rounded-2xl p-6 mb-6 border border-emerald-100">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <div className="bg-white rounded-2xl p-4 md:p-6 mb-6 border border-slate-200 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className="relative lg:col-span-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search by name, ID, or contact..."
+                placeholder="Search name, ID, phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl   transition-all duration-200"
+                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm"
               />
             </div>
 
-            {/* Status Filter */}
+            <select
+              value={year}
+              onChange={(e) => {
+                setYear(e.target.value);
+                setDate("");
+              }}
+              className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+            >
+              {YEARS.map((y) => (
+                <option key={y.value || "all"} value={y.value}>
+                  {y.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={month}
+              onChange={(e) => {
+                setMonth(e.target.value);
+                setDate("");
+              }}
+              className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+            >
+              {MONTHS.map((m) => (
+                <option key={m.value || "all"} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm"
+                title="Exact date filter (overrides month)"
+              />
+            </div>
+
             <div className="relative">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none bg-white border-2 border-gray-200 rounded-xl px-4 py-3 pr-10  transition-all duration-200"
+                className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2.5 pr-9 text-sm"
               >
-                <option value="">All Status</option>
+                <option value="">All call status</option>
+                <option value="N/A">Not contacted</option>
                 {FOLLOW_UP_STATUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
-              <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
             </div>
+          </div>
 
-            {/* Export Button */}
-            <button className="bg-white border-2 border-gray-200  text-gray-700 px-6 py-3 rounded-xl font-semibold flex items-center">
-              <Download className="w-5 h-5 mr-2" />
-              Export
+          <div className="flex flex-wrap gap-2 mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setYear(String(currentYear));
+                setMonth(String(new Date().getMonth() + 1));
+                setDate("");
+                setStatusFilter("");
+                setPerformance("");
+                setSearchTerm("");
+              }}
+              className="px-3 py-2 text-sm rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
+            >
+              Reset filters
+            </button>
+            <button
+              type="button"
+              onClick={exportCsv}
+              className="px-3 py-2 text-sm rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 inline-flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
             </button>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-emerald-100">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[900px]">
               <thead
                 className="text-white"
                 style={{ backgroundColor: "var(--color-brand-primary)" }}
               >
                 <tr>
-                  <th className="px-2 py-4 text-left font-semibold">
-                    Partner Name
-                  </th>
-                  <th className="px-2 py-4 text-left font-semibold">
-                    Partner ID
-                  </th>
-                  <th className="px-2 py-4 text-left font-semibold">Contact</th>
-                  <th className="px-2 py-4 text-left font-semibold">Status</th>
-                  <th className="px-2 py-4 text-left font-semibold">Remarks</th>
-                  <th className="px-2 py-4 text-center font-semibold">
-                    Actions
-                  </th>
-                  <th className="px-2 py-4 text-center font-semibold">
-                    Last Call
-                  </th>{" "}
-                  {/* ✅ Added */}
+                  <th className="px-3 py-3 text-left text-sm font-semibold">Partner</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold">ID</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold">Contact</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold">Forms</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold">Performance</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold">Call status</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold">Remarks</th>
+                  <th className="px-3 py-3 text-left text-sm font-semibold">Last call</th>
+                  <th className="px-3 py-3 text-center text-sm font-semibold">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <TableLoader colSpan={7} label="Loading follow-ups…" />
+                  <TableLoader colSpan={9} label="Loading follow-ups…" />
+                ) : null}
+                {!loading && sortedFilteredFollowUps.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-10 text-center text-slate-500">
+                      No partners match these filters.
+                    </td>
+                  </tr>
                 ) : null}
                 {!loading &&
                   sortedFilteredFollowUps.map((followUp, index) => {
-                  const statusStyle = getFollowUpStatusStyle(followUp.status);
-                  return (
-                    <tr
-                      key={followUp.id}
-                      className={`hover:bg-gray-50 transition-colors duration-200 ${
-                        index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                      }`}
-                    >
-                      <td className="px-2 py-2 text-sm">
-                        <div className="flex items-center">
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold mr-3"
+                    const statusStyle = getFollowUpStatusStyle(followUp.status);
+                    return (
+                      <tr
+                        key={`${followUp.partnerId}-${index}`}
+                        className={index % 2 === 0 ? "bg-white" : "bg-slate-50/60"}
+                      >
+                        <td className="px-3 py-3 text-sm font-semibold text-slate-800">
+                          {followUp.partnerName}
+                        </td>
+                        <td className="px-3 py-3 text-sm">
+                          <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-mono">
+                            {followUp.employeeId || "—"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-slate-700">
+                          <span className="inline-flex items-center gap-1">
+                            <Phone className="w-3.5 h-3.5 text-slate-400" />
+                            {followUp.partnerContact || "—"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-sm">
+                          <span
+                            className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                              followUp.hasFilledForm
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-amber-100 text-amber-900"
+                            }`}
+                          >
+                            {followUp.applicationCount}{" "}
+                            {followUp.hasFilledForm ? "filled" : "not filled"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-sm capitalize">
+                          {followUp.performance === "working" ? (
+                            <span className="text-teal-700 font-semibold">Working</span>
+                          ) : (
+                            <span className="text-rose-700 font-semibold">Non-working</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-sm">
+                          <span
+                            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyle.bgColor} ${statusStyle.textColor}`}
+                          >
+                            {followUp.status || "N/A"}
+                          </span>
+                        </td>
+                        <td
+                          className="px-3 py-3 text-sm text-slate-600 max-w-[180px] truncate"
+                          title={followUp.remarks}
+                        >
+                          {followUp.remarks || "—"}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-slate-600 whitespace-nowrap">
+                          {followUp.lastCall || "—"}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(followUp)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold text-white"
                             style={{ backgroundColor: "var(--color-brand-primary)" }}
                           >
-                            {followUp.partnerName.charAt(0)}
-                          </div>
-                          <span className="font-semibold text-gray-800 text-sm">
-                            {followUp.partnerName}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-sm">
-                        <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-mono">
-                          {followUp.employeeId}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-sm text-gray-700">
-                        {followUp.partnerContact}
-                      </td>
-                      <td className="px-2 py-2 text-sm">
-                        <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${statusStyle.bgColor} ${statusStyle.textColor}`}
-                        >
-                          {FOLLOW_UP_STATUS_OPTIONS.find(
-                            (opt) => opt.value === followUp.status
-                          )?.label || "N/A"}
-                        </span>
-                      </td>
-
-                      <td
-                        className="px-2 py-2 text-sm text-gray-700 max-w-xs truncate"
-                        title={followUp.remarks}
-                      >
-                        {followUp.remarks}
-                      </td>
-                      <td className="px-2 py-2 text-sm">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => handleEdit(followUp)}
-                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition-colors duration-200"
-                          >
-                            <Edit3 className="w-4 h-4" />
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Follow up
                           </button>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-sm text-center text-gray-700">
-                        {followUp.lastCall
-                          ? new Date(followUp.lastCall).toLocaleString(
-                              "en-IN",
-                              {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                              }
-                            )
-                          : "N/A"}
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
-
-          {!loading && sortedFilteredFollowUps.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-gray-400 text-lg">No follow-ups found</div>
-              <p className="text-gray-500 mt-2">
-                Try adjusting your search or filter criteria
-              </p>
-            </div>
-          )}
         </div>
-
-        {/* Stats Cards */}
       </div>
 
-      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/25 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white rounded-t-3xl border-b border-gray-100 px-6 py-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-800">
-                  {editingId ? "Edit Follow Up" : "Add New Follow Up"}
-                </h2>
-                <button
-                  onClick={resetForm}
-                  className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl border border-slate-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="font-bold text-slate-900">Record follow-up</h3>
+              <button type="button" onClick={resetForm} className="p-1 rounded hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="flex items-center text-gray-800 font-semibold mb-3">
-                    <User
-                      className="w-5 h-5 mr-2"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    />
-                    Partner Name
-                  </label>
-                  <input
-                    type="text"
-                    name="partnerName"
-                    value={formData.partnerName}
-                    onChange={handleInputChange}
-                    placeholder="Enter partner name"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl "
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center text-gray-800 font-semibold mb-3">
-                    <Hash
-                      className="w-5 h-5 mr-2"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    />
-                    Partner ID
-                  </label>
-                  <input
-                    type="text"
-                    name="partnerId"
-                    value={formData.partnerId}
-                    onChange={handleInputChange}
-                    placeholder="Enter partner ID"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl "
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center text-gray-800 font-semibold mb-3">
-                    <Phone
-                      className="w-5 h-5 mr-2"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    />
-                    Partner Contact
-                  </label>
-                  <input
-                    type="tel"
-                    name="partnerContact"
-                    value={formData.partnerContact}
-                    onChange={handleInputChange}
-                    placeholder="Enter contact number"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl f"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center text-gray-800 font-semibold mb-3">
-                    <div
-                      className={`w-3 h-3 rounded-full mr-2 ${
-                        getFollowUpStatusStyle(formData.status).color || "bg-gray-300"
-                      }`}
-                    ></div>
-                    Status
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl  appearance-none cursor-pointer pr-12"
-                      required
-                    >
-                      <option value="">Select status</option>
-                      {FOLLOW_UP_STATUS_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
+            <div className="p-5 space-y-4">
               <div>
-                <label className="flex items-center text-gray-800 font-semibold mb-3">
-                  <MessageSquare
-                    className="w-5 h-5 mr-2"
-                    style={{ color: "var(--color-brand-primary)" }}
-                  />
+                <p className="text-sm font-semibold text-slate-800">{formData.partnerName}</p>
+                <p className="text-xs text-slate-500">
+                  {formData.employeeId} · {formData.partnerContact}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Call status
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+                >
+                  {FOLLOW_UP_STATUS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Remarks
                 </label>
                 <textarea
                   name="remarks"
                   value={formData.remarks}
                   onChange={handleInputChange}
-                  placeholder="Enter any additional notes or remarks..."
-                  rows={1}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl resize-vertical"
-                />
-              </div>
-              <div>
-                <label className="flex items-center text-gray-800 font-semibold mb-3">
-                  <Calendar
-                    className="w-5 h-5 mr-2"
-                    style={{ color: "var(--color-brand-primary)" }}
-                  />
-                  Last Call
-                </label>
-                <input
-                  type="datetime-local"
-                  name="lastCall"
-                  value={formData.lastCall}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm"
+                  rows={3}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+                  placeholder="What was discussed / next step..."
                 />
               </div>
             </div>
-
-            <div className="sticky bottom-0 bg-white rounded-b-3xl border-t border-gray-100 px-6 py-4">
-              <div className="flex gap-4">
-                <button
-                  onClick={handleSubmit}
-                  disabled={
-                    !formData.partnerName ||
-                    !formData.partnerId ||
-                    !formData.partnerContact ||
-                    !formData.status
-                  }
-                  className="flex-1 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center disabled:transform-none disabled:shadow-none"
-                  style={{ backgroundColor: "var(--color-brand-primary)" }}
-                >
-                  <Save className="w-5 h-5 mr-2" />
-                  {editingId ? "Update Follow Up" : "Save Follow Up"}
-                </button>
-
-                <button
-                  onClick={resetForm}
-                  className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-6 rounded-xl border-2 border-gray-200 hover:border-emerald-500 flex items-center justify-center"
-                >
-                  Cancel
-                </button>
-              </div>
+            <div className="px-5 py-4 border-t border-slate-100 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-white inline-flex items-center gap-2"
+                style={{ backgroundColor: "var(--color-brand-primary)" }}
+              >
+                <Save className="w-4 h-4" />
+                Save
+              </button>
             </div>
           </div>
         </div>

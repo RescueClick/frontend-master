@@ -308,15 +308,32 @@ export const setPayouts = createAsyncThunk(
 
 export const fetchPartnersWithFollowUp = createAsyncThunk(
   "rm/fetchPartnersWithFollowUp",
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     try {
       const { rmToken } = getAuthData();
+      const params = {};
+      if (filters.year) params.year = filters.year;
+      if (filters.month) params.month = filters.month;
+      if (filters.date) params.date = filters.date;
+      if (filters.from) params.from = filters.from;
+      if (filters.to) params.to = filters.to;
+      if (filters.status) params.status = filters.status;
+      if (filters.performance) params.performance = filters.performance;
 
       const response = await axios.get(`${backendurl}/rm/partners-with-followup`, {
         headers: { Authorization: `Bearer ${rmToken}` },
+        params,
       });
 
-      return unwrapApiData(response.data); // returns partner list with follow-up data
+      const body = response.data || {};
+      const items = Array.isArray(body)
+        ? body
+        : body.items || body.data || [];
+      return {
+        items,
+        summary: body.summary || null,
+        period: body.period || null,
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch partners with follow-up"
@@ -329,10 +346,7 @@ export const fetchPartnersWithFollowUp = createAsyncThunk(
 
 export const updateFollowUp = createAsyncThunk(
   "followUp/updateFollowUp",
-  async ({ partnerId, status, remarks, lastCall }, { rejectWithValue, dispatch }) => {
-
-    
-
+  async ({ partnerId, status, remarks, lastCall, filters }, { rejectWithValue, dispatch }) => {
     try {
       const { rmToken } = getAuthData();
 
@@ -344,8 +358,8 @@ export const updateFollowUp = createAsyncThunk(
         }
       );
 
-      dispatch(fetchPartnersWithFollowUp());
-      return unwrapApiData(response.data); // backend sends message + followUp object
+      dispatch(fetchPartnersWithFollowUp(filters || {}));
+      return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to update follow-up"

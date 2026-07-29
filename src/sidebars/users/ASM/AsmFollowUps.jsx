@@ -1,19 +1,26 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Search,
-  Phone,
-  Calendar,
-  MessageSquare,
-  User,
-  CheckCircle,
-  XCircle,
-  Clock,
   Filter,
   Download,
   Edit3,
+  Phone,
+  Save,
+  X,
+  Calendar,
+  Users,
+  FileCheck2,
+  FileX2,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
-import { fetchRsmFollowUps, recordRsmFollowUp } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchAsmRmFollowUps,
+  recordAsmRmFollowUp,
+  fetchRsmFollowUps,
+  recordRsmFollowUp,
+} from "../../../feature/thunks/asmThunks";
 import toast from "react-hot-toast";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import {
@@ -22,351 +29,291 @@ import {
 } from "../../../utils/followUpStatusConfig";
 import TableLoader from "../../../components/shared/TableLoader";
 
+const MONTHS = [
+  { value: "", label: "All months" },
+  ...Array.from({ length: 12 }, (_, i) => ({
+    value: String(i + 1),
+    label: new Date(2000, i, 1).toLocaleString("en", { month: "long" }),
+  })),
+];
+const currentYear = new Date().getFullYear();
+const YEARS = [
+  { value: "", label: "All years" },
+  ...Array.from({ length: 6 }, (_, i) => {
+    const y = String(currentYear - i);
+    return { value: y, label: y };
+  }),
+];
+
 const AsmFollowUps = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const dispatch = useDispatch();
+  const rmState = useSelector((state) => state.asm.rmFollowUps || {});
+  const rsmState = useSelector((state) => state.asm.followUps || {});
+
+  const [tab, setTab] = useState("rm"); // rm | rsm
+  const [year, setYear] = useState(String(currentYear));
+  const [month, setMonth] = useState(String(new Date().getMonth() + 1));
+  const [date, setDate] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
-  const [selectedRsm, setSelectedRsm] = useState(null);
+  const [performance, setPerformance] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [selected, setSelected] = useState(null);
   const [status, setStatus] = useState("Connected");
   const [remarks, setRemarks] = useState("");
 
-  const dispatch = useDispatch();
-
-  const { data, loading } = useSelector(
-    (state) => state.asm.followUps || { data: [], loading: false }
-  );
+  const apiFilters = useMemo(() => {
+    const f = {};
+    if (date) f.date = date;
+    else {
+      if (year) f.year = year;
+      if (month) f.month = month;
+    }
+    if (statusFilter) f.status = statusFilter;
+    if (tab === "rm" && performance) f.performance = performance;
+    return f;
+  }, [year, month, date, statusFilter, performance, tab]);
 
   useEffect(() => {
-    dispatch(fetchRsmFollowUps());
-  }, [dispatch]);
+    if (tab === "rm") dispatch(fetchAsmRmFollowUps(apiFilters));
+    else dispatch(fetchRsmFollowUps(apiFilters));
+  }, [dispatch, apiFilters, tab]);
 
-  const handleRecordFollowUp = async () => {
-    if (!selectedRsm || !status) {
-      toast.error("Please select RSM and status");
-      return;
+  const loading = tab === "rm" ? rmState.loading : rsmState.loading;
+  const summary = tab === "rm" ? rmState.summary : rsmState.summary;
+  const period = tab === "rm" ? rmState.period : rsmState.period;
+  const raw = tab === "rm" ? rmState.data : rsmState.data;
+
+  const rows = (Array.isArray(raw) ? raw : []).map((item) => {
+    if (tab === "rm") {
+      return {
+        id: item.rm?.id,
+        name: item.rm?.name || "",
+        employeeId: item.rm?.employeeId || "",
+        phone: item.rm?.phone || "",
+        partnerCount: item.partnerCount || 0,
+        partnersFilled: item.partnersFilled || 0,
+        partnersNotFilled: item.partnersNotFilled || 0,
+        applicationCount: item.applicationCount || 0,
+        performance: item.performance || "non_working",
+        callStatus: item.status || item.followUp?.status || "N/A",
+        lastCall: item.lastCall || item.followUp?.lastCallFormatted || "",
+        remarksText: item.remarks || item.followUp?.remarks || "",
+        targetType: "rm",
+      };
     }
-
-    try {
-      await dispatch(recordRsmFollowUp({
-        rsmId: selectedRsm.rsm.id,
-        status,
-        remarks,
-      })).unwrap();
-      toast.success("Follow-up recorded successfully");
-      setShowFollowUpModal(false);
-      setSelectedRsm(null);
-      setStatus("Connected");
-      setRemarks("");
-      dispatch(fetchRsmFollowUps());
-    } catch (error) {
-      toast.error(error || "Failed to record follow-up");
-    }
-  };
-
-  const followUps = Array.isArray(data) ? data : [];
-
-  const getStatusIcon = (s) => {
-    switch (s) {
-      case "Connected":
-        return <CheckCircle size={16} className="text-green-600" />;
-      case "Ringing":
-        return <Clock size={16} className="text-blue-600" />;
-      case "Switch Off":
-      case "Not Reachable":
-        return <XCircle size={16} className="text-red-600" />;
-      default:
-        return <Phone size={16} className="text-gray-600" />;
-    }
-  };
-
-  const formatDate = (date) => {
-    if (!date) return "Never";
-    const d = new Date(date);
-    return d
-      .toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-      .replace(",", "");
-  };
-
-  const filteredFollowUps = followUps.filter((item) => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch =
-      item.rsm?.name?.toLowerCase().includes(term) ||
-      item.rsm?.employeeId?.toLowerCase().includes(term) ||
-      item.rsm?.email?.toLowerCase().includes(term);
-
-    const itemStatus = item.followUp?.status || "";
-    const matchesStatus =
-      statusFilter === "" || itemStatus === statusFilter;
-
-    return matchesSearch && matchesStatus;
+    return {
+      id: item.rsm?.id,
+      name: item.rsm?.name || "",
+      employeeId: item.rsm?.employeeId || "",
+      phone: item.rsm?.phone || "",
+      callStatus: item.status || item.followUp?.status || "N/A",
+      lastCall: item.lastCall || item.followUp?.lastCallFormatted || "",
+      remarksText: item.remarks || item.followUp?.remarks || "",
+      targetType: "rsm",
+    };
   });
 
-  const sortedFilteredFollowUps = sortNewestFirst(
-    filteredFollowUps.map((item) => ({
-      ...item,
-      lastCallSort: item.followUp?.lastCall || item.followUp?.createdAt || item.rsm?.createdAt,
-    })),
-    { dateKeys: ["lastCallSort"] }
-  );
+  const filtered = rows.filter((r) => {
+    const q = searchTerm.toLowerCase();
+    return (
+      !q ||
+      r.name.toLowerCase().includes(q) ||
+      String(r.employeeId).toLowerCase().includes(q) ||
+      String(r.phone).includes(searchTerm)
+    );
+  });
+  const sorted = sortNewestFirst(filtered, { dateKeys: ["lastCall"] });
+
+  const saveFollowUp = async () => {
+    if (!selected?.id) return;
+    try {
+      if (selected.targetType === "rm") {
+        await dispatch(
+          recordAsmRmFollowUp({ rmId: selected.id, status, remarks })
+        ).unwrap();
+      } else {
+        await dispatch(
+          recordRsmFollowUp({ rsmId: selected.id, status, remarks })
+        ).unwrap();
+      }
+      toast.success("Follow-up recorded");
+      setShowModal(false);
+      if (tab === "rm") dispatch(fetchAsmRmFollowUps(apiFilters));
+      else dispatch(fetchRsmFollowUps(apiFilters));
+    } catch (e) {
+      toast.error(e || "Failed to record follow-up");
+    }
+  };
+
+  const exportCsv = () => {
+    const header =
+      tab === "rm"
+        ? ["RM", "ID", "Phone", "Partners", "Filled", "Not filled", "Apps", "Performance", "Status", "Last call", "Remarks"]
+        : ["RSM", "ID", "Phone", "Status", "Last call", "Remarks"];
+    const body = sorted.map((r) =>
+      tab === "rm"
+        ? [r.name, r.employeeId, r.phone, r.partnerCount, r.partnersFilled, r.partnersNotFilled, r.applicationCount, r.performance, r.callStatus, r.lastCall, r.remarksText]
+        : [r.name, r.employeeId, r.phone, r.callStatus, r.lastCall, r.remarksText]
+    );
+    const csv = [header, ...body]
+      .map((row) => row.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = tab === "rm" ? "asm-rm-followups.csv" : "asm-rsm-followups.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      {/* Header & controls styled like RM */}
-
-      <div className="bg-white rounded-2xl p-6 mb-6 border border-emerald-100">
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search by RSM name, ID, or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl transition-all duration-200"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="appearance-none bg-white border-2 border-gray-200 rounded-xl px-4 py-3 pr-10 transition-all duration-200"
-            >
-              <option value="">All Status</option>
-              {FOLLOW_UP_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-          </div>
-
-          {/* Export Button */}
-          <button className="bg-white border-2 border-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold flex items-center">
-            <Download className="w-5 h-5 mr-2" />
-            Export
-          </button>
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Follow-up</h1>
+          <p className="text-sm text-slate-600 mt-1">
+            ASM → RM performance follow-ups (and RSM calls). Filter by month / year / date.
+            {period?.label ? <span className="ml-2 text-teal-700 font-medium">Period: {period.label}</span> : null}
+          </p>
         </div>
-      </div>
 
-      {/* Table layout like RM */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-emerald-100">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead
-              className="text-white"
-              style={{ backgroundColor: "var(--color-brand-primary)" }}
-            >
-              <tr>
-                <th className="px-2 py-4 text-left font-semibold">
-                  RSM Name
-                </th>
-                <th className="px-2 py-4 text-left font-semibold">
-                  Employee ID
-                </th>
-                <th className="px-2 py-4 text-left font-semibold">Email</th>
-                <th className="px-2 py-4 text-left font-semibold">Phone</th>
-                <th className="px-2 py-4 text-left font-semibold">Status</th>
-                <th className="px-2 py-4 text-left font-semibold">Remarks</th>
-                <th className="px-2 py-4 text-center font-semibold">
-                  Actions
-                </th>
-                <th className="px-2 py-4 text-center font-semibold">
-                  Last Call
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <TableLoader colSpan={8} label="Loading follow-ups…" />
-              ) : sortedFilteredFollowUps.length === 0 ? (
+        <div className="flex gap-2 mb-4">
+          <button type="button" onClick={() => setTab("rm")} className={`px-4 py-2 rounded-xl text-sm font-semibold border ${tab === "rm" ? "bg-teal-600 text-white border-teal-600" : "bg-white text-slate-700"}`}>RM follow-ups</button>
+          <button type="button" onClick={() => setTab("rsm")} className={`px-4 py-2 rounded-xl text-sm font-semibold border ${tab === "rsm" ? "bg-teal-600 text-white border-teal-600" : "bg-white text-slate-700"}`}>RSM follow-ups</button>
+        </div>
+
+        {tab === "rm" && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            {[
+              { label: "RMs", value: summary?.total ?? rows.length, icon: Users, tone: "bg-slate-50 border-slate-200" },
+              { label: "Partners filled", value: summary?.partnersFilled ?? 0, icon: FileCheck2, tone: "bg-emerald-50 border-emerald-200", key: "filled" },
+              { label: "Not filled", value: summary?.partnersNotFilled ?? 0, icon: FileX2, tone: "bg-amber-50 border-amber-200", key: "not_filled" },
+              { label: "Working RMs", value: summary?.working ?? 0, icon: TrendingUp, tone: "bg-teal-50 border-teal-200", key: "working" },
+              { label: "Non-working", value: summary?.nonWorking ?? 0, icon: TrendingDown, tone: "bg-rose-50 border-rose-200", key: "non_working" },
+            ].map((c) => {
+              const Icon = c.icon;
+              return (
+                <button key={c.label} type="button" onClick={() => c.key && setPerformance(performance === c.key ? "" : c.key)} className={`rounded-xl border p-4 text-left ${c.tone} ${performance === c.key ? "ring-2 ring-teal-500" : ""}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase opacity-80">{c.label}</span>
+                    <Icon className="w-4 h-4 opacity-70" />
+                  </div>
+                  <p className="text-2xl font-bold">{c.value}</p>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl p-4 md:p-6 mb-6 border border-slate-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className="relative lg:col-span-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            <select className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm" value={year} onChange={(e) => { setYear(e.target.value); setDate(""); }}>
+              {YEARS.map((y) => <option key={y.value || "all"} value={y.value}>{y.label}</option>)}
+            </select>
+            <select className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm" value={month} onChange={(e) => { setMonth(e.target.value); setDate(""); }}>
+              {MONTHS.map((m) => <option key={m.value || "all"} value={m.value}>{m.label}</option>)}
+            </select>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input type="date" className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="relative">
+              <select className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2.5 pr-9 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="">All call status</option>
+                <option value="N/A">Not contacted</option>
+                {FOLLOW_UP_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button type="button" className="px-3 py-2 text-sm rounded-lg border" onClick={() => { setYear(String(currentYear)); setMonth(String(new Date().getMonth() + 1)); setDate(""); setStatusFilter(""); setPerformance(""); setSearchTerm(""); }}>Reset</button>
+            <button type="button" className="px-3 py-2 text-sm rounded-lg border inline-flex items-center gap-2" onClick={exportCsv}><Download className="w-4 h-4" /> Export</button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px]">
+              <thead className="text-white" style={{ backgroundColor: "var(--color-brand-primary)" }}>
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-8 text-center text-gray-500"
-                  >
-                    No RSM follow-ups found
-                  </td>
+                  <th className="px-3 py-3 text-left text-sm">{tab === "rm" ? "RM" : "RSM"}</th>
+                  <th className="px-3 py-3 text-left text-sm">ID</th>
+                  <th className="px-3 py-3 text-left text-sm">Contact</th>
+                  {tab === "rm" && <th className="px-3 py-3 text-left text-sm">Partners filled / not</th>}
+                  {tab === "rm" && <th className="px-3 py-3 text-left text-sm">Apps</th>}
+                  {tab === "rm" && <th className="px-3 py-3 text-left text-sm">Performance</th>}
+                  <th className="px-3 py-3 text-left text-sm">Call status</th>
+                  <th className="px-3 py-3 text-left text-sm">Last call</th>
+                  <th className="px-3 py-3 text-center text-sm">Action</th>
                 </tr>
-              ) : (
-                sortedFilteredFollowUps.map((item, index) => {
-                  const s = item.followUp?.status || "";
-                  const statusStyle = getFollowUpStatusStyle(s);
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? <TableLoader colSpan={tab === "rm" ? 9 : 6} label="Loading…" /> : null}
+                {!loading && sorted.length === 0 ? (
+                  <tr><td colSpan={tab === "rm" ? 9 : 6} className="px-4 py-10 text-center text-slate-500">No records match filters.</td></tr>
+                ) : null}
+                {!loading && sorted.map((row, idx) => {
+                  const style = getFollowUpStatusStyle(row.callStatus);
                   return (
-                    <tr
-                      key={item.rsm.id}
-                      className={`hover:bg-gray-50 transition-colors duration-200 ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                        }`}
-                    >
-                      <td className="px-2 py-2 text-sm">
-                        <div className="flex items-center">
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold mr-3"
-                            style={{ backgroundColor: "var(--color-brand-primary)" }}
-                          >
-                            {item.rsm.name?.charAt(0)}
-                          </div>
-                          <span className="font-semibold text-gray-800 text-sm">
-                            {item.rsm.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-sm">
-                        <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-mono">
-                          {item.rsm.employeeId}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-sm text-gray-700">
-                        {item.rsm.email}
-                      </td>
-                      <td className="px-2 py-2 text-sm text-gray-700">
-                        {item.rsm.phone}
-                      </td>
-                      <td className="px-2 py-2 text-sm">
-                        {s ? (
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${statusStyle.bgColor} ${statusStyle.textColor}`}
-                          >
-                            {/* {getStatusIcon(s)} */}
-                            <span className="ml-1">
-                              {
-                                FOLLOW_UP_STATUS_OPTIONS.find(
-                                  (opt) => opt.value === s
-                                )?.label
-                              }
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-400">
-                            No follow-up
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        className="px-2 py-2 text-sm text-gray-700 max-w-xs truncate"
-                        title={item.followUp?.remarks || ""}
-                      >
-                        {item.followUp?.remarks || "-"}
-                      </td>
-                      <td className="px-2 py-2 text-sm">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedRsm(item);
-                              setShowFollowUpModal(true);
-                            }}
-                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition-colors duration-200"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-sm text-center text-gray-700">
-                        {item.followUp?.lastCall
-                          ? formatDate(item.followUp.lastCall)
-                          : "N/A"}
+                    <tr key={row.id || idx} className={idx % 2 ? "bg-slate-50/60" : "bg-white"}>
+                      <td className="px-3 py-3 text-sm font-semibold">{row.name}</td>
+                      <td className="px-3 py-3 text-xs font-mono">{row.employeeId || "—"}</td>
+                      <td className="px-3 py-3 text-sm"><span className="inline-flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-slate-400" />{row.phone || "—"}</span></td>
+                      {tab === "rm" && (
+                        <td className="px-3 py-3 text-sm">
+                          <span className="text-emerald-700 font-semibold">{row.partnersFilled}</span>
+                          <span className="text-slate-400"> / </span>
+                          <span className="text-amber-700 font-semibold">{row.partnersNotFilled}</span>
+                          <span className="text-xs text-slate-500 ml-1">of {row.partnerCount}</span>
+                        </td>
+                      )}
+                      {tab === "rm" && <td className="px-3 py-3 text-sm font-semibold">{row.applicationCount}</td>}
+                      {tab === "rm" && (
+                        <td className="px-3 py-3 text-sm font-semibold">
+                          {row.performance === "working" ? <span className="text-teal-700">Working</span> : <span className="text-rose-700">Non-working</span>}
+                        </td>
+                      )}
+                      <td className="px-3 py-3 text-sm"><span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${style.bgColor} ${style.textColor}`}>{row.callStatus}</span></td>
+                      <td className="px-3 py-3 text-sm whitespace-nowrap">{row.lastCall || "—"}</td>
+                      <td className="px-3 py-3 text-center">
+                        <button type="button" onClick={() => { setSelected(row); setStatus("Connected"); setRemarks(""); setShowModal(true); }} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white inline-flex items-center gap-1" style={{ backgroundColor: "var(--color-brand-primary)" }}>
+                          <Edit3 className="w-3.5 h-3.5" /> Follow up
+                        </button>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* Follow-up Modal */}
-      {showFollowUpModal && selectedRsm && (
-        <div className="fixed inset-0 bg-black/25 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Record Follow-up
-              </h2>
-              <button
-                onClick={() => {
-                  setShowFollowUpModal(false);
-                  setSelectedRsm(null);
-                  setStatus("Connected");
-                  setRemarks("");
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XCircle size={24} />
-              </button>
+      {showModal && selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <h3 className="font-bold">Follow up — {selected.name}</h3>
+              <button type="button" onClick={() => setShowModal(false)}><X className="w-5 h-5" /></button>
             </div>
-
-            <div className="space-y-4">
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm">
-                <div className="grid grid-cols-[140px_1fr] py-1">
-                  <span className="font-medium text-gray-600">RSM</span>
-                  <span className="text-gray-900">{selectedRsm.rsm.name}</span>
-                </div>
-
-                <div className="grid grid-cols-[140px_1fr] py-1">
-                  <span className="font-medium text-gray-600">Employee ID</span>
-                  <span className="text-gray-900">{selectedRsm.rsm.employeeId}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status *
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                >
-                  {FOLLOW_UP_STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Remarks (Optional)
-                </label>
-                <textarea
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  rows={4}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                  placeholder="Add any remarks about the follow-up..."
-                />
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <button
-                  onClick={handleRecordFollowUp}
-                  className="flex-1 bg-brand-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#0fa085] transition-colors"
-                >
-                  Record Follow-up
-                </button>
-                <button
-                  onClick={() => {
-                    setShowFollowUpModal(false);
-                    setSelectedRsm(null);
-                    setStatus("Connected");
-                    setRemarks("");
-                  }}
-                  className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
+            <div className="p-5 space-y-4">
+              <select className="w-full border rounded-xl px-3 py-2.5 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
+                {FOLLOW_UP_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <textarea className="w-full border rounded-xl px-3 py-2.5 text-sm" rows={3} placeholder="Remarks..." value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+            </div>
+            <div className="px-5 py-4 border-t flex justify-end gap-2">
+              <button type="button" className="px-4 py-2 rounded-xl border text-sm" onClick={() => setShowModal(false)}>Cancel</button>
+              <button type="button" className="px-4 py-2 rounded-xl text-sm text-white inline-flex items-center gap-2" style={{ backgroundColor: "var(--color-brand-primary)" }} onClick={saveFollowUp}>
+                <Save className="w-4 h-4" /> Save
+              </button>
             </div>
           </div>
         </div>
@@ -376,4 +323,3 @@ const AsmFollowUps = () => {
 };
 
 export default AsmFollowUps;
-

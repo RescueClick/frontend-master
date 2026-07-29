@@ -85,6 +85,8 @@ const initialState = {
     error: null,
     success: false,
     data: [],
+    summary: null,
+    period: null,
   },
 
   // fetch bank state
@@ -334,13 +336,25 @@ const rsmSlice = createSlice({
       })
       .addCase(fetchRmFollowUps.fulfilled, (state, action) => {
         state.rmFollowUps.loading = false;
-        state.rmFollowUps.data = action.payload;
+        const payload = action.payload;
+        if (Array.isArray(payload)) {
+          state.rmFollowUps.data = payload;
+          state.rmFollowUps.summary = null;
+          state.rmFollowUps.period = null;
+        } else {
+          state.rmFollowUps.data = payload?.items || [];
+          state.rmFollowUps.summary = payload?.summary || null;
+          state.rmFollowUps.period = payload?.period || null;
+        }
         state.rmFollowUps.success = true;
       })
       .addCase(fetchRmFollowUps.rejected, (state, action) => {
         state.rmFollowUps.loading = false;
         state.rmFollowUps.error = action.payload;
         state.rmFollowUps.success = false;
+        state.rmFollowUps.data = [];
+        state.rmFollowUps.summary = null;
+        state.rmFollowUps.period = null;
       })
       .addCase(recordRmFollowUp.fulfilled, (state) => {
         // no-op: UI will refetch follow-ups after successful record

@@ -315,15 +315,29 @@ export const recordRmFollowUp = createAsyncThunk(
 // Fetch RM Follow-ups (RSM role)
 export const fetchRmFollowUps = createAsyncThunk(
   "rsm/fetchRmFollowUps",
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     try {
       const { rsmToken } = getAuthData();
+      const params = {};
+      if (filters.year) params.year = filters.year;
+      if (filters.month) params.month = filters.month;
+      if (filters.date) params.date = filters.date;
+      if (filters.status) params.status = filters.status;
+      if (filters.performance) params.performance = filters.performance;
+
       const response = await axios.get(`${backendurl}/rsm/rms/follow-ups`, {
         headers: {
           Authorization: `Bearer ${rsmToken}`,
         },
+        params,
       });
-      return unwrapApiData(response.data);
+      const body = response.data || {};
+      const items = Array.isArray(body) ? body : body.items || body.data || [];
+      return {
+        items,
+        summary: body.summary || null,
+        period: body.period || null,
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RM follow-ups"
