@@ -11,12 +11,17 @@ const CibilAuditLog = () => {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const { token } = await getAuthData();
+        const { adminToken } = getAuthData();
+        if (!adminToken) {
+          console.error("Error fetching CIBIL reports: missing admin token");
+          setLoading(false);
+          return;
+        }
         const res = await axios.get(`${backendurl}/cibil/admin/all`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${adminToken}` },
         });
         setStats(res.data.stats);
-        setReports(res.data.reports);
+        setReports(res.data.reports || []);
       } catch (err) {
         console.error("Error fetching CIBIL reports:", err);
       } finally {
