@@ -93,6 +93,7 @@ const Customer = () => {
       "Disbursed Amount": c.approvedAmount ?? "",
       Payout: c.payoutAmount ?? "",
       Status: getLoanStatusLabel(c.status) || String(c.status || ""),
+      Remarks: c.remarks || "",
     }));
     if (!downloadXlsx(rows, "partner-customers.xlsx", "Customers")) {
       toast.error("No rows to export");
@@ -215,6 +216,18 @@ const Customer = () => {
           <LoanStatusBadge status={s} className="whitespace-nowrap" />
         ),
       },
+      {
+        title: "Remarks",
+        key: "remarks",
+        render: (_, customer) =>
+          customer.status === "REJECTED" && customer.remarks ? (
+            <span className="text-sm text-red-600 max-w-[220px] block truncate" title={customer.remarks}>
+              {customer.remarks}
+            </span>
+          ) : (
+            <span className="text-gray-400">—</span>
+          ),
+      },
     ],
     []
   );
@@ -272,6 +285,13 @@ const Customer = () => {
             </div>
           </div>
         </div>
+
+        {customer.status === "REJECTED" && customer.remarks ? (
+          <div className="pt-2 border-t border-gray-100">
+            <div className="text-xs text-gray-500 mb-1">Rejection Remark</div>
+            <div className="text-sm text-red-600">{customer.remarks}</div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

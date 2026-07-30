@@ -83,6 +83,7 @@ const Application = () => {
                 : latestPayoutAmount, // Use backend field if present, else latest payout
             status: mapStatus(app.status), // normalize backend → UI
             stageHistory: app.stageHistory || [],
+            remarks: app.remarks || null,
           };
         });
 
@@ -297,9 +298,14 @@ const Application = () => {
             style={{ backgroundColor: "orange" }}
             title="View Remarks"
             onClick={() => {
-              const lastRemark = application.stageHistory?.length
-                ? application.stageHistory[application.stageHistory.length - 1].note
-                : "No remarks available";
+              const lastRemark =
+                application.remarks ||
+                (application.stageHistory?.length
+                  ? [...application.stageHistory]
+                      .reverse()
+                      .find((h) => h?.note && String(h.note).trim())?.note
+                  : null) ||
+                "No remarks available";
               setSelectedRemark(lastRemark);
               setOpen(true);
             }}
@@ -584,12 +590,14 @@ const Application = () => {
                     className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity text-sm"
                     style={{ backgroundColor: "orange" }}
                     onClick={() => {
-                      const lastRemark = application.stageHistory
-                        ?.length
-                        ? application.stageHistory[
-                            application.stageHistory.length - 1
-                          ].note
-                        : "No remarks available";
+                      const lastRemark =
+                        application.remarks ||
+                        (application.stageHistory?.length
+                          ? [...application.stageHistory]
+                              .reverse()
+                              .find((h) => h?.note && String(h.note).trim())?.note
+                          : null) ||
+                        "No remarks available";
 
                       setSelectedRemark(lastRemark);
                       setOpen(true);
