@@ -373,8 +373,10 @@ const PartnerRegistrationForm = () => {
     } catch (err) {
       const payload = err?.payload;
       const backendMsg =
+        (typeof err === "string" && err.trim()) ||
         (typeof payload === "string" && payload.trim()) ||
-        payload?.message || err?.message ||
+        payload?.message ||
+        err?.message ||
         "Registration failed. Please try again.";
       setSuccessMessageType("error");
       setSuccessMessage(backendMsg);
