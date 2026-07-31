@@ -217,7 +217,7 @@ const Dashboard = () => {
             <div className="flex-1">
               <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Customers</p>
               <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalCustomers || 0)}</p>
-              <p className={typography.tiny()}>Total customers</p>
+              <p className={typography.tiny()}>With loan applications</p>
             </div>
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
               <UserCheck className="w-5 h-5 text-white" />

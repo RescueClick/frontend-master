@@ -67,7 +67,7 @@ export default function CustomerTable() {
       const employeeId = (c.employeeId || "").toLowerCase();
       const phone = String(c.phone || "").toLowerCase();
       const email = (c.email || "").toLowerCase();
-      const mongoId = (c._id || "").toLowerCase();
+      const mongoId = String(c._id || c.applicationId || "").toLowerCase();
       const appNo = String(c.appNo ?? "").toLowerCase();
       const loanType = (c.loanType || "").toLowerCase();
       const asmName = (c.asmName || "").toLowerCase();
@@ -89,6 +89,15 @@ export default function CustomerTable() {
       );
     });
   }, [sortedData, searchQuery, statusFilter]);
+
+  const uniqueCustomerCount = useMemo(() => {
+    const ids = new Set(
+      filteredCustomers
+        .map((c) => String(c.userId || c.employeeId || "").trim())
+        .filter(Boolean)
+    );
+    return ids.size;
+  }, [filteredCustomers]);
 
   useEffect(() => {
     dispatch(getAllCustomers());
@@ -232,7 +241,7 @@ export default function CustomerTable() {
               borderColor: colors.secondary,
               color: colors.secondary,
             }}
-            onClick={() => handleLoginAs(c._id)}
+            onClick={() => handleLoginAs(c.userId)}
           >
             Login
           </button>
@@ -328,7 +337,7 @@ export default function CustomerTable() {
           Cancel
         </button>
         <button
-          onClick={() => handleDeleteCustomer(deleteConfirm._id, `${deleteConfirm.firstName} ${deleteConfirm.lastName}`)}
+          onClick={() => handleDeleteCustomer(deleteConfirm.userId, `${deleteConfirm.firstName} ${deleteConfirm.lastName}`)}
           disabled={deleting}
           className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
@@ -492,7 +501,9 @@ export default function CustomerTable() {
 <DashboardTablePage
       title="Customer Applications"
       subtitle={
-        loading ? "Loading..." : `Total ${filteredCustomers.length} records found`
+        loading
+          ? "Loading..."
+          : `${filteredCustomers.length} applications · ${uniqueCustomerCount} unique customers`
       }
       headerRight={
         <>
