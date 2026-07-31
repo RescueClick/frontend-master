@@ -303,22 +303,22 @@ export default function CustomerTable() {
 
       {/* Title */}
       <h2 className="text-xl font-bold text-center text-gray-800 mb-2">
-        Delete Customer?
+        Soft-delete customer?
       </h2>
 
       {/* Warning Message */}
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-red-800 font-medium mb-2">
-          ⚠️ This action cannot be undone!
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+        <p className="text-sm text-amber-900 font-medium mb-2">
+          Applications will be hidden from Admin lists. Records and documents stay in the database.
         </p>
         <p className="text-sm text-gray-700">
-          You are about to permanently delete:
+          You are about to soft-delete (hide):
         </p>
         <ul className="text-sm text-gray-700 mt-2 ml-4 list-disc">
           <li>Customer: <strong>{deleteConfirm.firstName} {deleteConfirm.lastName}</strong></li>
           <li>Customer ID: <strong>{deleteConfirm.employeeId}</strong></li>
-          <li>All associated loan applications</li>
-          <li>All uploaded documents</li>
+          <li>Their loan applications will be hidden from lists</li>
+          <li>Data is kept in the database (not permanently wiped)</li>
         </ul>
       </div>
 
