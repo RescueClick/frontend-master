@@ -42,6 +42,7 @@ import AddRSMPage from "./sidebars/users/Admin/addaccount/AddRSMPage.jsx";
 // Import Admin user pages
 import AdminDashboard from "./sidebars/users/Admin/Dashboard";
 import AdminPartner from "./sidebars/users/Admin/Partner";
+import AdminMovePartners from "./sidebars/users/Admin/MovePartners";
 import AdminRM from "./sidebars/users/Admin/RM";
 import AdminRSM from "./sidebars/users/Admin/RSM";
 import AdiminASM from "./sidebars/users/Admin/ASM";
@@ -82,6 +83,7 @@ import AsmDonePayout from "./sidebars/users/ASM/AsmDonePayout";
 import AsmWithdrawals from "./sidebars/users/ASM/AsmWithdrawals";
 import AsmPartnerTargets from "./sidebars/users/ASM/AsmPartnerTargets";
 import AsmPartners from "./sidebars/users/ASM/AsmPartners";
+import AsmMovePartners from "./sidebars/users/ASM/AsmMovePartners";
 import Settings from "./sidebars/users/ASM/Settings";
 import ASManalytics from "./sidebars/users/ASM/ASManalytics";
 import EditProfile from "./sidebars/users/userProfile/EditProfile";
@@ -251,6 +253,7 @@ const AppRoutes = () => {
         <Route path="RM" element={<AdminRM />} />
         <Route path="partner" element={<AdminPartner />} />
         <Route path="Partner" element={<AdminPartner />} />
+        <Route path="move-partners" element={<AdminMovePartners />} />
         <Route path="public-loan-referral" element={<AdminPublicLoanReferral />} />
         <Route path="referral-reward-amounts" element={<AdminReferralRewardAmounts />} />
         <Route path="referral-rewards" element={<AdminReferralRewards />} />
@@ -293,6 +296,7 @@ const AppRoutes = () => {
         <Route path="rms" element={<AsmRM />} /> 
         <Route path="applications" element={<Applications />} />
         <Route path="partners" element={<AsmPartners />} />
+        <Route path="move-partners" element={<AsmMovePartners />} />
         <Route path="payouts" element={<AsmPayouts />} />
         <Route path="pending-payout" element={<AsmPendingPayout />} />
         <Route path="done-payout" element={<AsmDonePayout />} />

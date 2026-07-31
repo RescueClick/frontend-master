@@ -85,6 +85,7 @@ const AdminSideBar = () => {
     { name: "RSM", icon: Users, path: "/admin/rsm" },
     { name: "RM", icon: Users, path: "/admin/rm" },
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
+    { name: "Move Partners", icon: Users, path: "/admin/move-partners", highlight: true },
     { name: "Customer", icon: Users, path: "/admin/customer" },
     {
       name: "Public loan referral",

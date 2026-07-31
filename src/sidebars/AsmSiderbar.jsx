@@ -87,6 +87,7 @@ const AsmSiderbar = () => {
     { name: "Dashboard", icon: LayoutGrid, path: "/asm/dashboard" },
     { name: "RSMs", icon: Users, path: "/asm/rsms" },
     { name: "Partners", icon: UserCheck, path: "/asm/partners" },
+    { name: "Move Partners", icon: Users, path: "/asm/move-partners", highlight: true },
     { name: "Applications", icon: FileText, path: "/asm/applications" },
     { name: "Payouts", icon: IndianRupee, path: "/asm/payouts", highlight: true },
     { name: "Incentives", icon: Award, path: "/asm/incentives", highlight: true },

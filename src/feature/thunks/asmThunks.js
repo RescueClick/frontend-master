@@ -179,6 +179,43 @@ export const fetchAsmPartners = createAsyncThunk(
   }
 );
 
+export const fetchAsmPartnersByRm = createAsyncThunk(
+  "asm/fetchPartnersByRm",
+  async (rmId, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.get(
+        `${backendurl}/asm/rm/${rmId}/get-partners`,
+        { headers: { Authorization: `Bearer ${asmToken}` } }
+      );
+      return unwrapApiData(response.data);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch partners for RM"
+      );
+    }
+  }
+);
+
+export const bulkMoveAsmPartnersRm = createAsyncThunk(
+  "asm/bulkMovePartnersRm",
+  async ({ partnerIds, fromRmId, toRmId, dryRun = false }, { rejectWithValue }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/asm/partners/bulk-move-rm`,
+        { partnerIds, fromRmId, toRmId, dryRun },
+        { headers: { Authorization: `Bearer ${asmToken}` } }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to move partners"
+      );
+    }
+  }
+);
+
 export const fetchAsmCustomers = createAsyncThunk(
   "asm/fetchCustomers",
   async (_, { rejectWithValue }) => {

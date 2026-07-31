@@ -436,6 +436,45 @@ export const fetchPartners = createAsyncThunk(
   }
 );
 
+/** Partners under a specific RM (for bulk move UI) */
+export const fetchAdminPartnersByRm = createAsyncThunk(
+  "admin/fetchPartnersByRm",
+  async (rmId, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.get(
+        `${backendurl}/admin/rm/${rmId}/get-partners`,
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+      return unwrapApiData(response.data);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch partners for RM"
+      );
+    }
+  }
+);
+
+/** Bulk move partners From RM → To RM */
+export const bulkMovePartnersRm = createAsyncThunk(
+  "admin/bulkMovePartnersRm",
+  async ({ partnerIds, fromRmId, toRmId, dryRun = false }, { rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/partners/bulk-move-rm`,
+        { partnerIds, fromRmId, toRmId, dryRun },
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to move partners"
+      );
+    }
+  }
+);
+
 // Get Unassigned Partners
 export const getUnassignedPartners = createAsyncThunk(
   "admin/getUnassignedPartners",
