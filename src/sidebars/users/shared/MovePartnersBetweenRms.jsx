@@ -392,6 +392,10 @@ export default function MovePartnersBetweenRms({ mode = "admin" }) {
                 <strong>{preview.movedPartners}</strong>
               </li>
               <li>
+                Customers kept on same partner (RM sync):{" "}
+                <strong>{preview.syncedCustomers ?? 0}</strong>
+              </li>
+              <li>
                 Open applications that will move:{" "}
                 <strong>{preview.movedApplications}</strong>
               </li>
@@ -401,8 +405,9 @@ export default function MovePartnersBetweenRms({ mode = "admin" }) {
               </li>
             </ul>
             <p className="mt-3 text-xs text-amber-700">
-              Disbursed / rejected applications and paid payouts stay with
-              historical records. Partner status is not changed.
+              Customers stay with the same partner. Disbursed / rejected
+              applications and paid payouts stay with historical records.
+              Partner status is not changed.
             </p>
             <div className="mt-6 flex justify-end gap-2">
               <button
