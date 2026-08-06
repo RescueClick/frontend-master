@@ -71,7 +71,11 @@ const AdminDonePayout = () => {
         row.loanType,
       ]);
       const matchesStatus = matchesStatusFilter(row.payOutStatus, selectedFilter);
-      const matchesDate = matchesMonthYear(row, { year, month });
+      const matchesDate = matchesMonthYear(row, {
+        year,
+        month,
+        dateKeys: ["disbursedAt", "updatedAt", "createdAt", "applicationDate"],
+      });
       return matchesSearch && matchesStatus && matchesDate;
     });
     return sortNewestFirst(filtered, { dateKeys: ["createdAt", "applicationDate"] });
