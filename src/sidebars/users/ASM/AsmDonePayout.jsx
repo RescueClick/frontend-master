@@ -34,8 +34,12 @@ const AsmDonePayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [year, setYear] = useState(location.state?.year || new Date().getFullYear());
-  const [month, setMonth] = useState(location.state?.month || new Date().getMonth() + 1);
+  const [year, setYear] = useState(
+    location.state?.allMonths ? "all" : location.state?.year || new Date().getFullYear()
+  );
+  const [month, setMonth] = useState(
+    location.state?.allMonths ? "all" : location.state?.month || new Date().getMonth() + 1
+  );
 
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [approvalAmount, setApprovalAmount] = useState("");
@@ -69,11 +73,14 @@ const AsmDonePayout = () => {
         row.loanType,
       ]);
       const matchesStatus = matchesStatusFilter(row.payOutStatus, selectedFilter);
-      const matchesDate = matchesMonthYear(row, {
-        year,
-        month,
-        dateKeys: ["disbursedAt", "updatedAt", "createdAt", "applicationDate"],
-      });
+      const matchesDate =
+        year === "all" || month === "all"
+          ? true
+          : matchesMonthYear(row, {
+              year,
+              month,
+              dateKeys: ["disbursedAt", "updatedAt", "createdAt", "applicationDate"],
+            });
       return matchesSearch && matchesStatus && matchesDate;
     });
     return sortNewestFirst(filtered, { dateKeys: ["createdAt", "applicationDate"] });
@@ -409,9 +416,13 @@ const AsmDonePayout = () => {
 
             <select
               value={year}
-              onChange={(e) => setYear(parseInt(e.target.value))}
+              onChange={(e) => {
+                const v = e.target.value;
+                setYear(v === "all" ? "all" : parseInt(v, 10));
+              }}
               className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
             >
+              <option value="all">All years</option>
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
                 <option key={y} value={y}>
                   {y}
@@ -421,9 +432,13 @@ const AsmDonePayout = () => {
 
             <select
               value={month}
-              onChange={(e) => setMonth(parseInt(e.target.value))}
+              onChange={(e) => {
+                const v = e.target.value;
+                setMonth(v === "all" ? "all" : parseInt(v, 10));
+              }}
               className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
             >
+              <option value="all">All months</option>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m}>
                   {new Date(2000, m - 1).toLocaleString("default", { month: "short" })}
