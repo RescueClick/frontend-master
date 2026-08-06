@@ -417,7 +417,7 @@ export default function CustomerTable() {
               {[
                 ["Application no.", model.appNo ?? "—"],
                 ["Application date", formatDate(model.applicationDate)],
-                ["User name", model.userName ?? "—"],
+                ["User name", [model.firstName, model.lastName].filter(Boolean).join(" ") || model.userName || "—"],
                 ["User ID", model.userId || "N/A"],
                 ["Phone", model.phone ?? "—"],
                 ["Email", model.email ?? "—"],

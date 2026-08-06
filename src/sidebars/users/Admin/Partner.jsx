@@ -189,46 +189,46 @@ export default function PartnerTable() {
   const filteredPartners = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    const term = searchQuery.trim().toLowerCase();
-    const selectedState = stateFilter === "All" ? "" : stateFilter.trim().toLowerCase();
+    const norm = (v) =>
+      String(v ?? "")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const term = norm(searchQuery);
+    const selectedState =
+      stateFilter === "All" ? "" : norm(stateFilter);
 
     return data.filter((partner) => {
-      const partnerRegion = String(partner.region || "").trim().toLowerCase();
+      const partnerRegion = norm(partner.region);
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;
       if (!term) return true;
 
-      const fullName = `${partner.firstName || ""} ${
-        partner.middleName || ""
-      } ${partner.lastName || ""}`.toLowerCase();
-      const email = (partner.email || "").toLowerCase();
-      const phone = (partner.phone || "").toLowerCase();
-      const partnerId = (partner._id || "").toLowerCase();
-      const partnerCode = (partner.partnerCode || "").toLowerCase();
-      const employeeId = (partner.employeeId || "").toLowerCase();
-      const rmName = (partner.rmName || "").toLowerCase();
-      const rmEmployeeId = (partner.rmEmployeeId || "").toLowerCase();
-      const asmName = (partner.asmName || "").toLowerCase();
-      const asmEmployeeId = (partner.asmEmployeeId || "").toLowerCase();
-      const rmId = (partner.rmId || "").toLowerCase();
-      const asmId = (partner.asmId || "").toLowerCase();
-      const region = partnerRegion;
-
-      return (
-        fullName.includes(term) ||
-        email.includes(term) ||
-        phone.includes(term) ||
-        partnerId.includes(term) ||
-        partnerCode.includes(term) ||
-        employeeId.includes(term) ||
-        rmName.includes(term) ||
-        rmEmployeeId.includes(term) ||
-        asmName.includes(term) ||
-        asmEmployeeId.includes(term) ||
-        rmId.includes(term) ||
-        asmId.includes(term) ||
-        region.includes(term)
+      const fullName = norm(
+        [partner.firstName, partner.middleName, partner.lastName]
+          .filter(Boolean)
+          .join(" ")
       );
+      const haystack = [
+        fullName,
+        partner.email,
+        partner.phone,
+        partner._id,
+        partner.partnerCode,
+        partner.employeeId,
+        partner.rmName,
+        partner.rmEmployeeId,
+        partner.asmName,
+        partner.asmEmployeeId,
+        partner.rmId,
+        partner.asmId,
+        partner.region,
+      ]
+        .map(norm)
+        .join(" ");
+
+      return haystack.includes(term);
     });
   }, [data, searchQuery, stateFilter]);
 
@@ -523,7 +523,11 @@ loginAsUser(userId, navigate);
         <DashboardTablePage
           title="Partner"
           subtitle={
-            loading ? "Loading..." : `Total ${data.length} records found`
+            loading
+              ? "Loading..."
+              : searchQuery.trim() || stateFilter !== "All"
+                ? `Showing ${sortedFilteredPartners.length} of ${data.length} partners`
+                : `Total ${data.length} records found`
           }
           headerRight={
             <>
