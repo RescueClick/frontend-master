@@ -69,8 +69,8 @@ const Dashboard = () => {
   const metricCards = useMemo(
     () => [
       {
-        title: "Active Partners",
-        value: data?.totals?.activePartners ?? 0,
+        title: "Total Partners",
+        value: data?.totals?.totalPartners ?? 0,
         icon: Users,
         onClick: () => navigate("/rm/partners"),
         subtitle: "Partners under you",
