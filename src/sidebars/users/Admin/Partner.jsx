@@ -34,9 +34,13 @@ const colors = {
 const docTypeDisplayNames = {
   PAN: "PAN Card",
   AADHAR_FRONT: "Aadhaar Front",
+  AADHAAR_FRONT: "Aadhaar Front",
   AADHAR_BACK: "Aadhaar Back",
+  AADHAAR_BACK: "Aadhaar Back",
   PHOTO: "Photo",
   SELFIE: "Selfie",
+  PHOTO_OR_SELFIE: "Photo or Selfie",
+  PASSPORT_PHOTO: "Photo",
   ADDRESS_PROOF: "Address Proof",
   OTHER_DOCS: "Other Documents",
   BUSINESS_OTHER_DOCS: "Business Other Documents",
@@ -54,6 +58,11 @@ const docTypeDisplayNames = {
   GST_DOCUMENT: "GST Document",
   GST_CERTIFICATE: "GST Certificate",
   SHOP_PHOTO: "Shop Photo",
+  CO_APPLICANT_AADHAR_FRONT: "Co-applicant Aadhaar Front",
+  CO_APPLICANT_AADHAR_BACK: "Co-applicant Aadhaar Back",
+  CO_APPLICANT_PAN: "Co-applicant PAN",
+  CO_APPLICANT_SELFIE: "Co-applicant Selfie",
+  CO_APPLICANT_SELFIE_OR_PHOTO: "Co-applicant Selfie or Photo",
 };
 
 const toDocLabel = (docType) => {

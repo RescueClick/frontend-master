@@ -289,7 +289,9 @@ const RsmApplicationView = () => {
   const docTypeDisplayNames = {
     PAN: "PAN Card",
     AADHAR_FRONT: "Aadhaar Front",
+    AADHAAR_FRONT: "Aadhaar Front",
     AADHAR_BACK: "Aadhaar Back",
+    AADHAAR_BACK: "Aadhaar Back",
     PHOTO: "Photo",
     SELFIE: "Selfie",
     PHOTO_OR_SELFIE: "Photo or Selfie",
