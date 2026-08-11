@@ -92,7 +92,16 @@ const RsmFollowUps = () => {
       String(r.phone).includes(searchTerm)
     );
   });
-  const sorted = sortNewestFirst(filtered, { dateKeys: ["lastCall"] });
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const codeA = String(a.employeeId || "").trim();
+      const codeB = String(b.employeeId || "").trim();
+      if (codeA && codeB) {
+        return codeB.localeCompare(codeA, undefined, { numeric: true });
+      }
+      return 0;
+    });
+  }, [filtered]);
 
   const openFollowUp = (row) => {
     setSelectedRm(row);

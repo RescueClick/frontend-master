@@ -194,9 +194,16 @@ const FollowUp = () => {
     );
   });
 
-  const sortedFilteredFollowUps = sortNewestFirst(filteredFollowUps, {
-    dateKeys: ["lastCall"],
-  });
+  const sortedFilteredFollowUps = useMemo(() => {
+    return [...filteredFollowUps].sort((a, b) => {
+      const codeA = String(a.employeeId || "").trim();
+      const codeB = String(b.employeeId || "").trim();
+      if (codeA && codeB) {
+        return codeB.localeCompare(codeA, undefined, { numeric: true });
+      }
+      return 0;
+    });
+  }, [filteredFollowUps]);
 
   const totalLoans =
     summary?.totalLoans ??
