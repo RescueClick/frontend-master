@@ -1037,14 +1037,75 @@ const CustomerApplication = () => {
     return getLocalRequiredDocRules(applicationData?.loanType);
   };
 
-  const normalizeDocKey = (value) => String(value || "").trim().toUpperCase();
+  const normalizeDocKey = (value) => {
+    const raw = String(value || "").trim().toUpperCase();
+    const map = {
+      AADHAAR_FRONT: "AADHAR_FRONT",
+      AADHAAR_BACK: "AADHAR_BACK",
+      PASSPORT_PHOTO: "PHOTO",
+      PHOTO_OR_SELFIE: "PHOTO_OR_SELFIE",
+      COMPANY_ID: "COMPANY_ID_CARD",
+      COMPANY_IDCARD: "COMPANY_ID_CARD",
+      BANK_STATEMENT: "BANK_STATEMENT_1",
+      GST: "GST_DOCUMENT",
+      GST_DOC: "GST_DOCUMENT",
+      GST_CERTIFICATE: "GST_DOCUMENT",
+      CO_APPLICANT_PASSPORT_PHOTO: "CO_APPLICANT_SELFIE",
+    };
+    return map[raw] || raw;
+  };
 
   const isRuleMatchedByDoc = (rule, doc) => {
-    const acceptedDocTypes = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
-    const docType = normalizeDocKey(doc?.docType);
-    return acceptedDocTypes.some(
-      (type) => normalizeDocKey(type) === docType
-    );
+    if (!doc || !doc.docType) return false;
+    const docType = String(doc.docType).trim().toUpperCase();
+    const normDocType = normalizeDocKey(docType);
+
+    const ruleKey = String(rule?.key || "").trim().toUpperCase();
+    const normRuleKey = normalizeDocKey(ruleKey);
+
+    if (docType === ruleKey || normDocType === normRuleKey) return true;
+
+    const acceptedDocTypes = Array.isArray(rule?.acceptedDocTypes)
+      ? rule.acceptedDocTypes.map((t) => String(t).trim().toUpperCase())
+      : [ruleKey];
+
+    if (
+      acceptedDocTypes.includes(docType) ||
+      acceptedDocTypes.includes(normDocType) ||
+      acceptedDocTypes.some((t) => normalizeDocKey(t) === normDocType)
+    ) {
+      return true;
+    }
+
+    const isPhotoRule =
+      normRuleKey === "PHOTO_OR_SELFIE" ||
+      normRuleKey === "PHOTO" ||
+      normRuleKey === "SELFIE" ||
+      acceptedDocTypes.some((t) => ["PHOTO", "SELFIE", "PHOTO_OR_SELFIE"].includes(t));
+
+    const isPhotoDoc =
+      docType === "PHOTO_OR_SELFIE" ||
+      docType === "PHOTO" ||
+      docType === "SELFIE" ||
+      docType === "PASSPORT_PHOTO" ||
+      normDocType === "PHOTO";
+
+    if (isPhotoRule && isPhotoDoc) return true;
+
+    if (
+      (normRuleKey === "AADHAR_FRONT" || normRuleKey === "AADHAAR_FRONT") &&
+      (docType === "AADHAR_FRONT" || docType === "AADHAAR_FRONT")
+    ) {
+      return true;
+    }
+    if (
+      (normRuleKey === "AADHAR_BACK" || normRuleKey === "AADHAAR_BACK") &&
+      (docType === "AADHAR_BACK" || docType === "AADHAAR_BACK")
+    ) {
+      return true;
+    }
+
+    return false;
   };
 
   const findDocForRule = (rule, docs = []) => {
@@ -1054,9 +1115,12 @@ const CustomerApplication = () => {
   const docTypeDisplayNames = {
     PAN: "PAN Card",
     AADHAR_FRONT: "Aadhaar Front",
+    AADHAAR_FRONT: "Aadhaar Front",
     AADHAR_BACK: "Aadhaar Back",
+    AADHAAR_BACK: "Aadhaar Back",
     PHOTO: "Photo",
     SELFIE: "Selfie",
+    PHOTO_OR_SELFIE: "Photo or Selfie",
     ADDRESS_PROOF: "Address Proof",
     LIGHT_BILL: "Light Bill",
     UTILITY_BILL: "Utility Bill",
@@ -1081,6 +1145,7 @@ const CustomerApplication = () => {
     CO_APPLICANT_AADHAR_BACK: "Co-applicant Aadhaar Back",
     CO_APPLICANT_PAN: "Co-applicant PAN",
     CO_APPLICANT_SELFIE: "Co-applicant Selfie",
+    CO_APPLICANT_SELFIE_OR_PHOTO: "Co-applicant Selfie or Photo",
   };
 
   const toDocLabel = (docType) => {

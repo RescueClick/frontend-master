@@ -250,10 +250,30 @@ const RsmApplicationView = () => {
   };
 
   const findDocForRule = (rule, docs = []) => {
-    const accepted = Array.isArray(rule?.acceptedDocTypes) ? rule.acceptedDocTypes : [];
-    return docs.find((doc) =>
-      accepted.some((type) => normalizeDocType(type) === normalizeDocType(doc?.docType))
-    );
+    if (!rule) return undefined;
+    const normRuleKey = String(rule.key || "").trim().toUpperCase();
+    const accepted = Array.isArray(rule.acceptedDocTypes)
+      ? rule.acceptedDocTypes.map((t) => String(t).trim().toUpperCase())
+      : [normRuleKey];
+
+    return docs.find((doc) => {
+      if (!doc || !doc.docType) return false;
+      const docType = String(doc.docType).trim().toUpperCase();
+      if (docType === normRuleKey || accepted.includes(docType)) return true;
+      if (
+        (normRuleKey === "PHOTO_OR_SELFIE" || normRuleKey === "PHOTO" || normRuleKey === "SELFIE") &&
+        (docType === "PHOTO_OR_SELFIE" || docType === "PHOTO" || docType === "SELFIE" || docType === "PASSPORT_PHOTO")
+      ) return true;
+      if (
+        (normRuleKey === "AADHAR_FRONT" || normRuleKey === "AADHAAR_FRONT") &&
+        (docType === "AADHAR_FRONT" || docType === "AADHAAR_FRONT")
+      ) return true;
+      if (
+        (normRuleKey === "AADHAR_BACK" || normRuleKey === "AADHAAR_BACK") &&
+        (docType === "AADHAR_BACK" || docType === "AADHAAR_BACK")
+      ) return true;
+      return false;
+    });
   };
 
   const hasRuleUpload = (rule, docs = []) => {

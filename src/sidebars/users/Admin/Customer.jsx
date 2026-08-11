@@ -233,19 +233,22 @@ export default function CustomerTable() {
       {
         title: "Login As",
         key: "login",
-        render: (_, c) => (
-          <button
-            type="button"
-            className="px-2 py-1 border rounded text-xs"
-            style={{
-              borderColor: colors.secondary,
-              color: colors.secondary,
-            }}
-            onClick={() => handleLoginAs(c.userId)}
-          >
-            Login
-          </button>
-        ),
+        render: (_, c) =>
+          c.isUserAccount && c.userId ? (
+            <button
+              type="button"
+              className="px-2 py-1 border rounded text-xs"
+              style={{
+                borderColor: colors.secondary,
+                color: colors.secondary,
+              }}
+              onClick={() => handleLoginAs(c.userId)}
+            >
+              Login
+            </button>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          ),
       },
       {
         title: "Status",
@@ -272,7 +275,7 @@ export default function CustomerTable() {
               type="button"
               className="p-1 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
               onClick={() => setDeleteConfirm(c)}
-              title="Delete Customer"
+              title="Delete Customer / Loan File"
             >
               <Trash2 size={14} />
             </button>
@@ -303,7 +306,7 @@ export default function CustomerTable() {
 
       {/* Title */}
       <h2 className="text-xl font-bold text-center text-gray-800 mb-2">
-        Soft-delete customer?
+        Soft-delete customer / loan file?
       </h2>
 
       {/* Warning Message */}
@@ -315,9 +318,9 @@ export default function CustomerTable() {
           You are about to soft-delete (hide):
         </p>
         <ul className="text-sm text-gray-700 mt-2 ml-4 list-disc">
-          <li>Customer: <strong>{deleteConfirm.firstName} {deleteConfirm.lastName}</strong></li>
-          <li>Customer ID: <strong>{deleteConfirm.employeeId}</strong></li>
-          <li>Their loan applications will be hidden from lists</li>
+          <li>Customer: <strong>{deleteConfirm.firstName || deleteConfirm.userName || "Customer"} {deleteConfirm.lastName || ""}</strong></li>
+          <li>ID / App No: <strong>{deleteConfirm.employeeId || deleteConfirm.appNo || "N/A"}</strong></li>
+          <li>Loan application will be hidden from lists</li>
           <li>Data is kept in the database (not permanently wiped)</li>
         </ul>
       </div>
@@ -337,7 +340,12 @@ export default function CustomerTable() {
           Cancel
         </button>
         <button
-          onClick={() => handleDeleteCustomer(deleteConfirm.userId, `${deleteConfirm.firstName} ${deleteConfirm.lastName}`)}
+          onClick={() =>
+            handleDeleteCustomer(
+              deleteConfirm.userId || deleteConfirm.applicationId || deleteConfirm._id,
+              `${deleteConfirm.firstName || deleteConfirm.userName || "Customer"} ${deleteConfirm.lastName || ""}`.trim()
+            )
+          }
           disabled={deleting}
           className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
@@ -349,7 +357,7 @@ export default function CustomerTable() {
           ) : (
             <>
               <Trash2 size={16} />
-              Delete Permanently
+              Delete Softly
             </>
           )}
         </button>
