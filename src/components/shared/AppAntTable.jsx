@@ -1,4 +1,5 @@
 import { Table } from "antd";
+import { useState } from "react";
 
 /** Fixed 10 rows per page everywhere (size changer off). */
 const defaultPagination = {
@@ -24,8 +25,35 @@ export default function AppAntTable({
   className = "",
   /** Use in cards/widgets: no min-height on the shell so short tables stay tight */
   compact = false,
+  tableId,
   ...rest
 }) {
+  const locationPath = typeof window !== "undefined" ? window.location.pathname : "";
+  // Use a stable key for session storage. Use tableId if provided, else use pathname
+  const storageKey = `table-page-${tableId || locationPath}`;
+
+  // Initial page from session storage
+  const [currentPage, setCurrentPage] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(storageKey);
+      return saved ? parseInt(saved, 10) : 1;
+    } catch {
+      return 1;
+    }
+  });
+
+  const handleTableChange = (newPagination, filters, sorter, extra) => {
+    if (newPagination && newPagination.current) {
+      setCurrentPage(newPagination.current);
+      try {
+        sessionStorage.setItem(storageKey, newPagination.current.toString());
+      } catch {}
+    }
+    if (rest.onChange) {
+      rest.onChange(newPagination, filters, sorter, extra);
+    }
+  };
+
   const paginationConfig =
     pagination === false
       ? false
@@ -34,6 +62,18 @@ export default function AppAntTable({
             typeof pagination === "object" && pagination !== null
               ? { ...pagination }
               : {};
+          
+          // Calculate valid page to avoid "No data" if list shrinks
+          let validPage = currentPage;
+          const totalItems = extra.total !== undefined ? extra.total : (dataSource ? dataSource.length : 0);
+          
+          if (!loading && totalItems >= 0) {
+            const maxPage = Math.max(1, Math.ceil(totalItems / 10));
+            if (validPage > maxPage) {
+              validPage = maxPage;
+            }
+          }
+
           delete extra.pageSize;
           delete extra.defaultPageSize;
           delete extra.pageSizeOptions;
@@ -41,6 +81,7 @@ export default function AppAntTable({
           return {
             ...defaultPagination,
             ...extra,
+            current: validPage,
             defaultPageSize: 10,
             pageSizeOptions: ["10"],
             showSizeChanger: false,
@@ -61,6 +102,7 @@ export default function AppAntTable({
         scroll={scroll}
         size={size}
         {...rest}
+        onChange={handleTableChange}
       />
     </div>
   );
