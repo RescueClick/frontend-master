@@ -50,7 +50,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    currentPassword: "",
     phone: "",
     dob: "",
     address: "",
@@ -60,12 +59,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
 
   const [errors, setErrors] = useState({});
   const [saveMsg, setSaveMsg] = useState(null);
-
-  const originalEmail = data?.email || "";
-  const isEmailChanged =
-    Boolean(originalEmail) &&
-    Boolean(formData.email?.trim()) &&
-    formData.email.trim().toLowerCase() !== originalEmail.trim().toLowerCase();
 
   useEffect(() => {
     const { asmToken, rsmToken, rmToken } = getAuthData();
@@ -83,7 +76,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
     setFormData({
       fullName,
       email: data.email || "",
-      currentPassword: "",
       phone: data.phone || "",
       dob: data.dob ? String(data.dob).slice(0, 10) : "",
       address: data.address || "",
@@ -112,10 +104,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
       newErrors.email = "Email address is required";
     } else if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
       newErrors.email = "Please enter a valid email address";
-    }
-
-    if (isEmailChanged && !formData.currentPassword?.trim()) {
-      newErrors.currentPassword = "Enter your current password to authorize email address change";
     }
 
     if (!formData.phone?.trim()) {
@@ -185,11 +173,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
       experience: formData.experience || "",
       region: formData.region?.trim() || "",
     };
-
-    if (isEmailChanged) {
-      payload.currentEmail = originalEmail;
-      payload.currentPassword = formData.currentPassword;
-    }
 
     try {
       let result;
@@ -309,31 +292,6 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                       <p className="text-red-500 text-xs mt-1">{errors.email}</p>
                     )}
                   </div>
-
-                  {isEmailChanged && (
-                    <div className="md:col-span-2 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-                      <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
-                        <Lock className="w-4 h-4 text-amber-600" />
-                        Confirm Email Change
-                      </div>
-                      <p className="text-xs text-amber-700">
-                        You are changing your registered email from <strong>{originalEmail}</strong> to <strong>{formData.email}</strong>. Please enter your current password to authorize this change.
-                      </p>
-                      <input
-                        name="currentPassword"
-                        type="password"
-                        value={formData.currentPassword || ""}
-                        onChange={(e) => handleInputChange("currentPassword", e.target.value)}
-                        className={`w-full px-3 py-2.5 bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm ${
-                          errors.currentPassword ? "border-red-400" : "border-amber-300"
-                        }`}
-                        placeholder="Enter your current password"
-                      />
-                      {errors.currentPassword && (
-                        <p className="text-red-500 text-xs">{errors.currentPassword}</p>
-                      )}
-                    </div>
-                  )}
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
                       <Phone className="w-4 h-4 text-brand-primary" />
