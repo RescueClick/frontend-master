@@ -3,6 +3,7 @@ import {
   User,
   Phone,
   Mail,
+  Lock,
   Calendar,
   Home,
   Briefcase,
@@ -30,6 +31,7 @@ export default function PartnerEditProfile() {
     middleName: "",
     lastName: "",
     email: "",
+    currentPassword: "",
     phone: "",
     dob: "",
     address: "",
@@ -39,6 +41,12 @@ export default function PartnerEditProfile() {
   const [errors, setErrors] = useState({});
   const [saveMsg, setSaveMsg] = useState(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const originalEmail = data?.email || "";
+  const isEmailChanged =
+    Boolean(originalEmail) &&
+    Boolean(form.email?.trim()) &&
+    form.email.trim().toLowerCase() !== originalEmail.trim().toLowerCase();
 
   const getErrMsg = (err, fallback) => {
     const data = err?.response?.data;
@@ -66,6 +74,7 @@ export default function PartnerEditProfile() {
       middleName: data.middleName || "",
       lastName: data.lastName || "",
       email: data.email || "",
+      currentPassword: "",
       phone: data.phone || "",
       dob: data.dob ? String(data.dob).slice(0, 10) : "",
       address: data.address || "",
@@ -85,6 +94,9 @@ export default function PartnerEditProfile() {
     if (!form.lastName?.trim()) e.lastName = "Last name is required";
     if (!form.email?.trim()) e.email = "Email address is required";
     else if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) e.email = "Enter a valid email address";
+    if (isEmailChanged && !form.currentPassword?.trim()) {
+      e.currentPassword = "Enter your current password to authorize email address change";
+    }
     if (!form.phone?.trim()) e.phone = "Phone is required";
     else if (form.phone.replace(/\D/g, "").length !== 10) e.phone = "Enter 10-digit mobile";
     if (!form.dob) e.dob = "Date of birth is required";
@@ -117,6 +129,11 @@ export default function PartnerEditProfile() {
       experience: form.experience,
       region: form.region.trim(),
     };
+
+    if (isEmailChanged) {
+      payload.currentEmail = originalEmail;
+      payload.currentPassword = form.currentPassword;
+    }
 
     try {
       await dispatch(updatePartnerProfile(payload)).unwrap();
@@ -306,6 +323,31 @@ export default function PartnerEditProfile() {
                     />
                     {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                   </div>
+
+                  {isEmailChanged && (
+                    <div className="md:col-span-2 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
+                        <Lock className="w-4 h-4 text-amber-600" />
+                        Confirm Email Change
+                      </div>
+                      <p className="text-xs text-amber-700">
+                        You are changing your registered email from <strong>{originalEmail}</strong> to <strong>{form.email}</strong>. Please enter your current password to authorize this change.
+                      </p>
+                      <input
+                        name="currentPassword"
+                        type="password"
+                        value={form.currentPassword || ""}
+                        onChange={(e) => handleChange("currentPassword", e.target.value)}
+                        className={`w-full px-3 py-2.5 bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm ${
+                          errors.currentPassword ? "border-red-400" : "border-amber-300"
+                        }`}
+                        placeholder="Enter your current password"
+                      />
+                      {errors.currentPassword && (
+                        <p className="text-red-500 text-xs">{errors.currentPassword}</p>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
                       <Phone className="w-4 h-4 text-brand-primary" />
