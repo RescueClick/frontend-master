@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   User,
   Phone,
+  Mail,
   Calendar,
   Home,
   Briefcase,
@@ -28,6 +29,7 @@ export default function PartnerEditProfile() {
     firstName: "",
     middleName: "",
     lastName: "",
+    email: "",
     phone: "",
     dob: "",
     address: "",
@@ -63,6 +65,7 @@ export default function PartnerEditProfile() {
       firstName: data.firstName || "",
       middleName: data.middleName || "",
       lastName: data.lastName || "",
+      email: data.email || "",
       phone: data.phone || "",
       dob: data.dob ? String(data.dob).slice(0, 10) : "",
       address: data.address || "",
@@ -80,6 +83,8 @@ export default function PartnerEditProfile() {
     const e = {};
     if (!form.firstName?.trim()) e.firstName = "First name is required";
     if (!form.lastName?.trim()) e.lastName = "Last name is required";
+    if (!form.email?.trim()) e.email = "Email address is required";
+    else if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) e.email = "Enter a valid email address";
     if (!form.phone?.trim()) e.phone = "Phone is required";
     else if (form.phone.replace(/\D/g, "").length !== 10) e.phone = "Enter 10-digit mobile";
     if (!form.dob) e.dob = "Date of birth is required";
@@ -105,6 +110,7 @@ export default function PartnerEditProfile() {
       firstName: form.firstName.trim(),
       middleName: form.middleName?.trim() || "",
       lastName: form.lastName.trim(),
+      email: form.email.trim().toLowerCase(),
       phone: form.phone.trim(),
       dob: form.dob,
       address: form.address.trim(),
@@ -283,6 +289,23 @@ export default function PartnerEditProfile() {
                   Contact
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+                      <Mail className="w-4 h-4 text-brand-primary" />
+                      Email Address *
+                    </label>
+                    <input
+                      name="email"
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => handleChange("email", e.target.value)}
+                      className={`w-full px-3 py-2.5 border rounded-xl ${
+                        errors.email ? "border-red-400" : "border-slate-200"
+                      }`}
+                      placeholder="name@example.com"
+                    />
+                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                  </div>
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
                       <Phone className="w-4 h-4 text-brand-primary" />

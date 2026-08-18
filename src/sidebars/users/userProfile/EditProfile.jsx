@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   User,
   Phone,
+  Mail,
   Calendar,
   Home,
   Briefcase,
@@ -47,6 +48,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
 
   const [formData, setFormData] = useState({
     fullName: "",
+    email: "",
     phone: "",
     dob: "",
     address: "",
@@ -72,6 +74,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
         : `${data.firstName || ""} ${data.lastName || ""}`.trim();
     setFormData({
       fullName,
+      email: data.email || "",
       phone: data.phone || "",
       dob: data.dob ? String(data.dob).slice(0, 10) : "",
       address: data.address || "",
@@ -94,6 +97,12 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
       newErrors.fullName = "Full name must be at least 2 characters";
     } else if (!/^[a-zA-Z\s]+$/.test(formData.fullName.trim())) {
       newErrors.fullName = "Full name should only contain letters and spaces";
+    }
+
+    if (!formData.email?.trim()) {
+      newErrors.email = "Email address is required";
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (!formData.phone?.trim()) {
@@ -156,6 +165,7 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
     const payload = {
       firstName,
       lastName,
+      email: formData.email?.trim().toLowerCase() || "",
       phone: formData.phone?.trim() || "",
       dob: formData.dob || "",
       address: formData.address?.trim() || "",
@@ -260,6 +270,25 @@ export default function EditProfile({ setEditProfileOpen, onClose }) {
                     />
                     {errors.fullName && (
                       <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+                      <Mail className="w-4 h-4 text-brand-primary" />
+                      Email Address *
+                    </label>
+                    <input
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/40 transition ${
+                        errors.email ? "border-red-400" : "border-slate-200"
+                      }`}
+                      placeholder="name@example.com"
+                    />
+                    {errors.email && (
+                      <p className="text-red-500 text-xs mt-1">{errors.email}</p>
                     )}
                   </div>
                   <div>
