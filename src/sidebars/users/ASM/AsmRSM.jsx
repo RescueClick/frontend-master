@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Download } from "lucide-react";
+import { Search, Download, X } from "lucide-react";
 import { fetchRsmList, activateRSM, asmDeactivateRsm } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +32,16 @@ export default function AsmRSM() {
   const [rsmToActivate, setRsmToActivate] = useState(null);
   const [replacementRsmId, setReplacementRsmId] = useState("");
   const [replacementSearch, setReplacementSearch] = useState("");
+  const [rsmForTransfer, setRsmForTransfer] = useState(null);
+  const [availableRms, setAvailableRms] = useState([]);
+  const [loadingRms, setLoadingRms] = useState(false);
+  const [selectedRmIdsForTransfer, setSelectedRmIdsForTransfer] = useState([]);
+  const [transferSearch, setTransferSearch] = useState("");
+  const [transferSubmitting, setTransferSubmitting] = useState(false);
+  const [rsmWorkloadSource, setRsmWorkloadSource] = useState(null);
+  const [targetRsmWorkloadId, setTargetRsmWorkloadId] = useState("");
+  const [workloadSearch, setWorkloadSearch] = useState("");
+  const [workloadSubmitting, setWorkloadSubmitting] = useState(false);
 
   const { data: rsmsData, loading, error } = useSelector((state) => state.asm.rsmList || { data: [], loading: false, error: null });
   
@@ -134,6 +144,111 @@ export default function AsmRSM() {
       setReplacementSearch("");
     } catch (err) {
       // toast is handled in thunk
+    }
+  };
+
+  const fetchRmsForTransfer = async () => {
+    setLoadingRms(true);
+    try {
+      const { asmToken, adminToken } = getAuthData() || {};
+      const token = asmToken || adminToken;
+      const res = await axios.get(`${backendurl}/asm/get-rms-for-transfer`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAvailableRms(res.data || []);
+    } catch (err) {
+      console.error("Failed to load RMs:", err);
+      toast.error("Failed to load RMs");
+    } finally {
+      setLoadingRms(false);
+    }
+  };
+
+  const openTransferModal = (rsm) => {
+    setRsmForTransfer(rsm);
+    setSelectedRmIdsForTransfer([]);
+    setTransferSearch("");
+    fetchRmsForTransfer();
+  };
+
+  const handleConfirmTransfer = async () => {
+    if (!rsmForTransfer || !selectedRmIdsForTransfer.length) {
+      toast.error("Please select at least one RM to transfer");
+      return;
+    }
+    setTransferSubmitting(true);
+    try {
+      const { asmToken, adminToken } = getAuthData() || {};
+      const token = asmToken || adminToken;
+      const res = await axios.post(
+        `${backendurl}/asm/transfer-rm-to-rsm`,
+        {
+          rmIds: selectedRmIdsForTransfer,
+          toRsmId: rsmForTransfer._id,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(res.data.message || "RMs transferred successfully");
+      setRsmForTransfer(null);
+      setSelectedRmIdsForTransfer([]);
+      dispatch(fetchRsmList());
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to transfer RMs");
+    } finally {
+      setTransferSubmitting(false);
+    }
+  };
+
+  const rsmWorkloadCandidates = useMemo(() => {
+    if (!rsmWorkloadSource || !Array.isArray(rsms)) return [];
+    const term = (workloadSearch || "").trim().toLowerCase();
+    return rsms
+      .filter(
+        (r) =>
+          r._id !== rsmWorkloadSource._id &&
+          r.status === "ACTIVE" &&
+          (r.rsmType || "").toUpperCase() ===
+            (rsmWorkloadSource.rsmType || "").toUpperCase()
+      )
+      .filter((r) =>
+        term
+          ? `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase().includes(term) ||
+            `${r.employeeId || ""}`.toLowerCase().includes(term)
+          : true
+      )
+      .map((r) => ({
+        id: r._id,
+        name: `${r.firstName || ""} ${r.lastName || ""}`.trim(),
+        meta: `${r.employeeId || "RSM"} • ${r.rsmType || ""}`,
+        statusBadge: r.status,
+      }));
+  }, [rsms, rsmWorkloadSource, workloadSearch]);
+
+  const handleConfirmWorkloadTransfer = async () => {
+    if (!rsmWorkloadSource || !targetRsmWorkloadId) {
+      toast.error("Please select a target replacement RSM");
+      return;
+    }
+    setWorkloadSubmitting(true);
+    try {
+      const { asmToken, adminToken } = getAuthData() || {};
+      const token = asmToken || adminToken;
+      const res = await axios.post(
+        `${backendurl}/asm/transfer-rsm-workload`,
+        {
+          fromRsmId: rsmWorkloadSource._id,
+          toRsmId: targetRsmWorkloadId,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(res.data.message || "RSM workload transferred successfully");
+      setRsmWorkloadSource(null);
+      setTargetRsmWorkloadId("");
+      dispatch(fetchRsmList());
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to transfer RSM workload");
+    } finally {
+      setWorkloadSubmitting(false);
     }
   };
 
@@ -278,7 +393,25 @@ export default function AsmRSM() {
       title: "Action",
       key: "action",
       render: (_, rsm) => (
-        <div className="flex h-full flex-wrap items-center gap-3">
+        <div className="flex h-full flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="rounded px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+            onClick={() => openTransferModal(rsm)}
+          >
+            Assign / Transfer RMs
+          </button>
+          <button
+            type="button"
+            className="rounded px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors"
+            onClick={() => {
+              setRsmWorkloadSource(rsm);
+              setTargetRsmWorkloadId("");
+              setWorkloadSearch("");
+            }}
+          >
+            Transfer to RSM
+          </button>
           <button
             type="button"
             className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
@@ -385,6 +518,166 @@ export default function AsmRSM() {
         onConfirm={confirmDeactivate}
         confirmLabel="Confirm & Deactivate"
         confirmDisabled={!replacementRsmId}
+      />
+
+      {/* Assign / Transfer RMs Modal */}
+      {rsmForTransfer && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setRsmForTransfer(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative max-h-[85vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 bg-brand-primary text-white rounded-t-2xl flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold">Assign / Transfer RMs</h3>
+                <p className="text-xs text-white/80 mt-0.5">
+                  Target RSM: {rsmForTransfer.firstName} {rsmForTransfer.lastName} ({rsmForTransfer.employeeId || "N/A"}) • {rsmForTransfer.rsmType || "ALL"}
+                </p>
+              </div>
+              <button
+                className="text-white/80 hover:text-white rounded-full p-1.5"
+                onClick={() => setRsmForTransfer(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 flex-1 overflow-y-auto space-y-4">
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search RM by name, ID, or phone..."
+                  value={transferSearch}
+                  onChange={(e) => setTransferSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                />
+              </div>
+
+              {loadingRms ? (
+                <div className="py-8 text-center text-sm text-gray-500">Loading RMs...</div>
+              ) : availableRms.length === 0 ? (
+                <div className="py-8 text-center text-sm text-gray-500">No RMs available under your management</div>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                  {availableRms
+                    .filter((rm) => {
+                      const term = transferSearch.trim().toLowerCase();
+                      if (!term) return true;
+                      const name = `${rm.firstName || ""} ${rm.lastName || ""}`.toLowerCase();
+                      const eid = (rm.employeeId || "").toLowerCase();
+                      const phone = (rm.phone || "").toLowerCase();
+                      return name.includes(term) || eid.includes(term) || phone.includes(term);
+                    })
+                    .map((rm) => {
+                      const isSelected = selectedRmIdsForTransfer.includes(rm._id);
+                      const currentPersonal = rm.personalRsmId?.firstName ? `${rm.personalRsmId.firstName} ${rm.personalRsmId.lastName}` : "None";
+                      const currentBiz = rm.businessHomeRsmId?.firstName ? `${rm.businessHomeRsmId.firstName} ${rm.businessHomeRsmId.lastName}` : "None";
+
+                      return (
+                        <div
+                          key={rm._id}
+                          onClick={() => {
+                            setSelectedRmIdsForTransfer((prev) =>
+                              prev.includes(rm._id)
+                                ? prev.filter((id) => id !== rm._id)
+                                : [...prev, rm._id]
+                            );
+                          }}
+                          className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                            isSelected
+                              ? "border-brand-primary bg-blue-50/60 shadow-sm"
+                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {}}
+                              className="h-4 w-4 rounded text-brand-primary focus:ring-brand-primary pointer-events-none"
+                            />
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">
+                                {rm.firstName} {rm.lastName}{" "}
+                                <span className="text-xs font-normal text-gray-500">
+                                  ({rm.employeeId || "RM"})
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                Current Personal RSM: <span className="font-medium text-gray-700">{currentPersonal}</span> • Biz/Home RSM: <span className="font-medium text-gray-700">{currentBiz}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right text-xs text-gray-500 shrink-0">
+                            <div><span className="font-semibold text-gray-800">{rm.partnerCount || 0}</span> Partners</div>
+                            <div><span className="font-semibold text-gray-800">{rm.appCount || 0}</span> Apps</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+              <div className="text-xs text-gray-600">
+                Selected: <span className="font-bold text-gray-900">{selectedRmIdsForTransfer.length}</span> RM(s)
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRsmForTransfer(null)}
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={transferSubmitting || !selectedRmIdsForTransfer.length}
+                  onClick={handleConfirmTransfer}
+                  className="px-5 py-2 text-sm font-medium rounded-lg text-white disabled:opacity-50 transition-colors"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  {transferSubmitting ? "Transferring..." : `Transfer ${selectedRmIdsForTransfer.length} RM(s)`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer RSM Workload Modal */}
+      <ReassignmentDeactivateModal
+        isOpen={!!rsmWorkloadSource}
+        title="Transfer RSM Workload"
+        subjectName={`${rsmWorkloadSource?.firstName || ""} ${rsmWorkloadSource?.lastName || ""}`.trim()}
+        subjectMeta={
+          rsmWorkloadSource?.rsmType
+            ? `RSM type: ${rsmWorkloadSource.rsmType}`
+            : ""
+        }
+        warningText="All RMs and open application files under this RSM will be safely transferred to the selected active replacement RSM."
+        searchValue={workloadSearch}
+        onSearchChange={setWorkloadSearch}
+        searchPlaceholder="Search target RSM by name or ID..."
+        candidates={rsmWorkloadCandidates}
+        selectedId={targetRsmWorkloadId}
+        onSelect={setTargetRsmWorkloadId}
+        onCancel={() => {
+          setRsmWorkloadSource(null);
+          setTargetRsmWorkloadId("");
+          setWorkloadSearch("");
+        }}
+        onConfirm={handleConfirmWorkloadTransfer}
+        confirmLabel={workloadSubmitting ? "Transferring..." : "Confirm & Transfer Workload"}
+        confirmDisabled={!targetRsmWorkloadId || workloadSubmitting}
       />
     </>
   );
