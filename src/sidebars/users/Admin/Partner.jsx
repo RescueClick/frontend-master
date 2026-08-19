@@ -87,6 +87,7 @@ export default function PartnerTable() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
 
   /** null | { mode: 'single', partner } | { mode: 'all', partners: [] } */
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -195,6 +196,18 @@ export default function PartnerTable() {
 
   const stateOptions = INDIAN_STATE_FILTER_OPTIONS;
 
+  const { activeCount, inactiveCount, pendingCount } = useMemo(() => {
+    let act = 0;
+    let inact = 0;
+    let pend = 0;
+    (data || []).forEach((p) => {
+      if (p.status === "ACTIVE") act++;
+      else if (p.status === "PENDING") pend++;
+      else inact++;
+    });
+    return { activeCount: act, inactiveCount: inact, pendingCount: pend };
+  }, [data]);
+
   const filteredPartners = useMemo(() => {
     if (!data || data.length === 0) return [];
 
@@ -212,6 +225,11 @@ export default function PartnerTable() {
       const partnerRegion = norm(partner.region);
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;
+
+      if (statusFilter === "ACTIVE" && partner.status !== "ACTIVE") return false;
+      if (statusFilter === "INACTIVE" && (partner.status === "ACTIVE" || partner.status === "PENDING")) return false;
+      if (statusFilter === "PENDING" && partner.status !== "PENDING") return false;
+
       if (!term) return true;
 
       const fullName = norm(
@@ -239,7 +257,7 @@ export default function PartnerTable() {
 
       return haystack.includes(term);
     });
-  }, [data, searchQuery, stateFilter]);
+  }, [data, searchQuery, stateFilter, statusFilter]);
 
   const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
@@ -534,9 +552,9 @@ loginAsUser(userId, navigate);
           subtitle={
             loading
               ? "Loading..."
-              : searchQuery.trim() || stateFilter !== "All"
-                ? `Showing ${sortedFilteredPartners.length} of ${data.length} partners`
-                : `Total ${data.length} records found`
+              : searchQuery.trim() || stateFilter !== "All" || statusFilter !== "All"
+                ? `Showing ${sortedFilteredPartners.length} of ${data?.length || 0} partners (${activeCount} Active, ${inactiveCount + pendingCount} Inactive/Pending)`
+                : `Total ${data?.length || 0} partners (${activeCount} Active, ${inactiveCount + pendingCount} Inactive/Pending)`
           }
           headerRight={
             <>
@@ -553,6 +571,17 @@ loginAsUser(userId, navigate);
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+              <select
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary bg-white font-medium"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                aria-label="Filter by status"
+              >
+                <option value="All">All Statuses ({data?.length || 0})</option>
+                <option value="ACTIVE">Active ({activeCount})</option>
+                <option value="INACTIVE">Inactive / Suspended ({inactiveCount})</option>
+                <option value="PENDING">Pending ({pendingCount})</option>
+              </select>
               <select
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary bg-white"
                 value={stateFilter}

@@ -135,8 +135,8 @@ const Dashboard = () => {
         title: "Active Partners",
         value: data?.totals?.activePartners || 0,
         icon: Building2,
-        onClick: () => navigate("/rsm/applications"),
-        subtitle: "Active partners",
+        onClick: () => navigate("/rsm/partners"),
+        subtitle: `${data?.totals?.activePartners || 0} Active • ${data?.totals?.totalPartners || 0} Total`,
         colorIndex: 1,
       },
       {

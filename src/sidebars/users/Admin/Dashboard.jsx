@@ -197,9 +197,11 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1">
-              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Partners</p>
-              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalPartners || 0)}</p>
-              <p className={typography.tiny()}>Total partners</p>
+              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Active Partners</p>
+              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.activePartners ?? data?.totalPartners ?? 0)}</p>
+              <p className={typography.tiny()}>
+                <span className="font-semibold text-emerald-600">{formatNumber(data?.activePartners ?? 0)} Active</span> • {formatNumber(data?.totalPartners || 0)} Total
+              </p>
             </div>
             <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
               <Building2 className="w-5 h-5 text-white" />

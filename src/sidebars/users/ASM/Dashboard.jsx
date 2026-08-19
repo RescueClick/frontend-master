@@ -62,8 +62,8 @@ const Dashboard = () => {
       title: "Active Partners",
       value: formatNumber(data?.totals?.activePartners || 0),
       icon: Building2,
-      path: "/asm/rms",
-      subtitle: "Active partners in region"
+      path: "/asm/partners",
+      subtitle: `${formatNumber(data?.totals?.activePartners || 0)} Active • ${formatNumber(data?.totals?.totalPartners || 0)} Total`
     },
     {
       title: "Total Customers",
