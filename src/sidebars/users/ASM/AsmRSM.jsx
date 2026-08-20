@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Download, X } from "lucide-react";
-import { fetchRsmList, activateRSM, asmDeactivateRsm } from "../../../feature/thunks/asmThunks";
+import { fetchRsmList, activateRSM, asmDeactivateRsm, deleteRsmAsm } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { formatNumber } from "../../../utils/designSystem";
@@ -310,44 +310,67 @@ export default function AsmRSM() {
     return sortNewestFirst(rows, { dateKeys: ["createdAt", "updatedAt"] });
   }, [filteredRsms]);
 
+  const handleDeleteRsm = async (rsm) => {
+    const name = `${rsm.firstName || ""} ${rsm.lastName || ""}`.trim() || "this RSM";
+    const confirmed = window.confirm(
+      `Delete RSM account "${name}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await dispatch(deleteRsmAsm(rsm._id)).unwrap();
+      dispatch(fetchRsmList());
+      toast.success("RSM deleted successfully");
+    } catch (err) {
+      toast.error(
+        typeof err === "string" ? err : err?.message || "Failed to delete RSM"
+      );
+    }
+  };
+
   const asmRsmColumns = [
     {
       title: "RSM name",
       key: "name",
       render: (_, rsm) => (
         <span className="align-top text-sm font-medium text-gray-900">
-          {rsm.name}
+          {rsm.firstName} {rsm.lastName}
         </span>
       ),
     },
-    {
-      title: "User ID",
-      key: "employeeId",
-      render: (_, rsm) => rsm.employeeId || "N/A",
-    },
+    { title: "User ID", dataIndex: "employeeId", key: "employeeId" },
     {
       title: "RSM type",
+      dataIndex: "rsmType",
       key: "rsmType",
-      render: (_, rsm) => (
-        <span className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-800">
-          {rsm.rsmType || "N/A"}
+      render: (type) => (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            (type || "").toUpperCase() === "PERSONAL"
+              ? "bg-purple-100 text-purple-800"
+              : "bg-blue-100 text-blue-800"
+          }`}
+        >
+          {type || "N/A"}
         </span>
       ),
     },
     {
       title: "Contact",
-      key: "phone",
+      key: "contact",
       render: (_, rsm) => (
-        <span className="text-sm font-medium">{rsm.phone || "N/A"}</span>
+        <span className="text-sm font-medium">{rsm.phone || "—"}</span>
       ),
     },
     {
       title: "Created on",
       key: "createdAt",
       render: (_, rsm) =>
-        rsm.createdAt
-          ? new Date(rsm.createdAt).toLocaleDateString()
-          : "N/A",
+        new Date(rsm.createdAt).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
     },
     {
       title: "Status",
@@ -356,14 +379,28 @@ export default function AsmRSM() {
         <div
           role="button"
           tabIndex={0}
-          onClick={() => toggleActivation(rsm)}
           className={`flex h-6 w-12 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ${
             rsm.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-300"
           }`}
+          onClick={() => {
+            if (rsm.status === "ACTIVE") {
+              setRsmToDeactivate(rsm);
+              setReplacementRsmId("");
+              setReplacementSearch("");
+            } else {
+              setRsmToActivate(rsm);
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              toggleActivation(rsm);
+              if (rsm.status === "ACTIVE") {
+                setRsmToDeactivate(rsm);
+                setReplacementRsmId("");
+                setReplacementSearch("");
+              } else {
+                setRsmToActivate(rsm);
+              }
             }
           }}
         >
@@ -418,6 +455,13 @@ export default function AsmRSM() {
             onClick={() => handleViewAnalytics(rsm)}
           >
             Analytics
+          </button>
+          <button
+            type="button"
+            className="cursor-pointer rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-200 transition-colors"
+            onClick={() => handleDeleteRsm(rsm)}
+          >
+            Delete
           </button>
         </div>
       ),

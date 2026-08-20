@@ -459,6 +459,27 @@ export const deleteRmAsm = createAsyncThunk(
   }
 );
 
+// Thunk to delete an RSM (ASM role) after deactivation / RM reassignment
+export const deleteRsmAsm = createAsyncThunk(
+  "asm/deleteRsm",
+  async (rsmId, { rejectWithValue, dispatch }) => {
+    try {
+      const { asmToken } = getAuthData();
+      const response = await axios.delete(`${backendurl}/asm/rsm/${rsmId}`, {
+        headers: {
+          Authorization: `Bearer ${asmToken}`,
+        },
+      });
+      dispatch(fetchRsmList());
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to delete RSM"
+      );
+    }
+  }
+);
+
 // Fetch RSM Analytics (ASM role)
 // Now uses universal analytics endpoint
 export const fetchRsmAnalytics = createAsyncThunk(
