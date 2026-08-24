@@ -57,55 +57,14 @@ const toDocLabel = (docType) => {
   return docTypeDisplayNames[key] || key || "Document";
 };
 
-// Sample customer data
-const customersData = [
-  {
-    name: "Sanjay",
-    userId: "U001",
-    contact: "7720990081",
-    applicationDate: "18-08-2025",
-    loanType: "Personal Loan",
-    loanAmount: "₹5,00,000",
-    disburseAmount: "₹4,80,000",
-    status: "In Process",
-  },
-  {
-    name: "XYZ",
-    userId: "U002",
-    contact: "123456789",
-    applicationDate: "14-08-2025",
-    loanType: "Home Loan",
-    loanAmount: "₹25,00,000",
-    disburseAmount: "₹24,50,000",
-    status: "Disbursed",
-  },
-  {
-    name: "ABCD",
-    userId: "U003",
-    contact: "8899990000",
-    applicationDate: "01-08-2025",
-    loanType: "Car Loan",
-    loanAmount: "₹10,00,000",
-    disburseAmount: "₹9,80,000",
-    status: "Rejected",
-  },
-  {
-    name: "Aslam",
-    userId: "U004",
-    contact: "7517433560",
-    applicationDate: "24-07-2025",
-    loanType: "Education Loan",
-    loanAmount: "₹15,00,000",
-    disburseAmount: "₹14,70,000",
-    status: "Disbursed",
-  },
-];
+
 
 export default function RMpartner() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [partnerToAssign, setPartnerToAssign] = useState(null);
   const [selectedRm, setSelectedRm] = useState(null);
   const [rmSearch, setRmSearch] = useState("");
+  const [partnerSearch, setPartnerSearch] = useState("");
 
   const [handleModal, setHandleModal] = useState({
     modalStatus: false,
@@ -128,7 +87,15 @@ export default function RMpartner() {
 
   const isRejecting = rejectPartnerState.loading;
 
-  const displayData = data || [];
+  const allPartners = data || [];
+
+  const displayData = allPartners.filter((p) => {
+    const term = partnerSearch.trim().toLowerCase();
+    if (!term) return true;
+    const name = `${p.firstName || ""} ${p.lastName || ""}`.toLowerCase();
+    const phone = `${p.phone || ""}`.toLowerCase();
+    return name.includes(term) || phone.includes(term);
+  });
 
   useEffect(() => {
     const { adminToken } = getAuthData() || {};
@@ -138,8 +105,6 @@ export default function RMpartner() {
 
     dispatch(getUnassignedPartners());
   }, [dispatch]);
-
-  const [customers] = useState(customersData);
 
   const handleRejectPartner = async () => {
     if (!partnerToReject || isRejecting) return;
@@ -570,11 +535,28 @@ export default function RMpartner() {
         </div>
       )}
 
-      {/* Title */}
-      <h2 className="text-lg font-semibold mb-2">New Partner</h2>
-      <p className="text-xs text-gray-600 mb-3">
-        Total {displayData?.length || 0} records found
-      </p>
+      {/* Title + Search */}
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <div>
+          <h2 className="text-lg font-semibold">New Partner</h2>
+          <p className="text-xs text-gray-600 mt-0.5">
+            Total {displayData?.length || 0} records found
+          </p>
+        </div>
+        <div className="relative">
+          <Search
+            size={16}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <input
+            type="text"
+            className="border border-gray-300 rounded-md pl-8 pr-3 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            placeholder="Search by name or phone…"
+            value={partnerSearch}
+            onChange={(e) => setPartnerSearch(e.target.value)}
+          />
+        </div>
+      </div>
 
       {/* Table */}
       <div className="overflow-x-auto rounded-lg shadow-md">
