@@ -39,6 +39,37 @@ import {
 } from "../../../../utils/loanDocumentUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 
+const formatDocTypeName = (docType) => {
+  const map = {
+    AADHAR_FRONT: "Aadhaar Card (Front)",
+    AADHAR_BACK: "Aadhaar Card (Back)",
+    PAN: "PAN Card",
+    PHOTO: "Applicant Photo / Selfie",
+    SELFIE: "Applicant Photo / Selfie",
+    PHOTO_OR_SELFIE: "Applicant Photo / Selfie",
+    ADDRESS_PROOF: "Address Proof (Electricity Bill / Rent Agreement)",
+    LIGHT_BILL: "Electricity Bill",
+    COMPANY_ID_CARD: "Company ID Card",
+    SALARY_SLIP_1: "Salary Slip (Month 1)",
+    SALARY_SLIP_2: "Salary Slip (Month 2)",
+    SALARY_SLIP_3: "Salary Slip (Month 3)",
+    FORM_16_26AS: "Form 16 / 26AS",
+    BANK_STATEMENT_1: "Bank Statement (Latest 6 Months)",
+    BANK_STATEMENT_2: "Bank Statement 2",
+    SHOP_ACT: "Shop Act / Gumasta License",
+    UDHYAM_AADHAR: "Udyam Aadhaar",
+    ITR: "ITR (Income Tax Returns)",
+    SHOP_PHOTO: "Shop / Office Photo",
+    GST_DOCUMENT: "GST Certificate",
+    CO_APPLICANT_AADHAR_FRONT: "Co-Applicant Aadhaar (Front)",
+    CO_APPLICANT_AADHAR_BACK: "Co-Applicant Aadhaar (Back)",
+    CO_APPLICANT_PAN: "Co-Applicant PAN Card",
+    CO_APPLICANT_SELFIE: "Co-Applicant Photo / Selfie",
+    CO_APPLICANT_SELFIE_OR_PHOTO: "Co-Applicant Photo / Selfie",
+  };
+  return map[docType] || String(docType || "").replace(/_/g, " ");
+};
+
 export default function BusinessLoan({ embed = false } = {}) {
   const { partnerToken } = getAuthData();
   const isPartnerLoggedIn = Boolean(partnerToken);
@@ -799,11 +830,19 @@ const handleSubmit = async () => {
     } else if (err.code === "ECONNABORTED") {
       setError("Request timeout. Please check your connection and try again.");
     } else if (err.response) {
-      const backendMessage = err.response?.data?.message;
-      const backendError = err.response?.data?.error || "";
+      const backendData = err.response?.data;
+      const backendMessage = backendData?.message;
+      const backendError = backendData?.error || "";
+      const missingDocs = backendData?.missingDocs;
+      const errorsList = backendData?.errors;
 
-      // Friendly messages for duplicate keys (email / phone)
-      if (typeof backendError === "string" && backendError.includes("E11000")) {
+      if (Array.isArray(missingDocs) && missingDocs.length > 0) {
+        setError("Mandatory documents are missing. Please upload the required documents:");
+        setValidationErrors(missingDocs.map((doc) => `Missing Document: ${formatDocTypeName(doc)}`));
+      } else if (Array.isArray(errorsList) && errorsList.length > 0) {
+        setError(backendMessage || "Please fix the following validation errors:");
+        setValidationErrors(errorsList);
+      } else if (typeof backendError === "string" && backendError.includes("E11000")) {
         if (backendError.includes("email_1")) {
           setError(
             "An account with this email already exists. Please login or use a different email."
@@ -817,20 +856,22 @@ const handleSubmit = async () => {
             "A record with these details already exists. Please login or use different details."
           );
         }
+        setValidationErrors([]);
       } else {
-        // Generic server-side validation / error
         setError(
           backendMessage || err.message || "Failed to save application. Try again."
         );
-        setValidationErrors(err.response?.data?.errors || []);
+        setValidationErrors([]);
       }
     } else if (err.request) {
-      // Request was made but no response received
       setError("Network error. Please check your connection and try again.");
     } else {
-      // Something else happened
-      setError("An unexpected error occurred. Please try again.");
+      setError(err.message || "An unexpected error occurred. Please try again.");
     }
+
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 100);
   } finally {
     setLoading(false);
     abortControllerRef.current = null;
@@ -850,7 +891,6 @@ const handleSubmit = async () => {
         resetFields();
         return;
       }
-      // Create AbortController for request cancellation
       abortControllerRef.current = new AbortController();
 
       await axios.post(
@@ -860,28 +900,41 @@ const handleSubmit = async () => {
           headers: {
             Authorization: `Bearer ${partnerToken}`,
           },
-          timeout: 30000, // 30 seconds timeout
+          timeout: 30000,
           signal: abortControllerRef.current.signal,
         }
       );
       setSuccessMessage("Application submitted successfully.");
       resetFields();
     } catch (err) {
-      // Handle different error types
       if (axios.isCancel(err)) {
         setError("Request was cancelled. Please try again.");
       } else if (err.code === 'ECONNABORTED') {
         setError("Request timeout. Please check your connection and try again.");
       } else if (err.response) {
-        setError(
-          err.response?.data?.message || err.message || "Something went wrong."
-        );
-        setValidationErrors(err.response?.data?.errors || []);
+        const backendData = err.response?.data;
+        const missingDocs = backendData?.missingDocs;
+        const errorsList = backendData?.errors;
+
+        if (Array.isArray(missingDocs) && missingDocs.length > 0) {
+          setError("Mandatory documents missing:");
+          setValidationErrors(missingDocs.map((doc) => `Missing Document: ${formatDocTypeName(doc)}`));
+        } else if (Array.isArray(errorsList) && errorsList.length > 0) {
+          setError(backendData?.message || "Validation errors:");
+          setValidationErrors(errorsList);
+        } else {
+          setError(backendData?.message || err.message || "Something went wrong.");
+          setValidationErrors([]);
+        }
       } else if (err.request) {
         setError("Network error. Please check your connection and try again.");
       } else {
-        setError("An unexpected error occurred. Please try again.");
+        setError(err.message || "An unexpected error occurred. Please try again.");
       }
+
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 100);
     } finally {
       setLoading(false);
       abortControllerRef.current = null;

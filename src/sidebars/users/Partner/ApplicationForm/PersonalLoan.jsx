@@ -38,6 +38,37 @@ import {
 } from "../../../../utils/loanDocumentUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 
+const formatDocTypeName = (docType) => {
+  const map = {
+    AADHAR_FRONT: "Aadhaar Card (Front)",
+    AADHAR_BACK: "Aadhaar Card (Back)",
+    PAN: "PAN Card",
+    PHOTO: "Applicant Photo / Selfie",
+    SELFIE: "Applicant Photo / Selfie",
+    PHOTO_OR_SELFIE: "Applicant Photo / Selfie",
+    ADDRESS_PROOF: "Address Proof (Electricity Bill / Rent Agreement)",
+    LIGHT_BILL: "Electricity Bill",
+    COMPANY_ID_CARD: "Company ID Card",
+    SALARY_SLIP_1: "Salary Slip (Month 1)",
+    SALARY_SLIP_2: "Salary Slip (Month 2)",
+    SALARY_SLIP_3: "Salary Slip (Month 3)",
+    FORM_16_26AS: "Form 16 / 26AS",
+    BANK_STATEMENT_1: "Bank Statement (Latest 6 Months)",
+    BANK_STATEMENT_2: "Bank Statement 2",
+    SHOP_ACT: "Shop Act / Gumasta License",
+    UDHYAM_AADHAR: "Udyam Aadhaar",
+    ITR: "ITR (Income Tax Returns)",
+    SHOP_PHOTO: "Shop / Office Photo",
+    GST_DOCUMENT: "GST Certificate",
+    CO_APPLICANT_AADHAR_FRONT: "Co-Applicant Aadhaar (Front)",
+    CO_APPLICANT_AADHAR_BACK: "Co-Applicant Aadhaar (Back)",
+    CO_APPLICANT_PAN: "Co-Applicant PAN Card",
+    CO_APPLICANT_SELFIE: "Co-Applicant Photo / Selfie",
+    CO_APPLICANT_SELFIE_OR_PHOTO: "Co-Applicant Photo / Selfie",
+  };
+  return map[docType] || String(docType || "").replace(/_/g, " ");
+};
+
 export default function PersonalLoan({ embed = false } = {}) {
   const [documentModel, setdocumentModel] = useState(null);
 
@@ -789,11 +820,19 @@ export default function PersonalLoan({ embed = false } = {}) {
       } else if (error.code === "ECONNABORTED") {
         setError("Request timeout. Please check your connection and try again.");
       } else if (error.response) {
-        const backendMessage = error.response?.data?.message;
-        const backendError = error.response?.data?.error || "";
+        const backendData = error.response?.data;
+        const backendMessage = backendData?.message;
+        const backendError = backendData?.error || "";
+        const missingDocs = backendData?.missingDocs;
+        const errorsList = backendData?.errors;
 
-        // Friendly messages for duplicate keys (email / phone)
-        if (typeof backendError === "string" && backendError.includes("E11000")) {
+        if (Array.isArray(missingDocs) && missingDocs.length > 0) {
+          setError("Mandatory documents are missing. Please upload the required documents:");
+          setValidationErrors(missingDocs.map((doc) => `Missing Document: ${formatDocTypeName(doc)}`));
+        } else if (Array.isArray(errorsList) && errorsList.length > 0) {
+          setError(backendMessage || "Please fix the following validation errors:");
+          setValidationErrors(errorsList);
+        } else if (typeof backendError === "string" && backendError.includes("E11000")) {
           if (backendError.includes("email_1")) {
             setError(
               "An account with this email already exists. Please login or use a different email."
@@ -807,20 +846,28 @@ export default function PersonalLoan({ embed = false } = {}) {
               "A record with these details already exists. Please login or use different details."
             );
           }
+          setValidationErrors([]);
         } else {
-          // Generic server-side validation / error
           setError(
-            backendMessage || "Failed to save application. Try again."
+            backendMessage || "Failed to save application. Please try again."
           );
-          setValidationErrors(error.response?.data?.errors || []);
+          setValidationErrors([]);
         }
       } else if (error.request) {
-        // Request was made but no response received
-        setError("Network error. Please check your connection and try again.");
+        setError("Network error. Please check your internet connection and try again.");
       } else {
-        // Something else happened
-        setError("An unexpected error occurred. Please try again.");
+        setError(error.message || "An unexpected error occurred. Please try again.");
       }
+
+      // Auto-scroll to top so user sees error banner
+      setTimeout(() => {
+        const topEl = document.getElementById("loan-application-form-top");
+        if (topEl) {
+          topEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }, 100);
     } finally {
       setLoading(false);
       abortControllerRef.current = null;
@@ -840,7 +887,6 @@ export default function PersonalLoan({ embed = false } = {}) {
         resetFields();
         return;
       }
-      // Create AbortController for request cancellation
       abortControllerRef.current = new AbortController();
 
       await axios.post(
@@ -850,28 +896,46 @@ export default function PersonalLoan({ embed = false } = {}) {
           headers: {
             Authorization: `Bearer ${partnerToken}`,
           },
-          timeout: 30000, // 30 seconds timeout
+          timeout: 30000,
           signal: abortControllerRef.current.signal,
         }
       );
       setSuccessMessage("Application submitted successfully.");
       resetFields();
     } catch (err) {
-      // Handle different error types
       if (axios.isCancel(err)) {
         setError("Request was cancelled. Please try again.");
-      } else if (err.code === 'ECONNABORTED') {
+      } else if (err.code === "ECONNABORTED") {
         setError("Request timeout. Please check your connection and try again.");
       } else if (err.response) {
-        setError(
-          err.response?.data?.message || err.message || "Something went wrong."
-        );
-        setValidationErrors(err.response?.data?.errors || []);
+        const backendData = err.response?.data;
+        const missingDocs = backendData?.missingDocs;
+        const errorsList = backendData?.errors;
+
+        if (Array.isArray(missingDocs) && missingDocs.length > 0) {
+          setError("Mandatory documents missing:");
+          setValidationErrors(missingDocs.map((doc) => `Missing Document: ${formatDocTypeName(doc)}`));
+        } else if (Array.isArray(errorsList) && errorsList.length > 0) {
+          setError(backendData?.message || "Validation errors:");
+          setValidationErrors(errorsList);
+        } else {
+          setError(backendData?.message || err.message || "Something went wrong.");
+          setValidationErrors([]);
+        }
       } else if (err.request) {
         setError("Network error. Please check your connection and try again.");
       } else {
-        setError("An unexpected error occurred. Please try again.");
+        setError(err.message || "An unexpected error occurred. Please try again.");
       }
+
+      setTimeout(() => {
+        const topEl = document.getElementById("loan-application-form-top");
+        if (topEl) {
+          topEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }, 100);
     } finally {
       setLoading(false);
       abortControllerRef.current = null;
@@ -1024,18 +1088,32 @@ export default function PersonalLoan({ embed = false } = {}) {
             </div>
           )}
 
-          {currentStep === steps.length - 1 && error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-              <p className="font-semibold">
-                {error}
-              </p>
-              {Array.isArray(validationErrors) && validationErrors.length > 0 && (
-                <ul className="list-disc list-inside mt-2 text-sm space-y-1">
-                  {validationErrors.map((msg, idx) => (
-                    <li key={idx}>{msg}</li>
-                  ))}
-                </ul>
-              )}
+          {error && (
+            <div className="mb-4 rounded-xl border-2 border-red-300 bg-red-50 p-4 text-red-900 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-red-200 p-1 text-red-700 mt-0.5">
+                    <X className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-red-900 text-base">{error}</p>
+                    {Array.isArray(validationErrors) && validationErrors.length > 0 && (
+                      <ul className="list-disc list-inside mt-2 text-sm space-y-1 bg-white/70 rounded-lg p-3 border border-red-200 font-medium">
+                        {validationErrors.map((msg, idx) => (
+                          <li key={idx} className="text-red-800">{msg}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="text-sm text-red-600 hover:text-red-800 underline font-semibold"
+                  onClick={() => { setError(""); setValidationErrors([]); }}
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           )}
 
@@ -1054,6 +1132,7 @@ export default function PersonalLoan({ embed = false } = {}) {
             </div>
 
             <div className="p-6 space-y-6">
+              <div id="loan-application-form-top"></div>
               <LoanStepper
                 steps={steps}
                 currentStep={currentStep}

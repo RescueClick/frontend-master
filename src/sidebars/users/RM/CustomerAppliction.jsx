@@ -652,8 +652,7 @@ const CustomerApplication = () => {
 
   const canRmUploadDocs = Boolean(
     applicationData &&
-      !applicationData.rsmId &&
-      applicationData.status !== "DOC_COMPLETE"
+      ["DRAFT", "SUBMITTED", "DOC_INCOMPLETE"].includes(applicationData.status)
   );
 
   const openDocUploadPicker = (docType) => {
