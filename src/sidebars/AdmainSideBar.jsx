@@ -17,6 +17,8 @@ import {
   Link2,
   Gift,
   Shield,
+  FileCheck,
+  Crown,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -99,10 +101,11 @@ const AdminSideBar = () => {
       path: "/admin/referral-rewards",
       highlight: true,
     },
-    // highlight payout / incentives / target / add bank
-    { name: "Payout", icon: IndianRupee, path: "/admin/payout", highlight: true },
+    // Unified Payout Management Hub
+    { name: "Disbursed Loans", icon: FileCheck, path: "/admin/disbursed-loans", highlight: true },
+    { name: "Payout Management", icon: IndianRupee, path: "/admin/payout", highlight: true },
     { name: "Incentives", icon: Award, path: "/admin/incentives", highlight: true },
-    { name: "Withdrawals", icon: IndianRupee, path: "/admin/withdrawals", highlight: true },
+    { name: "Levels & Benefits", icon: Crown, path: "/admin/partner-levels", highlight: true },
     { name: "CIBIL Audit", icon: Shield, path: "/admin/cibil-audit", highlight: true },
     { name: "Set Target", icon: TrendingUp, path: "/admin/target", highlight: true },
     { name: "Banner", icon: Download, path: "/admin/banner" },

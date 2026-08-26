@@ -86,7 +86,14 @@ const AuthLetter = () => {
         {/* Signatures Section */}
         <div className="flex justify-between items-end mt-20 relative">
           {/* Left Signature */}
-          <div className="text-center flex-1">
+          <div className="text-center flex-1 flex flex-col items-center">
+            <div className="h-24 flex items-center justify-center mb-1">
+              <img
+                src="/authorized_signatory.png"
+                alt="Authorized Signatory"
+                className="h-20 object-contain mix-blend-multiply mx-auto"
+              />
+            </div>
             <div className="w-48 border-b-2 border-gray-800 mx-auto mb-2"></div>
             <div className="text-base font-bold text-gray-800 mb-1">Anil Bagad</div>
             <div className="text-sm font-bold text-teal-500">

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Search, Trash2 } from "lucide-react";
+import { Download, Search, Trash2, FileText, Award, CreditCard, Edit3, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   activatePartner,
@@ -85,6 +85,22 @@ export default function PartnerTable() {
 
   const [PartneractiveModel, setPartneractiveModel] = useState(null);
 
+  // Edit Partner Details (CRUD) State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [partnerToEdit, setPartnerToEdit] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    aadharNumber: "",
+    panNumber: "",
+    region: "",
+    officeAddress: "",
+    residenceAddress: "",
+  });
+  const [isSavingPartner, setIsSavingPartner] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -93,16 +109,97 @@ export default function PartnerTable() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
-  console.log(" partners : ", data);
-
-
-
   useEffect(() => {
     const { adminToken } = getAuthData();
     if (adminToken) {
       dispatch(fetchPartners(adminToken));
     }
   }, [dispatch]);
+
+  const handleOpenAgreement = (p) => {
+    navigate("/Agreement", {
+      state: {
+        employeeData: {
+          name: `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+          IDNo: p.employeeId || p.partnerCode || p._id,
+          Aadhar_Number: p.aadharNumber || "",
+          PAN_Number: p.panNumber || "",
+          address: p.address || p.region || "office No -31 C Wing Ashoka Nagar, Kharadi, Pune, Maharashtra 411014",
+          partnerOffice: p.officeAddress || p.address || p.region || "",
+          partnerResidence: p.residenceAddress || p.address || p.region || "",
+        },
+      },
+    });
+  };
+
+  const handleOpenAuthLetter = (p) => {
+    navigate("/AuthLetter", {
+      state: {
+        name: `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+      },
+    });
+  };
+
+  const handleOpenIdCard = (p) => {
+    navigate("/IdCard", {
+      state: {
+        employeeData: {
+          id: p.employeeId || p.partnerCode || p._id,
+          name: `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+          designation: "Authorized Partner",
+          location: p.region || p.city || "Pune, Maharashtra",
+          photo: p.profilePic,
+          initials: `${p.firstName?.[0] || ""}${p.lastName?.[0] || ""}`.toUpperCase() || "P",
+        },
+      },
+    });
+  };
+
+  const handleEditPartner = (p) => {
+    setPartnerToEdit(p);
+    setEditFormData({
+      firstName: p.firstName || "",
+      lastName: p.lastName || "",
+      phone: p.phone || "",
+      email: p.email || "",
+      aadharNumber: p.aadharNumber || "",
+      panNumber: p.panNumber || "",
+      region: p.region || "",
+      officeAddress: p.officeAddress || p.address || "",
+      residenceAddress: p.residenceAddress || p.address || "",
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSavePartnerDetails = async (e) => {
+    e.preventDefault();
+    if (!partnerToEdit?._id) return;
+    try {
+      setIsSavingPartner(true);
+      const { adminToken } = getAuthData();
+      
+      const res = await axios.put(
+        `${backendurl}/admin/partner/${partnerToEdit._id}`,
+        editFormData,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      toast.success(res.data?.message || "Partner details updated successfully!");
+      setEditModalOpen(false);
+      setPartnerToEdit(null);
+      dispatch(fetchPartners(adminToken));
+    } catch (err) {
+      console.error("Failed to update partner:", err);
+      toast.error(err.response?.data?.message || "Failed to update partner details");
+    } finally {
+      setIsSavingPartner(false);
+    }
+  };
 
   const toggleActivation = (partner) => {
     if (partner.status === "ACTIVE") {
@@ -461,13 +558,49 @@ loginAsUser(userId, navigate);
       ),
     },
     {
-      title: "Action",
-      key: "action",
+      title: "Documents & Actions",
+      key: "actions",
       render: (_, p) => (
-        <div className="flex h-full flex-wrap items-center gap-3">
+        <div className="flex h-full flex-wrap items-center gap-1.5">
           <button
             type="button"
-            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
+            title="Partner Agreement"
+            className="inline-flex items-center gap-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 text-xs font-semibold transition-colors"
+            onClick={() => handleOpenAgreement(p)}
+          >
+            <FileText size={13} className="text-emerald-600" />
+            Agreement
+          </button>
+          <button
+            type="button"
+            title="Authorization Letter"
+            className="inline-flex items-center gap-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 px-2 py-1 text-xs font-semibold transition-colors"
+            onClick={() => handleOpenAuthLetter(p)}
+          >
+            <Award size={13} className="text-amber-600" />
+            Auth Letter
+          </button>
+          <button
+            type="button"
+            title="Partner ID Card"
+            className="inline-flex items-center gap-1 rounded bg-teal-50 hover:bg-teal-100 text-teal-800 px-2 py-1 text-xs font-semibold transition-colors"
+            onClick={() => handleOpenIdCard(p)}
+          >
+            <CreditCard size={13} className="text-teal-600" />
+            ID Card
+          </button>
+          <button
+            type="button"
+            title="Edit Partner Details (CRUD)"
+            className="inline-flex items-center gap-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 text-xs font-semibold transition-colors"
+            onClick={() => handleEditPartner(p)}
+          >
+            <Edit3 size={13} />
+            Edit
+          </button>
+          <button
+            type="button"
+            className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline ml-1"
             onClick={() => openPartnerAnalytics(p)}
           >
             Analytics
@@ -615,6 +748,139 @@ loginAsUser(userId, navigate);
             locale={{ emptyText: "No partners found." }}
           />
         </DashboardTablePage>
+        {/* Edit Partner Details Modal (CRUD) */}
+        {editModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between border-b border-gray-100 bg-slate-50/80 px-6 py-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Edit Partner Details</h3>
+                  <p className="text-xs text-gray-500">Update profile & legal agreement details for {partnerToEdit?.firstName} {partnerToEdit?.lastName}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(false)}
+                  className="rounded-full p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSavePartnerDetails} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">First Name</label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      value={editFormData.firstName}
+                      onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      value={editFormData.lastName}
+                      onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Phone Number</label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      value={editFormData.phone}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Aadhar Number</label>
+                    <input
+                      type="text"
+                      placeholder="12 digit Aadhar"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      value={editFormData.aadharNumber}
+                      onChange={(e) => setEditFormData({ ...editFormData, aadharNumber: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">PAN Number</label>
+                    <input
+                      type="text"
+                      placeholder="10 digit PAN"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      value={editFormData.panNumber}
+                      onChange={(e) => setEditFormData({ ...editFormData, panNumber: e.target.value.toUpperCase() })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">State / Region</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Maharashtra"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      value={editFormData.region}
+                      onChange={(e) => setEditFormData({ ...editFormData, region: e.target.value })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Partner Office Address</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Office / Business address"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      value={editFormData.officeAddress}
+                      onChange={(e) => setEditFormData({ ...editFormData, officeAddress: e.target.value })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Partner Residential Address</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Residential address"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      value={editFormData.residenceAddress}
+                      onChange={(e) => setEditFormData({ ...editFormData, residenceAddress: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditModalOpen(false)}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                    disabled={isSavingPartner}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingPartner}
+                    className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-5 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    {isSavingPartner ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

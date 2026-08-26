@@ -91,7 +91,6 @@ const AsmSiderbar = () => {
     { name: "Applications", icon: FileText, path: "/asm/applications" },
     { name: "Payouts", icon: IndianRupee, path: "/asm/payouts", highlight: true },
     { name: "Incentives", icon: Award, path: "/asm/incentives", highlight: true },
-    { name: "Withdrawals", icon: IndianRupee, path: "/asm/withdrawals", highlight: true },
     { name: "Follow Up", icon: CalendarCheck, path: "/asm/follow-ups" },
     { name: "Settings", icon: Settings, path: "/asm/settings" },
   ];

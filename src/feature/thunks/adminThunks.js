@@ -799,18 +799,33 @@ export const payAdminIncentive = createAsyncThunk(
     try {
       const { adminToken } = getAuthData();
       const id = typeof payload === "string" ? payload : payload?.id;
-      const amount = typeof payload === "object" ? payload?.amount : undefined;
-      const response = await axios.post(
-        `${backendurl}/admin/incentives/${id}/pay`,
-        { amount },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      dispatch(fetchAdminIncentives({}));
+
+      let response;
+      if (id) {
+        response = await axios.post(
+          `${backendurl}/admin/incentives/${id}/pay`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${adminToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      } else {
+        response = await axios.post(
+          `${backendurl}/admin/incentives/partner-pay`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${adminToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+
+      dispatch(fetchAdminIncentives({ year: payload?.year, month: payload?.month }));
       return unwrapApiData(response.data);
     } catch (error) {
       return rejectWithValue(

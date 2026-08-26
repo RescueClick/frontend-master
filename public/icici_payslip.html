@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ICICI Bank - Payslip May 2026</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #475569;
+      color: #000000;
+      padding: 25px 10px;
+      font-size: 11px;
+      line-height: 1.35;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Floating Toolbar */
+    .action-toolbar {
+      max-width: 860px;
+      margin: 0 auto 14px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      padding: 10px 18px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .action-toolbar .title {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-orange {
+      background: #f37021;
+      color: #ffffff;
+    }
+    .btn-orange:hover {
+      background: #d85c13;
+    }
+
+    .btn-dark {
+      background: #334155;
+      color: #ffffff;
+    }
+    .btn-dark:hover {
+      background: #475569;
+    }
+
+    /* Payslip Canvas */
+    .payslip-sheet {
+      max-width: 860px;
+      margin: 0 auto;
+      background-color: #eef2f6; /* Exact cool light gray-blue tint */
+      padding: 30px 45px 35px 45px;
+      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.25);
+      border-radius: 2px;
+      color: #000000;
+    }
+
+    /* Logo */
+    .logo-row {
+      margin-bottom: 6px;
+    }
+
+    .logo-svg {
+      height: 44px;
+      width: auto;
+    }
+
+    /* Month Header Title */
+    .payslip-title-container {
+      text-align: center;
+      margin-top: -6px;
+      margin-bottom: 12px;
+    }
+
+    .payslip-month-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #000000;
+      text-transform: uppercase;
+      display: inline-block;
+      margin-left: 90px;
+    }
+
+    /* Metadata Table */
+    .emp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      color: #000000;
+      margin-bottom: 12px;
+    }
+
+    .emp-table td {
+      padding: 1.5px 0;
+      vertical-align: top;
+      font-weight: 700;
+    }
+
+    .col-55 { width: 54%; }
+    .col-45 { width: 46%; }
+
+    /* Main Table */
+    .fin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      color: #000000;
+    }
+
+    .fin-table thead tr {
+      background-color: #d6e0ea !important;
+    }
+
+    .fin-table th {
+      padding: 4px 6px;
+      font-weight: 700;
+      text-align: right;
+      letter-spacing: 0.1px;
+      color: #000000;
+      border: none;
+    }
+
+    .fin-table th:first-child {
+      text-align: left;
+      padding-left: 6px;
+      width: 38%;
+    }
+
+    .fin-table th:nth-child(2) { width: 16%; }
+    .fin-table th:nth-child(3) { width: 15%; }
+    .fin-table th:nth-child(4) { width: 15%; }
+    .fin-table th:nth-child(5) { width: 16%; }
+
+    .fin-table td {
+      padding: 2px 6px;
+      text-align: right;
+      font-weight: 400;
+      color: #000000;
+      border: none;
+    }
+
+    .fin-table td:first-child {
+      text-align: left;
+      padding-left: 6px;
+      font-weight: 400;
+    }
+
+    /* BANDS */
+    .row-band {
+      background-color: #d6e0ea !important;
+    }
+
+    .row-band td {
+      font-weight: 700 !important;
+      padding-top: 3px !important;
+      padding-bottom: 3px !important;
+    }
+
+    .section-heading td {
+      font-weight: 700 !important;
+      padding-top: 10px !important;
+      padding-bottom: 2px !important;
+      text-align: left !important;
+    }
+
+    /* SUMMARY BLOCK */
+    .summary-block {
+      width: 100%;
+      margin-top: 14px;
+      margin-bottom: 12px;
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: right;
+      color: #000000;
+    }
+
+    .summary-table th {
+      font-weight: 700;
+      text-align: right;
+      padding: 2px 6px;
+      border: none;
+      background: transparent !important;
+    }
+
+    .summary-table td {
+      font-weight: 700;
+      text-align: right;
+      padding: 2px 6px;
+      border: none;
+      background: transparent !important;
+    }
+
+    /* Transfer info & Notes */
+    .transfer-line {
+      margin-top: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #000000;
+    }
+
+    .gst-notice {
+      margin-top: 5px;
+      font-size: 10.5px;
+      color: #111111;
+    }
+
+    /* Footers */
+    .footer-addresses {
+      margin-top: 38px;
+      font-size: 10px;
+      line-height: 1.45;
+      color: #222222;
+    }
+
+    .gen-signature-text {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 10.5px;
+      color: #222222;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: none !important;
+        padding: 0 !important;
+      }
+      .action-toolbar {
+        display: none !important;
+      }
+      .payslip-sheet {
+        box-shadow: none !important;
+        padding: 20px 25px !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        background-color: #eef2f6 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .fin-table thead tr,
+      .row-band {
+        background-color: #d6e0ea !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .summary-table th,
+      .summary-table td {
+        background-color: transparent !important;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls -->
+  <div class="action-toolbar">
+    <div class="title">
+      ICICI Bank Salary Slip Template (Same to Same)
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-orange" onclick="window.print()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+        </svg>
+        Print / Save PDF
+      </button>
+      <button class="btn btn-dark" onclick="downloadWordDocExact()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        Download .DOC File
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Payslip Document -->
+  <div class="payslip-sheet" id="payslipDocument">
+
+    <!-- ICICI Bank Logo -->
+    <div class="logo-row" id="logoRow">
+      <svg id="iciciLogoSvg" class="logo-svg" viewBox="0 0 340 52" width="220" height="34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19 4C21.8 8.1 23.5 13 23.5 18.2C23.5 29.8 14.5 39.2 3.4 39.2C2.2 39.2 1.1 39.1 0 38.9C4.3 46.8 12.8 52 22.3 52C36.4 52 47.8 40.4 47.8 26C47.8 15.3 41.3 6.1 32 2C29.1 6.6 24.7 10 19 4Z" fill="#F37021"/>
+        <path d="M13 13C14.8 16 16 19.3 16 22.8C16 30.9 9.5 37.5 1.5 37.5C1 37.5 0.5 37.4 0 37.3C2.9 42.9 8.8 46.5 15.5 46.5C25.4 46.5 33.4 38.4 33.4 28.5C33.4 20.9 28.8 14.5 22.2 11.7C20.1 14.9 17 17.3 13 13Z" fill="#A01E28"/>
+        <circle cx="58" cy="18" r="4.8" fill="#F37021"/>
+        <path d="M53.8 26.5H62.2V50H53.8V26.5Z" fill="#F37021"/>
+        <text x="70" y="48.5" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="36" fill="#052F5F" letter-spacing="-0.8">ICICI Bank</text>
+      </svg>
+    </div>
+
+    <!-- Centered / Center-Right Payslip Month Title -->
+    <div class="payslip-title-container">
+      <span class="payslip-month-title">PAYSLIP FOR THE MONTH MAY 2026</span>
+    </div>
+
+    <!-- Employee Metadata Grid -->
+    <table class="emp-table" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tbody>
+        <tr>
+          <td class="col-55">NAME : PRIYANKA JAGANNATH KAPSE</td>
+          <td class="col-45">EMP. NO. : 889354</td>
+        </tr>
+        <tr>
+          <td class="col-55">DATE OF JOINING : SEP 01, 2022</td>
+          <td class="col-45">CURRENT MTH CAL DAYS : 31</td>
+        </tr>
+        <tr>
+          <td class="col-55">GRADE : DMII</td>
+          <td class="col-45">CURRENT MTH PAID DAYS : 31</td>
+        </tr>
+        <tr>
+          <td colspan="2">LOC : PUNE-FURSUNGI_BR</td>
+        </tr>
+        <tr>
+          <td class="col-55">FATHER'S/ MOTHER / SPOUSE NAME : JAGANNATH NAGAPPA KAPSE</td>
+          <td class="col-45">DATE OF ISSUE : MAY 29, 2026</td>
+        </tr>
+        <tr>
+          <td class="col-55">PAN.No. : AWQPT3688M</td>
+          <td class="col-45">PF.No. : MH/BAN/18796/000/889354</td>
+        </tr>
+        <tr>
+          <td class="col-55">EPS.No. : MH/BAN/18796/000/5601221</td>
+          <td class="col-45">UAN.No. : 100453498824</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Main Earnings & Deductions Table with Same to Same Shading Bands -->
+    <table class="fin-table" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <thead>
+        <tr bgcolor="#d6e0ea">
+          <th style="text-align: left; padding: 4px 6px;">EARNINGS</th>
+          <th style="text-align: right; padding: 4px 6px;">STANDARD RATE</th>
+          <th style="text-align: right; padding: 4px 6px;">AMOUNT</th>
+          <th style="text-align: right; padding: 4px 6px;">ARREARS / ADJ</th>
+          <th style="text-align: right; padding: 4px 6px;">TOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align: left; padding: 2px 6px;">BASIC</td>
+          <td style="text-align: right; padding: 2px 6px;">15,640.00</td>
+          <td style="text-align: right; padding: 2px 6px;">15,640.00</td>
+          <td style="text-align: right; padding: 2px 6px;"></td>
+          <td style="text-align: right; padding: 2px 6px;">15,640.00</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; padding: 2px 6px;">CONVEYANCE ALLOWANCE</td>
+          <td style="text-align: right; padding: 2px 6px;">4,692.00</td>
+          <td style="text-align: right; padding: 2px 6px;">4,692.00</td>
+          <td style="text-align: right; padding: 2px 6px;"></td>
+          <td style="text-align: right; padding: 2px 6px;">4,692.00</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; padding: 2px 6px;">HOUSE RENT ALLOWANCE</td>
+          <td style="text-align: right; padding: 2px 6px;">8,602.00</td>
+          <td style="text-align: right; padding: 2px 6px;">8,602.00</td>
+          <td style="text-align: right; padding: 2px 6px;"></td>
+          <td style="text-align: right; padding: 2px 6px;">8,602.00</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; padding: 2px 6px;">LEAVE TRAVEL ALLOWANCE MONTHLY</td>
+          <td style="text-align: right; padding: 2px 6px;">1,302.00</td>
+          <td style="text-align: right; padding: 2px 6px;">1,302.00</td>
+          <td style="text-align: right; padding: 2px 6px;">1,302.00</td>
+          <td style="text-align: right; padding: 2px 6px;">2,604.00</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; padding: 2px 6px;">SUPPLEMENTARY ALLOWANCE</td>
+          <td style="text-align: right; padding: 2px 6px;">15,550.00</td>
+          <td style="text-align: right; padding: 2px 6px;">15,550.00</td>
+          <td style="text-align: right; padding: 2px 6px;">-1,302.00</td>
+          <td style="text-align: right; padding: 2px 6px;">14,248.00</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; padding: 2px 6px;">SUPERANNUATION ALLOWANCE</td>
+          <td style="text-align: right; padding: 2px 6px;">2,346.00</td>
+          <td style="text-align: right; padding: 2px 6px;">2,346.00</td>
+          <td style="text-align: right; padding: 2px 6px;"></td>
+          <td style="text-align: right; padding: 2px 6px;">2,346.00</td>
+        </tr>
+
+        <!-- EXACT GREY-BLUE BAND FOR TOTAL EARNINGS -->
+        <tr class="row-band" bgcolor="#d6e0ea">
+          <td style="text-align: left; font-weight: bold; padding: 3px 6px;">TOTAL EARNINGS</td>
+          <td style="text-align: right; font-weight: bold; padding: 3px 6px;">48,132.00</td>
+          <td style="text-align: right; font-weight: bold; padding: 3px 6px;">48,132.00</td>
+          <td style="text-align: right; font-weight: bold; padding: 3px 6px;">0.00</td>
+          <td style="text-align: right; font-weight: bold; padding: 3px 6px;">48,132.00</td>
+        </tr>
+
+        <!-- Deductions Heading -->
+        <tr class="section-heading">
+          <td colspan="5" style="text-align: left; font-weight: bold; padding-top: 10px; padding-bottom: 2px; padding-left: 6px;">DEDUCTIONS</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; padding: 2px 6px;">PROVIDENT FUND</td>
+          <td style="text-align: right; padding: 2px 6px;"></td>
+          <td style="text-align: right; padding: 2px 6px;">1,877.00</td>
+          <td style="text-align: right; padding: 2px 6px;"></td>
+          <td style="text-align: right; padding: 2px 6px;">1,877.00</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; padding: 2px 6px;">PROFESSIONAL TAX</td>
+          <td style="text-align: right; padding: 2px 6px;"></td>
+          <td style="text-align: right; padding: 2px 6px;">200.00</td>
+          <td style="text-align: right; padding: 2px 6px;"></td>
+          <td style="text-align: right; padding: 2px 6px;">200.00</td>
+        </tr>
+
+        <!-- EXACT GREY-BLUE BAND FOR TOTAL DEDUCTIONS -->
+        <tr class="row-band" bgcolor="#d6e0ea">
+          <td style="text-align: left; font-weight: bold; padding: 3px 6px;">TOTAL DEDUCTIONS</td>
+          <td style="text-align: right; font-weight: bold; padding: 3px 6px;">0.00</td>
+          <td style="text-align: right; font-weight: bold; padding: 3px 6px;">2,077.00</td>
+          <td style="text-align: right; font-weight: bold; padding: 3px 6px;">0.00</td>
+          <td style="text-align: right; font-weight: bold; padding: 3px 6px;">2,077.00</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- EXACT SUMMARY BLOCK (ALIGNED WITH COLUMNS ABOVE, NO BG COLOR) -->
+    <div class="summary-block">
+      <table class="summary-table" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <thead>
+          <tr>
+            <th style="width: 25%; background: transparent;"></th>
+            <th style="width: 15%; text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">TOTAL EARNING</th>
+            <th style="width: 15%; text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">TOTAL DEDNS</th>
+            <th style="width: 15%; text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">LOAN DEDNS</th>
+            <th style="width: 15%; text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">GROSS DEDNS</th>
+            <th style="width: 15%; text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">NET SALARY</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="background: transparent;"></td>
+            <td style="text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">48,132.00</td>
+            <td style="text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">2,077.00</td>
+            <td style="text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">0.00</td>
+            <td style="text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">2,077.00</td>
+            <td style="text-align: right; font-weight: bold; padding: 2px 6px; background: transparent;">46,055.00</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Transfer Info & GST -->
+    <div class="transfer-line">
+      AMOUNT PAID BY TRANSFER TO A/C : 110701004891 - Rs. 46055.00
+    </div>
+
+    <div class="gst-notice">
+      GST is applicable on gym fees, mobile deduction, postage at applicable rates.
+    </div>
+
+    <!-- Footers -->
+    <div class="footer-addresses">
+      <div>Regd. Office: ICICI Bank Tower, Near Chakli Circle, Old Padra Road, Vadodara 390 007, India.</div>
+      <div>Corp. Office: ICICI Bank Towers, Bandra-Kurla Complex, Mumbai 400051, India.</div>
+      <div class="gen-signature-text">This is a computer generated statement and does not require signature.</div>
+    </div>
+
+  </div>
+
+  <!-- Microsoft Word (.doc) Downloader with Exact Formatting & Embedded Logo -->
+  <script>
+    async function downloadWordDocExact() {
+      // 1. Convert SVG logo into high-res Base64 PNG image so Microsoft Word renders it with 100% fidelity
+      const svgElement = document.getElementById("iciciLogoSvg");
+      const svgString = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const URLObj = window.URL || window.webkitURL || window;
+      const blobURL = URLObj.createObjectURL(svgBlob);
+
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = 680; // High resolution
+        canvas.height = 104;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#eef2f6";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const pngBase64 = canvas.toDataURL("image/png");
+
+        // 2. Build Word-compliant HTML document with exact styles and inline bgcolor attributes
+        const docHeader = `
+          <html xmlns:o='urn:schemas-microsoft-com:office:office'
+                xmlns:w='urn:schemas-microsoft-com:office:word'
+                xmlns='http://www.w3.org/TR/REC-html40'>
+          <head>
+            <!--[if gte mso 9]>
+            <xml>
+              <w:WordDocument>
+                <w:View>Print</w:View>
+                <w:Zoom>100</w:Zoom>
+                <w:DoNotOptimizeForBrowser/>
+              </w:WordDocument>
+            </xml>
+            <![endif]-->
+            <meta charset='utf-8'>
+            <title>ICICI Bank - Payslip May 2026</title>
+            <style>
+              @page Section1 {
+                size: 595.3pt 841.9pt; /* A4 Portrait */
+                margin: 28.0pt 35.0pt 28.0pt 35.0pt;
+                mso-header-margin: 35.4pt;
+                mso-footer-margin: 35.4pt;
+                mso-paper-source: 0;
+              }
+              div.Section1 { page: Section1; }
+              body {
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 9.5pt;
+                background-color: #eef2f6;
+                color: #000000;
+                margin: 0;
+                padding: 0;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                mso-table-lspace: 0pt;
+                mso-table-rspace: 0pt;
+                font-size: 9.5pt;
+              }
+              td, th {
+                padding: 2.5pt 4pt;
+              }
+              .row-band {
+                background-color: #d6e0ea !important;
+                font-weight: bold;
+              }
+              .header-band {
+                background-color: #d6e0ea !important;
+                font-weight: bold;
+              }
+              .transfer-line {
+                font-weight: bold;
+                margin-top: 10pt;
+                font-size: 9.5pt;
+              }
+              .gst-notice {
+                font-size: 8.5pt;
+                margin-top: 4pt;
+                color: #111;
+              }
+              .footer-addresses {
+                margin-top: 25pt;
+                font-size: 8pt;
+                line-height: 1.4;
+              }
+              .gen-signature-text {
+                text-align: center;
+                margin-top: 8pt;
+                font-size: 8.5pt;
+              }
+            </style>
+          </head>
+          <body style="background-color: #eef2f6;">
+            <div class="Section1" style="background-color: #eef2f6; padding: 20pt;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="left" style="padding-bottom: 5pt;">
+                    <img src="${pngBase64}" width="220" height="34" alt="ICICI Bank" />
+                  </td>
+                </tr>
+              </table>
+        `;
+
+        // 3. Extract content excluding interactive SVG
+        const contentClone = document.getElementById("payslipDocument").cloneNode(true);
+        const logoInClone = contentClone.querySelector("#logoRow");
+        if (logoInClone) logoInClone.remove();
+
+        const fullDoc = docHeader + contentClone.innerHTML + "</div></body></html>";
+
+        // 4. Download as .doc Word file
+        const blob = new Blob(['\ufeff' + fullDoc], {
+          type: 'application/msword;charset=utf-8'
+        });
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = 'ICICI_Bank_Payslip_May_2026_PRIYANKA_KAPSE.doc';
+        document.body.appendChild(link);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+        URLObj.revokeObjectURL(blobURL);
+      };
+
+      image.src = blobURL;
+    }
+  </script>
+
+</body>
+</html>

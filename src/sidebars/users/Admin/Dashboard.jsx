@@ -118,7 +118,7 @@ const Dashboard = () => {
         {/* TOTAL DISBURSED */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
-          onClick={() => navigate("/admin/payout")}
+          onClick={() => navigate("/admin/disbursed-loans")}
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
@@ -246,7 +246,10 @@ const Dashboard = () => {
         </div>
 
         {/* Achieved Company Disbursement */}
-        <div className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden">
+        <div
+          className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
+          onClick={() => navigate("/admin/disbursed-loans")}
+        >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1">

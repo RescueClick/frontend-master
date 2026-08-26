@@ -25,7 +25,19 @@ const Agreement = () => {
 
   useEffect(() => {
     setAgreementDate(new Date().toLocaleDateString('en-IN'));
-  }, []);
+    if (employeeData) {
+      setFormData(prev => ({
+        ...prev,
+        partnerName: employeeData.name || employeeData.partnerName || prev.partnerName || '',
+        partnerId: employeeData.IDNo || employeeData.employeeId || employeeData.partnerId || prev.partnerId || '',
+        aadharNumber: employeeData.Aadhar_Number || employeeData.aadharNumber || prev.aadharNumber || '',
+        panNumber: employeeData.PAN_Number || employeeData.panNumber || prev.panNumber || '',
+        companyAddress: employeeData.address || employeeData.companyAddress || prev.companyAddress || 'office No -31 C Wing Ashoka Nagar, Kharadi, Pune, Maharashtra 411014',
+        partnerOffice: employeeData.partnerOffice || employeeData.officeAddress || employeeData.address || prev.partnerOffice || '',
+        partnerResidence: employeeData.partnerResidence || employeeData.residenceAddress || employeeData.address || prev.partnerResidence || ''
+      }));
+    }
+  }, [employeeData]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -400,24 +412,32 @@ const Agreement = () => {
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-amber-500 to-emerald-500 rounded"></div>
           
           <div className="flex flex-col md:flex-row justify-between gap-8">
-            <div className="w-full md:w-5/12 text-center p-6 bg-gradient-to-br from-slate-50/80 to-white/60 rounded-2xl border-2 border-emerald-200 relative">
+            <div className="w-full md:w-5/12 text-center p-6 bg-gradient-to-br from-slate-50/80 to-white/60 rounded-2xl border-2 border-emerald-200 relative flex flex-col items-center">
               <div className="absolute -top-1 -left-1 -right-1 -bottom-1 bg-gradient-to-45 from-emerald-500 to-amber-500 rounded-2xl opacity-50 -z-10"></div>
               
-              <div className="h-12 border-b-4 border-emerald-500 mb-4 rounded-sm relative">
-                <div className="absolute right-2 bottom-1 text-lg">✒️</div>
+              <div className="h-24 w-full flex items-center justify-center mb-1">
+                <img
+                  src="/authorized_signatory.png"
+                  alt="Authorized Signatory"
+                  className="h-20 max-w-full object-contain mix-blend-multiply"
+                />
               </div>
-              <div className="font-bold">For DHANSOURCE CAPITAL</div>
-              <div>Authorized Signatory</div>
+              <div className="w-4/5 border-b-2 border-emerald-500 mb-3"></div>
+              <div className="font-bold text-gray-900">For DHANSOURCE CAPITAL</div>
+              <div className="text-sm text-gray-600 font-semibold">Authorized Signatory</div>
             </div>
-            
-            <div className="w-full md:w-5/12 text-center p-6 bg-gradient-to-br from-slate-50/80 to-white/60 rounded-2xl border-2 border-emerald-200 relative">
+            <div className="w-full md:w-5/12 text-center p-6 bg-gradient-to-br from-slate-50/80 to-white/60 rounded-2xl border-2 border-emerald-200 relative flex flex-col items-center justify-between min-h-[190px]">
               <div className="absolute -top-1 -left-1 -right-1 -bottom-1 bg-gradient-to-45 from-emerald-500 to-amber-500 rounded-2xl opacity-50 -z-10"></div>
               
-              <div className="h-12 border-b-4 border-emerald-500 mb-4 rounded-sm relative">
-                <div className="absolute right-2 bottom-1 text-lg">✒️</div>
+              <div className="h-20 w-full flex flex-col items-center justify-center mb-1">
+                <div className="px-3 py-1 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-800 text-xs font-bold shadow-xs">
+                  ✓ Digitally Confirmed & Signed
+                </div>
+                <div className="text-[10px] text-emerald-600 mt-1 font-medium">{agreementDate || "Signed on Agreement"}</div>
               </div>
-              <div className="font-bold">Partner Signature</div>
-              <div>{employeeData?.name}</div>
+              <div className="w-4/5 border-b-2 border-emerald-500 mb-3"></div>
+              <div className="font-bold text-gray-900">Partner Signature</div>
+              <div className="text-sm font-bold text-emerald-800">{employeeData?.name || formData.partnerName || "Partner"}</div>
             </div>
           </div>
         </div>

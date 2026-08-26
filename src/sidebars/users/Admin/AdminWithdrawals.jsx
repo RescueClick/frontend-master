@@ -12,42 +12,61 @@ import {
   UserRound,
   X,
   XCircle,
+  CreditCard,
+  Copy,
+  Check,
+  Download,
+  AlertCircle,
+  TrendingUp,
+  ArrowRight,
+  Eye,
 } from "lucide-react";
 import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
+import { downloadXlsx } from "../../../utils/downloadXlsx";
+import AppAntTable from "../../../components/shared/AppAntTable";
 
 const formatINR = (v) =>
-  `₹${Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  `₹${Number(v || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  })}`;
 
-const STATUS = {
+const formatINRPrecise = (v) =>
+  `₹${Number(v || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  })}`;
+
+const getInitials = (name) => {
+  if (!name || typeof name !== "string") return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const STATUS_CONFIG = {
+  PENDING_ADMIN: {
+    label: "Ready to Pay",
+    chip: "bg-teal-50 text-teal-800 border border-teal-200",
+    badge: "bg-teal-500",
+  },
   PENDING_ASM: {
     label: "With ASM",
-    chip: "bg-amber-50 text-amber-800 border-amber-200",
-    dot: "bg-amber-500",
-  },
-  PENDING_ADMIN: {
-    label: "Ready to pay",
-    chip: "bg-teal-50 text-teal-800 border-teal-200",
-    dot: "bg-teal-500",
+    chip: "bg-amber-50 text-amber-800 border border-amber-200",
+    badge: "bg-amber-500",
   },
   PAID: {
-    label: "Paid",
-    chip: "bg-emerald-50 text-emerald-800 border-emerald-200",
-    dot: "bg-emerald-500",
+    label: "Paid & Settled",
+    chip: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+    badge: "bg-emerald-500",
   },
   REJECTED: {
     label: "Rejected",
-    chip: "bg-rose-50 text-rose-800 border-rose-200",
-    dot: "bg-rose-500",
+    chip: "bg-rose-50 text-rose-800 border border-rose-200",
+    badge: "bg-rose-500",
   },
 };
-
-const TABS = [
-  { key: "PENDING_ADMIN", label: "Ready to pay" },
-  { key: "PAID", label: "Paid" },
-  { key: "REJECTED", label: "Rejected" },
-  { key: "ALL", label: "All" },
-];
 
 const AdminWithdrawals = () => {
   const [rows, setRows] = useState([]);
@@ -55,9 +74,13 @@ const AdminWithdrawals = () => {
   const [busyId, setBusyId] = useState(null);
   const [tab, setTab] = useState("PENDING_ADMIN");
   const [search, setSearch] = useState("");
-  const [rejectModal, setRejectModal] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
+
+  // Modals
+  const [payModalRecord, setPayModalRecord] = useState(null);
+  const [rejectModalRecord, setRejectModalRecord] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [confirmPay, setConfirmPay] = useState(null);
+  const [paymentNote, setPaymentNote] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -69,6 +92,7 @@ const AdminWithdrawals = () => {
       });
       setRows(Array.isArray(res?.data?.data) ? res.data.data : []);
     } catch (err) {
+      console.error("Failed to load withdrawals:", err);
       toast.error(err?.response?.data?.message || "Failed to load withdrawals");
       setRows([]);
     } finally {
@@ -80,14 +104,50 @@ const AdminWithdrawals = () => {
     load();
   }, [load]);
 
+  // Copy helper
+  const handleCopy = (text, key) => {
+    if (!text || text === "—") return;
+    navigator.clipboard.writeText(String(text).trim());
+    setCopiedKey(key);
+    toast.success(`Copied: ${text}`, { duration: 1500 });
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  // Metrics summary
   const counts = useMemo(() => {
-    const c = { PENDING_ADMIN: 0, PAID: 0, REJECTED: 0, PENDING_ASM: 0, ALL: rows.length };
+    const c = {
+      PENDING_ADMIN: 0,
+      PENDING_ADMIN_AMT: 0,
+      PENDING_ASM: 0,
+      PENDING_ASM_AMT: 0,
+      PAID: 0,
+      PAID_AMT: 0,
+      REJECTED: 0,
+      REJECTED_AMT: 0,
+      ALL: rows.length,
+      ALL_AMT: 0,
+    };
     rows.forEach((r) => {
-      if (c[r.status] !== undefined) c[r.status] += 1;
+      const amt = Number(r.amount || 0);
+      c.ALL_AMT += amt;
+      if (r.status === "PENDING_ADMIN") {
+        c.PENDING_ADMIN += 1;
+        c.PENDING_ADMIN_AMT += amt;
+      } else if (r.status === "PENDING_ASM") {
+        c.PENDING_ASM += 1;
+        c.PENDING_ASM_AMT += amt;
+      } else if (r.status === "PAID") {
+        c.PAID += 1;
+        c.PAID_AMT += amt;
+      } else if (r.status === "REJECTED") {
+        c.REJECTED += 1;
+        c.REJECTED_AMT += amt;
+      }
     });
     return c;
   }, [rows]);
 
+  // Filtered rows
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((row) => {
@@ -95,42 +155,46 @@ const AdminWithdrawals = () => {
       if (!q) return true;
       const p = row.partnerId || {};
       const a = row.asmId || {};
-      const hay = `${p.firstName || ""} ${p.lastName || ""} ${p.partnerCode || ""} ${p.employeeId || ""} ${a.firstName || ""} ${a.lastName || ""} ${row.note || ""}`.toLowerCase();
+      const hay = `${p.firstName || ""} ${p.lastName || ""} ${p.partnerCode || ""} ${p.employeeId || ""} ${p.phone || ""} ${p.bankName || ""} ${p.accountNumber || ""} ${p.ifscCode || ""} ${a.firstName || ""} ${a.lastName || ""} ${row.note || ""}`.toLowerCase();
       return hay.includes(q);
     });
   }, [rows, tab, search]);
 
-  const pay = async (id) => {
+  // Process payment
+  const handleConfirmPay = async () => {
+    if (!payModalRecord) return;
     try {
-      setBusyId(id);
+      setBusyId(payModalRecord._id);
       const { adminToken } = getAuthData();
       await axios.post(
-        `${backendurl}/admin/withdrawals/${id}/pay`,
-        {},
+        `${backendurl}/admin/withdrawals/${payModalRecord._id}/pay`,
+        { note: paymentNote.trim() },
         { headers: { Authorization: `Bearer ${adminToken}` } }
       );
-      toast.success("Marked as paid — pending earnings settled");
-      setConfirmPay(null);
+      toast.success("Withdrawal paid and settled successfully!");
+      setPayModalRecord(null);
+      setPaymentNote("");
       await load();
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Pay failed");
+      toast.error(err?.response?.data?.message || "Payment execution failed");
     } finally {
       setBusyId(null);
     }
   };
 
-  const reject = async () => {
-    if (!rejectModal) return;
+  // Reject withdrawal
+  const handleConfirmReject = async () => {
+    if (!rejectModalRecord) return;
     try {
-      setBusyId(rejectModal._id);
+      setBusyId(rejectModalRecord._id);
       const { adminToken } = getAuthData();
       await axios.post(
-        `${backendurl}/admin/withdrawals/${rejectModal._id}/reject`,
+        `${backendurl}/admin/withdrawals/${rejectModalRecord._id}/reject`,
         { reason: rejectReason.trim() },
         { headers: { Authorization: `Bearer ${adminToken}` } }
       );
-      toast.success("Withdraw request rejected");
-      setRejectModal(null);
+      toast.success("Withdrawal request rejected");
+      setRejectModalRecord(null);
       setRejectReason("");
       await load();
     } catch (err) {
@@ -140,290 +204,760 @@ const AdminWithdrawals = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#F4F7F8] p-4 md:p-6">
-      <div className="mx-auto max-w-6xl space-y-5">
-        <div className="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-800">
-                <Banknote className="h-3.5 w-3.5" />
-                Final payment step
-              </div>
-              <h1 className="text-2xl font-extrabold text-slate-900">Partner Withdrawals</h1>
-              <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                Only ASM-approved requests appear here for payment. Paying settles pending partner payout/incentive earnings.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={load}
-              className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
+  // Export Excel
+  const handleExportXlsx = () => {
+    if (!filtered.length) {
+      toast.error("No withdrawal records to export");
+      return;
+    }
+    const exportRows = filtered.map((r, i) => {
+      const p = r.partnerId || {};
+      const a = r.asmId || {};
+      return {
+        "S.No": i + 1,
+        "Request Date": r.createdAt
+          ? new Date(r.createdAt).toLocaleDateString("en-IN")
+          : "—",
+        "Partner Name": `${p.firstName || ""} ${p.lastName || ""}`.trim() || "Partner",
+        "Partner Code / ID": p.employeeId || p.partnerCode || "—",
+        "Partner Phone": p.phone || "—",
+        "Bank Name": p.bankName || "—",
+        "Account Number": p.accountNumber ? `'${p.accountNumber}` : "—",
+        "IFSC Code": p.ifscCode || "—",
+        "Requested Amount (INR)": r.amount || 0,
+        "ASM Name": `${a.firstName || ""} ${a.lastName || ""}`.trim() || "—",
+        Status: STATUS_CONFIG[r.status]?.label || r.status,
+        Note: r.note || r.adminNote || "",
+      };
+    });
+    downloadXlsx(exportRows, "Partner-Withdrawals.xlsx", "Withdrawals");
+    toast.success("Withdrawals exported to Excel!");
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        title: "Request Date",
+        key: "date",
+        width: 130,
+        render: (_, r) => (
+          <div className="flex flex-col">
+            <span className="font-bold text-slate-900 text-xs font-mono bg-slate-100 px-2 py-0.5 rounded w-fit border border-slate-200/80">
+              #{r._id.slice(-6).toUpperCase()}
+            </span>
+            <span className="text-[11px] text-slate-500 mt-1 font-medium">
+              {r.createdAt
+                ? new Date(r.createdAt).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "—"}
+            </span>
           </div>
+        ),
+      },
+      {
+        title: "Channel Partner (Beneficiary)",
+        key: "partner",
+        width: 250,
+        render: (_, r) => {
+          const p = r.partnerId || {};
+          const partnerName = `${p.firstName || ""} ${p.lastName || ""}`.trim() || "Partner";
+          const partnerCode = p.employeeId || p.partnerCode;
 
-          <div className="mt-5 grid gap-2 rounded-xl bg-gradient-to-r from-slate-800 via-teal-700 to-amber-600 p-3 text-white sm:grid-cols-3">
-            <div className="flex items-center gap-3 rounded-lg bg-white/10 px-3 py-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold">1</div>
-              <div>
-                <div className="text-xs font-semibold opacity-80">Partner</div>
-                <div className="text-sm font-bold">Requests withdraw</div>
+          return (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
+                {getInitials(partnerName)}
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg bg-white/10 px-3 py-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold">2</div>
-              <div>
-                <div className="text-xs font-semibold opacity-80">ASM</div>
-                <div className="text-sm font-bold">Approves request</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg bg-white/20 px-3 py-2.5 ring-2 ring-white/40">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-sm font-bold text-teal-900">3</div>
-              <div>
-                <div className="text-xs font-semibold opacity-90">You (Admin)</div>
-                <div className="text-sm font-bold">Pay or Reject</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {[
-            { label: "Ready to pay", value: counts.PENDING_ADMIN, color: "text-teal-700", bg: "bg-teal-50 border-teal-100" },
-            { label: "Still with ASM", value: counts.PENDING_ASM, color: "text-amber-700", bg: "bg-amber-50 border-amber-100" },
-            { label: "Paid", value: counts.PAID, color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-100" },
-            { label: "Rejected", value: counts.REJECTED, color: "text-rose-700", bg: "bg-rose-50 border-rose-100" },
-          ].map((s) => (
-            <div key={s.label} className={`rounded-xl border p-4 ${s.bg}`}>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{s.label}</div>
-              <div className={`mt-1 text-2xl font-extrabold ${s.color}`}>{s.value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2">
-              {TABS.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setTab(t.key)}
-                  className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-                    tab === t.key
-                      ? "bg-teal-600 text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {t.label}
-                  <span className={`ml-1.5 ${tab === t.key ? "text-teal-100" : "text-slate-400"}`}>
-                    {counts[t.key] ?? 0}
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-slate-900 text-xs truncate max-w-[150px]">
+                    {partnerName}
                   </span>
-                </button>
-              ))}
+                  {partnerCode && (
+                    <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-50 text-emerald-700 font-mono font-bold border border-emerald-200">
+                      {partnerCode}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] text-slate-500 mt-0.5">
+                  {p.phone || p.email || "—"}
+                </span>
+              </div>
             </div>
-            <div className="relative w-full lg:w-72">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          );
+        },
+      },
+      {
+        title: "Beneficiary Bank Details",
+        key: "bank",
+        width: 220,
+        render: (_, r) => {
+          const p = r.partnerId || {};
+          return (
+            <div className="flex flex-col text-xs">
+              <span className="font-bold text-slate-800 truncate">
+                {p.bankName || "—"}
+              </span>
+              <div className="flex items-center gap-2 font-mono text-[11px] text-slate-600 mt-0.5">
+                <span>{p.accountNumber ? `A/C: ${p.accountNumber}` : "—"}</span>
+                {p.ifscCode && (
+                  <span className="text-emerald-700 font-bold">
+                    {p.ifscCode}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        title: "ASM Reviewer",
+        key: "asm",
+        width: 170,
+        render: (_, r) => {
+          const a = r.asmId || {};
+          const asmName = `${a.firstName || ""} ${a.lastName || ""}`.trim();
+          return (
+            <div className="flex flex-col text-xs">
+              <span className="font-semibold text-slate-800">
+                {asmName || "—"}
+              </span>
+              {a.employeeId && (
+                <span className="text-[11px] text-slate-500 font-mono">
+                  {a.employeeId}
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        title: "Requested Amount",
+        key: "amount",
+        width: 150,
+        render: (_, r) => (
+          <span className="text-sm font-black text-slate-900">
+            {formatINR(r.amount)}
+          </span>
+        ),
+      },
+      {
+        title: "Status",
+        key: "status",
+        width: 130,
+        render: (_, r) => {
+          const cfg = STATUS_CONFIG[r.status] || {
+            label: r.status,
+            chip: "bg-slate-100 text-slate-700",
+          };
+          return (
+            <span
+              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${cfg.chip}`}
+            >
+              {cfg.label}
+            </span>
+          );
+        },
+      },
+      {
+        title: "Action",
+        key: "actions",
+        width: 160,
+        fixed: "right",
+        render: (_, r) => (
+          <div className="flex items-center gap-1.5">
+            {r.status === "PENDING_ADMIN" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setPayModalRecord(r)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-primary hover:bg-[#0f9b82] text-white shadow-sm flex items-center gap-1 transition"
+                >
+                  <IndianRupee className="w-3.5 h-3.5" />
+                  <span>Pay Now</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRejectModalRecord(r)}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 transition"
+                  title="Reject Request"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setPayModalRecord(r)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-sm flex items-center gap-1.5 transition"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>View Details</span>
+              </button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    []
+  );
+
+  return (
+    <div className="p-4 sm:p-6 bg-slate-50 min-h-screen">
+      <div className="max-w-7xl mx-auto space-y-4">
+        {/* KPI Metric Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Ready to Pay (Admin) */}
+          <div
+            onClick={() => setTab("PENDING_ADMIN")}
+            className={`bg-white p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+              tab === "PENDING_ADMIN"
+                ? "border-teal-400 ring-2 ring-teal-400/20 shadow-md"
+                : "border-slate-200/80 hover:border-teal-300 shadow-sm"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-teal-700">
+                Ready to Pay (Admin)
+              </span>
+              <div className="p-2 rounded-xl bg-teal-100 text-teal-600">
+                <IndianRupee className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <div className="text-2xl font-black text-teal-600">
+                {formatINR(counts.PENDING_ADMIN_AMT)}
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
+                <span>{counts.PENDING_ADMIN} Requests</span>
+                <span className="font-bold text-teal-600 group-hover:underline flex items-center gap-0.5">
+                  Pay Now <ArrowRight className="w-3 h-3" />
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Still with ASM */}
+          <div
+            onClick={() => setTab("PENDING_ASM")}
+            className={`bg-white p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+              tab === "PENDING_ASM"
+                ? "border-amber-400 ring-2 ring-amber-400/20 shadow-md"
+                : "border-slate-200/80 hover:border-amber-300 shadow-sm"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-700">
+                Still With ASM
+              </span>
+              <div className="p-2 rounded-xl bg-amber-100 text-amber-600">
+                <Clock3 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <div className="text-2xl font-black text-amber-600">
+                {formatINR(counts.PENDING_ASM_AMT)}
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
+                <span>{counts.PENDING_ASM} Pending ASM</span>
+                <span className="font-bold text-amber-600 group-hover:underline">
+                  View
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Paid & Settled */}
+          <div
+            onClick={() => setTab("PAID")}
+            className={`bg-white p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+              tab === "PAID"
+                ? "border-emerald-400 ring-2 ring-emerald-400/20 shadow-md"
+                : "border-slate-200/80 hover:border-emerald-300 shadow-sm"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                Paid &amp; Settled
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <div className="text-2xl font-black text-emerald-600">
+                {formatINR(counts.PAID_AMT)}
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
+                <span>{counts.PAID} Settled</span>
+                <span className="font-bold text-emerald-600 group-hover:underline">
+                  History
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Rejected */}
+          <div
+            onClick={() => setTab("REJECTED")}
+            className={`bg-white p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+              tab === "REJECTED"
+                ? "border-rose-400 ring-2 ring-rose-400/20 shadow-md"
+                : "border-slate-200/80 hover:border-rose-300 shadow-sm"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-700">
+                Rejected
+              </span>
+              <div className="p-2 rounded-xl bg-rose-100 text-rose-600">
+                <XCircle className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <div className="text-2xl font-black text-rose-600">
+                {formatINR(counts.REJECTED_AMT)}
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
+                <span>{counts.REJECTED} Declined</span>
+                <span className="font-bold text-rose-600 group-hover:underline">
+                  Review
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Master Table Container */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          {/* Integrated Toolbar */}
+          <div className="p-4 border-b border-slate-100 space-y-3">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              {/* Title & Tabs */}
+              <div className="flex items-center flex-wrap gap-3">
+                <div className="flex items-center gap-2 mr-1">
+                  <div className="p-1.5 rounded-xl bg-teal-500/10 text-teal-600">
+                    <Banknote className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
+                    Partner Withdrawals
+                  </h2>
+                </div>
+
+                <div className="flex items-center p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setTab("PENDING_ADMIN")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      tab === "PENDING_ADMIN"
+                        ? "bg-white text-teal-700 shadow-sm"
+                        : "text-slate-600 hover:text-teal-700"
+                    }`}
+                  >
+                    <span>Ready to pay</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold">
+                      {counts.PENDING_ADMIN}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTab("PENDING_ASM")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      tab === "PENDING_ASM"
+                        ? "bg-white text-amber-700 shadow-sm"
+                        : "text-slate-600 hover:text-amber-700"
+                    }`}
+                  >
+                    <span>With ASM</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                      {counts.PENDING_ASM}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTab("PAID")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      tab === "PAID"
+                        ? "bg-white text-emerald-700 shadow-sm"
+                        : "text-slate-600 hover:text-emerald-700"
+                    }`}
+                  >
+                    <span>Paid</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      {counts.PAID}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTab("REJECTED")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      tab === "REJECTED"
+                        ? "bg-white text-rose-700 shadow-sm"
+                        : "text-slate-600 hover:text-rose-700"
+                    }`}
+                  >
+                    <span>Rejected</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold">
+                      {counts.REJECTED}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTab("ALL")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      tab === "ALL"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    All ({counts.ALL})
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportXlsx}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm transition"
+                >
+                  <Download className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Excel</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={load}
+                  className="p-1.5 rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition"
+                  title="Refresh Data"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-brand-primary" : ""}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
+                type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search partner / ASM…"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100"
+                placeholder="Search by Partner Name, Partner Code, Phone, Bank Name, A/C No, IFSC..."
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
             </div>
           </div>
-        </div>
 
-        <div className="space-y-3">
-          {loading ? (
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-16 text-center text-slate-500 shadow-sm">
-              Loading withdraw requests…
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-16 text-center shadow-sm">
-              <Clock3 className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-              <div className="text-base font-semibold text-slate-700">No requests here</div>
-              <div className="mt-1 text-sm text-slate-500">
-                {tab === "PENDING_ADMIN"
-                  ? "No ASM-approved withdraws waiting for payment."
-                  : "Try another status tab or clear search."}
+          <AppAntTable
+            rowKey={(r) => r._id}
+            columns={columns}
+            dataSource={filtered}
+            loading={loading}
+            size="middle"
+          />
+        </div>
+      </div>
+
+      {/* 2-Column NO-SCROLL Payment & Bank Modal for Withdrawals */}
+      {payModalRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transform transition-all max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <IndianRupee className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>
+                      {payModalRecord.status === "PAID"
+                        ? "Settled Withdrawal Details"
+                        : "Settle Partner Withdrawal"}
+                    </span>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-white/10 text-emerald-300 font-semibold">
+                      #{payModalRecord._id.slice(-6).toUpperCase()}
+                    </span>
+                  </h3>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setPayModalRecord(null)}
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          ) : (
-            filtered.map((row) => {
-              const p = row.partnerId || {};
-              const a = row.asmId || {};
-              const name = `${p.firstName || ""} ${p.lastName || ""}`.trim() || "Partner";
-              const asmName = `${a.firstName || ""} ${a.lastName || ""}`.trim() || "—";
-              const st = STATUS[row.status] || STATUS.PENDING_ADMIN;
-              const canAct = row.status === "PENDING_ADMIN";
-              return (
-                <div
-                  key={row._id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-teal-200 hover:shadow-md"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex min-w-0 flex-1 items-start gap-3">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-700">
-                        <UserRound className="h-5 w-5" />
+
+            {/* 2-Column Side-by-Side Body */}
+            <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 gap-4 overflow-hidden">
+              {/* Left Column: Beneficiary Bank Details */}
+              <div className="md:col-span-6 bg-slate-50 p-4 rounded-xl border border-slate-200/90 flex flex-col justify-between space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-brand-primary" />
+                      <span>Beneficiary Bank Details</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const p = payModalRecord.partnerId || {};
+                        const fullText = `Account Holder: ${p.accountHolderName || `${p.firstName || ""} ${p.lastName || ""}`}\nBank: ${p.bankName || "—"}\nAccount Number: ${p.accountNumber || "—"}\nIFSC: ${p.ifscCode || "—"}`;
+                        handleCopy(fullText, "all-bank-info");
+                      }}
+                      className="text-[11px] font-bold text-brand-primary hover:underline flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Copy All</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200/80">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        Partner / Beneficiary
+                      </span>
+                      <p className="font-bold text-slate-900">
+                        {`${payModalRecord.partnerId?.firstName || ""} ${payModalRecord.partnerId?.lastName || ""}`.trim() || "Partner"}
+                        {payModalRecord.partnerId?.employeeId && (
+                          <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono font-bold border border-emerald-200">
+                            {payModalRecord.partnerId?.employeeId}
+                          </span>
+                        )}
+                      </p>
+                      <span className="text-[11px] text-slate-500">
+                        {payModalRecord.partnerId?.phone || "—"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200/80">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                          Bank Name
+                        </span>
+                        <p className="font-semibold text-slate-800 truncate mt-0.5">
+                          {payModalRecord.partnerId?.bankName || "—"}
+                        </p>
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-base font-bold text-slate-900">{name}</h3>
-                          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${st.chip}`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
-                            {st.label}
+
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200/80">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">
+                            Account Number
                           </span>
+                          {payModalRecord.partnerId?.accountNumber && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleCopy(payModalRecord.partnerId?.accountNumber, "modal-acc")
+                              }
+                              className="text-slate-400 hover:text-brand-primary"
+                            >
+                              {copiedKey === "modal-acc" ? (
+                                <Check className="w-3 h-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          )}
                         </div>
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-                          <span>{p.partnerCode || p.employeeId || "—"}</span>
-                          {p.phone ? <span>{p.phone}</span> : null}
-                          <span className="inline-flex items-center gap-1">
-                            <ShieldCheck className="h-3.5 w-3.5 text-teal-600" />
-                            ASM: {asmName}
-                          </span>
-                        </div>
-                        {row.note ? (
-                          <p className="mt-2 rounded-lg bg-slate-50 px-2.5 py-1.5 text-sm text-slate-600">
-                            Note: {row.note}
-                          </p>
-                        ) : null}
-                        <p className="mt-2 text-xs text-slate-400">
-                          Requested {row.createdAt ? new Date(row.createdAt).toLocaleString("en-IN") : "—"}
-                          {row.asmReviewedAt
-                            ? ` · ASM approved ${new Date(row.asmReviewedAt).toLocaleString("en-IN")}`
-                            : ""}
-                          {row.adminReviewedAt
-                            ? ` · Admin ${new Date(row.adminReviewedAt).toLocaleString("en-IN")}`
-                            : ""}
-                          {row.rejectReason ? ` · Reason: ${row.rejectReason}` : ""}
+                        <p className="font-mono font-bold text-slate-900 truncate mt-0.5">
+                          {payModalRecord.partnerId?.accountNumber || "—"}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center lg:pl-4">
-                      <div className="rounded-xl bg-amber-50 px-4 py-2 text-center">
-                        <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">Amount</div>
-                        <div className="text-xl font-extrabold text-amber-900">{formatINR(row.amount)}</div>
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200/80">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">
+                          IFSC Code
+                        </span>
+                        {payModalRecord.partnerId?.ifscCode && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopy(payModalRecord.partnerId?.ifscCode, "modal-ifsc")
+                            }
+                            className="text-slate-400 hover:text-brand-primary"
+                          >
+                            {copiedKey === "modal-ifsc" ? (
+                              <Check className="w-3 h-3 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        )}
                       </div>
-                      {canAct ? (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            disabled={busyId === row._id}
-                            onClick={() => setConfirmPay(row)}
-                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-teal-700 disabled:opacity-60 sm:flex-none"
-                          >
-                            <IndianRupee className="h-4 w-4" />
-                            Pay now
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busyId === row._id}
-                            onClick={() => {
-                              setRejectReason("");
-                              setRejectModal(row);
-                            }}
-                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-60 sm:flex-none"
-                          >
-                            <XCircle className="h-4 w-4" />
-                            Reject
-                          </button>
-                        </div>
-                      ) : row.status === "PAID" ? (
-                        <div className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Payment completed
-                        </div>
-                      ) : row.status === "PENDING_ASM" ? (
-                        <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-                          Waiting for ASM approval
-                        </div>
-                      ) : null}
+                      <p className="font-mono font-bold text-emerald-700 mt-0.5">
+                        {payModalRecord.partnerId?.ifscCode || "—"}
+                      </p>
                     </div>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
-      </div>
+              </div>
 
-      {confirmPay ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
-            <h3 className="text-lg font-bold text-slate-900">Confirm payment?</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Pay <span className="font-bold text-teal-700">{formatINR(confirmPay.amount)}</span> and settle pending payout/incentive earnings for this partner (FIFO).
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmPay(null)}
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={busyId === confirmPay._id}
-                onClick={() => pay(confirmPay._id)}
-                className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-60"
-              >
-                {busyId === confirmPay._id ? "Paying…" : "Yes, mark paid"}
-              </button>
+              {/* Right Column: Settlement & Actions */}
+              <div className="md:col-span-6 bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 p-4 rounded-xl border border-emerald-100 flex flex-col justify-between space-y-3">
+                <div>
+                  <span className="text-xs font-bold text-slate-900 block mb-2.5">
+                    Settlement Details
+                  </span>
+
+                  {/* Total Payable Banner */}
+                  <div className="p-3.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-xl flex items-center justify-between shadow-sm">
+                    <div>
+                      <span className="text-[10px] font-medium text-emerald-100 block">
+                        Payable Withdrawal Amount
+                      </span>
+                      <div className="text-2xl font-black tracking-tight">
+                        {formatINRPrecise(payModalRecord.amount)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/20 text-white font-mono">
+                        Wallet Withdrawal
+                      </span>
+                    </div>
+                  </div>
+
+                  {payModalRecord.status === "PENDING_ADMIN" && (
+                    <div className="mt-3">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Payment UTR / Reference Note (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={paymentNote}
+                        onChange={(e) => setPaymentNote(e.target.value)}
+                        placeholder="e.g. IMPS-UTR-987654321"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      />
+                    </div>
+                  )}
+
+                  {payModalRecord.note && (
+                    <div className="mt-2.5 p-2 bg-white rounded-lg border border-slate-200 text-xs">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                        Note / Reason:
+                      </span>
+                      <p className="text-slate-700 mt-0.5">{payModalRecord.note}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setPayModalRecord(null)}
+                    className="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition"
+                  >
+                    Close
+                  </button>
+
+                  {payModalRecord.status === "PENDING_ADMIN" && (
+                    <button
+                      type="button"
+                      disabled={busyId === payModalRecord._id}
+                      onClick={handleConfirmPay}
+                      className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-brand-primary hover:bg-[#0f9b82] shadow-sm transition flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {busyId === payModalRecord._id ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Confirm &amp; Settle Payment</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
 
-      {rejectModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Reject withdraw request</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Amount {formatINR(rejectModal.amount)}. Partner will be notified.
-                </p>
-              </div>
-              <button type="button" onClick={() => setRejectModal(null)} className="rounded-lg p-1 hover:bg-slate-100">
-                <X className="h-5 w-5 text-slate-500" />
+      {/* Reject Modal */}
+      {rejectModalRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-rose-700 flex items-center gap-1.5">
+                <XCircle className="w-4 h-4" />
+                <span>Reject Withdrawal Request</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRejectModalRecord(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <label className="mt-4 block text-sm font-semibold text-slate-700">
-              Reason (optional)
+
+            <div>
+              <p className="text-xs text-slate-600 mb-2">
+                Provide a reason for rejecting the withdrawal of{" "}
+                <span className="font-bold text-slate-900">
+                  {formatINR(rejectModalRecord.amount)}
+                </span>{" "}
+                for{" "}
+                <span className="font-bold text-slate-900">
+                  {`${rejectModalRecord.partnerId?.firstName || ""} ${rejectModalRecord.partnerId?.lastName || ""}`.trim()}
+                </span>
+                .
+              </p>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="e.g. Incorrect bank account details or pending document verification"
                 rows={3}
-                placeholder="Why is this being rejected?"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                className="w-full p-2.5 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
-            </label>
-            <div className="mt-5 flex justify-end gap-2">
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setRejectModal(null)}
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                onClick={() => setRejectModalRecord(null)}
+                className="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                disabled={busyId === rejectModal._id}
-                onClick={reject}
-                className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-60"
+                disabled={busyId === rejectModalRecord._id}
+                onClick={handleConfirmReject}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition flex items-center gap-1.5 disabled:opacity-50"
               >
-                {busyId === rejectModal._id ? "Rejecting…" : "Reject request"}
+                {busyId === rejectModalRecord._id ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Rejecting...</span>
+                  </>
+                ) : (
+                  <span>Confirm Reject</span>
+                )}
               </button>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 };

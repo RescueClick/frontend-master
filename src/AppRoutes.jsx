@@ -61,11 +61,12 @@ import AdminIncentives from "./sidebars/users/Admin/AdminIncentives";
 import AdminEligibleIncentive from "./sidebars/users/Admin/AdminEligibleIncentive";
 import AdminDoneIncentive from "./sidebars/users/Admin/AdminDoneIncentive";
 import AdminPendingIncentive from "./sidebars/users/Admin/AdminPendingIncentive";
-import AdminWithdrawals from "./sidebars/users/Admin/AdminWithdrawals";
 import AdminSettings from "./sidebars/users/Admin/AdminSettings";
 import AdminPublicLoanReferral from "./sidebars/users/Admin/AdminPublicLoanReferral";
 import AdminReferralRewardAmounts from "./sidebars/users/Admin/AdminReferralRewardAmounts";
 import AdminReferralRewards from "./sidebars/users/Admin/AdminReferralRewards";
+import AdminDisbursedLoans from "./sidebars/users/Admin/AdminDisbursedLoans";
+import AdminPartnerLevels from "./sidebars/users/Admin/AdminPartnerLevels";
 
 // Import ASM user pages
 import AsmDashboard from "./sidebars/users/ASM/Dashboard";
@@ -80,7 +81,6 @@ import AsmEligibleIncentive from "./sidebars/users/ASM/AsmEligibleIncentive";
 import AsmFollowUps from "./sidebars/users/ASM/AsmFollowUps";
 import AsmPendingPayout from "./sidebars/users/ASM/AsmPendingPayout";
 import AsmDonePayout from "./sidebars/users/ASM/AsmDonePayout";
-import AsmWithdrawals from "./sidebars/users/ASM/AsmWithdrawals";
 import AsmPartnerTargets from "./sidebars/users/ASM/AsmPartnerTargets";
 import AsmPartners from "./sidebars/users/ASM/AsmPartners";
 import AsmMovePartners from "./sidebars/users/ASM/AsmMovePartners";
@@ -278,11 +278,13 @@ const AppRoutes = () => {
         <Route path="pending-payout" element={<AdminPendingPayout />} />
         <Route path="done-payout" element={<AdminDonePayout />} />
         <Route path="incentives" element={<AdminIncentives />} />
-        <Route path="incentives/pending" element={<AdminPendingIncentive />} />
-        <Route path="incentives/eligible" element={<AdminEligibleIncentive />} />
-        <Route path="incentives/done" element={<AdminDoneIncentive />} />
-        <Route path="withdrawals" element={<AdminWithdrawals />} />
+        <Route path="partner-levels" element={<AdminPartnerLevels />} />
+        <Route path="incentives/pending" element={<Navigate to="/admin/incentives" replace state={{ defaultTab: "eligible" }} />} />
+        <Route path="incentives/eligible" element={<Navigate to="/admin/incentives" replace state={{ defaultTab: "eligible" }} />} />
+        <Route path="incentives/done" element={<Navigate to="/admin/incentives" replace state={{ defaultTab: "paid" }} />} />
         <Route path="cibil-audit" element={<CibilAuditLog />} />
+        <Route path="disbursed-loans" element={<AdminDisbursedLoans />} />
+        <Route path="withdrawals" element={<Navigate to="/admin/payout" replace />} />
         
       </Route>
       </Route>
@@ -298,13 +300,13 @@ const AppRoutes = () => {
         <Route path="partners" element={<AsmPartners />} />
         <Route path="move-partners" element={<AsmMovePartners />} />
         <Route path="payouts" element={<AsmPayouts />} />
-        <Route path="pending-payout" element={<AsmPendingPayout />} />
-        <Route path="done-payout" element={<AsmDonePayout />} />
+        <Route path="pending-payout" element={<Navigate to="/asm/payouts" replace state={{ defaultTab: "pending" }} />} />
+        <Route path="done-payout" element={<Navigate to="/asm/payouts" replace state={{ defaultTab: "done" }} />} />
         <Route path="incentives" element={<AsmIncentives />} />
-        <Route path="pending-incentive" element={<AsmPendingIncentive />} />
-        <Route path="eligible-incentive" element={<AsmEligibleIncentive />} />
-        <Route path="done-incentive" element={<AsmDoneIncentive />} />
-        <Route path="withdrawals" element={<AsmWithdrawals />} />
+        <Route path="pending-incentive" element={<Navigate to="/asm/incentives" replace state={{ defaultTab: "all" }} />} />
+        <Route path="eligible-incentive" element={<Navigate to="/asm/incentives" replace state={{ defaultTab: "eligible" }} />} />
+        <Route path="done-incentive" element={<Navigate to="/asm/incentives" replace state={{ defaultTab: "paid" }} />} />
+        <Route path="withdrawals" element={<Navigate to="/asm/payouts" replace />} />
         <Route path="follow-ups" element={<AsmFollowUps />} />
         <Route path="partner-targets" element={<AsmPartnerTargets />} />
         <Route path="settings" element={<PasswordSettings  />} />

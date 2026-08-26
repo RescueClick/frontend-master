@@ -389,10 +389,25 @@ const IdCard = () => {
         </div>
 
         {/* Location */}
-        <div className="px-4 mb-4 flex justify-center">
+        <div className="px-4 mb-2 flex justify-center">
           <div className="flex items-start gap-2 text-[11px] text-gray-900 break-words">
             <MapPin className="w-4 h-4 text-amber-500 flex-shrink-0 mt-[2px]" />
             <span className="font-medium text-left leading-snug">{employeeData.location}</span>
+          </div>
+        </div>
+
+        {/* Authorized Signatory Badge */}
+        <div className="px-5 mb-3 flex items-center justify-between">
+          <span className="text-[9px] text-gray-500 font-medium">Auth:</span>
+          <div className="flex flex-col items-center">
+            <img
+              src="/authorized_signatory.png"
+              alt="Authorized Signatory"
+              className="h-8 object-contain mix-blend-multiply"
+            />
+            <span className="text-[7.5px] font-bold text-gray-700 border-t border-gray-400 px-1">
+              Auth. Signatory
+            </span>
           </div>
         </div>
 
