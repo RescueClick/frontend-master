@@ -606,8 +606,8 @@ const RsmApplicationView = () => {
         DOC_COMPLETE: ["LOGIN"],
         LOGIN: ["UNDER_REVIEW"],
         UNDER_REVIEW: ["APPROVED", "REJECTED"],
-        APPROVED: ["AGREEMENT", "DISBURSED"],
-        AGREEMENT: ["DISBURSED"],
+        APPROVED: ["AGREEMENT", "DISBURSED", "REJECTED"],
+        AGREEMENT: ["DISBURSED", "REJECTED"],
       };
 
       if (!allowedTransitions[currentStatus]?.includes(status)) {
@@ -793,8 +793,8 @@ const RsmApplicationView = () => {
       DOC_COMPLETE: ["LOGIN"],
       LOGIN: ["UNDER_REVIEW"],
       UNDER_REVIEW: ["APPROVED", "REJECTED"],
-      APPROVED: ["AGREEMENT", "DISBURSED"],
-      AGREEMENT: ["DISBURSED"],
+      APPROVED: ["AGREEMENT", "DISBURSED", "REJECTED"],
+      AGREEMENT: ["DISBURSED", "REJECTED"],
     };
     return allowedTransitions[currentStatus] || [];
   };
@@ -1513,7 +1513,9 @@ const RsmApplicationView = () => {
                         <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
                           <AlertCircle className="w-5 h-5 text-blue-600 mr-2 shrink-0" />
                           <p className="text-xs text-blue-800 font-medium">
-                            {status === "DISBURSED" 
+                            {status === "REJECTED"
+                              ? "Please enter a rejection reason. This cannot be done after Disbursed."
+                              : status === "DISBURSED"
                               ? "Please enter the approved loan amount below."
                               : "Please add a remark explaining this status change."}
                           </p>
