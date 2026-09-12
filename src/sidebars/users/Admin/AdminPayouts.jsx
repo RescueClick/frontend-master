@@ -23,6 +23,10 @@ import {
   AlertCircle,
   ArrowRight,
   Settings,
+  Mail,
+  FileText,
+  Printer,
+  Receipt,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -42,6 +46,7 @@ import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import PayoutStatusBadge from "../../../components/shared/PayoutStatusBadge";
+import PartnerInvoiceModal from "../../../components/shared/PartnerInvoiceModal";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -88,6 +93,11 @@ const AdminPayouts = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [copiedKey, setCopiedKey] = useState(null);
 
+  // Invoice Modal State
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [invoiceModalRecord, setInvoiceModalRecord] = useState(null);
+  const [isSendingInvoiceId, setIsSendingInvoiceId] = useState(null);
+
   // Payout Policy State
   const [payoutPolicy, setPayoutPolicy] = useState({
     PERSONAL: 2.0,
@@ -95,9 +105,22 @@ const AdminPayouts = () => {
     HOME_LOAN_SALARIED: 0.75,
     HOME_LOAN_SELF_EMPLOYED: 0.85,
     LAP: 1.0,
+    LAP_SALARIED: 1.0,
+    LAP_SELF_EMPLOYED: 1.0,
     DEFAULT: 2.0,
+    // TDS Defaults
+    tdsApplicable: true,
+    tdsSection: "194T",
+    tdsPercentage: 10,
+    companyName: "DhanSource Capital Pvt Ltd",
+    companyAddress: "Corporate Office: 402, Trade Avenue, Andheri East, Mumbai, Maharashtra - 400069",
+    companyGstin: "27AAACD1234F1Z5",
+    companyPan: "AAACD1234F",
+    companyTan: "MUMA12345E",
+    invoiceNotes: "Tax has been deducted at source under Section 194T of the Income Tax Act, 1961. TDS certificate (Form 16A) will be issued quarterly on TRACES portal.",
   });
   const [policyModalOpen, setPolicyModalOpen] = useState(false);
+  const [policyTab, setPolicyTab] = useState("commission"); // 'commission' | 'tds'
   const [isSavingPolicy, setIsSavingPolicy] = useState(false);
 
   // Modal form data
@@ -106,7 +129,17 @@ const AdminPayouts = () => {
     partnerId: "",
     approvalAmount: 0,
     payoutPercentage: "",
+    grossAmount: "",
     payoutAmount: "",
+    tdsApplicable: true,
+    tdsSection: "194T",
+    tdsPercentage: "10",
+    tdsAmount: "0",
+    netAmount: "0",
+    invoiceNumber: "",
+    invoiceDate: new Date().toISOString().split("T")[0],
+    sendInvoiceEmail: true,
+    invoiceNotes: "",
     payOutStatus: "DONE",
     note: "",
   });
@@ -268,6 +301,43 @@ const AdminPayouts = () => {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  // Open Invoice Builder / Preview Modal
+  const handleOpenInvoiceModal = (record) => {
+    setInvoiceModalRecord(record);
+    setInvoiceModalOpen(true);
+  };
+
+  // Direct Send Invoice Email to Partner
+  const handleDirectSendInvoice = async (record) => {
+    const payoutId = record.payoutId || record._id;
+    if (!payoutId) {
+      toast.error("Payout record must be saved before sending invoice email.");
+      return;
+    }
+    const email = record.partner?.email || record.partnerEmail;
+    if (!email) {
+      toast.error("Partner does not have an email registered.");
+      return;
+    }
+
+    try {
+      setIsSendingInvoiceId(payoutId);
+      const { adminToken } = getAuthData();
+      const res = await axios.post(
+        `${backendurl}/admin/payouts/${payoutId}/send-invoice`,
+        {},
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+      toast.success(res?.data?.message || `Tax invoice email sent to ${email}`);
+      loadData();
+    } catch (err) {
+      console.error("Error sending invoice email:", err);
+      toast.error(err?.response?.data?.message || "Failed to send invoice email");
+    } finally {
+      setIsSendingInvoiceId(null);
+    }
+  };
+
   // Open Payout Action Modal
   const handleOpenModal = (record) => {
     setSelectedRecord(record);
@@ -276,13 +346,20 @@ const AdminPayouts = () => {
     const existingPayoutAmt = Number(record.payoutAmount || 0);
 
     let initialPct = "";
-    let initialAmt = "";
+    let initialGross = "";
 
-    if (record.payoutPercentage) {
+    if (record.grossAmount != null && Number(record.grossAmount) > 0) {
+      initialGross = String(record.grossAmount);
+      if (record.payoutPercentage) {
+        initialPct = String(record.payoutPercentage);
+      } else if (appr > 0) {
+        initialPct = String(Number(((Number(record.grossAmount) / appr) * 100).toFixed(2)));
+      }
+    } else if (record.payoutPercentage) {
       initialPct = String(record.payoutPercentage);
-      initialAmt = String(existingPayoutAmt || (appr * record.payoutPercentage) / 100);
+      initialGross = String(existingPayoutAmt || (appr * record.payoutPercentage) / 100);
     } else if (existingPayoutAmt > 0 && appr > 0) {
-      initialAmt = String(existingPayoutAmt);
+      initialGross = String(existingPayoutAmt);
       initialPct = String(Number(((existingPayoutAmt / appr) * 100).toFixed(2)));
     } else if (record.payOutStatus !== "DONE") {
       const defaultRate =
@@ -292,16 +369,59 @@ const AdminPayouts = () => {
           ? Number(payoutPolicy.DEFAULT)
           : 2.0;
       initialPct = String(defaultRate);
-      initialAmt = String((appr * defaultRate) / 100);
+      initialGross = String((appr * defaultRate) / 100);
     }
+
+    const isTds =
+      record.tdsApplicable !== undefined
+        ? Boolean(record.tdsApplicable)
+        : payoutPolicy.tdsApplicable !== false;
+    const tdsSec = record.tdsSection || payoutPolicy.tdsSection || "194T";
+    const tdsPct =
+      record.tdsPercentage != null
+        ? Number(record.tdsPercentage)
+        : payoutPolicy.tdsPercentage != null
+        ? Number(payoutPolicy.tdsPercentage)
+        : 10;
+
+    const grossNum = Number(initialGross) || 0;
+    const tdsAmt = isTds ? Number(((grossNum * tdsPct) / 100).toFixed(2)) : 0;
+    const netAmt = isTds ? Number(Math.max(0, grossNum - tdsAmt).toFixed(2)) : grossNum;
+
+    const appNo =
+      record.appNo ||
+      (record.applicationId
+        ? `TLF${String(record.applicationId).slice(-4).toUpperCase()}`
+        : "APP");
+
+    const defaultInvNo =
+      record.invoiceNumber ||
+      `INV-PO-${new Date().getFullYear()}-${appNo}-${String(
+        record.payoutId || record._id || Math.floor(1000 + Math.random() * 9000)
+      ).slice(-4).toUpperCase()}`;
 
     setModalForm({
       applicationId: String(record.applicationId || record._id || ""),
       partnerId: String(record.partnerId || record.partner?.partnerId || ""),
       approvalAmount: appr,
       payoutPercentage: initialPct,
-      payoutAmount: initialAmt,
-      payOutStatus: "DONE",
+      grossAmount: initialGross ? String(Number(initialGross).toFixed(2)) : "",
+      tdsApplicable: isTds,
+      tdsSection: tdsSec,
+      tdsPercentage: String(tdsPct),
+      tdsAmount: String(tdsAmt),
+      netAmount: String(netAmt),
+      payoutAmount: String(netAmt),
+      invoiceNumber: defaultInvNo,
+      invoiceDate: record.invoiceDate
+        ? new Date(record.invoiceDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      sendInvoiceEmail: true,
+      invoiceNotes:
+        record.invoiceNotes ||
+        payoutPolicy.invoiceNotes ||
+        "Tax deducted under Section 194T of the Income Tax Act, 1961.",
+      payOutStatus: record.payOutStatus || "DONE",
       note: record.payoutNote || "",
     });
 
@@ -324,7 +444,7 @@ const AdminPayouts = () => {
         { policy: payoutPolicy },
         { headers: { Authorization: `Bearer ${adminToken}` } }
       );
-      toast.success("Default payout commission policy saved successfully!");
+      toast.success("Default payout commission policy & TDS settings saved successfully!");
       setPolicyModalOpen(false);
     } catch (err) {
       console.error("Failed to save payout policy:", err);
@@ -334,37 +454,49 @@ const AdminPayouts = () => {
     }
   };
 
-  // Live Bidirectional Calculation in Modal
+  // Live Financial & Section 194T TDS Recalculation
+  const updateFinancials = (overrides = {}) => {
+    setModalForm((prev) => {
+      const merged = { ...prev, ...overrides };
+      const appr = Number(merged.approvalAmount || 0);
+
+      let gross = Number(merged.grossAmount) || 0;
+      let pct = merged.payoutPercentage;
+
+      if (overrides.payoutPercentage !== undefined) {
+        const p = Number(overrides.payoutPercentage);
+        if (!isNaN(p) && appr > 0) {
+          gross = Number(((appr * p) / 100).toFixed(2));
+        }
+      } else if (overrides.grossAmount !== undefined) {
+        gross = Number(overrides.grossAmount) || 0;
+        if (appr > 0) {
+          pct = Number(((gross / appr) * 100).toFixed(2));
+        }
+      }
+
+      const isTds = merged.tdsApplicable !== false;
+      const rate = Number(merged.tdsPercentage) || 0;
+      const tdsAmt = isTds ? Number(((gross * rate) / 100).toFixed(2)) : 0;
+      const netAmt = isTds ? Number(Math.max(0, gross - tdsAmt).toFixed(2)) : gross;
+
+      return {
+        ...merged,
+        payoutPercentage: pct !== undefined ? String(pct) : prev.payoutPercentage,
+        grossAmount: String(gross),
+        tdsAmount: String(tdsAmt),
+        netAmount: String(netAmt),
+        payoutAmount: String(netAmt),
+      };
+    });
+  };
+
   const handlePercentageChange = (pctValue) => {
-    const pct = pctValue;
-    const appr = Number(modalForm.approvalAmount || 0);
-    let calculatedAmt = "";
-
-    if (pct !== "" && !isNaN(Number(pct)) && appr > 0) {
-      calculatedAmt = String(Number(((appr * Number(pct)) / 100).toFixed(2)));
-    }
-
-    setModalForm((prev) => ({
-      ...prev,
-      payoutPercentage: pct,
-      payoutAmount: calculatedAmt,
-    }));
+    updateFinancials({ payoutPercentage: pctValue });
   };
 
   const handleAmountChange = (amtValue) => {
-    const amt = amtValue;
-    const appr = Number(modalForm.approvalAmount || 0);
-    let calculatedPct = "";
-
-    if (amt !== "" && !isNaN(Number(amt)) && appr > 0) {
-      calculatedPct = String(Number(((Number(amt) / appr) * 100).toFixed(2)));
-    }
-
-    setModalForm((prev) => ({
-      ...prev,
-      payoutAmount: amt,
-      payoutPercentage: calculatedPct,
-    }));
+    updateFinancials({ grossAmount: amtValue });
   };
 
   const handlePresetPercentage = (pct) => {
@@ -386,7 +518,17 @@ const AdminPayouts = () => {
           applicationId: modalForm.applicationId,
           partnerId: modalForm.partnerId || undefined,
           payoutAmount: modalForm.payoutAmount ? Number(modalForm.payoutAmount) : undefined,
+          grossAmount: modalForm.grossAmount ? Number(modalForm.grossAmount) : undefined,
           payoutPercentage: modalForm.payoutPercentage ? Number(modalForm.payoutPercentage) : undefined,
+          tdsApplicable: modalForm.tdsApplicable,
+          tdsSection: modalForm.tdsSection,
+          tdsPercentage: modalForm.tdsPercentage ? Number(modalForm.tdsPercentage) : 10,
+          tdsAmount: modalForm.tdsAmount ? Number(modalForm.tdsAmount) : 0,
+          netAmount: modalForm.netAmount ? Number(modalForm.netAmount) : Number(modalForm.payoutAmount || 0),
+          invoiceNumber: modalForm.invoiceNumber,
+          invoiceDate: modalForm.invoiceDate,
+          invoiceNotes: modalForm.invoiceNotes,
+          sendInvoiceEmail: modalForm.sendInvoiceEmail,
           payOutStatus: modalForm.payOutStatus,
           note: modalForm.note || "",
         })
@@ -394,7 +536,9 @@ const AdminPayouts = () => {
 
       toast.success(
         modalForm.payOutStatus === "DONE"
-          ? "Payout settled! Commission invoice & statement emailed to partner."
+          ? (modalForm.sendInvoiceEmail
+              ? "Payout settled! Section 194T tax invoice & statement emailed to partner."
+              : "Payout marked as DONE!")
           : "Payout record updated successfully!"
       );
       handleCloseModal();
@@ -503,6 +647,11 @@ const AdminPayouts = () => {
                       {partnerEmpId}
                     </span>
                   )}
+                  {(r.partner?.panNumber || r.partnerPan) && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 font-mono font-bold border border-sky-200" title="Partner PAN for Section 194T TDS">
+                      PAN: {r.partner?.panNumber || r.partnerPan}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
                   {partnerPhone && <span>{partnerPhone}</span>}
@@ -564,27 +713,59 @@ const AdminPayouts = () => {
         ),
       },
       {
-        title: "Payout Amount",
+        title: "Payout & TDS (194T)",
         key: "payout",
-        width: 160,
-        render: (_, r) => (
-          <div className="flex flex-col">
-            <span
-              className={`text-sm font-black ${
-                r.payOutStatus === "DONE"
-                  ? "text-emerald-600"
-                  : "text-amber-600"
-              }`}
-            >
-              {r.payoutAmount ? formatInrPrecise(r.payoutAmount) : "₹0.00"}
-            </span>
-            {r.payoutPercentage ? (
-              <span className="text-[11px] font-semibold text-slate-500">
-                ({r.payoutPercentage}% commission)
-              </span>
-            ) : null}
-          </div>
-        ),
+        width: 200,
+        render: (_, r) => {
+          const isDone = r.payOutStatus === "DONE";
+          const gross = Number(r.grossAmount || r.payoutAmount || 0);
+          const isTds = r.tdsApplicable !== false;
+          const tdsAmt = Number(r.tdsAmount || 0);
+          const net = Number(r.netAmount || r.payoutAmount || 0);
+          const sec = r.tdsSection || "194T";
+          const rate = r.tdsPercentage || 10;
+
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className={`text-sm font-black ${
+                    isDone ? "text-emerald-700" : "text-amber-700"
+                  }`}
+                >
+                  {formatInrPrecise(net || gross)}
+                </span>
+                <span className="text-[10px] uppercase font-bold text-slate-400">
+                  Net
+                </span>
+              </div>
+
+              {isTds && tdsAmt > 0 ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-red-50 text-red-700 rounded border border-red-200">
+                    -{formatInrPrecise(tdsAmt)} ({rate}% u/s {sec})
+                  </span>
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                <span>Gross: {formatInr(gross)}</span>
+                {r.payoutPercentage ? (
+                  <span className="text-slate-400 font-mono">
+                    ({r.payoutPercentage}%)
+                  </span>
+                ) : null}
+              </div>
+
+              {r.invoiceSentAt ? (
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-semibold mt-0.5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Invoice Emailed</span>
+                </span>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         title: "Status",
@@ -595,33 +776,68 @@ const AdminPayouts = () => {
         ),
       },
       {
-        title: "Action",
+        title: "Action & Invoice",
         key: "actions",
-        width: 130,
+        width: 210,
         fixed: "right",
-        render: (_, r) => (
-          <button
-            type="button"
-            onClick={() => handleOpenModal(r)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm ${
-              r.payOutStatus === "DONE"
-                ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-                : "bg-brand-primary hover:bg-[#0f9b82] text-white shadow-emerald-500/20"
-            }`}
-          >
-            {r.payOutStatus === "DONE" ? (
-              <>
-                <Eye className="w-3.5 h-3.5" />
-                <span>View Details</span>
-              </>
-            ) : (
-              <>
-                <IndianRupee className="w-3.5 h-3.5" />
-                <span>Pay Payout</span>
-              </>
-            )}
-          </button>
-        ),
+        render: (_, r) => {
+          const isDone = r.payOutStatus === "DONE";
+          const payoutId = r.payoutId || r._id;
+          const isSending = isSendingInvoiceId === payoutId;
+
+          return (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleOpenModal(r)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm ${
+                  isDone
+                    ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+                    : "bg-brand-primary hover:bg-[#0f9b82] text-white"
+                }`}
+                title={isDone ? "View / Edit Payout" : "Process Payout"}
+              >
+                {isDone ? (
+                  <>
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Details</span>
+                  </>
+                ) : (
+                  <>
+                    <IndianRupee className="w-3.5 h-3.5" />
+                    <span>Pay</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpenInvoiceModal(r)}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition flex items-center gap-1 shadow-sm"
+                title="Build & View Tax Invoice (Section 194T)"
+              >
+                <FileText className="w-3.5 h-3.5 text-teal-600" />
+                <span>Invoice</span>
+              </button>
+
+              {isDone && (
+                <button
+                  type="button"
+                  disabled={isSending}
+                  onClick={() => handleDirectSendInvoice(r)}
+                  className="p-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition disabled:opacity-50"
+                  title="Share Tax Invoice Email to Partner"
+                >
+                  {isSending ? (
+                    <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              )}
+            </div>
+          );
+        },
       },
     ],
     []
@@ -873,6 +1089,8 @@ const AdminPayouts = () => {
                   <option value="BUSINESS">Business</option>
                   <option value="HOME_LOAN_SALARIED">Home (Sal)</option>
                   <option value="HOME_LOAN_SELF_EMPLOYED">Home (Self)</option>
+                  <option value="LAP_SALARIED">LAP (Sal)</option>
+                  <option value="LAP_SELF_EMPLOYED">LAP (Self)</option>
                 </select>
 
                 <button
@@ -1127,17 +1345,35 @@ const AdminPayouts = () => {
 
               {/* RIGHT COLUMN: Calculation & Payout Action */}
               <div className="md:col-span-7 bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 p-4 rounded-xl border border-emerald-100 flex flex-col justify-between space-y-3">
-                <div>
-                  <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs mb-2.5">
-                    <Calculator className="w-4 h-4 text-emerald-600" />
-                    <span>Commission Calculation &amp; Action</span>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs">
+                      <Calculator className="w-4 h-4 text-emerald-600" />
+                      <span>Commission Calculation &amp; Section 194T TDS</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleOpenInvoiceModal({
+                          ...selectedRecord,
+                          ...modalForm,
+                          payoutId: selectedRecord?.payoutId || selectedRecord?._id,
+                        })
+                      }
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition flex items-center gap-1 shadow-sm"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-teal-600" />
+                      <span>Build &amp; Preview Invoice</span>
+                    </button>
                   </div>
 
+                  {/* Commission % & Gross Amount */}
                   <div className="grid grid-cols-2 gap-3">
                     {/* Payout % Input */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Payout Percentage (%)
+                        Commission Rate (%)
                       </label>
                       <div className="relative">
                         <input
@@ -1172,50 +1408,164 @@ const AdminPayouts = () => {
                       </div>
                     </div>
 
-                    {/* Calculated Amount Input */}
+                    {/* Gross Commission Amount */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Calculated Payout (₹)
+                        Gross Commission (₹)
                       </label>
                       <div className="relative">
                         <input
                           type="number"
                           step="1"
                           min="0"
-                          value={modalForm.payoutAmount}
+                          value={modalForm.grossAmount}
                           onChange={(e) => handleAmountChange(e.target.value)}
                           placeholder="e.g. 6000"
-                          className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-black text-emerald-700 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                          className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
                         />
                         <IndianRupee className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                       </div>
                       <span className="text-[10px] text-slate-400 mt-1 block">
-                        Auto-syncs with percentage.
+                        Commission before TDS deduction.
                       </span>
                     </div>
                   </div>
 
-                  {/* Compact Total Payable Banner */}
-                  <div className="mt-3 p-3 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-xl flex items-center justify-between shadow-sm">
-                    <div>
-                      <span className="text-[10px] font-medium text-emerald-100 block">
-                        Total Payable Commission
+                  {/* SECTION 194T TDS CONFIGURATION */}
+                  <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-teal-900">
+                        <input
+                          type="checkbox"
+                          checked={modalForm.tdsApplicable}
+                          onChange={(e) =>
+                            updateFinancials({ tdsApplicable: e.target.checked })
+                          }
+                          className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300"
+                        />
+                        <span>Apply TDS under Income Tax Act</span>
+                      </label>
+                      <span className="text-[10px] font-mono font-bold text-teal-700 bg-teal-100/80 px-2 py-0.5 rounded">
+                        Section 194T Compliant
                       </span>
-                      <div className="text-xl font-black tracking-tight">
-                        {formatInrPrecise(modalForm.payoutAmount)}
+                    </div>
+
+                    {modalForm.tdsApplicable && (
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-teal-200/60">
+                        <div>
+                          <label className="block text-[11px] font-bold text-teal-800 mb-1">
+                            TDS Section
+                          </label>
+                          <select
+                            value={modalForm.tdsSection}
+                            onChange={(e) => {
+                              const sec = e.target.value;
+                              let rate = modalForm.tdsPercentage;
+                              if (sec === "194T") rate = "10";
+                              else if (sec === "194H") rate = "5";
+                              updateFinancials({ tdsSection: sec, tdsPercentage: rate });
+                            }}
+                            className="w-full px-2 py-1.5 bg-white border border-teal-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          >
+                            <option value="194T">Sec 194T (Partner Payment - 10%)</option>
+                            <option value="194H">Sec 194H (Commission - 5%)</option>
+                            <option value="CUSTOM">Custom Section / Rate</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-teal-800 mb-1">
+                            TDS Rate (%)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              value={modalForm.tdsPercentage}
+                              onChange={(e) =>
+                                updateFinancials({ tdsPercentage: e.target.value })
+                              }
+                              className="w-full pl-3 pr-7 py-1.5 bg-white border border-teal-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            />
+                            <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3-WAY FINANCIAL SUMMARY BANNER */}
+                  <div className="p-3 bg-gradient-to-r from-slate-900 to-teal-950 text-white rounded-xl shadow-sm">
+                    <div className="grid grid-cols-3 gap-2 text-center divide-x divide-white/10">
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase block font-semibold">
+                          Gross Commission
+                        </span>
+                        <div className="text-sm font-bold text-white mt-0.5 font-mono">
+                          {formatInr(modalForm.grossAmount)}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] text-rose-300 uppercase block font-semibold">
+                          TDS u/s {modalForm.tdsSection} ({modalForm.tdsPercentage}%)
+                        </span>
+                        <div className="text-sm font-bold text-rose-300 mt-0.5 font-mono">
+                          {modalForm.tdsApplicable && Number(modalForm.tdsAmount) > 0
+                            ? `-${formatInr(modalForm.tdsAmount)}`
+                            : "₹0.00"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] text-emerald-300 uppercase block font-bold">
+                          Net Credited
+                        </span>
+                        <div className="text-base font-black text-emerald-400 mt-0.5 font-mono">
+                          {formatInrPrecise(modalForm.netAmount || modalForm.grossAmount)}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white font-mono">
-                        {modalForm.payoutPercentage || "0"}% of Loan
-                      </span>
+                  </div>
+
+                  {/* INVOICE & PAYMENT DETAILS */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Invoice Reference #
+                      </label>
+                      <input
+                        type="text"
+                        value={modalForm.invoiceNumber}
+                        onChange={(e) =>
+                          setModalForm((prev) => ({ ...prev, invoiceNumber: e.target.value }))
+                        }
+                        placeholder="e.g. INV-PO-2026-..."
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Invoice / Disbursal Date
+                      </label>
+                      <input
+                        type="date"
+                        value={modalForm.invoiceDate}
+                        onChange={(e) =>
+                          setModalForm((prev) => ({ ...prev, invoiceDate: e.target.value }))
+                        }
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      />
                     </div>
                   </div>
 
                   {/* Payment Reference / UTR */}
-                  <div className="mt-2.5">
+                  <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Payment Reference / UTR / Note (Optional)
+                      Bank Reference / UTR / Transaction Note
                     </label>
                     <input
                       type="text"
@@ -1228,30 +1578,49 @@ const AdminPayouts = () => {
                     />
                   </div>
 
-                  {/* Payout Status Selector */}
-                  <div className="mt-2.5">
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Target Payout Status
-                    </label>
-                    <select
-                      value={modalForm.payOutStatus}
-                      onChange={(e) =>
-                        setModalForm((prev) => ({
-                          ...prev,
-                          payOutStatus: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                    >
-                      <option value="DONE">DONE (Disbursed &amp; Settled)</option>
-                      <option value="PENDING">PENDING (Keep Pending)</option>
-                      <option value="REJECTED">REJECTED (Decline Payout)</option>
-                    </select>
+                  {/* Status & Email Dispatch Toggle */}
+                  <div className="grid grid-cols-2 gap-2 items-center">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Target Payout Status
+                      </label>
+                      <select
+                        value={modalForm.payOutStatus}
+                        onChange={(e) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            payOutStatus: e.target.value,
+                          }))
+                        }
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      >
+                        <option value="DONE">DONE (Disbursed &amp; Settled)</option>
+                        <option value="PENDING">PENDING (Keep Pending)</option>
+                        <option value="REJECTED">REJECTED (Decline Payout)</option>
+                      </select>
+                    </div>
+
+                    <div className="pt-4">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={modalForm.sendInvoiceEmail}
+                          onChange={(e) =>
+                            setModalForm((prev) => ({
+                              ...prev,
+                              sendInvoiceEmail: e.target.checked,
+                            }))
+                          }
+                          className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary border-slate-300"
+                        />
+                        <span>Send Tax Invoice Email to Partner</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
 
                 {/* Modal Footer Actions */}
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={handleCloseModal}
@@ -1288,7 +1657,7 @@ const AdminPayouts = () => {
         </div>
       )}
 
-      {/* Payout Policy Settings Modal */}
+      {/* Payout Policy & TDS Settings Modal */}
       {policyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-3 sm:p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
@@ -1300,10 +1669,10 @@ const AdminPayouts = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">
-                    Default Payout Commission Policy
+                    Payout Commission &amp; TDS Policy Settings
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Auto-calculates commission when loans are disbursed
+                    Configure default commission rates, Section 194T TDS, and Invoice details
                   </p>
                 </div>
               </div>
@@ -1316,134 +1685,382 @@ const AdminPayouts = () => {
               </button>
             </div>
 
+            {/* TAB SELECTOR */}
+            <div className="flex border-b border-slate-200 bg-slate-50 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setPolicyTab("commission")}
+                className={`flex-1 py-2.5 text-center transition border-b-2 ${
+                  policyTab === "commission"
+                    ? "border-brand-primary text-brand-primary bg-white"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                Loan Commission Rates
+              </button>
+              <button
+                type="button"
+                onClick={() => setPolicyTab("tds")}
+                className={`flex-1 py-2.5 text-center transition border-b-2 ${
+                  policyTab === "tds"
+                    ? "border-brand-primary text-brand-primary bg-white"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                TDS (Sec 194T) &amp; Invoice
+              </button>
+            </div>
+
             {/* Body */}
-            <form onSubmit={handleSavePolicy} className="p-5 space-y-4">
-              <div className="space-y-3 text-xs">
-                {/* Personal Loan */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                  <div>
-                    <span className="font-bold text-slate-900 block">Personal Loan (PL)</span>
-                    <span className="text-[11px] text-slate-500">Unsecured salaried / professional loans</span>
+            <form onSubmit={handleSavePolicy} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              {policyTab === "commission" ? (
+                <div className="space-y-3 text-xs">
+                  {/* Personal Loan */}
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                    <div>
+                      <span className="font-bold text-slate-900 block">Personal Loan (PL)</span>
+                      <span className="text-[11px] text-slate-500">Unsecured salaried / professional loans</span>
+                    </div>
+                    <div className="relative w-28">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={payoutPolicy.PERSONAL ?? 2.0}
+                        onChange={(e) =>
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            PERSONAL: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
+                      />
+                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
-                  <div className="relative w-28">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={payoutPolicy.PERSONAL ?? 2.0}
-                      onChange={(e) =>
-                        setPayoutPolicy((prev) => ({
-                          ...prev,
-                          PERSONAL: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                    />
-                    <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                  </div>
-                </div>
 
-                {/* Business Loan */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                  <div>
-                    <span className="font-bold text-slate-900 block">Business Loan (BL)</span>
-                    <span className="text-[11px] text-slate-500">SME / MSME business working capital</span>
+                  {/* Business Loan */}
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                    <div>
+                      <span className="font-bold text-slate-900 block">Business Loan (BL)</span>
+                      <span className="text-[11px] text-slate-500">SME / MSME business working capital</span>
+                    </div>
+                    <div className="relative w-28">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={payoutPolicy.BUSINESS ?? 1.8}
+                        onChange={(e) =>
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            BUSINESS: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
+                      />
+                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
-                  <div className="relative w-28">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={payoutPolicy.BUSINESS ?? 1.8}
-                      onChange={(e) =>
-                        setPayoutPolicy((prev) => ({
-                          ...prev,
-                          BUSINESS: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                    />
-                    <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                  </div>
-                </div>
 
-                {/* Home Loan Salaried */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                  <div>
-                    <span className="font-bold text-slate-900 block">Home Loan (Salaried)</span>
-                    <span className="text-[11px] text-slate-500">Secured home purchase for salaried clients</span>
+                  {/* Home Loan Salaried */}
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                    <div>
+                      <span className="font-bold text-slate-900 block">Home Loan (Salaried)</span>
+                      <span className="text-[11px] text-slate-500">Secured home purchase for salaried clients</span>
+                    </div>
+                    <div className="relative w-28">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={payoutPolicy.HOME_LOAN_SALARIED ?? 0.75}
+                        onChange={(e) =>
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            HOME_LOAN_SALARIED: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
+                      />
+                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
-                  <div className="relative w-28">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={payoutPolicy.HOME_LOAN_SALARIED ?? 0.75}
-                      onChange={(e) =>
-                        setPayoutPolicy((prev) => ({
-                          ...prev,
-                          HOME_LOAN_SALARIED: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                    />
-                    <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                  </div>
-                </div>
 
-                {/* Home Loan Self-Employed */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                  <div>
-                    <span className="font-bold text-slate-900 block">Home Loan (Self-Employed)</span>
-                    <span className="text-[11px] text-slate-500">Secured home purchase for self-employed</span>
+                  {/* Home Loan Self-Employed */}
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                    <div>
+                      <span className="font-bold text-slate-900 block">Home Loan (Self-Employed)</span>
+                      <span className="text-[11px] text-slate-500">Secured home purchase for self-employed</span>
+                    </div>
+                    <div className="relative w-28">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={payoutPolicy.HOME_LOAN_SELF_EMPLOYED ?? 0.85}
+                        onChange={(e) =>
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            HOME_LOAN_SELF_EMPLOYED: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
+                      />
+                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
-                  <div className="relative w-28">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={payoutPolicy.HOME_LOAN_SELF_EMPLOYED ?? 0.85}
-                      onChange={(e) =>
-                        setPayoutPolicy((prev) => ({
-                          ...prev,
-                          HOME_LOAN_SELF_EMPLOYED: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                    />
-                    <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                  </div>
-                </div>
 
-                {/* Default Fallback */}
-                <div className="flex items-center justify-between p-3 bg-emerald-50/50 rounded-xl border border-emerald-200/80">
-                  <div>
-                    <span className="font-bold text-emerald-900 block">Default Fallback Rate</span>
-                    <span className="text-[11px] text-emerald-700">Applied when product type is unclassified</span>
+                  {/* LAP Loan Salaried */}
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                    <div>
+                      <span className="font-bold text-slate-900 block">LAP (Salaried)</span>
+                      <span className="text-[11px] text-slate-500">Loan against property for salaried individual</span>
+                    </div>
+                    <div className="relative w-28">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={payoutPolicy.LAP_SALARIED ?? payoutPolicy.LAP ?? 1.0}
+                        onChange={(e) =>
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            LAP_SALARIED: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
+                      />
+                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
-                  <div className="relative w-28">
+
+                  {/* LAP Loan Self-Employed */}
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                    <div>
+                      <span className="font-bold text-slate-900 block">LAP (Self-Employed)</span>
+                      <span className="text-[11px] text-slate-500">Loan against property for business owners</span>
+                    </div>
+                    <div className="relative w-28">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={payoutPolicy.LAP_SELF_EMPLOYED ?? payoutPolicy.LAP ?? 1.0}
+                        onChange={(e) =>
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            LAP_SELF_EMPLOYED: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
+                      />
+                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  {/* Default Fallback */}
+                  <div className="flex items-center justify-between p-3 bg-emerald-50/50 rounded-xl border border-emerald-200/80">
+                    <div>
+                      <span className="font-bold text-emerald-900 block">Default Fallback Rate</span>
+                      <span className="text-[11px] text-emerald-700">Applied when product type is unclassified</span>
+                    </div>
+                    <div className="relative w-28">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={payoutPolicy.DEFAULT ?? 2.0}
+                        onChange={(e) =>
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            DEFAULT: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-emerald-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
+                      />
+                      <Percent className="w-3 h-3 text-emerald-600 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 text-xs">
+                  {/* TDS Enable Switch */}
+                  <div className="flex items-center justify-between p-3 bg-teal-50/60 rounded-xl border border-teal-200">
+                    <div>
+                      <span className="font-bold text-teal-950 block">Deduct TDS by Default</span>
+                      <span className="text-[11px] text-teal-700">
+                        Section 194T of Income Tax Act 1961
+                      </span>
+                    </div>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={payoutPolicy.DEFAULT ?? 2.0}
+                      type="checkbox"
+                      checked={payoutPolicy.tdsApplicable !== false}
                       onChange={(e) =>
                         setPayoutPolicy((prev) => ({
                           ...prev,
-                          DEFAULT: parseFloat(e.target.value) || 0,
+                          tdsApplicable: e.target.checked,
                         }))
                       }
-                      className="w-full pl-3 pr-7 py-1.5 bg-white border border-emerald-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
+                      className="w-5 h-5 rounded text-teal-600 focus:ring-teal-500 border-slate-300"
                     />
-                    <Percent className="w-3 h-3 text-emerald-600 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                  </div>
+
+                  {/* TDS Section & Default % */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Default TDS Section
+                      </label>
+                      <select
+                        value={payoutPolicy.tdsSection || "194T"}
+                        onChange={(e) => {
+                          const sec = e.target.value;
+                          let rate = payoutPolicy.tdsPercentage;
+                          if (sec === "194T") rate = 10;
+                          else if (sec === "194H") rate = 5;
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            tdsSection: sec,
+                            tdsPercentage: rate,
+                          }));
+                        }}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      >
+                        <option value="194T">Section 194T (Partner Payment - 10%)</option>
+                        <option value="194H">Section 194H (Commission - 5%)</option>
+                        <option value="CUSTOM">Custom Section</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Default TDS Rate (%)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          value={payoutPolicy.tdsPercentage ?? 10}
+                          onChange={(e) =>
+                            setPayoutPolicy((prev) => ({
+                              ...prev,
+                              tdsPercentage: parseFloat(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        />
+                        <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Company Details for Invoice */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <span className="font-bold text-slate-900 block">
+                      Company Details (Printed on Tax Invoice)
+                    </span>
+
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-0.5">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        value={payoutPolicy.companyName || ""}
+                        onChange={(e) =>
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            companyName: e.target.value,
+                          }))
+                        }
+                        placeholder="DhanSource Capital Pvt Ltd"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[11px] text-slate-500 mb-0.5">
+                          PAN
+                        </label>
+                        <input
+                          type="text"
+                          value={payoutPolicy.companyPan || ""}
+                          onChange={(e) =>
+                            setPayoutPolicy((prev) => ({
+                              ...prev,
+                              companyPan: e.target.value,
+                            }))
+                          }
+                          placeholder="AAACD1234F"
+                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-500 mb-0.5">
+                          TAN
+                        </label>
+                        <input
+                          type="text"
+                          value={payoutPolicy.companyTan || ""}
+                          onChange={(e) =>
+                            setPayoutPolicy((prev) => ({
+                              ...prev,
+                              companyTan: e.target.value,
+                            }))
+                          }
+                          placeholder="MUMA12345E"
+                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-500 mb-0.5">
+                          GSTIN
+                        </label>
+                        <input
+                          type="text"
+                          value={payoutPolicy.companyGstin || ""}
+                          onChange={(e) =>
+                            setPayoutPolicy((prev) => ({
+                              ...prev,
+                              companyGstin: e.target.value,
+                            }))
+                          }
+                          placeholder="27AAACD1234F1Z5"
+                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-0.5">
+                        Statutory Invoice Note
+                      </label>
+                      <textarea
+                        rows="2"
+                        value={payoutPolicy.invoiceNotes || ""}
+                        onChange={(e) =>
+                          setPayoutPolicy((prev) => ({
+                            ...prev,
+                            invoiceNotes: e.target.value,
+                          }))
+                        }
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Actions */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
@@ -1473,6 +2090,18 @@ const AdminPayouts = () => {
           </div>
         </div>
       )}
+
+      {/* PARTNER TAX INVOICE BUILDER & PREVIEW MODAL */}
+      <PartnerInvoiceModal
+        isOpen={invoiceModalOpen}
+        onClose={() => {
+          setInvoiceModalOpen(false);
+          setInvoiceModalRecord(null);
+        }}
+        record={invoiceModalRecord}
+        policy={payoutPolicy}
+        onSuccess={loadData}
+      />
     </div>
   );
 };

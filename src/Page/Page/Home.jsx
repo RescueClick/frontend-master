@@ -73,7 +73,7 @@ const Home = () => {
     {
       icon: <FaLaptop size={32} className="text-brand-primary" />,
       title: "Online Financial Process",
-      desc: "With a few clicks, your consultation process gets started without time wastage or splurging.",
+      desc: "With a few clicks, your loan application process gets started without time wastage or splurging.",
     },
     {
       icon: <FaBolt size={32} className="text-brand-primary" />,
@@ -82,7 +82,7 @@ const Home = () => {
     },
     {
       icon: <FaHeadset size={32} className="text-brand-primary" />,
-      title: "Free Loan Consultancy",
+      title: "Free Loan Advisory",
       desc: "Our experts are always ready to help & guide you in streamlining and scaling your finances.",
     },
   ];
@@ -371,13 +371,13 @@ const Home = () => {
         <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/10 hover:border-teal-500/50 transition-all duration-300 group">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <Phone className="w-6 h-6 text-white" />
+              <MapPin className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Call Us</h3>
-              <a href="tel:+917057772026" className="text-xl font-bold text-teal-400 hover:text-teal-300 transition-colors">
-                +91 7057772026
-              </a>
+              <h3 className="text-lg font-semibold text-white mb-1">Corporate Office</h3>
+              <p className="text-base font-bold text-teal-400">
+                Kharadi, Pune, Maharashtra
+              </p>
             </div>
           </div>
         </div>

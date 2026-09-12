@@ -10,6 +10,7 @@ import {
   IndianRupee,
   Loader2,
   Pencil,
+  Sparkles,
 } from "lucide-react";
 import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
@@ -310,13 +311,22 @@ export default function AdminReferralRewards() {
             </p>
           </div>
         </div>
-        <Link
-          to="/admin/referral-reward-amounts"
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm ring-1 ring-teal-700/20 transition hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 sm:self-start"
-        >
-          <IndianRupee className="h-4 w-4" aria-hidden />
-          Referral reward amounts
-        </Link>
+        <div className="flex flex-wrap items-center gap-2.5 sm:self-start">
+          <Link
+            to="/admin/referral-banners"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          >
+            <Sparkles className="h-4 w-4 text-teal-600" aria-hidden />
+            Referral Banners
+          </Link>
+          <Link
+            to="/admin/referral-reward-amounts"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm ring-1 ring-teal-700/20 transition hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+          >
+            <IndianRupee className="h-4 w-4" aria-hidden />
+            Referral reward amounts
+          </Link>
+        </div>
       </div>
 
       {summary ? (

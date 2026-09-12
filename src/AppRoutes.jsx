@@ -24,6 +24,7 @@ import { PARTNER_REGISTRATION_ROUTE } from "./config/publicReferral.js";
 import { RequestResetForm } from "./Page/RequestResetForm.jsx";
 import { ConfirmResetForm } from "./Page/ConfirmResetForm.jsx";
 import ConfirmEmailChange from "./Page/ConfirmEmailChange.jsx";
+import PartnerStorefront from "./Page/PartnerStorefront.jsx";
 
 // Import main pages
 
@@ -65,6 +66,7 @@ import AdminSettings from "./sidebars/users/Admin/AdminSettings";
 import AdminPublicLoanReferral from "./sidebars/users/Admin/AdminPublicLoanReferral";
 import AdminReferralRewardAmounts from "./sidebars/users/Admin/AdminReferralRewardAmounts";
 import AdminReferralRewards from "./sidebars/users/Admin/AdminReferralRewards";
+import AdminReferralBanners from "./sidebars/users/Admin/AdminReferralBanners";
 import AdminDisbursedLoans from "./sidebars/users/Admin/AdminDisbursedLoans";
 import AdminPartnerLevels from "./sidebars/users/Admin/AdminPartnerLevels";
 
@@ -119,6 +121,10 @@ import BusinessLoan from "./sidebars/users/Partner/ApplicationForm/BusinessLoan"
 import GetLoan from "./sidebars/users/Partner/GetLoan";
 import HomeLoanSalaried from "./sidebars/users/Partner/ApplicationForm/HomeLoanSalaried";
 import HomeLoanSelfEmployee from "./sidebars/users/Partner/ApplicationForm/HomeLoanSelfEmployee";
+import HomeLoan from "./sidebars/users/Partner/ApplicationForm/HomeLoan";
+import LapLoanSalaried from "./sidebars/users/Partner/ApplicationForm/LapLoanSalaried";
+import LapLoanSelfEmployee from "./sidebars/users/Partner/ApplicationForm/LapLoanSelfEmployee";
+import LapLoan from "./sidebars/users/Partner/ApplicationForm/LapLoan";
 import PersonalLoan from "./sidebars/users/Partner/ApplicationForm/PersonalLoan";
 
 // Import Partner user pages
@@ -191,6 +197,7 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="Home" replace />} />
         <Route path="Home" element={<Home />} />
         <Route path="services" element={<Services />} />
+        <Route path="apply" element={<Services />} />
         <Route path="channel-partner" element={<ChannelPartner />} />
         <Route path="documents" element={<Documents />} />
         <Route path="about-us" element={<AboutUs />} />
@@ -220,10 +227,34 @@ const AppRoutes = () => {
       <Route path="/AuthLetter" element={<AuthLetter />} />
       <Route path="/IdCard" element={<IdCard  />} />
 
+      {/* ⭐ DEDICATED PARTNER DIGITAL STORE / ADVISOR PROFILE (All Partner Data & All Products) */}
+      <Route path="/advisor/:partnerCode" element={<PartnerStorefront />} />
+      <Route path="/advisor" element={<PartnerStorefront />} />
+      <Route path="/store/:partnerCode" element={<PartnerStorefront />} />
+      <Route path="/store" element={<PartnerStorefront />} />
+      <Route path="/p/:partnerCode" element={<PartnerStorefront />} />
+      <Route path="/loan-advisor/:partnerCode" element={<PartnerStorefront />} />
+      <Route path="/loan-advisor/*" element={<PartnerStorefront />} />
+      <Route path="/loan-advisor" element={<PartnerStorefront />} />
+      <Route path="/partner-store/:partnerCode" element={<PartnerStorefront />} />
+      <Route path="/loan-saving-agent/*" element={<PartnerStorefront />} />
 
-{/* ⭐ PUBLIC LOAN FORM ROUTES (For Apply Now Buttons) */}
+{/* ⭐ PUBLIC LOAN FORM ROUTES (For Apply Now Buttons & Partner Share Links) */}
+      <Route
+        path="/partner/application"
+        element={<PersonalLoan />}
+      />
+      <Route
+        path="/partner/apply"
+        element={<PersonalLoan />}
+      />
+
       <Route
         path="/partner/application/personal-loan"
+        element={<PersonalLoan />}
+      />
+      <Route
+        path="/apply/personal-loan"
         element={<PersonalLoan />}
       />
 
@@ -231,15 +262,63 @@ const AppRoutes = () => {
         path="/partner/application/business-loan"
         element={<BusinessLoan />}
       />
+      <Route
+        path="/apply/business-loan"
+        element={<BusinessLoan />}
+      />
 
       <Route
         path="/partner/application/home-loan-salaried"
+        element={<HomeLoanSalaried />}
+      />
+      <Route
+        path="/apply/home-loan-salaried"
         element={<HomeLoanSalaried />}
       />
 
       <Route
         path="/partner/application/home-loan-self-employed"
         element={<HomeLoanSelfEmployee />}
+      />
+      <Route
+        path="/apply/home-loan-self-employed"
+        element={<HomeLoanSelfEmployee />}
+      />
+
+      <Route
+        path="/partner/application/home-loan"
+        element={<HomeLoan />}
+      />
+      <Route
+        path="/apply/home-loan"
+        element={<HomeLoan />}
+      />
+
+      <Route
+        path="/partner/application/lap-loan-salaried"
+        element={<LapLoanSalaried />}
+      />
+      <Route
+        path="/apply/lap-loan-salaried"
+        element={<LapLoanSalaried />}
+      />
+
+      <Route
+        path="/partner/application/lap-loan-self-employed"
+        element={<LapLoanSelfEmployee />}
+      />
+      <Route
+        path="/apply/lap-loan-self-employed"
+        element={<LapLoanSelfEmployee />}
+      />
+
+      <Route
+        path="/partner/application/lap-loan"
+        element={<LapLoan />}
+      />
+      <Route
+        path="/apply/lap-loan"
+        element={<LapLoan />}
       />
       {/* Admin routes: Only accessible to Admin users */}
       <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
@@ -257,9 +336,10 @@ const AppRoutes = () => {
         <Route path="public-loan-referral" element={<AdminPublicLoanReferral />} />
         <Route path="referral-reward-amounts" element={<AdminReferralRewardAmounts />} />
         <Route path="referral-rewards" element={<AdminReferralRewards />} />
+        <Route path="referral-banners" element={<AdminReferralBanners />} />
         <Route path="customer" element={<AdiminCustomer />} />
-        <Route path="target" element={<SetTarget />} />
-        <Route path="partner-targets" element={<PartnerTargets />} />
+        <Route path="target" element={<Navigate to="/admin/incentives" replace />} />
+        <Route path="partner-targets" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="banks" element={<AdiminBanks />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="Analytics" element={<Analytics />} />
@@ -308,7 +388,7 @@ const AppRoutes = () => {
         <Route path="done-incentive" element={<Navigate to="/asm/incentives" replace state={{ defaultTab: "paid" }} />} />
         <Route path="withdrawals" element={<Navigate to="/asm/payouts" replace />} />
         <Route path="follow-ups" element={<AsmFollowUps />} />
-        <Route path="partner-targets" element={<AsmPartnerTargets />} />
+        <Route path="partner-targets" element={<Navigate to="/asm/incentives" replace />} />
         <Route path="settings" element={<PasswordSettings  />} />
         <Route path="EditProfile" element={<EditProfile />} />
         <Route path="analytics" element={<ASManalytics />} />
@@ -350,7 +430,7 @@ const AppRoutes = () => {
         <Route path="analytics" element={<RManalytics/>}/>
         <Route path="RManalytics" element={<RManalytics/>}/>
         <Route path="Rm-Application" element={<RmApplication/>}/>
-        <Route path="partner-targets" element={<RmPartnerTargets />} />
+        <Route path="partner-targets" element={<Navigate to="/rm/dashboard" replace />} />
         <Route path="settings" element={<PasswordSettings />} />
         <Route path="EditProfile" element={<EditProfile />} />
         {/* Payout routes moved to ASM and Admin */}
@@ -385,7 +465,7 @@ const AppRoutes = () => {
           <Route path="KYCDetails" element={<KYCDetails />} />
           <Route path="complete-application" element={<CompleteApplication />} />
           <Route path="document-upload" element={<DocumentUpload />} />
-          <Route path="my-target" element={<MyTarget />} />
+          <Route path="my-target" element={<Navigate to="/partner/incentives" replace />} />
           <Route path="incentives" element={<IncentiveHistory />} />
           <Route path="referral-rewards" element={<PartnerReferralRewardHistory />} />
           <Route path="payouts" element={<PayoutHistory />} />
@@ -393,8 +473,12 @@ const AppRoutes = () => {
           <Route path="get-loan" element={<GetLoan />} />
           <Route path="personal-loan" element={<PersonalLoan />} />
           <Route path="bussiness-loan" element={<BusinessLoan />} />
+          <Route path="home-loan" element={<HomeLoan />} />
           <Route path="home-loan-salaried" element={<HomeLoanSalaried />} />
           <Route path="home-loan-self-employee" element={<HomeLoanSelfEmployee />} />
+          <Route path="lap-loan" element={<LapLoan />} />
+          <Route path="lap-loan-salaried" element={<LapLoanSalaried />} />
+          <Route path="lap-loan-self-employee" element={<LapLoanSelfEmployee />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[ROLES.CUSTOMER]} />}>

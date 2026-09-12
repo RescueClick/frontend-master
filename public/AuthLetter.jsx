@@ -79,7 +79,7 @@ const AuthLetter = () => {
 
         {/* Authorization Text */}
         <div className="text-center text-lg italic leading-relaxed text-gray-700 mb-10">
-          You are hereby authorized to promote and provide consultation<br />
+          You are hereby authorized to promote and facilitate loan applications<br />
           for all the Financial Products and Services offered by DhanSource Capital
         </div>
 
@@ -112,13 +112,21 @@ const AuthLetter = () => {
             </div>
           </div>
 
-          {/* Right Signature */}
-          <div className="text-center flex-1">
+          {/* Right Signature: Partner Digital Sign */}
+          <div className="text-center flex-1 flex flex-col items-center">
+            <div className="h-24 flex flex-col items-center justify-center mb-1">
+              <span className="font-serif italic text-gray-800 text-lg font-bold">
+                {name || "Authorized Partner"}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 mt-1 rounded bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-semibold">
+                ✓ Digitally Signed
+              </span>
+            </div>
             <div className="w-48 border-b-2 border-gray-800 mx-auto mb-2"></div>
-            <div className="text-base font-bold text-gray-800 mb-1">Kanchan Ghorpade</div>
+            <div className="text-base font-bold text-gray-800 mb-1">{name || "Authorized Partner"}</div>
             <div className="text-sm font-bold text-teal-500">
-              MD<br />
-              DhanSource Capital
+              Partner Digital Sign<br />
+              Channel Partner
             </div>
           </div>
         </div>

@@ -1015,14 +1015,14 @@ const CustomerApplication = () => {
   const getLocalRequiredDocRules = (loanType) => {
     const baseDocs = ["PAN", "AADHAR_FRONT", "AADHAR_BACK"];
     const key = String(loanType || "").toUpperCase();
-    if (key === "PERSONAL" || key === "HOME_LOAN_SALARIED") {
+    if (key === "PERSONAL" || key === "HOME_LOAN_SALARIED" || key === "LAP_SALARIED") {
       return [
         ...baseDocs.map((docType) => ({ key: docType, acceptedDocTypes: [docType] })),
         { key: "SALARY_SLIP_1", acceptedDocTypes: ["SALARY_SLIP_1"] },
         { key: "BANK_STATEMENT_1", acceptedDocTypes: ["BANK_STATEMENT_1", "BANK_STATEMENT"] },
       ];
     }
-    if (key === "BUSINESS" || key === "HOME_LOAN_SELF_EMPLOYED") {
+    if (key === "BUSINESS" || key === "HOME_LOAN_SELF_EMPLOYED" || key === "LAP_SELF_EMPLOYED") {
       return [
         ...baseDocs.map((docType) => ({ key: docType, acceptedDocTypes: [docType] })),
         { key: "BANK_STATEMENT_1", acceptedDocTypes: ["BANK_STATEMENT_1", "BANK_STATEMENT"] },

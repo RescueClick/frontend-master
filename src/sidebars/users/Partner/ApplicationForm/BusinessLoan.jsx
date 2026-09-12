@@ -15,20 +15,26 @@ import {
   Receipt,
   Shield,
   X,
+  Share2,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { z } from "zod";
+import { useSelector } from "react-redux";
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
 import {
   fetchPublicDefaultPartnerReferralCode,
+  fetchPublicPartnerInfo,
   PUBLIC_LOAN_REFERRAL_FALLBACK,
 } from "../../../../feature/publicLoanReferral";
+import { canonicalPartnerReferralCode } from "../../../../config/branding";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
 import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofBlock";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
+import PublicLoanPartnerTrustBanner from "../../../../components/loan/PublicLoanPartnerTrustBanner";
+import ShareLoanModal from "../../../../components/loan/ShareLoanModal";
 import {
   findOversizeInLoanDocsQueue,
   formatLoanDocOversizeError,
@@ -71,8 +77,31 @@ const formatDocTypeName = (docType) => {
 };
 
 export default function BusinessLoan({ embed = false } = {}) {
-  const { partnerToken } = getAuthData();
+  const { partnerToken, partnerUser } = getAuthData();
   const isPartnerLoggedIn = Boolean(partnerToken);
+  const profileState = useSelector((state) => state?.partner?.profile?.data);
+
+  const currentPartnerCode =
+    canonicalPartnerReferralCode(
+      profileState?.partnerCode,
+      profileState?.referralCode
+    ) ||
+    canonicalPartnerReferralCode(
+      partnerUser?.partnerCode,
+      partnerUser?.referralCode
+    ) ||
+    "";
+
+  const currentPartnerName =
+    profileState?.fullName ||
+    [profileState?.firstName, profileState?.middleName, profileState?.lastName]
+      .filter(Boolean)
+      .join(" ") ||
+    [partnerUser?.firstName, partnerUser?.lastName].filter(Boolean).join(" ") ||
+    "Authorized Partner";
+
+  const [partnerInfo, setPartnerInfo] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [defaultReferralCode, setDefaultReferralCode] = useState(
     PUBLIC_LOAN_REFERRAL_FALLBACK
   );
@@ -190,14 +219,21 @@ export default function BusinessLoan({ embed = false } = {}) {
   useEffect(() => {
     if (isPartnerLoggedIn) return;
     let cancelled = false;
-    fetchPublicDefaultPartnerReferralCode().then((code) => {
+    fetchPublicDefaultPartnerReferralCode().then(async (code) => {
       if (cancelled) return;
-      setDefaultReferralCode(code);
-      setFormData((prev) => {
-        const existing = String(prev.partnerReferralCode ?? "").trim();
-        if (existing) return prev;
-        return { ...prev, partnerReferralCode: code };
-      });
+      if (code) {
+        setDefaultReferralCode(code);
+        setFormData((prev) => {
+          const existing = String(prev.partnerReferralCode ?? "").trim();
+          if (existing) return prev;
+          return { ...prev, partnerReferralCode: code };
+        });
+
+        const info = await fetchPublicPartnerInfo(code);
+        if (!cancelled && info) {
+          setPartnerInfo(info);
+        }
+      }
     });
     return () => {
       cancelled = true;
@@ -1113,18 +1149,40 @@ const handleSubmit = async () => {
           </div>
         )}
 
+        {/* Customer Trust Banner & Partner Certificate Info */}
+        {!isPartnerLoggedIn && (
+          <PublicLoanPartnerTrustBanner
+            partner={partnerInfo || (defaultReferralCode ? { partnerCode: defaultReferralCode } : null)}
+            loanTitle="Business Loan"
+          />
+        )}
+
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Header */}
           <div
-            className="px-8 py-6 text-white"
+            className="px-6 sm:px-8 py-6 text-white flex flex-col sm:flex-row items-center justify-between gap-4"
             style={{ backgroundColor: "var(--color-brand-primary)" }}
           >
-            <h1 className="text-3xl font-bold text-center">
-              Business Loan Application
-            </h1>
-            <p className="text-center mt-2 opacity-90">
-              Complete all fields to process your business loan application
-            </p>
+            <div className="text-center sm:text-left flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold">
+                Business Loan Application
+              </h1>
+              <p className="mt-1 opacity-90 text-xs sm:text-sm">
+                Complete all fields to process your business loan application
+              </p>
+            </div>
+
+            {isPartnerLoggedIn && (
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-teal-800 hover:bg-teal-50 font-bold text-xs shadow-md transition transform hover:scale-105 active:scale-95 flex-shrink-0"
+                title="Share customer application link"
+              >
+                <Share2 className="w-3.5 h-3.5 text-teal-600" />
+                <span>Share Customer Link</span>
+              </button>
+            )}
           </div>
 
           <div className="p-6 space-y-6">
@@ -2710,6 +2768,22 @@ const handleSubmit = async () => {
           </div>
         </div>
       </div>
+
+      {isPartnerLoggedIn && (
+        <ShareLoanModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          loan={{
+            id: "business",
+            title: "Business Loan",
+            badge: "Upto ₹2Cr",
+            route: "/partner/application/business-loan",
+            hasSubTypes: false,
+          }}
+          partnerCode={currentPartnerCode}
+          partnerName={currentPartnerName}
+        />
+      )}
     </div>
   );
 }

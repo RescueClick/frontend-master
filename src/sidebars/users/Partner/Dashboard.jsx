@@ -31,6 +31,7 @@ import {
   IndianRupee,
   Award,
   Gift,
+  Share2,
 } from "lucide-react";
 import { getAuthData } from "../../../utils/localStorage";
 
@@ -224,19 +225,30 @@ const Dashboard = () => {
         <div className="mb-4 sm:mb-6">
         {/* Mobile: Stack vertically, Desktop: Side by side */}
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch">
-          {/* Left Side - Total Files Card and New Application Button */}
+          {/* Left Side - Total Files Card and Action Buttons */}
           <div className="flex-shrink-0">
-            {/* New Application Button - Full width on mobile */}
-            <button
-              className="w-full lg:w-60 flex items-center justify-center gap-2 px-4 py-3 mb-4 rounded-lg text-white text-lg transition-colors hover:opacity-90"
-              style={{ backgroundColor: "var(--color-brand-primary)" }}
-              onClick={() => {
-                navigate("/partner/get-loan");
-                console.log("Navigate to new application");
-              }}
-            >
-              <Plus size={18} /> New Application
-            </button>
+            {/* New Application & Share Loan Buttons */}
+            <div className="space-y-2 mb-4 w-full lg:w-60">
+              <button
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-bold text-base transition-all duration-200 hover:opacity-95 shadow-md active:scale-95"
+                style={{ backgroundColor: "var(--color-brand-primary)" }}
+                onClick={() => {
+                  navigate("/partner/get-loan");
+                }}
+              >
+                <Plus size={18} /> New Application
+              </button>
+
+              <button
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100/80 text-teal-800 border border-teal-300 font-bold text-sm transition-all duration-200 shadow-sm active:scale-95"
+                onClick={() => {
+                  navigate("/partner/get-loan");
+                }}
+                title="Open Loan Products Catalog and Share Links with Customers"
+              >
+                <Share2 size={16} className="text-teal-600" /> Share Loan Links
+              </button>
+            </div>
 
             {/* Total Files Card - Full width on mobile, fixed width on desktop */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-blue-500 p-4 sm:p-5 w-full lg:w-60">
@@ -539,7 +551,7 @@ const Dashboard = () => {
               ) : (
                 <p className="text-sm text-gray-500 py-6 text-center rounded-xl border border-dashed border-gray-200 bg-gray-50/50">
                   No referral rewards yet this month. Share your PT referral code from Profile — when
-                  downlines grow and loans disburse, entries appear here and in{" "}
+                  referred partners join and disburse a loan file successfully, entries appear here and in{" "}
                   <button
                     type="button"
                     className="text-teal-700 font-medium underline-offset-2 hover:underline"

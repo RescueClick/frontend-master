@@ -2,9 +2,24 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Home, FileQuestion } from "lucide-react";
 import { COMPANY_NAME } from "../config/branding";
+import PartnerStorefront from "./PartnerStorefront";
 
 const PageNotFound = () => {
   const { pathname } = useLocation();
+
+  // Automatically catch and render dedicated partner storefronts for WeRize-style custom URLs or partner codes
+  const isPartnerSlug =
+    pathname.startsWith("/loan-saving-agent") ||
+    pathname.startsWith("/loan-advisor") ||
+    pathname.startsWith("/advisor") ||
+    pathname.startsWith("/store") ||
+    pathname.startsWith("/p/") ||
+    /PT-[\w-]+/i.test(pathname) ||
+    /TLP[\w-]+/i.test(pathname);
+
+  if (isPartnerSlug) {
+    return <PartnerStorefront />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100/90 via-white to-slate-50/95">

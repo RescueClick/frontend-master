@@ -847,6 +847,8 @@ const AsmPayouts = () => {
                   <option value="BUSINESS">Business</option>
                   <option value="HOME_LOAN_SALARIED">Home (Sal)</option>
                   <option value="HOME_LOAN_SELF_EMPLOYED">Home (Self)</option>
+                  <option value="LAP_SALARIED">LAP (Sal)</option>
+                  <option value="LAP_SELF_EMPLOYED">LAP (Self)</option>
                 </select>
 
                 <button

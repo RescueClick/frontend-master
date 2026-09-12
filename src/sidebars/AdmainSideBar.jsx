@@ -4,6 +4,7 @@ import {
   UserCheck,
   Building2,
   Menu,
+  X,
   Download,
   LayoutGrid,
   User,
@@ -19,6 +20,7 @@ import {
   Shield,
   FileCheck,
   Crown,
+  Sparkles,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -34,12 +36,40 @@ import { useSidebarNotifications } from "../hooks/useSidebarNotifications";
 
 // Admin sidebar component
 const AdminSideBar = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
   const [profileOpen, setProfileOpen] = useState(false);
 
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // Responsive sidebar: auto-close on mobile resize / initial
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Auto-close sidebar on mobile navigation
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname]);
 
   // Get Redux profile state
   const { loading, error, data } = useSelector((state) => state.admin?.profile);
@@ -101,13 +131,18 @@ const AdminSideBar = () => {
       path: "/admin/referral-rewards",
       highlight: true,
     },
+    {
+      name: "Referral Banners",
+      icon: Sparkles,
+      path: "/admin/referral-banners",
+      highlight: true,
+    },
     // Unified Payout Management Hub
     { name: "Disbursed Loans", icon: FileCheck, path: "/admin/disbursed-loans", highlight: true },
     { name: "Payout Management", icon: IndianRupee, path: "/admin/payout", highlight: true },
     { name: "Incentives", icon: Award, path: "/admin/incentives", highlight: true },
     { name: "Levels & Benefits", icon: Crown, path: "/admin/partner-levels", highlight: true },
     { name: "CIBIL Audit", icon: Shield, path: "/admin/cibil-audit", highlight: true },
-    { name: "Set Target", icon: TrendingUp, path: "/admin/target", highlight: true },
     { name: "Banner", icon: Download, path: "/admin/banner" },
     { name: "Admin → Partner", icon: UserCheck, path: "/admin/rm-partner" },
     { name: "Add Bank", icon: Building2, path: "/admin/banks", highlight: true },
@@ -133,22 +168,40 @@ const AdminSideBar = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar — same pattern as ASM/RSM/Partner: wide when open, narrow icon rail (w-20) when collapsed */}
-      <div
-        className={`${
-          sidebarOpen ? "w-60" : "w-20"
-        } shrink-0 bg-white shadow-xl transition-all duration-300 ease-in-out flex flex-col sticky top-0 h-screen border-r border-gray-200 overflow-x-hidden`}
+    <div className="flex h-screen w-full bg-gray-50 overflow-hidden relative">
+      {/* Mobile Drawer Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar — Off-canvas overlay on mobile, relative full-height sidebar on desktop */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 h-full bg-white shadow-xl transition-all duration-300 ease-in-out flex flex-col border-r border-gray-200 shrink-0 ${
+          sidebarOpen
+            ? "translate-x-0 w-64 md:w-60"
+            : "-translate-x-full md:w-20"
+        }`}
       >
         {/* Logo */}
         <div
-          className={`flex w-full min-w-0 items-center border-b border-gray-800 py-5 min-h-[72px] ${
-            sidebarOpen ? "justify-start px-4 gap-3" : "justify-center px-2"
+          className={`flex w-full min-w-0 items-center justify-between border-b border-gray-100 py-3 md:py-5 min-h-[64px] md:min-h-[72px] px-3 ${
+            sidebarOpen ? "md:justify-start md:px-4 md:gap-3" : "md:justify-center md:px-2"
           }`}
         >
-          <div className="w-full min-w-0 h-[72px] rounded-lg flex items-center justify-center shrink-0 overflow-hidden px-2">
-            <img src={brandLogo} alt={COMPANY_NAME} className="h-full w-full object-cover object-center" />
+          <div className="w-full min-w-0 h-[56px] md:h-[72px] rounded-lg flex items-center justify-center shrink-0 overflow-hidden px-2">
+            <img src={brandLogo} alt={COMPANY_NAME} className="h-full w-full object-contain md:object-cover object-center" />
           </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+            aria-label="Close sidebar"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Navigation */}
@@ -210,26 +263,27 @@ const AdminSideBar = () => {
             );
           })}
         </nav>
-      </div>
+      </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto overflow-x-hidden">
         {/* Top Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center space-x-4">
+        <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20 shrink-0">
+          <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+                aria-label="Toggle navigation menu"
               >
                 <Menu size={20} className="text-gray-600" />
               </button>
-              <h1 className="text-xl font-semibold text-gray-800">
+              <h1 className="text-base sm:text-xl font-semibold text-gray-800 truncate">
                 Admin Dashboard
               </h1>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
               {/* Go Back Buttons - Show when impersonating */}
               {isImpersonating && originalRole && (
                 <>
@@ -284,7 +338,7 @@ const AdminSideBar = () => {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 p-6 bg-gray-50 overflow-y-auto">
+        <main className="flex-1 p-2 sm:p-4 md:p-6 bg-gray-50 overflow-y-auto min-w-0">
           <Suspense
             fallback={
               <DhanSourceLoader label="Loading page…" className="min-h-[50vh]" />

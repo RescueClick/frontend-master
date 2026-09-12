@@ -567,7 +567,7 @@ const PartnerRegistrationForm = () => {
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
               Become a <span className="text-[#0d9488]">{COMPANY_NAME}</span> Partner
             </h1>
-            <p className="mt-1.5 text-sm text-stone-500">{COMPANY_TAGLINE}</p>
+            {COMPANY_TAGLINE ? <p className="mt-1.5 text-sm text-stone-500">{COMPANY_TAGLINE}</p> : null}
             <Link to="/LoginPage" className="mt-3 inline-block text-sm font-semibold text-[#0d9488] underline-offset-4 hover:underline">
               Already registered? Sign in →
             </Link>

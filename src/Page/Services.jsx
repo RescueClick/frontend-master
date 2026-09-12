@@ -1,5 +1,5 @@
 import React from "react";
-import { User, Home, Building2, Briefcase, ArrowRight, Check } from "lucide-react";
+import { User, Home, Building2, Briefcase, ArrowRight, Check, Building, Landmark } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Services = () => {
@@ -10,73 +10,109 @@ const Services = () => {
       id: 1,
       title: "Personal Loan",
       description:
-        "We are providing personal loans for individuals with salary between ₹12k and ₹5 lac.",
-      amount: "₹12k min sal.",
+        "Fast digital approval & quick bank disbursement for salaried professionals.",
+      amount: "Upto ₹25 Lakhs",
       icon: User,
       features: [
-        "Salary requirement: ₹12k to ₹5 lac",
-        "Quick approval process",
-        "Minimal documentation",
-        "Competitive interest rates",
+        "Salary requirement: ₹15,000+ per month",
+        "Quick approval process (24 - 72 hrs)",
+        "Zero collateral or mortgage needed",
+        "Competitive interest rates from 10.5%",
       ],
-      link: "/partner/application/personal-loan",
+      link: "/apply/personal-loan",
       accentBar: "from-teal-600 via-brand-primary to-emerald-600",
       iconBg: "from-teal-50 to-emerald-50/90 ring-teal-200/60",
       iconColor: "text-teal-700",
     },
     {
       id: 2,
+      title: "Business Loan",
+      description:
+        "Working capital and expansion capital for MSMEs, retailers, and enterprises.",
+      amount: "Upto ₹2 Crores",
+      icon: Briefcase,
+      features: [
+        "100% unsecured business capital",
+        "High sanction based on banking volume",
+        "Flexible repayment terms up to 84 months",
+        "Fast digital underwriting",
+      ],
+      link: "/apply/business-loan",
+      accentBar: "from-slate-700 via-teal-800 to-brand-primary",
+      iconBg: "from-slate-50 to-teal-50/80 ring-slate-200/70",
+      iconColor: "text-slate-800",
+    },
+    {
+      id: 3,
       title: "Home Loan (Salaried)",
       description:
         "Home loans tailored for salaried customers with a streamlined digital journey.",
-      amount: "Call us",
+      amount: "Upto ₹5 Crores",
       icon: Home,
       features: [
-        "For salaried applicants",
-        "Fast-track options",
-        "Digital documentation",
-        "Multi-lender choice",
+        "For MNC, Private & Govt employees",
+        "Up to 90% of property cost funded",
+        "Tenure up to 30 years for lowest EMI",
+        "Max tax deductions under 80C & 24(b)",
       ],
-      link: "/partner/application/home-loan-salaried",
+      link: "/apply/home-loan-salaried",
       accentBar: "from-cyan-700 via-teal-600 to-emerald-700",
       iconBg: "from-cyan-50/90 to-teal-50 ring-cyan-200/50",
       iconColor: "text-cyan-800",
     },
     {
-      id: 3,
+      id: 4,
       title: "Home Loan (Self Employed)",
       description:
-        "Flexible home loans for self-employed professionals and business owners.",
-      amount: "Call us",
+        "Flexible home loans for self-employed professionals, traders & business owners.",
+      amount: "Upto ₹5 Crores",
       icon: Building2,
       features: [
-        "For business owners",
-        "Flexible repayment",
+        "Gross turnover & banking evaluation",
+        "Purchase, plot, renovation & self-construction",
         "Structured documentation support",
-        "Up to high LTV options",
+        "Co-applicant pooling to boost limit",
       ],
-      link: "/partner/application/home-loan-self-employed",
+      link: "/apply/home-loan-self-employed",
       accentBar: "from-emerald-700 via-teal-700 to-teal-600",
       iconBg: "from-emerald-50 to-teal-50/90 ring-emerald-200/55",
       iconColor: "text-emerald-800",
     },
     {
-      id: 4,
-      title: "Business Loan",
+      id: 5,
+      title: "Loan Against Property (Salaried)",
       description:
-        "Working capital and expansion loans for MSMEs with guided processing.",
-      amount: "Any business",
-      icon: Briefcase,
+        "High-value funding pledging owned residential or commercial property at low interest rates.",
+      amount: "Upto ₹10 Crores",
+      icon: Building,
       features: [
-        "Competitive rates",
-        "Quick processing",
-        "Cash-flow aligned tenure",
-        "Bank & lender options",
+        "For salaried property owners",
+        "Lower EMI burden with tenure up to 20 yrs",
+        "High LTV: Unlock 70-75% property value",
+        "Property remains in your complete use",
       ],
-      link: "/partner/application/business-loan",
-      accentBar: "from-slate-700 via-teal-800 to-brand-primary",
-      iconBg: "from-slate-50 to-teal-50/80 ring-slate-200/70",
-      iconColor: "text-slate-800",
+      link: "/apply/lap-loan-salaried",
+      accentBar: "from-purple-700 via-indigo-600 to-teal-600",
+      iconBg: "from-purple-50 to-indigo-50/90 ring-purple-200/60",
+      iconColor: "text-purple-700",
+    },
+    {
+      id: 6,
+      title: "Loan Against Property (Self Employed)",
+      description:
+        "Large-ticket capital injection against property to fuel business scaling or restructure liabilities.",
+      amount: "Upto ₹10 Crores",
+      icon: Landmark,
+      features: [
+        "For business owners, partners & directors",
+        "Large capital injection up to ₹10 Crores",
+        "Tax benefits on business interest paid",
+        "Fast legal & valuation verification",
+      ],
+      link: "/apply/lap-loan-self-employed",
+      accentBar: "from-indigo-700 via-purple-700 to-brand-primary",
+      iconBg: "from-indigo-50 to-purple-50/90 ring-indigo-200/60",
+      iconColor: "text-indigo-800",
     },
   ];
 
@@ -102,7 +138,7 @@ const Services = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
           {services.map((service) => {
             const Icon = service.icon;
             return (

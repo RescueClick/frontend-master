@@ -512,6 +512,8 @@ const AdminDisbursedLoans = () => {
                   <option value="BUSINESS">Business Loan</option>
                   <option value="HOME_LOAN_SALARIED">Home Loan (Salaried)</option>
                   <option value="HOME_LOAN_SELF_EMPLOYED">Home Loan (Self-Employed)</option>
+                  <option value="LAP_SALARIED">LAP (Salaried)</option>
+                  <option value="LAP_SELF_EMPLOYED">LAP (Self-Employed)</option>
                 </select>
 
                 {/* Payout Status */}

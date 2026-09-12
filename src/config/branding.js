@@ -14,7 +14,7 @@ export const COMPANY_NAME = "DhanSource Capital";
 /** Full legal name — website footer copyright, legal name field, contracts */
 export const COMPANY_NAME_LEGAL = "DhanSource Capital Pvt Ltd";
 
-export const COMPANY_TAGLINE = "Financial Consultancy";
+export const COMPANY_TAGLINE = "";
 
 /**
  * Logo-aligned palette (DhanSource mark: teal “Source” + gold धन).
@@ -96,6 +96,41 @@ export function legacyReferralAlternate(partnerCode, referralCode) {
   if (a && a.toUpperCase() !== canonical.toUpperCase()) return a;
   if (b && b.toUpperCase() !== canonical.toUpperCase()) return b;
   return "";
+}
+
+export function buildCombinedPartnerReferralMessage({
+  webRegistrationUrl,
+  appInviteUrl,
+  playStoreUrl,
+  code,
+  legacyAlt,
+}) {
+  const c = (code || "").trim() || "—";
+  const web = (webRegistrationUrl || "").trim();
+  const store = (playStoreUrl || "").trim();
+  const invite = (appInviteUrl || "").trim();
+  const lines = [
+    `Join ${COMPANY_NAME} as a channel partner!`,
+    ``,
+    `🌐 Register on the web:`,
+    web || "—",
+  ];
+  lines.push(``);
+  if (invite) {
+    lines.push(`📱 Partner app — install & signup (referral rewards):`, invite);
+    if (store && !invite.includes("play.google.com")) {
+      lines.push(``, `Or install from Google Play:`, store);
+    }
+  } else {
+    lines.push(`📱 Install the Partner app from Google Play:`, store || "—");
+  }
+  lines.push(``, `Your PT referral code (enter if a form asks): ${c}`);
+  const alt = (legacyAlt || "").trim();
+  if (alt && alt.toUpperCase() !== c.toUpperCase()) {
+    lines.push(``, `If a form still expects an older code, try: ${alt}`);
+  }
+  lines.push(``, `Questions? ${SUPPORT_EMAIL}`);
+  return lines.join("\n");
 }
 
 export { brandLogo };

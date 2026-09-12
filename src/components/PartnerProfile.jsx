@@ -35,46 +35,11 @@ import {
   whatsAppShareUrl,
   canonicalPartnerReferralCode,
   legacyReferralAlternate,
+  buildCombinedPartnerReferralMessage,
 } from "../config/branding";
 import { PARTNER_REGISTRATION_ROUTE } from "../config/publicReferral.js";
 
-import axios from "axios"
-
-/** One share text: web registration URL + app install / referral link + PT code. */
-function buildCombinedPartnerReferralMessage({
-  webRegistrationUrl,
-  appInviteUrl,
-  playStoreUrl,
-  code,
-  legacyAlt,
-}) {
-  const c = (code || "").trim() || "—";
-  const web = (webRegistrationUrl || "").trim();
-  const store = (playStoreUrl || "").trim();
-  const invite = (appInviteUrl || "").trim();
-  const lines = [
-    `Join ${COMPANY_NAME} as a channel partner!`,
-    ``,
-    `🌐 Register on the web:`,
-    web || "—",
-  ];
-  lines.push(``);
-  if (invite) {
-    lines.push(`📱 Partner app — install & signup (referral rewards):`, invite);
-    if (store && !invite.includes("play.google.com")) {
-      lines.push(``, `Or install from Google Play:`, store);
-    }
-  } else {
-    lines.push(`📱 Install the Partner app from Google Play:`, store || "—");
-  }
-  lines.push(``, `Your PT referral code (enter if a form asks): ${c}`);
-  const alt = (legacyAlt || "").trim();
-  if (alt && alt.toUpperCase() !== c.toUpperCase()) {
-    lines.push(``, `If a form still expects an older code, try: ${alt}`);
-  }
-  lines.push(``, `Questions? ${SUPPORT_EMAIL}`);
-  return lines.join("\n");
-}
+import axios from "axios";
 
 async function shareOrCopyText({ title, text, onOk, onErr }) {
   try {

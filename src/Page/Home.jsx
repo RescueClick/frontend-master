@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
 import { FaHandshake, FaLaptop, FaBolt, FaHeadset } from "react-icons/fa";
-import { Users, Building, MapPin, Shield, Phone, Mail, Wallet, BriefcaseBusiness, Home as HomeIcon, Store, ArrowRight, Target, ClipboardList, Zap, CheckCircle2, Smartphone } from "lucide-react";
+import { Users, Building, Building2, MapPin, Shield, Phone, Mail, Wallet, BriefcaseBusiness, Home as HomeIcon, Store, ArrowRight, Target, ClipboardList, Zap, CheckCircle2, Smartphone } from "lucide-react";
 
 import { COMPANY_NAME, COMPANY_TAGLINE, CONTACT_EMAIL, PARTNER_APP_PLAY_STORE_URL } from "../config/branding";
 import { PARTNER_REGISTRATION_ROUTE } from "../config/publicReferral.js";
@@ -65,38 +65,62 @@ const Home = () => {
   const services = [
     {
       title: "Personal Loan",
-      description: "Get Personal Loan Upto 40 Lac. Min. Salary 12k.",
+      description: "Get Personal Loan Upto 25 Lac. Fast approval and minimal documentation for salaried individuals.",
       icon: Wallet,
       accentBar: "from-teal-600 via-brand-primary to-emerald-600",
       iconBg: "from-teal-50 to-emerald-50/90 ring-teal-200/60",
       iconColor: "text-teal-700",
+      route: "/apply/personal-loan",
     },
     {
       title: "Business Loan",
       description:
-        "Working capital and expansion loans with structured documentation support for MSMEs and enterprises.",
+        "Working capital and expansion loans up to ₹2 Crores with structured documentation support for MSMEs and enterprises.",
       icon: BriefcaseBusiness,
       accentBar: "from-slate-700 via-teal-800 to-brand-primary",
       iconBg: "from-slate-50 to-teal-50/80 ring-slate-200/70",
       iconColor: "text-slate-800",
+      route: "/apply/business-loan",
     },
     {
       title: "Home Loan (Salaried)",
       description:
-        "Easy home loans tailored for salaried customers with quick approvals.",
+        "Easy home loans up to ₹5 Crores tailored for salaried customers with quick approvals & lowest EMIs.",
       icon: HomeIcon,
       accentBar: "from-cyan-700 via-teal-600 to-emerald-700",
       iconBg: "from-cyan-50/90 to-teal-50 ring-cyan-200/50",
       iconColor: "text-cyan-800",
+      route: "/apply/home-loan-salaried",
     },
     {
       title: "Home Loan (Self Employed)",
       description:
-        "Flexible home loans designed for self-employed professionals & business owners.",
+        "Flexible home loans up to ₹5 Crores designed for self-employed professionals & business owners.",
       icon: Store,
       accentBar: "from-emerald-700 via-teal-700 to-teal-600",
       iconBg: "from-emerald-50 to-teal-50/90 ring-emerald-200/55",
       iconColor: "text-emerald-800",
+      route: "/apply/home-loan-self-employed",
+    },
+    {
+      title: "Loan Against Property (Salaried)",
+      description:
+        "Unlock high-value liquidity up to ₹10 Crores pledging owned residential or commercial property with long tenure.",
+      icon: Building,
+      accentBar: "from-purple-700 via-indigo-600 to-teal-600",
+      iconBg: "from-purple-50 to-indigo-50/90 ring-purple-200/60",
+      iconColor: "text-purple-700",
+      route: "/apply/lap-loan-salaried",
+    },
+    {
+      title: "Loan Against Property (Self Employed)",
+      description:
+        "Large-ticket business liquidity up to ₹10 Crores against property to scale operations & lower high-cost debt.",
+      icon: Building2,
+      accentBar: "from-indigo-700 via-purple-700 to-brand-primary",
+      iconBg: "from-indigo-50 to-purple-50/90 ring-indigo-200/60",
+      iconColor: "text-indigo-800",
+      route: "/apply/lap-loan-self-employed",
     },
   ];
 
@@ -119,7 +143,7 @@ const Home = () => {
     },
     {
       icon: <FaHeadset size={32} className="text-brand-primary" />,
-      title: "Free Loan Consultancy",
+      title: "Free Loan Advisory",
       desc: "Our experts are always ready to help & guide you in streamlining and scaling your finances.",
     },
   ];
@@ -164,9 +188,11 @@ const Home = () => {
         <div className="relative z-10 mx-auto w-full max-w-7xl px-3 py-12 sm:px-6 sm:py-16 md:py-20 lg:px-8 lg:py-24">
           <div className="grid min-w-0 items-center gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-20">
             <div className="order-2 min-w-0 mx-auto max-w-xl text-center lg:order-1 lg:mx-0 lg:max-w-[32rem] lg:text-left">
-              <p className="mb-3 sm:mb-4 inline-flex max-w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.22em] text-brand-primary-light min-[400px]:text-[10px] min-[400px]:tracking-[0.28em] sm:px-4 sm:text-[11px]">
-                {COMPANY_TAGLINE}
-              </p>
+              {COMPANY_TAGLINE ? (
+                <p className="mb-3 sm:mb-4 inline-flex max-w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.22em] text-brand-primary-light min-[400px]:text-[10px] min-[400px]:tracking-[0.28em] sm:px-4 sm:text-[11px]">
+                  {COMPANY_TAGLINE}
+                </p>
+              ) : null}
 
               <h1
                 ref={container}
@@ -291,7 +317,7 @@ const Home = () => {
           </p>
         </div>
 
-        <div className="relative z-10 mx-auto grid min-w-0 max-w-7xl grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 md:gap-7 lg:grid-cols-4 lg:gap-6">
+        <div className="relative z-10 mx-auto grid min-w-0 max-w-7xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6 md:gap-7">
           {services.map((service, index) => {
             const Icon = service.icon;
             return (
@@ -319,22 +345,7 @@ const Home = () => {
                     type="button"
                     className="group/btn mt-auto inline-flex cursor-pointer items-center justify-center gap-2 self-center rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-hover px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-[#0d5c56] hover:shadow-lg hover:shadow-brand-primary/25"
                     onClick={() => {
-                      switch (service.title) {
-                        case "Personal Loan":
-                          navigate("/partner/application/personal-loan");
-                          break;
-                        case "Business Loan":
-                          navigate("/partner/application/business-loan");
-                          break;
-                        case "Home Loan (Salaried)":
-                          navigate("/partner/application/home-loan-salaried");
-                          break;
-                        case "Home Loan (Self Employed)":
-                          navigate("/partner/application/home-loan-self-employed");
-                          break;
-                        default:
-                          navigate("/partner/application/personal-loan");
-                      }
+                      navigate(service.route || "/partner/application/personal-loan");
                     }}
                   >
                     Apply now
@@ -525,12 +536,13 @@ const Home = () => {
                 >
                   Apply as partner
                 </button>
-                <a
-                  href="tel:+917057772026"
+                <button
+                  type="button"
+                  onClick={() => navigate("/Contact")}
                   className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-white/35 bg-white/10 px-8 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/50 hover:bg-white/20 sm:text-base"
                 >
-                  Talk to us
-                </a>
+                  Contact us
+                </button>
               </div>
 
               {/* ── Download the Partner App ── */}
@@ -726,15 +738,15 @@ const Home = () => {
             <h3 className="mb-8 text-center text-xl font-semibold text-slate-900 sm:text-2xl">Get in touch</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
               <a
-                href="tel:+917057772026"
+                href="/Contact"
                 className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-primary/30 hover:shadow-md"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-primary-hover">
-                  <Phone className="h-5 w-5 text-white" />
+                  <MapPin className="h-5 w-5 text-white" />
                 </div>
                 <div className="min-w-0 text-left">
-                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Phone</p>
-                  <p className="text-lg font-semibold text-slate-900 transition group-hover:text-brand-primary">+91 7057772026</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Corporate Office</p>
+                  <p className="text-base font-semibold text-slate-900 transition group-hover:text-brand-primary">Kharadi, Pune, Maharashtra</p>
                 </div>
               </a>
               <a

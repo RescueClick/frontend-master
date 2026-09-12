@@ -15,6 +15,7 @@ import {
   IndianRupee,
   X,
   Gift,
+  Share2,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -28,12 +29,40 @@ import { useSidebarNotifications } from "../hooks/useSidebarNotifications";
 
 // Admin sidebar component
 const PartnerSideBar = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
   const [profileOpen, setProfileOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  // Responsive sidebar: auto-close on mobile resize / initial
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Auto-close sidebar on mobile navigation
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname]);
 
   const { data: profileData } = useSelector((state) => state.partner?.profile || { data: null });
 
@@ -69,6 +98,7 @@ const PartnerSideBar = () => {
   // Sidebar navigation items with icons and routes
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: "/partner/dashboard" },
+    { name: "Loan Products & Share", icon: Share2, path: "/partner/get-loan" },
     { name: "Applications", icon: FileText, path: "/partner/applications" },
     { name: "My Target", icon: Target, path: "/partner/my-target" },
     { name: "Incentive History", icon: Award, path: "/partner/incentives" },
@@ -81,26 +111,46 @@ const PartnerSideBar = () => {
 
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen w-full bg-gray-50 overflow-hidden">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div
-        className={`${
-          sidebarOpen ? "w-60" : "w-20"
-        } shrink-0 bg-white shadow-xl transition-all duration-300 flex flex-col sticky top-0 h-screen border-r border-gray-200 overflow-x-hidden`}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 h-full bg-white shadow-xl transition-all duration-300 flex flex-col border-r border-gray-200 shrink-0 ${
+          sidebarOpen
+            ? "translate-x-0 w-60"
+            : "-translate-x-full md:w-20"
+        }`}
       >
         {/* Logo — match Admin */}
         <div
-          className={`flex w-full min-w-0 items-center border-b border-gray-800 py-5 min-h-[72px] ${
-            sidebarOpen ? "justify-start px-4 gap-3" : "justify-center px-2"
+          className={`flex w-full min-w-0 items-center border-b border-gray-200 py-4 md:py-5 min-h-[64px] md:min-h-[72px] ${
+            sidebarOpen ? "justify-between px-4" : "justify-center px-2"
           }`}
         >
-          <div className="w-full min-w-0 h-[72px] rounded-lg flex items-center justify-center shrink-0 overflow-hidden px-2">
+          <div className="w-full min-w-0 h-10 md:h-[72px] rounded-lg flex items-center justify-center shrink-0 overflow-hidden px-1">
             <img src={brandLogo} alt={COMPANY_NAME} className="h-full w-full object-cover object-center" />
           </div>
+          {sidebarOpen && (
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 shrink-0 ml-1"
+              aria-label="Close sidebar"
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         {/* Navigation */}
-        <nav className="mt-6 flex-1 overflow-y-auto px-3">
+        <nav className="mt-4 md:mt-6 flex-1 overflow-y-auto px-3">
           {sidebarItems.map((item, index) => {
             const active = location.pathname === item.path;
             const count = getBadgeCount(item.name);
@@ -115,6 +165,11 @@ const PartnerSideBar = () => {
               <Link
                 key={index}
                 to={item.path}
+                onClick={() => {
+                  if (typeof window !== "undefined" && window.innerWidth < 768) {
+                    setSidebarOpen(false);
+                  }
+                }}
                 className={`w-full flex items-center mb-2 rounded-xl transition-all duration-200 ${
                   sidebarOpen ? "space-x-3 px-4 py-3" : "justify-center px-2 py-3"
                 } ${active ? activeClasses : baseClasses}`}
@@ -141,12 +196,12 @@ const PartnerSideBar = () => {
             );
           })}
         </nav>
-      </div>
+      </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto overflow-x-hidden">
         {/* Top Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
+        <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20 shrink-0">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center space-x-4">
               <button

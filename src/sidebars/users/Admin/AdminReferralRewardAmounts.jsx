@@ -36,7 +36,7 @@ export default function AdminReferralRewardAmounts() {
     const d = Number(disbursedReward);
     const s = Number(signupReward);
     if (!Number.isFinite(d) || d <= 0) {
-      toast.error("Disbursed amount must be a positive number");
+      toast.error("Disbursed reward amount must be a positive number");
       return;
     }
     if (!Number.isFinite(s) || s <= 0) {
@@ -80,11 +80,11 @@ export default function AdminReferralRewardAmounts() {
             Referral reward amounts
           </h1>
           <p className="mt-1 text-slate-600">
-            Super Admin sets how many <span className="font-medium">INR</span> are stored on new
-            referral rows. <span className="font-medium">Disbursed</span> applies when a downline
-            partner&apos;s loan is marked DISBURSED (partner→partner program).{" "}
-            <span className="font-medium">Signup</span> applies only if legacy signup rewards are
-            created (non-partner referrers).
+            Super Admin sets how referral rewards are granted. In the partner→partner program,
+            a referring partner gets the <span className="font-medium">Disbursed referral reward</span>{" "}
+            on <span className="font-medium text-slate-800">every loan file disbursed</span> by their referred partner.{" "}
+            <span className="font-medium">Signup</span> applies only if legacy customer signup rewards are
+            created.
           </p>
         </div>
       </div>
@@ -118,6 +118,9 @@ export default function AdminReferralRewardAmounts() {
                 value={disbursedReward}
                 onChange={(e) => setDisbursedReward(e.target.value)}
               />
+              <p className="mt-1 text-xs text-slate-500">
+                Reward amount credited to the upline partner when their referred partner joins and disburses any loan file.
+              </p>
             </div>
 
             <div>

@@ -19,6 +19,10 @@ export function loanTypeToTableShort(loanType) {
     HOME: "HL",
     HOME_LOAN_SALARIED: "HLSalaried",
     HOME_LOAN_SELF_EMPLOYED: "HLself",
+    LAP: "LAP",
+    LAP_LOAN: "LAP",
+    LAP_SALARIED: "LAPSalaried",
+    LAP_SELF_EMPLOYED: "LAPself",
     BUSINESS: "BL",
     BUSINESS_LOAN: "BL",
     CAR_LOAN: "CL",
@@ -54,6 +58,11 @@ export function payoutLoanTypePillClass(loanType) {
     case "HOME_LOAN_SELF_EMPLOYED":
     case "Home Loan":
       return "bg-blue-100 text-blue-700";
+    case "LAP":
+    case "LAP_SALARIED":
+    case "LAP_SELF_EMPLOYED":
+    case "LAP Loan":
+      return "bg-purple-100 text-purple-700";
     case "BUSINESS":
     case "Business Loan":
       return "bg-green-100 text-green-700";

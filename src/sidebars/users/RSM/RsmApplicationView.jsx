@@ -23,7 +23,11 @@ import {
   AlertCircle,
   Loader2,
   Eye,
+  EyeOff,
   Lock,
+  Copy,
+  Check,
+  KeyRound,
   ExternalLink,
   RotateCcw,
   ZoomIn,
@@ -188,6 +192,53 @@ const RsmApplicationView = () => {
   const [fetchingBanks, setFetchingBanks] = useState(false);
   const [banksFetched, setBanksFetched] = useState(false);
   const [searchPincode, setSearchPincode] = useState("");
+  const [showBankPassword, setShowBankPassword] = useState({});
+  const [copiedBankField, setCopiedBankField] = useState(null);
+
+  const toggleBankPassword = (bankId) => {
+    setShowBankPassword((prev) => ({
+      ...prev,
+      [bankId]: !prev[bankId],
+    }));
+  };
+
+  const handleCopyBankCred = async (text, label, key) => {
+    if (!text || String(text).trim() === "") {
+      toast.error(`No ${label} configured for this bank`);
+      return;
+    }
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopiedBankField(key);
+      toast.success(`${label} copied to clipboard!`, { duration: 1800 });
+      setTimeout(() => {
+        setCopiedBankField((prev) => (prev === key ? null : prev));
+      }, 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+      toast.error(`Failed to copy ${label}`);
+    }
+  };
+
+  const handleCopyBothBankCreds = (bank) => {
+    const loginId = bank.portalLoginId || "N/A";
+    const password = bank.portalPassword || "N/A";
+    const portalLink = bank.portalLink || "N/A";
+    const formatted = `Bank: ${bank.bankName}\nLoan Type: ${bank.loanType}\nPortal URL: ${portalLink}\nLogin ID: ${loginId}\nPassword: ${password}`;
+    handleCopyBankCred(formatted, "Bank Credentials (ID & Password)", `${bank._id}-both`);
+  };
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -199,7 +250,7 @@ const RsmApplicationView = () => {
   const getLocalRequiredDocRules = (loanType, gender) => {
     const isFemale = String(gender || "").toLowerCase() === "female";
 
-    if (loanType === "PERSONAL" || loanType === "HOME_LOAN_SALARIED") {
+    if (loanType === "PERSONAL" || loanType === "HOME_LOAN_SALARIED" || loanType === "LAP_SALARIED") {
       return [
         { key: "AADHAR_FRONT", acceptedDocTypes: ["AADHAR_FRONT"] },
         { key: "AADHAR_BACK", acceptedDocTypes: ["AADHAR_BACK"] },
@@ -232,7 +283,7 @@ const RsmApplicationView = () => {
       { key: "BANK_STATEMENT_2", acceptedDocTypes: ["BANK_STATEMENT_2"] },
     ];
 
-    if (isFemale && (loanType === "BUSINESS" || loanType === "HOME_LOAN_SELF_EMPLOYED")) {
+    if (isFemale && (loanType === "BUSINESS" || loanType === "HOME_LOAN_SELF_EMPLOYED" || loanType === "LAP_SELF_EMPLOYED")) {
       baseRules.push(
         { key: "CO_APPLICANT_AADHAR_FRONT", acceptedDocTypes: ["CO_APPLICANT_AADHAR_FRONT"] },
         { key: "CO_APPLICANT_AADHAR_BACK", acceptedDocTypes: ["CO_APPLICANT_AADHAR_BACK"] },
@@ -1433,36 +1484,194 @@ const RsmApplicationView = () => {
                           <p className="text-sm font-medium">Finding best matches...</p>
                         </div>
                       ) : banksFetched && (
-                        <div className="space-y-3 mt-4 max-h-[280px] overflow-y-auto pr-1">
+                        <div className="space-y-3 mt-4 max-h-[460px] overflow-y-auto pr-1">
                           {eligibleBanks.length > 0 ? (
-                            eligibleBanks.map(bank => (
-                              <div key={bank._id} className="border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all rounded-xl p-3 flex items-center justify-between group">
-                                <div className="flex items-center gap-3">
-                                  {bank.bankLogoUrl ? (
-                                    <img src={bank.bankLogoUrl} alt={bank.bankName} className="w-10 h-10 rounded-full object-contain bg-white border border-gray-100 shadow-sm" />
-                                  ) : (
-                                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shadow-sm">
-                                      <Building2 className="w-5 h-5 text-emerald-600" />
+                            eligibleBanks.map(bank => {
+                              const isPwVisible = showBankPassword[bank._id] === true;
+                              const idCopied = copiedBankField === `${bank._id}-id`;
+                              const pwCopied = copiedBankField === `${bank._id}-pw`;
+                              const bothCopied = copiedBankField === `${bank._id}-both`;
+
+                              return (
+                                <div
+                                  key={bank._id}
+                                  className="border border-gray-200/90 hover:border-emerald-300 rounded-xl p-3 bg-white shadow-2xs space-y-2.5 transition-all"
+                                >
+                                  {/* Bank Header Row */}
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      {bank.bankLogoUrl ? (
+                                        <img
+                                          src={bank.bankLogoUrl}
+                                          alt={bank.bankName}
+                                          className="w-9 h-9 rounded-lg object-contain bg-slate-50 border border-gray-200/80 p-1 shrink-0"
+                                        />
+                                      ) : (
+                                        <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                          {bank.bankName?.slice(0, 2) || <Building2 className="w-4 h-4 text-emerald-600" />}
+                                        </div>
+                                      )}
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-gray-900 text-xs sm:text-sm leading-tight truncate">
+                                          {bank.bankName}
+                                        </p>
+                                        <span className="inline-block mt-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] px-1.5 py-0.2 rounded font-semibold truncate max-w-[150px]">
+                                          {bank.loanType}
+                                        </span>
+                                      </div>
                                     </div>
-                                  )}
-                                  <div>
-                                    <p className="font-bold text-gray-900 text-sm leading-tight">{bank.bankName}</p>
-                                    <span className="inline-block mt-1 bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-medium">
-                                      {bank.loanType}
-                                    </span>
+
+                                    {bank.portalLink && bank.portalLink !== "#" && (
+                                      <a
+                                        href={bank.portalLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 px-2 py-1.5 rounded-lg transition shrink-0"
+                                        title="Open official bank portal"
+                                      >
+                                        <span>Portal</span>
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                      </a>
+                                    )}
+                                  </div>
+
+                                  {/* Portal Credentials Subpanel */}
+                                  <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2.5 space-y-1.5 text-xs">
+                                    {/* Bank Login ID */}
+                                    <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded px-2 py-1 shadow-2xs">
+                                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide shrink-0">
+                                        ID:
+                                      </span>
+                                      <span className="font-mono text-xs font-bold text-slate-800 tracking-wide truncate flex-1 select-all">
+                                        {bank.portalLoginId || (
+                                          <span className="text-slate-400 font-normal italic">Not Set</span>
+                                        )}
+                                      </span>
+                                      {bank.portalLoginId && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleCopyBankCred(
+                                              bank.portalLoginId,
+                                              "Login ID",
+                                              `${bank._id}-id`
+                                            )
+                                          }
+                                          className={`p-1 rounded transition ${
+                                            idCopied
+                                              ? "text-emerald-600 bg-emerald-50"
+                                              : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                                          }`}
+                                          title="Copy Login ID"
+                                        >
+                                          {idCopied ? (
+                                            <Check className="w-3.5 h-3.5" />
+                                          ) : (
+                                            <Copy className="w-3.5 h-3.5" />
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {/* Bank Password */}
+                                    <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded px-2 py-1 shadow-2xs">
+                                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide shrink-0">
+                                        Password:
+                                      </span>
+                                      <span
+                                        className={`font-mono text-xs font-bold tracking-wide truncate flex-1 select-all ${
+                                          isPwVisible
+                                            ? "text-emerald-700"
+                                            : "text-slate-500 tracking-widest"
+                                        }`}
+                                      >
+                                        {isPwVisible
+                                          ? bank.portalPassword || (
+                                              <span className="text-slate-400 font-normal italic tracking-normal">
+                                                Not Set
+                                              </span>
+                                            )
+                                          : bank.portalPassword
+                                          ? "••••••••"
+                                          : (
+                                              <span className="text-slate-400 font-normal italic tracking-normal">
+                                                Not Set
+                                              </span>
+                                            )}
+                                      </span>
+                                      <div className="flex items-center gap-0.5 shrink-0">
+                                        {bank.portalPassword && (
+                                          <>
+                                            <button
+                                              type="button"
+                                              onClick={() => toggleBankPassword(bank._id)}
+                                              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                                              title={isPwVisible ? "Hide Password" : "Show Password"}
+                                            >
+                                              {isPwVisible ? (
+                                                <EyeOff className="w-3.5 h-3.5" />
+                                              ) : (
+                                                <Eye className="w-3.5 h-3.5" />
+                                              )}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                handleCopyBankCred(
+                                                  bank.portalPassword,
+                                                  "Password",
+                                                  `${bank._id}-pw`
+                                                )
+                                              }
+                                              className={`p-1 rounded transition ${
+                                                pwCopied
+                                                  ? "text-emerald-600 bg-emerald-50"
+                                                  : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                                              }`}
+                                              title="Copy Password"
+                                            >
+                                              {pwCopied ? (
+                                                <Check className="w-3.5 h-3.5" />
+                                              ) : (
+                                                <Copy className="w-3.5 h-3.5" />
+                                              )}
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Quick Copy Both Credentials */}
+                                    {(bank.portalLoginId || bank.portalPassword) && (
+                                      <div className="flex justify-end pt-0.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCopyBothBankCreds(bank)}
+                                          className={`inline-flex items-center gap-1 text-[10px] font-semibold transition px-1.5 py-0.5 rounded ${
+                                            bothCopied
+                                              ? "text-emerald-700 bg-emerald-100"
+                                              : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/60"
+                                          }`}
+                                          title="Copy Bank ID & Password together"
+                                        >
+                                          {bothCopied ? (
+                                            <>
+                                              <Check className="w-3 h-3 text-emerald-600" />
+                                              <span>Both Copied!</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <KeyRound className="w-3 h-3 text-slate-400" />
+                                              <span>Copy ID &amp; Password</span>
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                                <a 
-                                  href={bank.portalLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-emerald-600 hover:text-white hover:bg-emerald-600 p-2.5 bg-emerald-50 rounded-lg transition-colors"
-                                  title="Open Bank Portal"
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                </a>
-                              </div>
-                            ))
+                              );
+                            })
                           ) : (
                             <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                               <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2 opacity-50" />

@@ -374,7 +374,7 @@ const LoginPage = () => {
                     <span className="h-px w-10 shrink-0 rounded-full bg-gradient-to-r from-amber-400 to-amber-400/20" aria-hidden />
                     <span className="text-sm font-medium text-white/95">{COMPANY_NAME}</span>
                   </div>
-                  <p className="text-xs text-teal-100/75">{COMPANY_TAGLINE}</p>
+                  {COMPANY_TAGLINE ? <p className="text-xs text-teal-100/75">{COMPANY_TAGLINE}</p> : null}
                 </div>
                 <div
                   className="hidden shrink-0 rounded-lg border border-white/15 bg-white/[0.07] px-2.5 py-2 text-center sm:block"

@@ -1,5 +1,15 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Search, Calendar, Gift, IndianRupee } from "lucide-react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import {
+  ArrowLeft,
+  Search,
+  Calendar,
+  Gift,
+  IndianRupee,
+  Copy,
+  Share2,
+  Check,
+  MessageCircle,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getAuthData } from "../../../utils/localStorage";
@@ -8,6 +18,17 @@ import { matchesSearchTerm } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 import AppAntTable from "../../../components/shared/AppAntTable";
+import {
+  COMPANY_NAME,
+  PARTNER_APP_PLAY_STORE_URL,
+  PUBLIC_WEB_ORIGIN,
+  appendPartnerShareUtm,
+  canonicalPartnerReferralCode,
+  legacyReferralAlternate,
+  whatsAppShareUrl,
+  buildCombinedPartnerReferralMessage,
+} from "../../../config/branding";
+import { PARTNER_REGISTRATION_ROUTE } from "../../../config/publicReferral";
 
 function formatInr(n) {
   return new Intl.NumberFormat("en-IN", {
@@ -37,6 +58,139 @@ export default function PartnerReferralRewardHistory() {
   const [rows, setRows] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
   const [paidTotal, setPaidTotal] = useState(0);
+
+  // Profile data for referral code & invite share
+  const [profileData, setProfileData] = useState(null);
+  const [inviteHint, setInviteHint] = useState("");
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  useEffect(() => {
+    const { partnerUser, partnerToken } = getAuthData();
+    if (partnerUser) {
+      setProfileData(partnerUser);
+    }
+    const fetchProfile = async () => {
+      try {
+        if (!partnerToken) return;
+        const res = await axios.get(`${backendurl}/partner/profile`, {
+          headers: { Authorization: `Bearer ${partnerToken}` },
+        });
+        const p = res?.data?.partner || res?.data;
+        if (p) setProfileData(p);
+      } catch (err) {
+        console.warn("Could not fetch partner profile:", err?.message);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const referralCodeCanonical = useMemo(
+    () => canonicalPartnerReferralCode(profileData?.partnerCode, profileData?.referralCode),
+    [profileData?.partnerCode, profileData?.referralCode]
+  );
+
+  const referralLegacyAlt = useMemo(
+    () => legacyReferralAlternate(profileData?.partnerCode, profileData?.referralCode),
+    [profileData?.partnerCode, profileData?.referralCode]
+  );
+
+  const webRegistrationUrl = useMemo(() => {
+    if (!referralCodeCanonical) {
+      return appendPartnerShareUtm(`${PUBLIC_WEB_ORIGIN}${PARTNER_REGISTRATION_ROUTE}`, "web");
+    }
+    return appendPartnerShareUtm(
+      `${PUBLIC_WEB_ORIGIN}${PARTNER_REGISTRATION_ROUTE}?ref=${encodeURIComponent(referralCodeCanonical)}`,
+      "web"
+    );
+  }, [referralCodeCanonical]);
+
+  const playStoreUrlResolved = useMemo(
+    () => String(profileData?.playStoreUrl || PARTNER_APP_PLAY_STORE_URL).trim(),
+    [profileData?.playStoreUrl]
+  );
+
+  const appInviteUrlResolved = useMemo(() => {
+    if (!referralCodeCanonical) return "";
+    return appendPartnerShareUtm(
+      `${PUBLIC_WEB_ORIGIN}/invite?code=${encodeURIComponent(referralCodeCanonical)}`,
+      "invite"
+    );
+  }, [referralCodeCanonical]);
+
+  const combinedReferralMessage = useMemo(
+    () =>
+      buildCombinedPartnerReferralMessage({
+        webRegistrationUrl,
+        appInviteUrl: appInviteUrlResolved,
+        playStoreUrl: playStoreUrlResolved,
+        code: referralCodeCanonical,
+        legacyAlt: referralLegacyAlt,
+      }),
+    [
+      webRegistrationUrl,
+      appInviteUrlResolved,
+      playStoreUrlResolved,
+      referralCodeCanonical,
+      referralLegacyAlt,
+    ]
+  );
+
+  const whatsAppCombinedUrl = useMemo(
+    () => whatsAppShareUrl(combinedReferralMessage),
+    [combinedReferralMessage]
+  );
+
+  const copyReferralCode = useCallback(async () => {
+    setInviteHint("");
+    if (!referralCodeCanonical) {
+      setInviteHint("No code available.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(referralCodeCanonical);
+      setCopiedCode(true);
+      setInviteHint("Referral code copied.");
+      setTimeout(() => setCopiedCode(false), 2500);
+      setTimeout(() => setInviteHint(""), 4000);
+    } catch {
+      setInviteHint("Could not copy code.");
+    }
+  }, [referralCodeCanonical]);
+
+  const shareCombinedReferral = useCallback(async () => {
+    setInviteHint("");
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${COMPANY_NAME} — Partner referral invite`,
+          text: combinedReferralMessage,
+        });
+        setInviteHint("Invite shared.");
+        setTimeout(() => setInviteHint(""), 4000);
+        return;
+      } catch (err) {
+        if (err.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(combinedReferralMessage);
+      setInviteHint("Invite message copied.");
+      setTimeout(() => setInviteHint(""), 4000);
+    } catch {
+      setInviteHint("Could not copy message.");
+    }
+  }, [combinedReferralMessage]);
+
+  const copyCombinedReferral = useCallback(async () => {
+    setInviteHint("");
+    try {
+      await navigator.clipboard.writeText(combinedReferralMessage);
+      setInviteHint("Invite message copied.");
+      setTimeout(() => setInviteHint(""), 4000);
+    } catch {
+      setInviteHint("Could not copy message.");
+    }
+  }, [combinedReferralMessage]);
 
   useEffect(() => {
     const fetchRewards = async () => {
@@ -122,29 +276,30 @@ export default function PartnerReferralRewardHistory() {
         },
       },
       {
-        title: "Application",
+        title: "App No",
         key: "app",
-        render: (_, row) => {
-          const a = row.applicationId;
-          if (!a) return <span className="text-slate-400">—</span>;
-          return (
-            <div className="text-xs">
-              <div className="font-medium">{a.appNo || "—"}</div>
-              <div className="text-slate-500">{loanTypeToTableShort(a.loanType)}</div>
-            </div>
-          );
-        },
+        render: (_, row) => (
+          <span className="font-mono text-xs text-slate-800">
+            {row?.applicationId?.appNo || "—"}
+          </span>
+        ),
       },
       {
-        title: "Disbursed amt",
-        key: "dis",
-        render: (_, row) => formatInr(row.applicationId?.approvedLoanAmount),
+        title: "Loan",
+        key: "lt",
+        render: (_, row) => (
+          <span className="text-xs text-slate-600">
+            {loanTypeToTableShort(row?.applicationId?.loanType) || "-"}
+          </span>
+        ),
       },
       {
-        title: "Reward",
+        title: "Amount",
         key: "amt",
         render: (_, row) => (
-          <span className="font-semibold text-slate-900">{formatInr(row.amount)}</span>
+          <span className="text-xs font-semibold text-teal-700">
+            {formatInr(row.amount)}
+          </span>
         ),
       },
       {
@@ -152,15 +307,17 @@ export default function PartnerReferralRewardHistory() {
         key: "st",
         render: (_, row) => (
           <span
-            className={`inline-flex px-2 py-1 rounded-full text-[11px] font-medium border ${statusClass(row.status)}`}
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${statusClass(
+              row.status
+            )}`}
           >
-            {row.status || "—"}
+            {row.status || "-"}
           </span>
         ),
       },
       {
-        title: "Payment ref",
-        key: "ref",
+        title: "UTR / Ref",
+        key: "utr",
         render: (_, row) => (
           <span className="text-xs text-slate-600 break-all max-w-[140px] inline-block">
             {row.status === "PAID" && row.paymentReference ? row.paymentReference : "—"}
@@ -174,7 +331,7 @@ export default function PartnerReferralRewardHistory() {
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center mb-4">
             <button
               type="button"
@@ -190,9 +347,83 @@ export default function PartnerReferralRewardHistory() {
             Referral rewards
           </h1>
           <p className="text-gray-600 mt-1">
-            Rewards when your referred partners sign up or when their loans disburse. Totals are for the
+            Rewards earned when your referred partners join and disburse a loan file successfully. Totals are for the
             selected month.
           </p>
+        </div>
+
+        {/* Referral Invites Card */}
+        <div className="mb-6 rounded-2xl border border-teal-200/80 bg-gradient-to-br from-teal-50/70 via-white to-white p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-teal-700">
+                  <Gift className="h-4 w-4" />
+                </span>
+                <h2 className="text-lg font-bold text-gray-900">Referral Invites &amp; Earn</h2>
+              </div>
+              <p className="mt-1 text-xs text-gray-600 max-w-2xl">
+                Invite other partners to join DhanSource and earn referral payouts when they disburse loans.
+              </p>
+            </div>
+            {inviteHint ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 animate-fade-in">
+                {inviteHint}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-dashed border-teal-300 bg-white p-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">YOUR REFERRAL CODE</p>
+              <p className="font-mono text-xl font-extrabold text-gray-900 mt-0.5">
+                {referralCodeCanonical || "—"}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={copyReferralCode}
+                disabled={!referralCodeCanonical}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-teal-700 disabled:opacity-50 transition"
+              >
+                {copiedCode ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copiedCode ? "Copied!" : "Copy Code"}
+              </button>
+              <button
+                type="button"
+                onClick={shareCombinedReferral}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-teal-600 px-3.5 py-2 text-xs font-semibold text-teal-700 hover:bg-teal-50 transition"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share Invite
+              </button>
+              <button
+                type="button"
+                onClick={copyCombinedReferral}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy Msg
+              </button>
+              <a
+                href={whatsAppCombinedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#20ba5a] transition"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                WhatsApp
+              </a>
+            </div>
+          </div>
+
+          {referralLegacyAlt &&
+          referralLegacyAlt.toUpperCase() !== (referralCodeCanonical || "").toUpperCase() ? (
+            <p className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Older code: <span className="font-mono font-semibold">{referralLegacyAlt}</span>. Always share your PT code above.
+            </p>
+          ) : null}
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
@@ -279,14 +510,8 @@ export default function PartnerReferralRewardHistory() {
           columns={columns}
           dataSource={sortedFiltered}
           loading={loading}
-          size="small"
-          locale={{
-            emptyText: (
-              <div className="py-8 text-center text-gray-500">
-                No referral rewards for this month and filters.
-              </div>
-            ),
-          }}
+          pagination={{ pageSize: 15 }}
+          tableId="partner-referral-rewards"
         />
       </div>
     </div>

@@ -29,6 +29,8 @@ const loanTypeOptions = [
   { value: "BUSINESS", label: "Business Loan" },
   { value: "HOME_LOAN_SALARIED", label: "Home Loan (Salaried)" },
   { value: "HOME_LOAN_SELF_EMPLOYED", label: "Home Loan (Self Employed)" },
+  { value: "LAP_SALARIED", label: "LAP Loan (Salaried)" },
+  { value: "LAP_SELF_EMPLOYED", label: "LAP Loan (Self Employed)" },
 ];
 
 const rsmTypeOptions = [

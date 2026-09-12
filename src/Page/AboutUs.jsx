@@ -11,7 +11,7 @@ const AboutUs = () => {
   ];
 
   const features = [
-    "Expert financial consultation",
+    "Expert loan facilitation & advisory",
     "100% digital process",
     "No physical visits required",
     "Transparent partner commissions",
@@ -53,7 +53,7 @@ const AboutUs = () => {
           <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur-md sm:p-8">
             <p className="text-[15px] leading-relaxed text-slate-200 sm:text-lg">
               <strong className="text-white">{COMPANY_NAME}</strong> is an online platform where individuals and businesses can access
-              expert financial consultation and structured credit options from the comfort of home.
+              expert loan facilitation and structured credit options from the comfort of home.
             </p>
           </div>
         </div>

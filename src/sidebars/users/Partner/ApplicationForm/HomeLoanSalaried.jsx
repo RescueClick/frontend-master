@@ -13,22 +13,28 @@ import {
   X,
   Eye,
   EyeOff,
+  Share2,
 } from "lucide-react";
 
 import axios from "axios";
 import toast from "react-hot-toast";
 import { z } from "zod";
+import { useSelector } from "react-redux";
 
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
 import {
   fetchPublicDefaultPartnerReferralCode,
+  fetchPublicPartnerInfo,
   PUBLIC_LOAN_REFERRAL_FALLBACK,
 } from "../../../../feature/publicLoanReferral";
+import { canonicalPartnerReferralCode } from "../../../../config/branding";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
 import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofBlock";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
+import PublicLoanPartnerTrustBanner from "../../../../components/loan/PublicLoanPartnerTrustBanner";
+import ShareLoanModal from "../../../../components/loan/ShareLoanModal";
 import {
   findOversizeInLoanDocsQueue,
   formatLoanDocOversizeError,
@@ -42,8 +48,31 @@ import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCo
 export default function HomeLoanSalaried({ embed = false } = {}) {
   const [documentModel, setdocumentModel] = useState(null);
 
-  const { partnerToken } = getAuthData();
+  const { partnerToken, partnerUser } = getAuthData();
   const isPartnerLoggedIn = Boolean(partnerToken);
+  const profileState = useSelector((state) => state?.partner?.profile?.data);
+
+  const currentPartnerCode =
+    canonicalPartnerReferralCode(
+      profileState?.partnerCode,
+      profileState?.referralCode
+    ) ||
+    canonicalPartnerReferralCode(
+      partnerUser?.partnerCode,
+      partnerUser?.referralCode
+    ) ||
+    "";
+
+  const currentPartnerName =
+    profileState?.fullName ||
+    [profileState?.firstName, profileState?.middleName, profileState?.lastName]
+      .filter(Boolean)
+      .join(" ") ||
+    [partnerUser?.firstName, partnerUser?.lastName].filter(Boolean).join(" ") ||
+    "Authorized Partner";
+
+  const [partnerInfo, setPartnerInfo] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [defaultReferralCode, setDefaultReferralCode] = useState(
     PUBLIC_LOAN_REFERRAL_FALLBACK
   );
@@ -96,7 +125,9 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     salarySlip: "",
     bankStatement: "",
     photoCopy: "",
-    propertyType: "",
+    propertyType: "NEW_PROPERTY",
+    propertyValue: "",
+    propertyAddress: "",
     reference1Name: "",
     reference1Contact: "",
     reference2Name: "",
@@ -167,14 +198,21 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
   useEffect(() => {
     if (isPartnerLoggedIn) return;
     let cancelled = false;
-    fetchPublicDefaultPartnerReferralCode().then((code) => {
+    fetchPublicDefaultPartnerReferralCode().then(async (code) => {
       if (cancelled) return;
-      setDefaultReferralCode(code);
-      setFormData((prev) => {
-        const existing = String(prev.partnerReferralCode ?? "").trim();
-        if (existing) return prev;
-        return { ...prev, partnerReferralCode: code };
-      });
+      if (code) {
+        setDefaultReferralCode(code);
+        setFormData((prev) => {
+          const existing = String(prev.partnerReferralCode ?? "").trim();
+          if (existing) return prev;
+          return { ...prev, partnerReferralCode: code };
+        });
+
+        const info = await fetchPublicPartnerInfo(code);
+        if (!cancelled && info) {
+          setPartnerInfo(info);
+        }
+      }
     });
     return () => {
       cancelled = true;
@@ -290,7 +328,7 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
         return ["currentAddress", "stabilityOfResidency", "currentLandmark", "currentHouseStatus", "currentAddressPinCode", "permanentAddress", "permanentStability", "permanentLandmark", "permanentHouseStatus", "permanentAddressPinCode"];
       }
       if (stepIndex === 2) {
-        return ["loanAmount", "companyName", "designation", "companyAddress", "monthlySalary", "totalExperience", "currentExperience", "salaryInHand"];
+        return ["loanAmount", "companyName", "designation", "companyAddress", "monthlySalary", "totalExperience", "currentExperience", "salaryInHand", "propertyType", "propertyValue", "propertyAddress"];
       }
       if (stepIndex === 3) {
         return [
@@ -593,6 +631,11 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     if (!formData.salarySlip2) errors.salarySlip2 = "Salary slip 2 is required";
     if (!formData.salarySlip3) errors.salarySlip3 = "Salary slip 3 is required";
 
+    // Property Details
+    if (!formData.propertyType) errors.propertyType = "Property type is required.";
+    if (!formData.propertyValue) errors.propertyValue = "Property estimated value is required.";
+    if (!formData.propertyAddress) errors.propertyAddress = "Property address is required.";
+
     // Reference 1
     if (!formData.reference1Name)
       errors.reference1Name = "Reference 1 name is required.";
@@ -690,6 +733,9 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
           totalExperience: formData.totalExperience,
           currentExperience: formData.currentExperience,
           salaryInHand: formData.salaryInHand,
+          propertyType: formData.propertyType,
+          propertyValue: formData.propertyValue ? Number(formData.propertyValue) : undefined,
+          propertyAddress: formData.propertyAddress,
         },
         references: [
           { name: formData.reference1Name, phone: formData.reference1Contact },
@@ -697,6 +743,8 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
         ],
         docs: [], // files will be appended separately
         propertyType: formData.propertyType,
+        propertyValue: formData.propertyValue ? Number(formData.propertyValue) : undefined,
+        propertyAddress: formData.propertyAddress,
       };
 
       // ✅ Prepare FormData
@@ -991,22 +1039,6 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     return true;
   };
 
-  if (true) {
-    return (
-      <div className={embed ? "py-4" : "min-h-screen py-12"} style={{ backgroundColor: embed ? "transparent" : "#F8FAFC" }}>
-        <div className="max-w-4xl mx-auto flex items-center justify-center bg-white rounded-2xl shadow-xl p-16">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-slate-800 mb-4">Home Loan (Salaried)</h2>
-            <div className="inline-block px-4 py-2 rounded-full mb-4 font-semibold" style={{ backgroundColor: "var(--color-brand-primary)", color: "#fff", opacity: 0.9 }}>
-              Coming Soon
-            </div>
-            <p className="text-slate-600 text-lg">We are currently building this feature. Please check back later!</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <DocumentPreviewModal
@@ -1053,18 +1085,40 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
             </div>
           )}
 
+          {/* Customer Trust Banner & Partner Certificate Info */}
+          {!isPartnerLoggedIn && (
+            <PublicLoanPartnerTrustBanner
+              partner={partnerInfo || (defaultReferralCode ? { partnerCode: defaultReferralCode } : null)}
+              loanTitle="Home Loan (Salaried)"
+            />
+          )}
+
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
             {/* Header */}
             <div
-              className="px-8 py-6 text-white"
+              className="px-6 sm:px-8 py-6 text-white flex flex-col sm:flex-row items-center justify-between gap-4"
               style={{ backgroundColor: "var(--color-brand-primary)" }}
             >
-              <h1 className="text-3xl font-bold text-center">
-                Home Loan Application (Salaried)
-              </h1>
-              <p className="text-center mt-2 opacity-90">
-                Complete all fields to process your loan application
-              </p>
+              <div className="text-center sm:text-left flex-1">
+                <h1 className="text-2xl sm:text-3xl font-bold">
+                  Home Loan Application (Salaried)
+                </h1>
+                <p className="mt-1 opacity-90 text-xs sm:text-sm">
+                  Complete all fields to process your loan application
+                </p>
+              </div>
+
+              {isPartnerLoggedIn && (
+                <button
+                  type="button"
+                  onClick={() => setShowShareModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-teal-800 hover:bg-teal-50 font-bold text-xs shadow-md transition transform hover:scale-105 active:scale-95 flex-shrink-0"
+                  title="Share customer application link"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-teal-600" />
+                  <span>Share Customer Link</span>
+                </button>
+              )}
             </div>
 
             <div className="p-6 space-y-6">
@@ -2116,6 +2170,74 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                     {renderError('salaryInHand')}
                   </div>
                 </div>
+
+                <div className="mt-8 pt-6 border-t border-slate-200">
+                  <h3 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: "#111827" }}>
+                    <Home className="w-5 h-5 text-teal-600" />
+                    Property Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        Property Type *
+                      </label>
+                      <select
+                        name="propertyType"
+                        value={formData.propertyType}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        required
+                      >
+                        <option value="NEW_PROPERTY">New Property / Under Construction / Builder</option>
+                        <option value="RESALE_PROPERTY">Resale Property</option>
+                      </select>
+                      {renderError("propertyType")}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        Estimated Property Value (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        name="propertyValue"
+                        value={formData.propertyValue}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        placeholder="e.g. 5000000"
+                        min="0"
+                        required
+                      />
+                      {renderError("propertyValue")}
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        Complete Property Address *
+                      </label>
+                      <textarea
+                        name="propertyAddress"
+                        value={formData.propertyAddress}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        rows="2"
+                        placeholder="Enter the complete address of the property being purchased"
+                        required
+                      />
+                      {renderError("propertyAddress")}
+                    </div>
+                  </div>
+                </div>
               </section>
 
               {/* Bank Details Section */}
@@ -2331,8 +2453,52 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
               </section>
 
               <section hidden={currentStep !== 3}>
+                <h2
+                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
+                  style={{ color: "#111827" }}
+                >
+                  <Home className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
+                  4.4 Property Documents
+                </h2>
+                <p className="text-sm text-slate-600 mb-4">
+                  Upload allotment letter, sale deed / title deeds, payment receipts, or agreement copy.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { name: "allotmentLetter", label: "Allotment Letter / Agreement Copy", required: false },
+                    { name: "titleDeeds", label: "Title Deeds / Chain Documents", required: false },
+                    { name: "newPropertyPaymentReceipts", label: "Property Payment Receipts", required: false },
+                    { name: "agreementCopy", label: "Registered Agreement / Draft Agreement", required: false },
+                  ].map((doc) => (
+                    <DocumentUploadCard
+                      key={doc.name}
+                      name={doc.name}
+                      label={doc.label}
+                      file={formData[doc.name]}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      required={doc.required}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError(doc.name)}
+                      onPreview={() => {
+                        let url = "";
+                        if (formData[doc.name]?.preview) {
+                          url = formData[doc.name].preview;
+                        } else if (formData[doc.name] instanceof File) {
+                          url = URL.createObjectURL(formData[doc.name]);
+                          objectUrlsRef.current.push(url);
+                        }
+                        setdocumentModel(url);
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              <section hidden={currentStep !== 3}>
                 <LoanAddressProofBlock
-                  stepLabel="4.4"
+                  stepLabel="4.5"
                   file={formData.addressProof}
                   onChange={handleFileChangeAddressProofs}
                   renderError={renderError}
@@ -2718,6 +2884,22 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
           </div>
         </div>
       </div>
+
+      {isPartnerLoggedIn && (
+        <ShareLoanModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          loan={{
+            id: "home-salaried",
+            title: "Home Loan (Salaried)",
+            badge: "Upto ₹5Cr",
+            route: "/partner/application/home-loan-salaried",
+            hasSubTypes: false,
+          }}
+          partnerCode={currentPartnerCode}
+          partnerName={currentPartnerName}
+        />
+      )}
     </>
   );
 }

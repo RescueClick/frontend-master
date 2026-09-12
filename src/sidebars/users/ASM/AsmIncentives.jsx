@@ -92,9 +92,13 @@ const AsmIncentives = () => {
   const [slabsModalOpen, setSlabsModalOpen] = useState(false);
   const [activeSlabs, setActiveSlabs] = useState([
     { id: "slab_1", tier: "Bronze", minDisbursement: 1000000, rewardAmount: 1000, rewardType: "FLAT" },
-    { id: "slab_2", tier: "Silver", minDisbursement: 2000000, rewardAmount: 2500, rewardType: "FLAT" },
-    { id: "slab_3", tier: "Gold", minDisbursement: 5000000, rewardAmount: 7500, rewardType: "FLAT" },
-    { id: "slab_4", tier: "Platinum", minDisbursement: 10000000, rewardAmount: 20000, rewardType: "FLAT" },
+    { id: "slab_2", tier: "Silver", minDisbursement: 2000000, rewardAmount: 2000, rewardType: "FLAT" },
+    { id: "slab_3", tier: "Gold", minDisbursement: 3000000, rewardAmount: 3000, rewardType: "FLAT" },
+    { id: "slab_4", tier: "Ruby", minDisbursement: 4000000, rewardAmount: 4000, rewardType: "FLAT" },
+    { id: "slab_5", tier: "Diamond", minDisbursement: 5000000, rewardAmount: 5000, rewardType: "FLAT" },
+    { id: "slab_6", tier: "Platinum", minDisbursement: 10000000, rewardAmount: 10000, rewardType: "FLAT" },
+    { id: "slab_7", tier: "Titanium", minDisbursement: 20000000, rewardAmount: 20000, rewardType: "FLAT" },
+    { id: "slab_8", tier: "Crown Elite", minDisbursement: 50000000, rewardAmount: 50000, rewardType: "FLAT" },
   ]);
   const [newSlab, setNewSlab] = useState({ tier: "", minDisbursement: "", rewardAmount: "", rewardType: "FLAT" });
   const [isSavingSlabs, setIsSavingSlabs] = useState(false);

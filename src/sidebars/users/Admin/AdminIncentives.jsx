@@ -26,6 +26,8 @@ import {
   Trash2,
   Layers,
   Sparkles,
+  Calculator,
+  Zap,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -77,6 +79,17 @@ const getTierColor = (tier) => {
   return "bg-slate-100 text-slate-700 border-slate-200";
 };
 
+const STANDARD_INCENTIVE_PLAN_SLABS = [
+  { id: "slab_1", tier: "Bronze", minDisbursement: 1000000, rewardAmount: 1000, rewardType: "FLAT" },
+  { id: "slab_2", tier: "Silver", minDisbursement: 2000000, rewardAmount: 2000, rewardType: "FLAT" },
+  { id: "slab_3", tier: "Gold", minDisbursement: 3000000, rewardAmount: 3000, rewardType: "FLAT" },
+  { id: "slab_4", tier: "Ruby", minDisbursement: 4000000, rewardAmount: 4000, rewardType: "FLAT" },
+  { id: "slab_5", tier: "Diamond", minDisbursement: 5000000, rewardAmount: 5000, rewardType: "FLAT" },
+  { id: "slab_6", tier: "Platinum", minDisbursement: 10000000, rewardAmount: 10000, rewardType: "FLAT" },
+  { id: "slab_7", tier: "Titanium", minDisbursement: 20000000, rewardAmount: 20000, rewardType: "FLAT" },
+  { id: "slab_8", tier: "Crown Elite", minDisbursement: 50000000, rewardAmount: 50000, rewardType: "FLAT" },
+];
+
 const AdminIncentives = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -109,6 +122,10 @@ const AdminIncentives = () => {
     rewardAmount: "",
     rewardType: "FLAT",
   });
+
+  // Simulator Modal State
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
+  const [simVolume, setSimVolume] = useState("2000000");
 
   // Modal form data for settlement
   const [modalForm, setModalForm] = useState({
@@ -236,6 +253,37 @@ const AdminIncentives = () => {
       totalPartners: allRows.length,
     };
   }, [allRows]);
+
+  // Simulated Result for Bonus Simulator
+  const simulatedResult = useMemo(() => {
+    const vol = Math.max(0, Number(simVolume || 0));
+    const slabs = activeSlabs.length > 0 ? activeSlabs : STANDARD_INCENTIVE_PLAN_SLABS;
+    const sorted = [...slabs].sort((a, b) => Number(a.minDisbursement) - Number(b.minDisbursement));
+    
+    const standardBonus = Math.floor(vol / 1000000) * 1000;
+    let matchedReward = standardBonus;
+    let tierName = "Standard";
+    
+    for (let i = 0; i < sorted.length; i++) {
+      if (vol >= Number(sorted[i].minDisbursement)) {
+        tierName = sorted[i].tier;
+        matchedReward = Math.max(matchedReward, Number(sorted[i].rewardAmount));
+      }
+    }
+
+    const nextMilestone = (Math.floor(vol / 1000000) + 1) * 1000000;
+    const remainingToNext = Math.max(0, nextMilestone - vol);
+    const nextReward = (nextMilestone / 1000000) * 1000;
+
+    return {
+      volume: vol,
+      bonus: matchedReward,
+      tier: tierName,
+      nextMilestone,
+      nextReward,
+      remainingToNext,
+    };
+  }, [simVolume, activeSlabs]);
 
   // Copy helper
   const handleCopy = (text, key) => {
@@ -582,7 +630,7 @@ const AdminIncentives = () => {
             disabled
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-400 cursor-not-allowed"
           >
-            <span>Target Active</span>
+            <span>In Progress</span>
           </button>
         );
       },
@@ -680,6 +728,68 @@ const AdminIncentives = () => {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Active Incentive & Bonus Plan Showcase Banner */}
+        <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 rounded-2xl p-4 sm:p-5 text-white shadow-md border border-emerald-800/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
+                Active Partner Bonus Policy
+              </span>
+              <span className="text-xs text-slate-300 font-medium">
+                Standard Rule: ₹1,000 Cash Bonus per ₹10 Lakhs Disbursed
+              </span>
+            </div>
+            <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
+              DhanSource Monthly Bonus & Milestone Incentive Plan
+            </h2>
+            <div className="flex items-center gap-2 flex-wrap pt-1">
+              <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs font-bold text-white border border-white/10">
+                ₹10L ➔ <strong className="text-emerald-300">₹1,000</strong>
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs font-bold text-white border border-white/10">
+                ₹20L ➔ <strong className="text-emerald-300">₹2,000</strong>
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs font-bold text-white border border-white/10">
+                ₹30L ➔ <strong className="text-emerald-300">₹3,000</strong>
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs font-bold text-white border border-white/10">
+                ₹40L ➔ <strong className="text-emerald-300">₹4,000</strong>
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs font-bold text-white border border-white/10">
+                ₹50L ➔ <strong className="text-emerald-300">₹5,000</strong>
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs font-bold text-white border border-white/10">
+                ₹1 Cr ➔ <strong className="text-emerald-300">₹10,000</strong>
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs font-bold text-white border border-white/10">
+                ₹2 Cr ➔ <strong className="text-emerald-300">₹20,000</strong>
+              </span>
+              <span className="text-[11px] text-emerald-200 font-semibold italic">
+                ...& onwards (+₹1k / 10L)
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSimulatorOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition shadow-sm"
+            >
+              <Calculator className="w-4 h-4 text-emerald-300" />
+              <span>Bonus Simulator</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSlabsModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shadow-md"
+            >
+              <Settings className="w-4 h-4 text-slate-950" />
+              <span>Configure Slabs</span>
+            </button>
           </div>
         </div>
 
@@ -1119,9 +1229,22 @@ const AdminIncentives = () => {
             <div className="p-5 overflow-y-auto space-y-4">
               {/* Existing Slabs List */}
               <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Active Milestone Tiers
-                </span>
+                <div className="flex items-center justify-between pb-1">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Active Milestone Tiers
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSlabs(STANDARD_INCENTIVE_PLAN_SLABS);
+                      toast.success("Standard ₹1,000 / ₹10L Plan loaded! Click 'Save Slabs Policy' to commit to database.");
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-600" />
+                    <span>⚡ Reset to ₹1k / 10L Standard Plan</span>
+                  </button>
+                </div>
                 <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                   {activeSlabs.map((slab, idx) => (
                     <div
@@ -1240,6 +1363,132 @@ const AdminIncentives = () => {
                 className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-brand-primary hover:bg-[#0f9b82] transition disabled:opacity-50"
               >
                 {isSavingSlabs ? "Saving Slabs..." : "Save Slabs Policy"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Bonus Simulator Modal */}
+      {simulatorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+            <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+                  <Calculator className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">
+                    Partner Incentive & Bonus Calculator
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Simulate partner earnings for any monthly loan disbursement volume
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSimulatorOpen(false)}
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Quick Select Chips */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">
+                  Quick Volume Presets
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "₹10 Lakhs", val: 1000000 },
+                    { label: "₹20 Lakhs", val: 2000000 },
+                    { label: "₹30 Lakhs", val: 3000000 },
+                    { label: "₹50 Lakhs", val: 5000000 },
+                    { label: "₹1 Crore", val: 10000000 },
+                    { label: "₹2 Crores", val: 20000000 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.val}
+                      type="button"
+                      onClick={() => setSimVolume(String(preset.val))}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
+                        Number(simVolume) === preset.val
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-200"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Number Input */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-1.5">
+                  Monthly Disbursed Loan Volume (₹)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    value={simVolume}
+                    onChange={(e) => setSimVolume(e.target.value)}
+                    placeholder="e.g. 2500000"
+                    className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Output Result Card */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                    Projected Cash Bonus
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-200/60 text-emerald-900">
+                    {simulatedResult.tier} Tier
+                  </span>
+                </div>
+
+                <div className="text-3xl font-black text-emerald-700">
+                  {formatInr(simulatedResult.bonus)}
+                </div>
+
+                <div className="pt-2 border-t border-emerald-200/60 grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-500 block">Next Milestone</span>
+                    <strong className="text-slate-900 font-bold">
+                      {formatInr(simulatedResult.nextMilestone)}
+                    </strong>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-500 block">Next Bonus</span>
+                    <strong className="text-emerald-700 font-bold">
+                      +{formatInr(simulatedResult.nextReward)}
+                    </strong>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-emerald-800 font-medium">
+                  💡 Partner needs to disburse <strong className="text-emerald-950 font-bold">{formatInr(simulatedResult.remainingToNext)}</strong> more to unlock the next ₹1,000+ milestone tier!
+                </p>
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSimulatorOpen(false)}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-slate-700 bg-slate-200 hover:bg-slate-300 transition"
+              >
+                Close
               </button>
             </div>
           </div>

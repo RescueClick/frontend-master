@@ -144,7 +144,7 @@ const CompleteApplication = () => {
         "BANK_STATEMENT_2",
       ];
     }
-    if (key === "HOME_LOAN_SALARIED") {
+    if (key === "HOME_LOAN_SALARIED" || key === "LAP_SALARIED") {
       return [
         ...baseDocs,
         "COMPANY_ID_CARD",
@@ -156,7 +156,7 @@ const CompleteApplication = () => {
         "BANK_STATEMENT_2",
       ];
     }
-    if (key === "BUSINESS" || key === "BUSINESS_LOAN" || key === "HOME_LOAN_SELF_EMPLOYED") {
+    if (key === "BUSINESS" || key === "BUSINESS_LOAN" || key === "HOME_LOAN_SELF_EMPLOYED" || key === "LAP_SELF_EMPLOYED") {
       return [
         ...baseDocs,
         "BUSINESS_OTHER_DOCS",

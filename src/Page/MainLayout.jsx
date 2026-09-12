@@ -22,12 +22,12 @@ const MainLayout = () => {
   const navItems = [
     // Keep paths aligned with `AppRoutes.jsx` (note: `Home` uses uppercase path today)
     { name: "Home", href: "/Home" },
-    { name: "Services", href: "/services" },
+    { name: "Loan Services", href: "/services" },
+    { name: "Apply Loan", href: "/apply" },
     { name: "Channel Partner", href: "/channel-partner" },
     { name: "Documents", href: "/documents" },
     { name: "About Us", href: "/about-us" },
     { name: "Contact Us", href: "/contact" },
-
   ];
 
   // Close mobile menu on route change
@@ -69,14 +69,6 @@ const MainLayout = () => {
                   Opening Hour :
                   <span className="text-gray-400"> Mon - Fri, 9:00 AM - 6:00 PM</span>
                 </p>
-              </div>
-
-              {/* Call Us */}
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-brand-primary" />
-                <a href="tel:+917057772026" className="font-semibold hover:text-brand-primary">
-                  Call Us : <span className="text-gray-400">+91 7057772026</span>
-                </a>
               </div>
 
               {/* Email Us */}
@@ -136,6 +128,14 @@ const MainLayout = () => {
 
               {/* Right Buttons */}
               <div className="flex items-center gap-3">
+                {/* Apply Loan (Direct public filling without login) */}
+                <button
+                  type="button"
+                  className="cursor-pointer hidden lg:inline-flex items-center px-4 py-2 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white font-medium rounded-full hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                  onClick={() => { navigate("/apply"); }}
+                >
+                  Apply Loan
+                </button>
 
                 {/* Sign Up */}
                 <button
@@ -245,6 +245,16 @@ const MainLayout = () => {
             <div className="shrink-0 space-y-3 border-t border-slate-100 bg-slate-50/80 px-4 py-5 sm:px-5">
               <button
                 type="button"
+                className="flex w-full min-h-[48px] items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-hover px-4 text-sm font-semibold text-white shadow-md shadow-brand-primary/20 transition hover:shadow-lg"
+                onClick={() => {
+                  navigate("/apply");
+                  toggleMenu();
+                }}
+              >
+                Apply for Loan
+              </button>
+              <button
+                type="button"
                 className="flex w-full min-h-[48px] items-center justify-center rounded-full border border-brand-primary/40 bg-white px-4 text-sm font-semibold text-brand-primary shadow-sm transition hover:bg-brand-primary/5"
                 onClick={() => {
                   navigate(PARTNER_REGISTRATION_ROUTE);
@@ -277,13 +287,6 @@ const MainLayout = () => {
                   Login
                 </button>
               )}
-              <a
-                href="tel:+917057772026"
-                className="flex items-center justify-center gap-2 pt-1 text-xs font-medium text-slate-500 transition hover:text-brand-primary"
-              >
-                <Phone className="h-3.5 w-3.5 text-brand-primary" />
-                +91 7057772026
-              </a>
             </div>
           </div>
         </div>
@@ -305,7 +308,7 @@ const MainLayout = () => {
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-4">About us</h2>
             <p className="text-sm leading-relaxed text-slate-400">
-              {COMPANY_NAME} brings to you the easiest & most optimized online portal for effective financial consultation and services.
+              {COMPANY_NAME} brings to you the easiest & most optimized online portal for effective digital loan services.
             </p>
           </div>
 
@@ -314,6 +317,8 @@ const MainLayout = () => {
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-4">Quick links</h2>
             <ul className="space-y-3 text-sm">
               <li><a href="/Home" className="text-slate-400 transition-colors hover:text-white">Home</a></li>
+              <li><a href="/services" className="text-slate-400 transition-colors hover:text-white">Loan Services</a></li>
+              <li><a href="/apply" className="text-slate-400 transition-colors hover:text-white">Apply for Loan</a></li>
               <li><a href="/Contact" className="text-slate-400 transition-colors hover:text-white">Contact Us</a></li>
               <li><a href={PARTNER_REGISTRATION_ROUTE} className="text-slate-400 transition-colors hover:text-white">Apply for Channel Partner</a></li>
               <li>
@@ -346,7 +351,7 @@ const MainLayout = () => {
                 <FaInstagram size={20} />
               </a>
               <a
-                href="https://wa.me/917057772026"
+                href="https://wa.me/?text=Hello%20DhanSource%20Capital"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp DhanSource Capital"
@@ -380,14 +385,6 @@ const MainLayout = () => {
                   className="break-all transition-colors hover:text-white"
                 >
                   {CONTACT_EMAIL}
-                </a>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-slate-500">
-                  <FaPhoneAlt size={16} />
-                </span>
-                <a href="tel:+917057772026" className="transition-colors hover:text-white">
-                  +91 7057772026
                 </a>
               </li>
               <li className="flex items-start gap-3">

@@ -63,14 +63,20 @@ export const loginUser = createAsyncThunk(
 // Fetch Admin Dashboard
 export const fetchAdminDashboard = createAsyncThunk(
   "admin/fetchAdminDashboard",
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
+      const { year, month } = filters || {};
+
+      const params = {};
+      if (year !== undefined && year !== null) params.year = year;
+      if (month !== undefined && month !== null) params.month = month;
 
       const response = await axios.get(`${backendurl}/admin/dashboard`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
+        params,
       });
 
       return unwrapApiData(response.data);
