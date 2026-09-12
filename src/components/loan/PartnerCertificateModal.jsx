@@ -11,12 +11,23 @@ export default function PartnerCertificateModal({
 
   if (!isOpen) return null;
 
-  const partnerName =
-    partner?.fullName ||
-    [partner?.firstName, partner?.middleName, partner?.lastName]
-      .filter(Boolean)
-      .join(" ") ||
-    "Authorized Channel Partner";
+  // Keep only first name and last name, omitting middle name
+  const partnerName = (() => {
+    if (partner?.firstName && partner?.lastName) {
+      return `${partner.firstName.trim()} ${partner.lastName.trim()}`;
+    }
+    const raw = (partner?.fullName || partner?.name || "").trim();
+    if (!raw) {
+      if (partner?.firstName) return partner.firstName.trim();
+      return "Authorized Channel Partner";
+    }
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length > 2) {
+      // First name and last name only, omitting middle name(s)
+      return `${parts[0]} ${parts[parts.length - 1]}`;
+    }
+    return parts.join(" ");
+  })();
 
   const partnerCode = partner?.partnerCode || partner?.employeeId || "—";
   const currentYear = new Date().getFullYear();
@@ -102,7 +113,7 @@ export default function PartnerCertificateModal({
                 <p className="text-xs text-slate-500 uppercase tracking-widest font-semibold">
                   This Certificate is Proudly Awarded To
                 </p>
-                <h2 className="text-xl sm:text-3xl font-extrabold text-teal-700 italic tracking-wide mt-1">
+                <h2 className="text-xl sm:text-3xl font-extrabold text-teal-700 italic tracking-wide mt-1 break-words px-2">
                   {partnerName}
                 </h2>
                 <div className="inline-flex items-center gap-1.5 px-3 py-0.5 mt-2 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
@@ -133,7 +144,7 @@ export default function PartnerCertificateModal({
                     />
                   </div>
                   <div className="w-24 sm:w-32 border-b-2 border-slate-700 mx-auto mb-1"></div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-800">Anil Bagad</div>
+                  <div className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-full px-1">Anil Bagad</div>
                   <div className="text-[10px] sm:text-xs text-teal-700 font-semibold">
                     CEO & Director
                   </div>
@@ -152,15 +163,15 @@ export default function PartnerCertificateModal({
                 {/* Right Signature: Partner Digital Sign */}
                 <div className="text-center">
                   <div className="h-12 flex flex-col items-center justify-center mb-1">
-                    <span className="italic font-serif text-slate-800 text-xs sm:text-sm font-bold truncate max-w-[130px]">
+                    <span className="italic font-serif text-slate-800 text-xs sm:text-sm font-bold truncate max-w-[130px] block mx-auto px-1">
                       {partnerName}
                     </span>
-                    <span className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                    <span className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
                       ✓ Digitally Signed
                     </span>
                   </div>
                   <div className="w-24 sm:w-32 border-b-2 border-slate-700 mx-auto mb-1"></div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-[140px] mx-auto">
+                  <div className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-[140px] mx-auto px-1">
                     {partnerName}
                   </div>
                   <div className="text-[10px] sm:text-xs text-teal-700 font-semibold">

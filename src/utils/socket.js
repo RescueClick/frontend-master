@@ -156,6 +156,30 @@ class SocketManager {
       this.emit("dashboardUpdate", data);
     });
 
+    // Banners & Promos
+    this.socket.on("bannersUpdated", (data) => {
+      this.emit("bannersUpdated", data);
+    });
+
+    // Partner Levels & Milestones
+    this.socket.on("partnerLevelsUpdated", (data) => {
+      this.emit("partnerLevelsUpdated", data);
+    });
+
+    // Referral Banners & Benefits
+    this.socket.on("referralBannersUpdated", (data) => {
+      this.emit("referralBannersUpdated", data);
+    });
+
+    // Referral Reward Amounts & General Referral Updates
+    this.socket.on("referralRewardAmountsUpdated", (data) => {
+      this.emit("referralRewardAmountsUpdated", data);
+    });
+
+    this.socket.on("referralUpdated", (data) => {
+      this.emit("referralUpdated", data);
+    });
+
     // User Online/Offline
     this.socket.on("userOnline", (data) => {
       this.emit("userOnline", data);

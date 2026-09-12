@@ -168,24 +168,35 @@ export default function AsmPartner() {
   };
 
   const handleOpenAuthLetter = (c) => {
+    const raw = c.raw || {};
+    const firstName = (raw.firstName || c.name?.split(" ")[0] || "").trim();
+    const lastName = (raw.lastName || (c.name?.split(" ").length > 1 ? c.name?.split(" ").slice(-1)[0] : "") || "").trim();
+    const partnerName = `${firstName} ${lastName}`.trim() || c.name || "Partner";
     navigate("/AuthLetter", {
       state: {
-        name: c.name,
+        name: partnerName,
+        firstName: firstName,
+        lastName: lastName,
       },
     });
   };
 
   const handleOpenIdCard = (c) => {
     const raw = c.raw || {};
+    const firstName = (raw.firstName || c.name?.split(" ")[0] || "").trim();
+    const lastName = (raw.lastName || (c.name?.split(" ").length > 1 ? c.name?.split(" ").slice(-1)[0] : "") || "").trim();
+    const partnerName = `${firstName} ${lastName}`.trim() || c.name || "Partner";
     navigate("/IdCard", {
       state: {
         employeeData: {
           id: c.employeeId || raw.partnerCode || c.id,
-          name: c.name,
+          name: partnerName,
+          firstName: firstName,
+          lastName: lastName,
           designation: "Authorized Partner",
           location: c.region || raw.city || "Pune, Maharashtra",
           photo: c.profilePic,
-          initials: (c.name || "P").substring(0, 2).toUpperCase(),
+          initials: `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "P",
         },
       },
     });

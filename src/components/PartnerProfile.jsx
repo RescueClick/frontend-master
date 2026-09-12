@@ -721,15 +721,20 @@ const PartnerProfile = ({ inModal = false }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <button
                 onClick={() => {
+                  const firstName = (data?.firstName || "").trim();
+                  const lastName = (data?.lastName || "").trim();
+                  const partnerName = `${firstName} ${lastName}`.trim() || data?.name || "Partner";
                   navigate("/IdCard", {
                     state: {
                       employeeData: {
-                        name: `${data?.firstName} ${data?.lastName}`,
+                        name: partnerName,
+                        firstName: firstName,
+                        lastName: lastName,
                         designation: "Partner",
-                        id: `${data?.employeeId}`,
-                        location: `${data?.address}`,
-                        initials: `${data?.firstName[0]}${data?.lastName[0]}`,
-                        photo: `${data?.profilePic}`,
+                        id: `${data?.employeeId || ""}`,
+                        location: `${data?.address || ""}`,
+                        initials: `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "P",
+                        photo: `${data?.profilePic || ""}`,
                       },
                     },
                   });
@@ -743,9 +748,14 @@ const PartnerProfile = ({ inModal = false }) => {
 
               <button
                 onClick={() => {
+                  const firstName = (data?.firstName || "").trim();
+                  const lastName = (data?.lastName || "").trim();
+                  const partnerName = `${firstName} ${lastName}`.trim() || data?.name || "Partner";
                   navigate("/AuthLetter", {
                     state: {
-                      name: ` ${data?.firstName} ${data?.middleName} ${data?.lastName} `,
+                      name: partnerName,
+                      firstName: firstName,
+                      lastName: lastName,
                     },
                   });
                 }}

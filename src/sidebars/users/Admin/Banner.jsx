@@ -1,16 +1,18 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Zap, Image as ImageIcon } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   deleteBanner,
   fetchBanners,
   uploadBanners,
 } from "../../../feature/thunks/adminThunks";
+import MilestoneBannerEditor from "./MilestoneBannerEditor";
 
 export default function Banner() {
   const dispatch = useDispatch();
 
+  const [activeTab, setActiveTab] = useState("milestone");
   const [banners, setBanners] = useState([]);
 
   const { loading, error, data } = useSelector(
@@ -266,18 +268,62 @@ export default function Banner() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 pb-32 flex justify-center">
-      <div className="w-full max-w-7xl space-y-10">
+      <div className="w-full max-w-7xl space-y-6">
 
         {/* HEADER */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-800">
-            Banner Management
-          </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Banner Management Hub
+            </h1>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Manage promotional banners displayed across the DhanSource partner ecosystem
+            </p>
+          </div>
 
-          <span className="text-sm text-gray-500">
-            {banners.length} selected
-          </span>
+          {activeTab === "carousel" && (
+            <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">
+              {banners.length} selected for upload
+            </span>
+          )}
         </div>
+
+        {/* TAB SWITCHER */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-3">
+          <button
+            type="button"
+            onClick={() => setActiveTab("milestone")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition ${
+              activeTab === "milestone"
+                ? "bg-emerald-600 text-white shadow-xs"
+                : "text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            <Zap size={16} className={activeTab === "milestone" ? "fill-white" : "text-emerald-600"} />
+            <span>Milestone Bonus Card (App Home Banner)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("carousel")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition ${
+              activeTab === "carousel"
+                ? "bg-emerald-600 text-white shadow-xs"
+                : "text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            <ImageIcon size={16} />
+            <span>Promotional Image Carousel ({bannersList.length})</span>
+          </button>
+        </div>
+
+        {/* TAB 1: MILESTONE BONUS BANNER CARD EDITOR */}
+        {activeTab === "milestone" && (
+          <MilestoneBannerEditor standalone={true} />
+        )}
+
+        {/* TAB 2: PROMOTIONAL IMAGE BANNERS */}
+        {activeTab === "carousel" && (
+          <div className="space-y-8">
 
         {/* UPLOAD SECTION */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
@@ -414,6 +460,9 @@ export default function Banner() {
               </button>
 
             </div>
+          </div>
+        )}
+
           </div>
         )}
 

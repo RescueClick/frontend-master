@@ -178,6 +178,37 @@ const IdCard = () => {
   const location = useLocation();
   const { employeeData } = location.state || {};
 
+  // Keep only first name and last name, omitting middle name
+  const getDisplayName = (data) => {
+    if (!data) return "";
+    if (data.firstName && data.lastName) {
+      return `${data.firstName.trim()} ${data.lastName.trim()}`;
+    }
+    const raw = (data.name || "").trim();
+    if (!raw) {
+      if (data.firstName) return data.firstName.trim();
+      return "";
+    }
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length > 2) {
+      // First name and last name only, omitting middle name(s)
+      return `${parts[0]} ${parts[parts.length - 1]}`;
+    }
+    return parts.join(" ");
+  };
+
+  const displayName = getDisplayName(employeeData);
+
+  const initials = (() => {
+    if (employeeData?.firstName && employeeData?.lastName) {
+      return `${employeeData.firstName[0]}${employeeData.lastName[0]}`.toUpperCase();
+    }
+    const parts = (displayName || employeeData?.name || "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return employeeData?.initials || "P";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  })();
+
   // -------------------- PDF DOWNLOAD FUNCTION ------------------------
   const downloadPDF = async () => {
     if (isDownloading) return;
@@ -315,7 +346,7 @@ const IdCard = () => {
       const y = (letterHeight - drawHeight) / 2;
 
       pdf.addImage(imgData, "PNG", x, y, drawWidth, drawHeight);
-      pdf.save(`${employeeData?.name || "ID"}-IDCard.pdf`);
+      pdf.save(`${displayName || employeeData?.name || "ID"}-IDCard.pdf`);
       setIsDownloading(false);
     } catch (error) {
       // Clean up cloned element on error
@@ -350,7 +381,7 @@ const IdCard = () => {
 
           {/* ID Number */}
           <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-md text-white px-2 py-1 rounded-xl text-[8px] font-bold border border-white/30 whitespace-nowrap">
-            ID: {employeeData.id}
+            ID: {employeeData?.id}
           </div>
         </div>
 
@@ -363,7 +394,7 @@ const IdCard = () => {
                 overflow-hidden border-3 border-teal-500
               "
             >
-              {employeeData.photo ? (
+              {employeeData?.photo ? (
                 <div className="w-24 h-24 overflow-hidden rounded-lg">
                   <img
                     src={
@@ -375,16 +406,16 @@ const IdCard = () => {
                   />
                 </div>
               ) : (
-                <div className="text-white text-2xl font-bold">{employeeData.initials}</div>
+                <div className="text-white text-2xl font-bold">{initials}</div>
               )}
             </div>
           </div>
 
           <div className="text-gray-900 text-base font-bold mb-2 leading-tight">
-            {employeeData.name}
+            {displayName || employeeData?.name || "Partner"}
           </div>
           <div className="inline-block mt-5 bg-teal-500/10 text-teal-600 text-sm font-semibold uppercase tracking-wide px-3 py-1 rounded-2xl border border-teal-500/20 mb-5">
-            {employeeData.designation}
+            {employeeData?.designation || "Partner"}
           </div>
         </div>
 
@@ -392,7 +423,7 @@ const IdCard = () => {
         <div className="px-4 mb-2 flex justify-center">
           <div className="flex items-start gap-2 text-[11px] text-gray-900 break-words">
             <MapPin className="w-4 h-4 text-amber-500 flex-shrink-0 mt-[2px]" />
-            <span className="font-medium text-left leading-snug">{employeeData.location}</span>
+            <span className="font-medium text-left leading-snug">{employeeData?.location || "Pune, Maharashtra"}</span>
           </div>
         </div>
 

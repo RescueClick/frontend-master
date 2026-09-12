@@ -133,23 +133,33 @@ export default function PartnerTable() {
   };
 
   const handleOpenAuthLetter = (p) => {
+    const firstName = (p.firstName || "").trim();
+    const lastName = (p.lastName || "").trim();
+    const partnerName = `${firstName} ${lastName}`.trim() || p.name || "Partner";
     navigate("/AuthLetter", {
       state: {
-        name: `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+        name: partnerName,
+        firstName: firstName,
+        lastName: lastName,
       },
     });
   };
 
   const handleOpenIdCard = (p) => {
+    const firstName = (p.firstName || "").trim();
+    const lastName = (p.lastName || "").trim();
+    const partnerName = `${firstName} ${lastName}`.trim() || p.name || "Partner";
     navigate("/IdCard", {
       state: {
         employeeData: {
           id: p.employeeId || p.partnerCode || p._id,
-          name: `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+          name: partnerName,
+          firstName: firstName,
+          lastName: lastName,
           designation: "Authorized Partner",
           location: p.region || p.city || "Pune, Maharashtra",
           photo: p.profilePic,
-          initials: `${p.firstName?.[0] || ""}${p.lastName?.[0] || ""}`.toUpperCase() || "P",
+          initials: `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "P",
         },
       },
     });

@@ -11,23 +11,33 @@ export default function PartnerIdCardModal({
 
   if (!isOpen) return null;
 
-  const partnerName =
-    partner?.fullName ||
-    [partner?.firstName, partner?.middleName, partner?.lastName]
-      .filter(Boolean)
-      .join(" ") ||
-    "Authorized Channel Partner";
+  // Keep only first name and last name, omitting middle name
+  const partnerName = (() => {
+    if (partner?.firstName && partner?.lastName) {
+      return `${partner.firstName.trim()} ${partner.lastName.trim()}`;
+    }
+    const raw = (partner?.fullName || partner?.name || "").trim();
+    if (!raw) {
+      if (partner?.firstName) return partner.firstName.trim();
+      return "Authorized Channel Partner";
+    }
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length > 2) {
+      // First name and last name only, omitting middle name(s)
+      return `${parts[0]} ${parts[parts.length - 1]}`;
+    }
+    return parts.join(" ");
+  })();
 
   const partnerCode = partner?.partnerCode || partner?.employeeId || "PT-PARTNER";
   const location = partner?.region || "Kharadi, Pune, Maharashtra";
   const photo = partner?.selfie || partner?.photo || null;
-  const initials = partnerName
-    .split(" ")
-    .map((n) => n[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "CP";
+  const initials = (() => {
+    const parts = partnerName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "CP";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  })();
 
   const handlePrint = () => {
     window.print();

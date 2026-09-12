@@ -22,6 +22,19 @@ const EmployeeIdCard = () => {
     setEmployeeData(prevData => ({ ...prevData, ...newData }));
   };
 
+  const displayName = (() => {
+    if (employeeData?.firstName && employeeData?.lastName) {
+      return `${employeeData.firstName.trim()} ${employeeData.lastName.trim()}`;
+    }
+    const raw = (employeeData?.name || "").trim();
+    if (!raw) return "";
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length > 2) {
+      return `${parts[0]} ${parts[parts.length - 1]}`;
+    }
+    return parts.join(" ");
+  })();
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-5">
       <div 
@@ -81,7 +94,7 @@ const EmployeeIdCard = () => {
 
           {/* Employee Name */}
           <div className="text-gray-900 text-base font-bold mb-2 leading-tight">
-            {employeeData.name}
+            {displayName || employeeData.name}
           </div>
 
           {/* Designation */}

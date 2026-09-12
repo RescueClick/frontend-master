@@ -31,6 +31,9 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
+import MilestoneBannerEditor, {
+  DEFAULT_BANNER_CONFIG,
+} from "./MilestoneBannerEditor";
 
 const ICON_MAP = {
   Shield: Shield,
@@ -66,12 +69,7 @@ const QUICK_VOLUME_PRESETS = [
 ];
 
 const DEFAULT_CONFIG = {
-  hero: {
-    label: "PERFORMANCE & MILESTONE REWARDS",
-    title: "Unlock Milestone Bonuses",
-    subtitle: "Achieve higher monthly disbursement targets to unlock bigger cash bonuses, VIP badges, and priority perks.",
-    bgColor: "#0D9488",
-  },
+  hero: DEFAULT_BANNER_CONFIG,
   levels: [
     {
       id: "BRONZE",
@@ -602,220 +600,16 @@ export default function AdminPartnerLevels() {
         </div>
       </div>
 
-      {/* Hero Banner Editor & Mobile App Simulator */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Hero Banner Editor */}
-        <div className="lg:col-span-6 bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-teal-50 text-teal-700">
-                <Palette size={16} />
-              </div>
-              <h2 className="text-sm font-bold text-gray-900">Hero Banner Text & Theme</h2>
-            </div>
-            <span className="text-[11px] text-gray-400 font-mono">Mobile App Header</span>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                Top Label Badge
-              </label>
-              <input
-                type="text"
-                value={hero.label}
-                onChange={(e) => setHero({ ...hero, label: e.target.value })}
-                placeholder="e.g. PERFORMANCE & MILESTONE REWARDS"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-900 focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                Main Headline Title
-              </label>
-              <input
-                type="text"
-                value={hero.title}
-                onChange={(e) => setHero({ ...hero, title: e.target.value })}
-                placeholder="e.g. Unlock Milestone Bonuses"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-bold text-gray-900 focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                Subtitle Description
-              </label>
-              <textarea
-                rows={2}
-                value={hero.subtitle}
-                onChange={(e) => setHero({ ...hero, subtitle: e.target.value })}
-                placeholder="Brief explanation of how climbing levels benefits the partner..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-800 focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                Banner Background Color
-              </label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={hero.bgColor || "#0D9488"}
-                  onChange={(e) => setHero({ ...hero, bgColor: e.target.value })}
-                  className="h-9 w-12 rounded-md border border-gray-300 cursor-pointer p-0.5"
-                />
-                <input
-                  type="text"
-                  value={hero.bgColor || "#0D9488"}
-                  onChange={(e) => setHero({ ...hero, bgColor: e.target.value })}
-                  className="w-32 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-mono text-gray-900 uppercase"
-                />
-                <div className="flex items-center gap-1.5">
-                  {["#0D9488", "#1E3A8A", "#0F172A", "#7C3AED", "#B45309"].map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setHero({ ...hero, bgColor: c })}
-                      className="w-6 h-6 rounded-full border border-gray-200 hover:scale-110 transition shadow-2xs"
-                      style={{ backgroundColor: c }}
-                      title={c}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Live Mobile App Preview (Hero or Selected Tier Card) */}
-        <div className="lg:col-span-6 bg-slate-900 rounded-2xl p-5 sm:p-6 text-white flex flex-col justify-between shadow-xs">
-          <div>
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-3 pb-2 border-b border-slate-800">
-              <span className="flex items-center gap-1.5 font-bold">
-                <Smartphone size={14} className="text-teal-400" />
-                Live Mobile Phone Preview
-              </span>
-              <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-lg border border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setPreviewTab("hero")}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition ${
-                    previewTab === "hero" ? "bg-teal-600 text-white" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Hero Card
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewTab("tierCard")}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition ${
-                    previewTab === "tierCard" ? "bg-teal-600 text-white" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Tier Card Preview
-                </button>
-              </div>
-            </div>
-
-            {/* TAB 1: HERO BANNER PREVIEW */}
-            {previewTab === "hero" ? (
-              <div
-                className="rounded-2xl p-6 relative overflow-hidden text-white shadow-xl transition-all"
-                style={{ backgroundColor: hero.bgColor || "#0D9488" }}
-              >
-                <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
-                <div className="absolute -left-6 -bottom-6 w-24 h-24 rounded-full bg-white/5 pointer-events-none" />
-
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/70 block mb-1">
-                  {hero.label || "PERFORMANCE & MILESTONE REWARDS"}
-                </span>
-                <h3 className="text-2xl font-black text-white mb-2 leading-tight">
-                  {hero.title || "Unlock Milestone Bonuses"}
-                </h3>
-                <p className="text-xs text-white/90 leading-relaxed max-w-md">
-                  {hero.subtitle || "Perform better each month to climb the tiers and maximize your payouts."}
-                </p>
-              </div>
-            ) : (
-              /* TAB 2: TIER CARD PREVIEW */
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-semibold">Preview Tier:</span>
-                  <select
-                    className="bg-slate-800 border border-slate-700 text-white text-xs rounded-lg px-2 py-1 font-semibold"
-                    value={selectedPreviewLevelIdx}
-                    onChange={(e) => setSelectedPreviewLevelIdx(Number(e.target.value))}
-                  >
-                    {levels.map((lvl, i) => (
-                      <option key={lvl.id || i} value={i}>
-                        {lvl.name} ({formatInrWords(lvl.minDisbursement)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div
-                  className="rounded-2xl border p-4 transition-all"
-                  style={{
-                    backgroundColor: activePreviewTier.bgColor || "#FFFFFF",
-                    borderColor: activePreviewTier.color || "#0D9488",
-                  }}
-                >
-                  <div className="flex items-center justify-between pb-3 border-b border-black/5">
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center shadow-xs"
-                        style={{ backgroundColor: activePreviewTier.accentColor || "#E2E8F0" }}
-                      >
-                        <ActivePreviewIcon size={20} style={{ color: activePreviewTier.color || "#0D9488" }} />
-                      </div>
-                      <div>
-                        <h4 className="text-base font-extrabold text-slate-900 leading-tight">
-                          {activePreviewTier.name}
-                        </h4>
-                        <span className="text-[11px] font-mono font-bold text-slate-500">
-                          {activePreviewTier.id}
-                        </span>
-                      </div>
-                    </div>
-                    <span
-                      className="text-xs font-black px-2.5 py-1 rounded-full text-white shadow-xs"
-                      style={{ backgroundColor: activePreviewTier.color || "#0D9488" }}
-                    >
-                      +{formatInr(activePreviewTier.rewardAmount)} Bonus
-                    </span>
-                  </div>
-
-                  <div className="py-2.5 text-xs text-slate-700 font-medium">
-                    <span className="text-slate-500 font-bold block text-[10px] uppercase">Requirement:</span>
-                    <p className="mt-0.5">{activePreviewTier.criteria || "—"}</p>
-                  </div>
-
-                  <div className="pt-2 border-t border-black/5 space-y-1">
-                    {(activePreviewTier.benefits || []).slice(0, 3).map((b, bI) => (
-                      <div key={bI} className="flex items-center gap-1.5 text-[11px] text-slate-800">
-                        <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
-                        <span className="truncate">{b}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex items-center justify-between text-[11px] text-slate-400 bg-slate-800/60 p-2.5 rounded-xl border border-slate-800">
-            <span className="flex items-center gap-1.5">
-              <Info size={13} className="text-amber-400" />
-              Synced in real time with DhanSource Partner App & Milestone Policy
-            </span>
-            <span className="font-bold text-slate-200">{levels.length} Active Tiers</span>
-          </div>
-        </div>
-      </div>
+      {/* Milestone Bonus Highlight Banner Card Editor & Live Mobile Simulator */}
+      <MilestoneBannerEditor
+        hero={hero}
+        setHero={setHero}
+        levels={levels}
+        isSaving={isSaving}
+        onSaveSuccess={(savedHero) => {
+          setHero(savedHero);
+        }}
+      />
 
       {/* Tier / Level Cards Section (Power CRUD Grid) */}
       <div className="space-y-4">
