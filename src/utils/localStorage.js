@@ -38,10 +38,11 @@ export const clearChildAuthData = () => {
   if (!parent) return; // No parent, nothing to clear
 
   // Clear all child role tokens (roles lower in hierarchy than parent)
+  // Standard Banking Hierarchy: SUPER_ADMIN > RSM (Senior) > ASM (Specialized) > RM > PARTNER > CUSTOMER
   const roleHierarchy = {
-    SUPER_ADMIN: ["asm", "rsm", "rm", "partner", "customer"],
-    ASM: ["rsm", "rm", "partner", "customer"],
-    RSM: ["rm", "partner", "customer"],
+    SUPER_ADMIN: ["rsm", "asm", "rm", "partner", "customer"],
+    RSM: ["asm", "rm", "partner", "customer"],
+    ASM: ["rm", "partner", "customer"],
     RM: ["partner", "customer"],
   };
 
@@ -102,6 +103,15 @@ export const saveAuthData = (token, user, impersonation = false, parent = null) 
       }
     }
 
+    // Clear conflicting role tokens to prevent session cross-contamination
+    const allRoles = ["super_admin", "rsm", "asm", "rm", "partner", "customer"];
+    allRoles.forEach((r) => {
+      if (r !== roleKey && (!impersonation || (parent && parent.role.toLowerCase() !== r))) {
+        localStorage.removeItem(`${r}_token`);
+        localStorage.removeItem(`${r}_user`);
+      }
+    });
+
     localStorage.setItem(`${roleKey}_token`, token);
     localStorage.setItem(`${roleKey}_user`, JSON.stringify(user));
 
@@ -140,13 +150,30 @@ export const restoreParentAuth = () => {
 };
 
 export const getAuthData = () => {
+  const adminToken = localStorage.getItem("super_admin_token");
+  const asmToken = localStorage.getItem("asm_token");
+  const rsmToken = localStorage.getItem("rsm_token");
+  const rsmUser = parseJson("rsm_user");
+  const asmUser = parseJson("asm_user");
+  
+  // Prioritize active role's token
+  const managerToken =
+    (rsmUser ? rsmToken : null) ||
+    (asmUser ? asmToken : null) ||
+    rsmToken ||
+    asmToken ||
+    adminToken ||
+    null;
+
   return {
-    adminToken: localStorage.getItem("super_admin_token"),
+    adminToken,
     adminUser: parseJson("super_admin_user"),
-    asmToken: localStorage.getItem("asm_token"),
-    asmUser: parseJson("asm_user"),
-    rsmToken: localStorage.getItem("rsm_token"),
-    rsmUser: parseJson("rsm_user"),
+    asmToken: (asmUser ? asmToken : null) || managerToken,
+    asmUser,
+    rsmToken: (rsmUser ? rsmToken : null) || managerToken,
+    rsmUser,
+    rawAsmToken: asmToken,
+    rawRsmToken: rsmToken,
     rmToken: localStorage.getItem("rm_token"),
     rmUser: parseJson("rm_user"),
     partnerToken: localStorage.getItem("partner_token"),

@@ -14,9 +14,11 @@ import {
   Building2,
   ShieldCheck,
   RefreshCw,
+  ArrowLeft,
 } from "lucide-react";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData, clearAuthData } from "../../../utils/localStorage";
+import { getOriginalRole, backToAdmin } from "../../../utils/impersonation";
 import { useNavigate } from "react-router-dom";
 import NotificationBell from "../../../components/NotificationBell";
 
@@ -149,6 +151,10 @@ const Customer = () => {
 
   const navigate = useNavigate();
 
+  const { parentUser } = getAuthData();
+  const isImpersonating = !!parentUser;
+  const originalRole = getOriginalRole();
+
   useEffect(() => {
     const { customerToken } = getAuthData();
     if (!customerToken) {
@@ -202,6 +208,18 @@ const Customer = () => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {isImpersonating && originalRole && (
+              <button
+                type="button"
+                onClick={() => backToAdmin(navigate)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition shadow-sm text-xs font-semibold"
+                title="Back to Admin Dashboard (exit all impersonations)"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Admin</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => fetchApplications(true)}

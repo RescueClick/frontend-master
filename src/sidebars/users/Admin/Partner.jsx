@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Search, Trash2, FileText, Award, CreditCard, Edit3, X } from "lucide-react";
+import { Download, Search, Trash2, FileText, Award, CreditCard, Edit3, X, KeyRound } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   activatePartner,
@@ -17,6 +17,7 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import AdminChangePasswordModal from "../../../components/shared/AdminChangePasswordModal";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import toast from "react-hot-toast";
@@ -87,6 +88,7 @@ export default function PartnerTable() {
 
   // Edit Partner Details (CRUD) State
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState(null);
   const [partnerToEdit, setPartnerToEdit] = useState(null);
   const [editFormData, setEditFormData] = useState({
     firstName: "",
@@ -409,10 +411,10 @@ export default function PartnerTable() {
 
   const loginAsUser = async (userId, navigate) => {
     try {
-      const { adminToken, asmToken, rmToken, partnerToken } = getAuthData();
+      const { adminToken, rsmToken, asmToken, rmToken, partnerToken } = getAuthData();
       
       // Determine which token to use (prioritize current role token)
-      let currentToken = adminToken || asmToken || rmToken || partnerToken;
+      let currentToken = adminToken || rsmToken || asmToken || rmToken || partnerToken;
       if (!currentToken) {
         alert("Not authenticated");
         return;
@@ -428,8 +430,8 @@ export default function PartnerTable() {
   
       // Get current user info to store as parent
       const currentAuth = getAuthData();
-      let currentUser = currentAuth.adminUser || currentAuth.asmUser || currentAuth.rmUser || currentAuth.partnerUser;
-      let currentUserToken = currentAuth.adminToken || currentAuth.asmToken || currentAuth.rmToken || currentAuth.partnerToken;
+      let currentUser = currentAuth.adminUser || currentAuth.rsmUser || currentAuth.asmUser || currentAuth.rmUser || currentAuth.partnerUser;
+      let currentUserToken = currentAuth.adminToken || currentAuth.rsmToken || currentAuth.asmToken || currentAuth.rmToken || currentAuth.partnerToken;
       
       // If parent info is provided from backend, use it; otherwise use current user
       const parentInfo = parent || (currentUser ? { ...currentUser, token: currentUserToken } : null);
@@ -439,11 +441,28 @@ export default function PartnerTable() {
   
       // Navigate to role
       switch (user.role) {
-        case "ASM": navigate("/asm"); break;
-        case "RM": navigate("/rm"); break;
-        case "PARTNER": navigate("/partner"); break;
-        case "CUSTOMER": navigate("/customer"); break;
-        default: navigate("/"); break;
+        case "SUPER_ADMIN":
+        case "ADMIN":
+          navigate("/admin");
+          break;
+        case "RSM":
+          navigate("/rsm");
+          break;
+        case "ASM":
+          navigate("/asm");
+          break;
+        case "RM":
+          navigate("/rm");
+          break;
+        case "PARTNER":
+          navigate("/partner");
+          break;
+        case "CUSTOMER":
+          navigate("/customer");
+          break;
+        default:
+          navigate("/partner");
+          break;
       }
     } catch (err) {
       console.error("Login as user failed:", err.response?.data || err.message);
@@ -607,6 +626,15 @@ loginAsUser(userId, navigate);
           >
             <Edit3 size={13} />
             Edit
+          </button>
+          <button
+            type="button"
+            title="Change Partner Password"
+            className="inline-flex items-center gap-1 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 px-2 py-1 text-xs font-semibold transition-colors"
+            onClick={() => setPasswordUser({ ...p, role: "PARTNER" })}
+          >
+            <KeyRound size={13} />
+            Password
           </button>
           <button
             type="button"
@@ -892,6 +920,12 @@ loginAsUser(userId, navigate);
           </div>
         )}
       </div>
+
+      <AdminChangePasswordModal
+        isOpen={Boolean(passwordUser)}
+        user={passwordUser}
+        onClose={() => setPasswordUser(null)}
+      />
     </>
   );
 }

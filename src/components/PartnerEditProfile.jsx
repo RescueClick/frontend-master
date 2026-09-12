@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   User,
   Phone,
@@ -10,9 +10,19 @@ import {
   MapPin,
   Save,
   ArrowLeft,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Sparkles,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { getAuthData } from "../utils/localStorage";
+import { backendurl } from "../feature/urldata";
 import {
   fetchPartnerProfile,
   updatePartnerProfile,
@@ -40,6 +50,135 @@ export default function PartnerEditProfile() {
   const [errors, setErrors] = useState({});
   const [saveMsg, setSaveMsg] = useState(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const authData = useMemo(() => getAuthData() || {}, []);
+  const adminToken =
+    authData.adminToken ||
+    authData.mainParentToken ||
+    (authData.parentUser?.role === "SUPER_ADMIN" ? authData.parentToken : null);
+  const isAdmin = Boolean(adminToken);
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
+  const [passwordStatus, setPasswordStatus] = useState(null);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+
+  const handleGeneratePassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$!";
+    let pwd = "";
+    pwd += "ABCDEFGHJKLMNPQRSTUVWXYZ"[Math.floor(Math.random() * 24)];
+    pwd += "abcdefghijkmnpqrstuvwxyz"[Math.floor(Math.random() * 24)];
+    pwd += "23456789"[Math.floor(Math.random() * 8)];
+    pwd += "@#$!"[Math.floor(Math.random() * 4)];
+    for (let i = 0; i < 6; i++) {
+      pwd += chars[Math.floor(Math.random() * chars.length)];
+    }
+    setPasswordForm((p) => ({ ...p, newPassword: pwd, confirmPassword: pwd }));
+    setShowPassword({ current: false, new: true, confirm: true });
+    setPasswordStatus(null);
+  };
+
+  const handleCopyPassword = () => {
+    if (!passwordForm.newPassword) return;
+    navigator.clipboard.writeText(passwordForm.newPassword);
+    setCopiedPassword(true);
+    setTimeout(() => setCopiedPassword(false), 2000);
+    toast.success("Password copied to clipboard!");
+  };
+
+  const handlePasswordUpdate = async () => {
+    setPasswordStatus(null);
+
+    if (!isAdmin && !passwordForm.currentPassword) {
+      setPasswordStatus({ type: "err", text: "Current password is required." });
+      return false;
+    }
+
+    if (!passwordForm.newPassword) {
+      setPasswordStatus({ type: "err", text: "New password is required." });
+      return false;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordStatus({
+        type: "err",
+        text: "New password must be at least 6 characters.",
+      });
+      return false;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordStatus({ type: "err", text: "Passwords do not match." });
+      return false;
+    }
+
+    setPasswordUpdating(true);
+    try {
+      if (isAdmin) {
+        const targetId = data?._id || data?.id;
+        const res = await axios.post(
+          `${backendurl}/admin/change-user-password`,
+          {
+            userId: targetId,
+            id: targetId,
+            email: form.email || data?.email,
+            newPassword: passwordForm.newPassword,
+            confirmPassword: passwordForm.confirmPassword,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${adminToken}`,
+            },
+          }
+        );
+        const msg = res.data?.message || "Password updated successfully by Admin!";
+        toast.success(msg);
+        setPasswordStatus({ type: "ok", text: msg });
+      } else {
+        const userToken = authData.partnerToken;
+        const res = await axios.post(
+          `${backendurl}/auth/change-password`,
+          {
+            oldPassword: passwordForm.currentPassword,
+            newPassword: passwordForm.newPassword,
+            confirmPassword: passwordForm.confirmPassword,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${userToken}`,
+            },
+          }
+        );
+        const msg = res.data?.message || "Password changed successfully!";
+        toast.success(msg);
+        setPasswordStatus({ type: "ok", text: msg });
+      }
+
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      return true;
+    } catch (err) {
+      console.error("Password update error:", err);
+      const errMsg =
+        err.response?.data?.message || err.message || "Failed to update password.";
+      setPasswordStatus({ type: "err", text: errMsg });
+      return false;
+    } finally {
+      setPasswordUpdating(false);
+    }
+  };
 
   const getErrMsg = (err, fallback) => {
     const data = err?.response?.data;
@@ -121,7 +260,12 @@ export default function PartnerEditProfile() {
 
     try {
       await dispatch(updatePartnerProfile(payload)).unwrap();
-      setSaveMsg({ type: "ok", text: "Profile updated successfully." });
+      let extraMsg = "";
+      if (passwordForm.newPassword) {
+        const pwOk = await handlePasswordUpdate();
+        if (pwOk) extraMsg = " and password";
+      }
+      setSaveMsg({ type: "ok", text: `Profile${extraMsg} updated successfully.` });
       await dispatch(fetchPartnerProfile());
       setTimeout(() => {
         if (location.state?.from) {
@@ -413,6 +557,173 @@ export default function PartnerEditProfile() {
                     </div>
                   </div>
                 </div>
+              </section>
+
+              {/* Security & Password */}
+              <section className="pt-6 border-t border-slate-100">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-brand-primary" />
+                    Security & Password
+                  </h3>
+                  {isAdmin && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <KeyRound size={13} className="text-emerald-600" />
+                      Admin Override Active
+                    </span>
+                  )}
+                </div>
+
+                {isAdmin ? (
+                  <div className="mb-5 p-3.5 bg-teal-50/80 border border-teal-200/80 rounded-xl text-xs text-teal-900">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <p>
+                        🔑 <strong>Admin Privilege:</strong> You can set a new password directly for this Partner. Current password is not required.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleGeneratePassword}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 font-semibold text-teal-800 bg-white hover:bg-teal-100/60 border border-teal-300 rounded-lg shadow-sm transition text-xs"
+                      >
+                        <Sparkles size={13} className="text-teal-600" />
+                        Generate strong password
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 mb-4">
+                    To change your account password, enter your current password followed by your new password.
+                  </p>
+                )}
+
+                {passwordStatus && (
+                  <div
+                    className={`mb-4 px-4 py-2.5 rounded-xl text-xs font-medium ${
+                      passwordStatus.type === "ok"
+                        ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        : "bg-red-50 text-red-800 border border-red-200"
+                    }`}
+                  >
+                    {passwordStatus.text}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {!isAdmin && (
+                    <div className="md:col-span-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+                        Current Password *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword.current ? "text" : "password"}
+                          value={passwordForm.currentPassword}
+                          onChange={(e) =>
+                            setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))
+                          }
+                          placeholder="Enter your current password"
+                          className="w-full pl-3 pr-10 py-2.5 border rounded-xl border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/40 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowPassword((p) => ({ ...p, current: !p.current }))
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          {showPassword.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="flex items-center justify-between text-sm font-medium text-slate-700 mb-1.5">
+                      <span>New Password {isAdmin ? "(optional)" : "*"}</span>
+                      {passwordForm.newPassword && (
+                        <button
+                          type="button"
+                          onClick={handleCopyPassword}
+                          className="inline-flex items-center gap-1 text-[11px] text-teal-600 hover:text-teal-700 font-medium"
+                        >
+                          {copiedPassword ? (
+                            <>
+                              <Check size={12} className="text-emerald-600" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={12} />
+                              Copy
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword.new ? "text" : "password"}
+                        value={passwordForm.newPassword}
+                        onChange={(e) =>
+                          setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))
+                        }
+                        placeholder={isAdmin ? "Enter new password (min. 6 chars)" : "Choose a strong password"}
+                        className="w-full pl-3 pr-10 py-2.5 border rounded-xl border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/40 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPassword((p) => ({ ...p, new: !p.new }))
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword.confirm ? "text" : "password"}
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) =>
+                          setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))
+                        }
+                        placeholder="Repeat new password"
+                        className="w-full pl-3 pr-10 py-2.5 border rounded-xl border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/40 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPassword((p) => ({ ...p, confirm: !p.confirm }))
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {passwordForm.newPassword && (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-xs text-slate-600">
+                      Ready to change password? You can update it right now:
+                    </span>
+                    <button
+                      type="button"
+                      disabled={passwordUpdating}
+                      onClick={handlePasswordUpdate}
+                      className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm transition disabled:opacity-50"
+                    >
+                      {passwordUpdating ? "Updating password..." : "Update Password Now"}
+                    </button>
+                  </div>
+                )}
               </section>
 
               <p className="text-xs text-slate-500">

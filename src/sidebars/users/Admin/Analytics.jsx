@@ -219,6 +219,13 @@ const Analytics = () => {
       : "Performance, targets, and monthly history";
   }, [location?.state, ID, analyticsData, role]);
 
+  // Navigate to ASM page
+  const handleNavigateToASM = useCallback(() => {
+    if (userAnalyticsID) {
+      navigate("/admin/asm", { state: userAnalyticsID });
+    }
+  }, [navigate, userAnalyticsID]);
+
   // Navigate to RM page
   const handleNavigateToRM = useCallback(() => {
     if (userAnalyticsID) {
@@ -362,23 +369,23 @@ const Analytics = () => {
 
       {/* Metrics Cards - Dynamic based on role - Using shared MetricCard component */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Show RSM count for ASM role */}
-        {analyticsData.role === "ASM" && analyticsData.totalRSM > 0 && (
+        {/* Show ASM count for RSM role (RSM manages ASMs) */}
+        {analyticsData.role === "RSM" && (Number(analyticsData.totalASM || analyticsData.totalASMs) > 0) && (
           <MetricCard
-            title="Total RSMs"
-            value={formatNumberHelper(analyticsData.totalRSM)}
+            title="Total ASMs"
+            value={formatNumberHelper(analyticsData.totalASM || analyticsData.totalASMs)}
             icon={UserCheck}
             colorIndex={0}
-            subtitle="Regional Sales Managers"
-            onClick={handleNavigateToRM}
+            subtitle="Area Sales Managers"
+            onClick={handleNavigateToASM}
           />
         )}
 
-        {/* Show RM count for ASM and RSM roles */}
-        {(analyticsData.role === "ASM" || analyticsData.role === "RSM") && analyticsData.totalRM > 0 && (
+        {/* Show RM count for ASM and RSM roles (ASM manages RMs) */}
+        {(analyticsData.role === "ASM" || analyticsData.role === "RSM") && (Number(analyticsData.totalRM || analyticsData.totalRMs) > 0) && (
           <MetricCard
             title="Total RMs"
-            value={formatNumberHelper(analyticsData.totalRM)}
+            value={formatNumberHelper(analyticsData.totalRM || analyticsData.totalRMs)}
             icon={UserCheck}
             colorIndex={1}
             subtitle="Relationship Managers"

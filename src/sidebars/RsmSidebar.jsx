@@ -17,6 +17,7 @@ import {
   Edit,
   X,
   TrendingUp,
+  MessageSquare,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -28,6 +29,7 @@ import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
 import DhanSourceLoader from "../components/DhanSourceLoader";
 import { useSidebarNotifications } from "../hooks/useSidebarNotifications";
+import StaffChatWidget from "./users/shared/chat/StaffChatWidget";
 
 // RSM sidebar component
 const RsmSidebar = () => {
@@ -71,16 +73,17 @@ const RsmSidebar = () => {
 
   // Fetch profile when component mounts or token changes
   useEffect(() => {
-    const { rsmToken } = getAuthData();
-    if (rsmToken) {
-      dispatch(fetchRsmProfile(rsmToken));
+    const { rsmToken, asmToken } = getAuthData();
+    const token = asmToken || rsmToken;
+    if (token) {
+      dispatch(fetchRsmProfile(token));
     }
   }, [dispatch]);
 
   // Get fallback user data from localStorage (for initial render before Redux loads)
   const getFallbackUser = () => {
     const authData = getAuthData();
-    return authData?.rsmUser || null;
+    return authData?.asmUser || authData?.rsmUser || null;
   };
 
   const fallbackUser = getFallbackUser();
@@ -94,6 +97,8 @@ const RsmSidebar = () => {
 
   const getBadgeCount = (name) => {
     switch (name) {
+      case "Chat":
+        return counts.chat;
       case "Applications":
         return counts.application;
       default:
@@ -102,16 +107,18 @@ const RsmSidebar = () => {
   };
 
   // Sidebar navigation items with icons and routes
+  // Hierarchy: RSM manages ASMs (/rsm/asms); ASM manages RMs (/asm/rms)
+  const basePath = location.pathname.startsWith("/rsm") ? "/rsm" : "/asm";
+  const subordinateLabel = basePath === "/rsm" ? "My ASMs" : "My RMs";
+  const subordinatePath = basePath === "/rsm" ? `${basePath}/asms` : `${basePath}/rms`;
   const sidebarItems = [
-    { name: "Dashboard", icon: LayoutGrid, path: "/rsm/dashboard" },
-    { name: "My RMs", icon: Users, path: "/rsm/rms" },
-    { name: "Partners", icon: UserCheck, path: "/rsm/partners" },
-    { name: "Applications", icon: FileText, path: "/rsm/applications" },
-    { name: "Follow Up", icon: CalendarCheck, path: "/rsm/follow-ups" },
-    // highlight banks for RSM
-    { name: "Banks", icon: Building2, path: "/rsm/banks", highlight: true },
-    //   { name: "Analytics", icon: BarChart2, path: "/rsm/analytics" },
-    { name: "Settings", icon: Settings, path: "/rsm/settings" },
+    { name: "Dashboard", icon: LayoutGrid, path: `${basePath}/dashboard` },
+    { name: subordinateLabel, icon: Users, path: subordinatePath },
+    { name: "Partners", icon: UserCheck, path: `${basePath}/partners` },
+    { name: "Applications", icon: FileText, path: `${basePath}/applications` },
+    { name: "Follow Up", icon: CalendarCheck, path: `${basePath}/follow-ups` },
+    { name: "Banks", icon: Building2, path: `${basePath}/banks`, highlight: true },
+    { name: "Settings", icon: Settings, path: `${basePath}/settings` },
   ];
 
   // Logout function
@@ -231,7 +238,7 @@ const RsmSidebar = () => {
                 <Menu size={20} className="text-gray-600" />
               </button>
               <h1 className="text-base sm:text-xl font-semibold text-gray-800 truncate">
-                RSM Dashboard
+                {basePath === "/asm" ? "ASM Dashboard" : "RSM Dashboard"}
               </h1>
             </div>
 
@@ -323,6 +330,9 @@ const RsmSidebar = () => {
           </div>
         </>
       )}
+
+      {/* Floating Bottom-Right Staff Chat Widget */}
+      <StaffChatWidget currentRole="RSM" />
     </div>
   );
 };

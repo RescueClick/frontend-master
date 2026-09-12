@@ -196,7 +196,11 @@ export default function MilestoneBannerEditor({
     ) {
       setHero(DEFAULT_BANNER_CONFIG);
       setCustomPillMode(false);
-      toast.success("Reset to DhanSource standard defaults in editor. Click 'Save' to apply live!");
+      toast.success(
+        standalone
+          ? "Reset to DhanSource standard defaults in editor. Click 'Save Banner Changes' to apply live!"
+          : "Reset to DhanSource standard defaults in editor. Click 'Save All Changes' to apply live!"
+      );
     }
   };
 
@@ -301,35 +305,44 @@ export default function MilestoneBannerEditor({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleResetDefaults}
-            className="px-3 py-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition flex items-center gap-1.5"
-            title="Reset to official DhanSource defaults"
-          >
-            <RotateCcw size={14} />
-            <span>Reset Defaults</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-xl transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
-          >
-            {isSaving ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Saving Live...</span>
-              </>
-            ) : (
-              <>
-                <Save size={14} />
-                <span>Save Banner Changes</span>
-              </>
-            )}
-          </button>
-        </div>
+        {standalone ? (
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleResetDefaults}
+              className="px-3 py-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition flex items-center gap-1.5"
+              title="Reset to official DhanSource defaults"
+            >
+              <RotateCcw size={14} />
+              <span>Reset Defaults</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-xl transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isSaving ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Saving Live...</span>
+                </>
+              ) : (
+                <>
+                  <Save size={14} />
+                  <span>Save Banner Changes</span>
+                </>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-3 py-1.5 rounded-xl inline-flex items-center gap-1.5 shadow-2xs">
+              <Sparkles size={13} className="text-emerald-600" />
+              Saved via <span className="font-bold">"Save All Changes"</span> above
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Main Grid: Form Controls (Left) & Mobile Simulator (Right) */}

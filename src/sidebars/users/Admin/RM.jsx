@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, Download, Trash2 } from "lucide-react";
+import { Search, Download, Trash2, KeyRound } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
@@ -9,6 +9,7 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import AdminChangePasswordModal from "../../../components/shared/AdminChangePasswordModal";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
@@ -79,6 +80,7 @@ function RM() {
   const [RMactiveModel, setRMactiveModel] = useState(null);
   const [rmToDelete, setRmToDelete] = useState(null);
   const [deleteRmSubmitting, setDeleteRmSubmitting] = useState(false);
+  const [passwordUser, setPasswordUser] = useState(null);
 
   // Fetch RMs on mount
   useEffect(() => {
@@ -196,8 +198,10 @@ function RM() {
       Status: user.status || "",
       "Employee ID": user.employeeId || "",
       "RM Code": user.rmCode || "",
-      "ASM Name": user.asmName || "",
-      "ASM Employee ID": user.asmEmployeeId || "",
+      "Reporting RSM": user.rsmName || user.asmName || "",
+      "Personal Loan ASM": user.personalAsmName || (user.personalAsm ? `${user.personalAsm.firstName} ${user.personalAsm.lastName}` : (user.personalRsm ? `${user.personalRsm.firstName} ${user.personalRsm.lastName}` : "")),
+      "Business Loan ASM": user.businessAsmName || (user.businessAsm ? `${user.businessAsm.firstName} ${user.businessAsm.lastName}` : (user.businessRsm ? `${user.businessRsm.firstName} ${user.businessRsm.lastName}` : "")),
+      "Home & LAP ASM": user.homeLapAsmName || (user.homeLapAsm ? `${user.homeLapAsm.firstName} ${user.homeLapAsm.lastName}` : (user.homeLapRsm ? `${user.homeLapRsm.firstName} ${user.homeLapRsm.lastName}` : "")),
       "Documents": user.docs ? user.docs.map((doc) => toDocLabel(doc.docType)).join(", ") : "",
       "Created At": user.createdAt ? new Date(user.createdAt).toLocaleString() : "",
       "Updated At": user.updatedAt ? new Date(user.updatedAt).toLocaleString() : "",
@@ -240,10 +244,10 @@ function RM() {
   
   const loginAsUser = async (userId, navigate) => {
     try {
-      const { adminToken, asmToken, rmToken, partnerToken } = getAuthData();
+      const { adminToken, rsmToken, asmToken, rmToken, partnerToken } = getAuthData();
       
       // Determine which token to use (prioritize current role token)
-      let currentToken = adminToken || asmToken || rmToken || partnerToken;
+      let currentToken = adminToken || rsmToken || asmToken || rmToken || partnerToken;
       if (!currentToken) {
         alert("Not authenticated");
         return;
@@ -259,8 +263,8 @@ function RM() {
   
       // Get current user info to store as parent
       const currentAuth = getAuthData();
-      let currentUser = currentAuth.adminUser || currentAuth.asmUser || currentAuth.rmUser || currentAuth.partnerUser;
-      let currentUserToken = currentAuth.adminToken || currentAuth.asmToken || currentAuth.rmToken || currentAuth.partnerToken;
+      let currentUser = currentAuth.adminUser || currentAuth.rsmUser || currentAuth.asmUser || currentAuth.rmUser || currentAuth.partnerUser;
+      let currentUserToken = currentAuth.adminToken || currentAuth.rsmToken || currentAuth.asmToken || currentAuth.rmToken || currentAuth.partnerToken;
       
       // If parent info is provided from backend, use it; otherwise use current user
       const parentInfo = parent || (currentUser ? { ...currentUser, token: currentUserToken } : null);
@@ -270,11 +274,28 @@ function RM() {
   
       // Navigate to role
       switch (user.role) {
-        case "ASM": navigate("/asm"); break;
-        case "RM": navigate("/rm"); break;
-        case "PARTNER": navigate("/partner"); break;
-        case "CUSTOMER": navigate("/customer"); break;
-        default: navigate("/"); break;
+        case "SUPER_ADMIN":
+        case "ADMIN":
+          navigate("/admin");
+          break;
+        case "RSM":
+          navigate("/rsm");
+          break;
+        case "ASM":
+          navigate("/asm");
+          break;
+        case "RM":
+          navigate("/rm");
+          break;
+        case "PARTNER":
+          navigate("/partner");
+          break;
+        case "CUSTOMER":
+          navigate("/customer");
+          break;
+        default:
+          navigate("/rm");
+          break;
       }
     } catch (err) {
       console.error("Login as user failed:", err.response?.data || err.message);
@@ -321,6 +342,58 @@ loginAsUser(userId, navigate);
       ),
     },
     { title: "User ID", dataIndex: "employeeId", key: "eid" },
+    {
+      title: "Assigned ASMs",
+      key: "asms",
+      render: (_, rm) => {
+        const plName =
+          rm.personalAsmName ||
+          (rm.personalAsm?.firstName
+            ? `${rm.personalAsm.firstName} ${rm.personalAsm.lastName || ""}`.trim()
+            : null) ||
+          rm.personalRsmName ||
+          (rm.personalRsm?.firstName
+            ? `${rm.personalRsm.firstName} ${rm.personalRsm.lastName || ""}`.trim()
+            : null) ||
+          "—";
+
+        const blName =
+          rm.businessAsmName ||
+          (rm.businessAsm?.firstName
+            ? `${rm.businessAsm.firstName} ${rm.businessAsm.lastName || ""}`.trim()
+            : null) ||
+          rm.businessRsmName ||
+          (rm.businessRsm?.firstName
+            ? `${rm.businessRsm.firstName} ${rm.businessRsm.lastName || ""}`.trim()
+            : null) ||
+          "—";
+
+        const hlName =
+          rm.homeLapAsmName ||
+          (rm.homeLapAsm?.firstName
+            ? `${rm.homeLapAsm.firstName} ${rm.homeLapAsm.lastName || ""}`.trim()
+            : null) ||
+          rm.homeLapRsmName ||
+          (rm.homeLapRsm?.firstName
+            ? `${rm.homeLapRsm.firstName} ${rm.homeLapRsm.lastName || ""}`.trim()
+            : null) ||
+          "—";
+
+        return (
+          <div className="text-xs space-y-0.5">
+            <div className="text-slate-700">
+              <span className="font-semibold text-blue-700">PL:</span> {plName}
+            </div>
+            <div className="text-slate-700">
+              <span className="font-semibold text-purple-700">BL:</span> {blName}
+            </div>
+            <div className="text-slate-700">
+              <span className="font-semibold text-emerald-700">HL/LAP:</span> {hlName}
+            </div>
+          </div>
+        );
+      },
+    },
     {
       title: "Contact",
       dataIndex: "phone",
@@ -426,6 +499,15 @@ loginAsUser(userId, navigate);
           >
             Analytics
           </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-800 hover:underline"
+            onClick={() => setPasswordUser({ ...rm, role: "RM" })}
+            title="Change password for this RM"
+          >
+            <KeyRound size={13} />
+            Password
+          </button>
         </div>
       ),
     },
@@ -460,6 +542,13 @@ loginAsUser(userId, navigate);
             >
               <Download size={16} className="inline mr-2" />
               Export
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 text-sm bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary-hover shadow-sm transition-colors"
+              onClick={() => navigate("/admin/add-rm-page")}
+            >
+              + Add RM
             </button>
           </>
         }
@@ -526,6 +615,12 @@ loginAsUser(userId, navigate);
           if (!deleteRmSubmitting) setRmToDelete(null);
         }}
         onConfirm={handleConfirmDeleteRm}
+      />
+
+      <AdminChangePasswordModal
+        isOpen={Boolean(passwordUser)}
+        user={passwordUser}
+        onClose={() => setPasswordUser(null)}
       />
 
     </>

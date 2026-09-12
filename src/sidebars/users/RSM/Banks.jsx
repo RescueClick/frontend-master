@@ -137,6 +137,14 @@ const Banks = () => {
       const filtered = mapped.filter((bank) => {
         const lt = normalizeLoanType(bank.loanType);
         if (rsmType === "PERSONAL") return lt === "PERSONAL";
+        if (rsmType === "BUSINESS") return lt === "BUSINESS";
+        if (rsmType === "HOME_LAP") {
+          return (
+            lt.startsWith("HOME_LOAN_") ||
+            lt.startsWith("LAP_") ||
+            lt === "LAP"
+          );
+        }
         if (rsmType === "BUSINESS_HOME") {
           return (
             lt === "BUSINESS" ||

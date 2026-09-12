@@ -14,9 +14,13 @@ export const fetchRsmProfile = createAsyncThunk(
   "rsm/fetchProfile",
   async (token, { rejectWithValue }) => {
     try {
+      const effectiveToken = token || getAuthData()?.rsmToken;
+      if (!effectiveToken) {
+        return rejectWithValue("Authentication token not found");
+      }
       const response = await axios.get(`${backendurl}/rsm/profile`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${effectiveToken}`,
         },
       });
       return unwrapApiData(response.data);
@@ -67,6 +71,9 @@ export const fetchRsmDashboard = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const { rsmToken } = getAuthData();
+      if (!rsmToken) {
+        return rejectWithValue("Authentication token not found");
+      }
       const response = await axios.get(`${backendurl}/rsm/dashboard`, {
         headers: {
           Authorization: `Bearer ${rsmToken}`,

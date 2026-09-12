@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, Calendar, IndianRupee, Download, Trash2 } from "lucide-react";
+import { X, Calendar, IndianRupee, Download, Trash2, KeyRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import {
   fetchAsms,
+  fetchRSMs,
   fetchRMs,
   adminDeactivateAsm,
   activateAsm,
@@ -22,6 +23,7 @@ import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
+import AdminChangePasswordModal from "../../../components/shared/AdminChangePasswordModal";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
@@ -49,19 +51,48 @@ export default function ASM() {
   const [deleteAsmSubmitting, setDeleteAsmSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingState, setLoading] = useState(false);
+  const [passwordUser, setPasswordUser] = useState(null);
   
+
+  const [updatingAsmId, setUpdatingAsmId] = useState(null);
 
   useEffect(() => {
     // Get token from local storage
     const { adminToken } = getAuthData() || {};
     if (adminToken) {
       dispatch(fetchAsms(adminToken));
+      dispatch(fetchRSMs(adminToken));
       dispatch(fetchRMs(adminToken));
     }
   }, [dispatch]);
 
-  // 🔹 Fix: Access the correct state structure from adminSlice
+  const handleInlineTypeChange = async (asmUser, newType) => {
+    if (!newType || newType === (asmUser.asmType || asmUser.rsmType)) return;
+    setUpdatingAsmId(asmUser._id);
+    try {
+      const { adminToken } = getAuthData() || {};
+      await axios.patch(
+        `${backendurl}/admin/asm/${asmUser._id}`,
+        { asmType: newType },
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+      const typeNames = {
+        PERSONAL: "Personal Loan ASM",
+        BUSINESS: "Business Loan ASM",
+        HOME_LAP: "Home & LAP Loan ASM",
+      };
+      toast.success(`${asmUser.firstName} ${asmUser.lastName} updated to ${typeNames[newType] || newType}!`);
+      dispatch(fetchAsms(adminToken));
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : err?.message || "Failed to update specialty");
+    } finally {
+      setUpdatingAsmId(null);
+    }
+  };
+
+  // 🔹 Access state structure from adminSlice
   const { data: asm, loading, error } = useSelector((state) => state.admin.asm);
+  const { data: rsms } = useSelector((state) => state.admin.rsm);
   const sortedAsm = sortNewestFirst(Array.isArray(asm) ? asm : [], { dateKeys: ["createdAt"] });
 
   const displayAsm = useMemo(() => {
@@ -198,10 +229,10 @@ export default function ASM() {
 
      const loginAsUser = async (userId, navigate) => {
       try {
-        const { adminToken, asmToken, rmToken, partnerToken } = getAuthData();
+        const { adminToken, rsmToken, asmToken, rmToken, partnerToken } = getAuthData();
         
         // Determine which token to use (prioritize current role token)
-        let currentToken = adminToken || asmToken || rmToken || partnerToken;
+        let currentToken = adminToken || rsmToken || asmToken || rmToken || partnerToken;
         if (!currentToken) {
           alert("Not authenticated");
           return;
@@ -217,8 +248,8 @@ export default function ASM() {
     
         // Get current user info to store as parent
         const currentAuth = getAuthData();
-        let currentUser = currentAuth.adminUser || currentAuth.asmUser || currentAuth.rmUser || currentAuth.partnerUser;
-        let currentUserToken = currentAuth.adminToken || currentAuth.asmToken || currentAuth.rmToken || currentAuth.partnerToken;
+        let currentUser = currentAuth.adminUser || currentAuth.rsmUser || currentAuth.asmUser || currentAuth.rmUser || currentAuth.partnerUser;
+        let currentUserToken = currentAuth.adminToken || currentAuth.rsmToken || currentAuth.asmToken || currentAuth.rmToken || currentAuth.partnerToken;
         
         // If parent info is provided from backend, use it; otherwise use current user
         const parentInfo = parent || (currentUser ? { ...currentUser, token: currentUserToken } : null);
@@ -228,11 +259,28 @@ export default function ASM() {
     
         // Navigate to role
         switch (user.role) {
-          case "ASM": navigate("/asm"); break;
-          case "RM": navigate("/rm"); break;
-          case "PARTNER": navigate("/partner"); break;
-          case "CUSTOMER": navigate("/customer"); break;
-          default: navigate("/"); break;
+          case "SUPER_ADMIN":
+          case "ADMIN":
+            navigate("/admin");
+            break;
+          case "RSM":
+            navigate("/rsm");
+            break;
+          case "ASM":
+            navigate("/asm");
+            break;
+          case "RM":
+            navigate("/rm");
+            break;
+          case "PARTNER":
+            navigate("/partner");
+            break;
+          case "CUSTOMER":
+            navigate("/customer");
+            break;
+          default:
+            navigate("/asm");
+            break;
         }
       } catch (err) {
         console.error("Login as user failed:", err.response?.data || err.message);
@@ -279,6 +327,62 @@ const handleLoginAs = (userId) => {
       ),
     },
     { title: "User ID", dataIndex: "employeeId", key: "eid" },
+    {
+      title: "Specialty Type",
+      dataIndex: "asmType",
+      key: "type",
+      render: (v, asmUser) => {
+        const norm = (asmUser.asmType || asmUser.rsmType || "").toUpperCase();
+        let colorClasses = "bg-amber-50 text-amber-900 border-amber-300 focus:border-amber-500";
+        if (norm === "PERSONAL") {
+          colorClasses = "bg-blue-50 text-blue-900 border-blue-300 focus:border-blue-500";
+        } else if (norm === "BUSINESS") {
+          colorClasses = "bg-purple-50 text-purple-900 border-purple-300 focus:border-purple-500";
+        } else if (norm === "HOME_LAP") {
+          colorClasses = "bg-emerald-50 text-emerald-900 border-emerald-300 focus:border-emerald-500";
+        }
+        const isUpdating = updatingAsmId === asmUser._id;
+
+        return (
+          <div className="relative inline-block min-w-[190px]">
+            <select
+              value={norm}
+              disabled={isUpdating}
+              onChange={(e) => handleInlineTypeChange(asmUser, e.target.value)}
+              className={`w-full cursor-pointer appearance-none text-xs font-semibold px-3 py-1.5 pr-7 rounded-lg border shadow-sm outline-none transition-all ${colorClasses} ${
+                isUpdating ? "opacity-50 cursor-wait" : "hover:shadow"
+              }`}
+            >
+              <option value="">Select Specialty</option>
+              <option value="PERSONAL">Personal Loan ASM</option>
+              <option value="BUSINESS">Business Loan ASM</option>
+              <option value="HOME_LAP">Home &amp; LAP Loan ASM</option>
+            </select>
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+              {isUpdating ? "..." : "▼"}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Reporting RSM",
+      key: "reportingRsm",
+      render: (_, asmUser) => {
+        const parentName = asmUser.rsmName || asmUser.asmName;
+        return (
+          <span className="text-sm font-medium text-slate-700">
+            {parentName || "—"}
+          </span>
+        );
+      },
+    },
+    {
+      title: "Region",
+      dataIndex: "region",
+      key: "region",
+      render: (v) => <span className="text-sm">{v || "N/A"}</span>,
+    },
     {
       title: "Contact",
       dataIndex: "phone",
@@ -374,6 +478,15 @@ const handleLoginAs = (userId) => {
             }
           >
             Analytics
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-800 hover:underline"
+            onClick={() => setPasswordUser({ ...c, role: "ASM" })}
+            title="Change password for this ASM"
+          >
+            <KeyRound size={13} />
+            Password
           </button>
         </div>
       ),
@@ -496,7 +609,7 @@ const handleLoginAs = (userId) => {
               type="text"
               value={regionQuery}
               onChange={(e) => setRegionQuery(e.target.value)}
-              placeholder="Search by name "
+              placeholder="Search by name, ID or code"
               className="w-48 sm:w-64 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
             <button
@@ -508,6 +621,13 @@ const handleLoginAs = (userId) => {
             >
               <Download size={16} className="inline mr-2" />
               Export
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 text-sm bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary-hover shadow-sm transition-colors"
+              onClick={() => navigate("/admin/add-asm-page")}
+            >
+              + Add ASM
             </button>
           </>
         }
@@ -627,6 +747,12 @@ const handleLoginAs = (userId) => {
           if (!deleteAsmSubmitting) setAsmToDelete(null);
         }}
         onConfirm={handleConfirmDeleteAsm}
+      />
+
+      <AdminChangePasswordModal
+        isOpen={Boolean(passwordUser)}
+        user={passwordUser}
+        onClose={() => setPasswordUser(null)}
       />
     </>
   );

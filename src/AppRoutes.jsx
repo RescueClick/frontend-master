@@ -37,6 +37,7 @@ import AddASMPage from "./sidebars/users/Admin/addaccount/AddASMPage";
 import AddPartnerPage from "./sidebars/users/Admin/addaccount/AddPartnerPage";
 import AddRMPage from "./sidebars/users/Admin/addaccount/AddRMpage";
 import AddRSMPage from "./sidebars/users/Admin/addaccount/AddRSMPage.jsx";
+import ChatDashboard from "./sidebars/users/shared/chat/ChatDashboard";
 
 
 
@@ -208,6 +209,7 @@ const AppRoutes = () => {
       </Route>
 
 
+      <Route path="/login" element={<Navigate to="/LoginPage" replace />} />
       <Route path="/LoginPage" element={<LoginPageRoute />} />
       <Route
         path={PARTNER_REGISTRATION_ROUTE}
@@ -321,10 +323,11 @@ const AppRoutes = () => {
         element={<LapLoan />}
       />
       {/* Admin routes: Only accessible to Admin users */}
-      <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, "ADMIN", "SUPER_ADMIN"]} />}>
       <Route path="/admin" element={<AdmainSideBar />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="chat" element={<ChatDashboard currentRole="SUPER_ADMIN" />} />
         <Route path="asm" element={<AdiminASM />} />
         <Route path="rsm" element={<AdminRSM />} />
         <Route path="RSM" element={<AdminRSM />} />
@@ -369,26 +372,28 @@ const AppRoutes = () => {
       </Route>
       </Route>
 
-      {/* ASM routes: Only accessible to ASM users */}
-      <Route element={<ProtectedRoute allowedRoles={[ROLES.ASM]} />}>
-      <Route path="/asm" element={<AsmSiderbar />}>
+      {/* RSM routes: Regional Sales Manager (Senior) */}
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.RSM, ROLES.ASM, ROLES.ADMIN, "ADMIN", "SUPER_ADMIN"]} />}>
+      <Route path="/rsm" element={<AsmSiderbar />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AsmDashboard />} />
+        <Route path="chat" element={<ChatDashboard currentRole="RSM" />} />
+        <Route path="asms" element={<AsmRSM />} />
         <Route path="rsms" element={<AsmRSM />} />
         <Route path="rms" element={<AsmRM />} /> 
         <Route path="applications" element={<Applications />} />
         <Route path="partners" element={<AsmPartners />} />
         <Route path="move-partners" element={<AsmMovePartners />} />
         <Route path="payouts" element={<AsmPayouts />} />
-        <Route path="pending-payout" element={<Navigate to="/asm/payouts" replace state={{ defaultTab: "pending" }} />} />
-        <Route path="done-payout" element={<Navigate to="/asm/payouts" replace state={{ defaultTab: "done" }} />} />
+        <Route path="pending-payout" element={<Navigate to="/rsm/payouts" replace state={{ defaultTab: "pending" }} />} />
+        <Route path="done-payout" element={<Navigate to="/rsm/payouts" replace state={{ defaultTab: "done" }} />} />
         <Route path="incentives" element={<AsmIncentives />} />
-        <Route path="pending-incentive" element={<Navigate to="/asm/incentives" replace state={{ defaultTab: "all" }} />} />
-        <Route path="eligible-incentive" element={<Navigate to="/asm/incentives" replace state={{ defaultTab: "eligible" }} />} />
-        <Route path="done-incentive" element={<Navigate to="/asm/incentives" replace state={{ defaultTab: "paid" }} />} />
-        <Route path="withdrawals" element={<Navigate to="/asm/payouts" replace />} />
+        <Route path="pending-incentive" element={<Navigate to="/rsm/incentives" replace state={{ defaultTab: "all" }} />} />
+        <Route path="eligible-incentive" element={<Navigate to="/rsm/incentives" replace state={{ defaultTab: "eligible" }} />} />
+        <Route path="done-incentive" element={<Navigate to="/rsm/incentives" replace state={{ defaultTab: "paid" }} />} />
+        <Route path="withdrawals" element={<Navigate to="/rsm/payouts" replace />} />
         <Route path="follow-ups" element={<AsmFollowUps />} />
-        <Route path="partner-targets" element={<Navigate to="/asm/incentives" replace />} />
+        <Route path="partner-targets" element={<Navigate to="/rsm/incentives" replace />} />
         <Route path="settings" element={<PasswordSettings  />} />
         <Route path="EditProfile" element={<EditProfile />} />
         <Route path="analytics" element={<ASManalytics />} />
@@ -396,11 +401,12 @@ const AppRoutes = () => {
       </Route>
       </Route>
 
-      {/* RSM routes: Only accessible to RSM users */}
-      <Route element={<ProtectedRoute allowedRoles={[ROLES.RSM]} />}>
-      <Route path="/rsm" element={<RsmSidebar />}>
+      {/* ASM routes: Area Sales Manager (Specialized) */}
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.ASM, ROLES.RSM, ROLES.ADMIN, "ADMIN", "SUPER_ADMIN"]} />}>
+      <Route path="/asm" element={<RsmSidebar />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<RsmDashboard />} />
+        <Route path="chat" element={<ChatDashboard currentRole="ASM" />} />
         <Route path="rms" element={<RsmRMs />} />
         <Route path="partners" element={<RsmPartners />} />
         <Route path="applications" element={<RsmApplications />} />
@@ -414,10 +420,11 @@ const AppRoutes = () => {
       </Route>
 
       {/* RM routes: Only accessible to RM users */}
-      <Route element={<ProtectedRoute allowedRoles={[ROLES.RM]} />}>
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.RM, ROLES.ASM, ROLES.RSM, ROLES.ADMIN, "ADMIN", "SUPER_ADMIN"]} />}>
       <Route path="/rm" element={<RmSidebar />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<RmDashboard />} />
+        <Route path="chat" element={<ChatDashboard currentRole="RM" />} />
         <Route path="customers" element={<RmCustomers />} />
         <Route path="partners" element={<RmPartners />} />
         <Route path="leads" element={<RmLeads />} />
@@ -451,7 +458,7 @@ const AppRoutes = () => {
 
       {/* Partner routes: Only accessible to Partner users */}
 
-      <Route element={<ProtectedRoute allowedRoles={[ROLES.PARTNER]} />}>
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.PARTNER, ROLES.ADMIN, "ADMIN", "SUPER_ADMIN"]} />}>
         <Route path="/partner" element={<PartnerSideBar />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<PartnerDashboard />} />
@@ -481,7 +488,7 @@ const AppRoutes = () => {
           <Route path="lap-loan-self-employee" element={<LapLoanSelfEmployee />} />
         </Route>
       </Route>
-      <Route element={<ProtectedRoute allowedRoles={[ROLES.CUSTOMER]} />}>
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.CUSTOMER, ROLES.ADMIN, "ADMIN", "SUPER_ADMIN"]} />}>
       <Route path="/customer" element={<Customer />} />
       </Route>
 

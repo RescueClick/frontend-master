@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Download, X } from "lucide-react";
+import { Search, Download, X, Edit2 } from "lucide-react";
 import { fetchRsmList, activateRSM, asmDeactivateRsm, deleteRsmAsm } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -42,6 +42,45 @@ export default function AsmRSM() {
   const [targetRsmWorkloadId, setTargetRsmWorkloadId] = useState("");
   const [workloadSearch, setWorkloadSearch] = useState("");
   const [workloadSubmitting, setWorkloadSubmitting] = useState(false);
+
+  // Edit RSM State
+  const [editingRsm, setEditingRsm] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    region: "",
+    rsmType: "",
+  });
+  const [editFormErrors, setEditFormErrors] = useState({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [updatingRsmId, setUpdatingRsmId] = useState(null);
+
+  const handleInlineTypeChange = async (rsm, newType) => {
+    if (!newType || newType === rsm.rsmType) return;
+    setUpdatingRsmId(rsm._id);
+    try {
+      const { asmToken } = getAuthData() || {};
+      await axios.patch(
+        `${backendurl}/asm/rsm/${rsm._id}`,
+        { rsmType: newType },
+        { headers: { Authorization: `Bearer ${asmToken}` } }
+      );
+      const typeNames = {
+        PERSONAL: "Personal Loan RSM",
+        BUSINESS: "Business Loan RSM",
+        HOME_LAP: "Home & LAP Loan RSM",
+      };
+      toast.success(`${rsm.firstName} ${rsm.lastName} updated to ${typeNames[newType] || newType}!`);
+      dispatch(fetchRsmList());
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to update RSM type";
+      toast.error(msg);
+    } finally {
+      setUpdatingRsmId(null);
+    }
+  };
 
   const { data: rsmsData, loading, error } = useSelector((state) => state.asm.rsmList || { data: [], loading: false, error: null });
   
@@ -203,13 +242,12 @@ export default function AsmRSM() {
     if (!rsmWorkloadSource || !Array.isArray(rsms)) return [];
     const term = (workloadSearch || "").trim().toLowerCase();
     return rsms
-      .filter(
-        (r) =>
-          r._id !== rsmWorkloadSource._id &&
-          r.status === "ACTIVE" &&
-          (r.rsmType || "").toUpperCase() ===
-            (rsmWorkloadSource.rsmType || "").toUpperCase()
-      )
+      .filter((r) => {
+        if (r._id === rsmWorkloadSource._id || r.status !== "ACTIVE") return false;
+        const t1 = (r.rsmType || "").toUpperCase();
+        const t2 = (rsmWorkloadSource.rsmType || "").toUpperCase();
+        return t1 === t2 || (t1 === "BUSINESS_HOME" && (t2 === "BUSINESS" || t2 === "HOME_LAP")) || (t2 === "BUSINESS_HOME" && (t1 === "BUSINESS" || t1 === "HOME_LAP"));
+      })
       .filter((r) =>
         term
           ? `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase().includes(term) ||
@@ -285,11 +323,28 @@ export default function AsmRSM() {
 
       // Navigate to role
       switch (user.role) {
-        case "RSM": navigate("/rsm"); break;
-        case "RM": navigate("/rm"); break;
-        case "PARTNER": navigate("/partner"); break;
-        case "CUSTOMER": navigate("/customer"); break;
-        default: navigate("/"); break;
+        case "SUPER_ADMIN":
+        case "ADMIN":
+          navigate("/admin");
+          break;
+        case "RSM":
+          navigate("/rsm");
+          break;
+        case "ASM":
+          navigate("/asm");
+          break;
+        case "RM":
+          navigate("/rm");
+          break;
+        case "PARTNER":
+          navigate("/partner");
+          break;
+        case "CUSTOMER":
+          navigate("/customer");
+          break;
+        default:
+          navigate("/asm");
+          break;
       }
     } catch (err) {
       console.error("Login as user failed:", err.response?.data || err.message);
@@ -328,9 +383,73 @@ export default function AsmRSM() {
     }
   };
 
+  const handleStartEdit = (rsm) => {
+    setEditingRsm(rsm);
+    setEditFormData({
+      firstName: rsm.firstName || "",
+      lastName: rsm.lastName || "",
+      phone: rsm.phone || "",
+      email: rsm.email || "",
+      region: rsm.region || "",
+      rsmType: rsm.rsmType || "",
+    });
+    setEditFormErrors({});
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+    if (editFormErrors[name]) {
+      setEditFormErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleSaveEditRsm = async (e) => {
+    e.preventDefault();
+    if (!editingRsm) return;
+
+    const errors = {};
+    if (!editFormData.firstName.trim()) errors.firstName = "First name is required";
+    if (!editFormData.lastName.trim()) errors.lastName = "Last name is required";
+    if (!editFormData.phone.trim()) errors.phone = "Phone is required";
+    if (!editFormData.email.trim()) errors.email = "Email is required";
+    if (!editFormData.rsmType) errors.rsmType = "RSM Type is required";
+
+    if (Object.keys(errors).length > 0) {
+      setEditFormErrors(errors);
+      return;
+    }
+
+    setEditSubmitting(true);
+    try {
+      const { asmToken } = getAuthData() || {};
+      await axios.patch(
+        `${backendurl}/asm/rsm/${editingRsm._id}`,
+        {
+          firstName: editFormData.firstName.trim(),
+          lastName: editFormData.lastName.trim(),
+          phone: editFormData.phone.trim(),
+          email: editFormData.email.trim(),
+          region: editFormData.region,
+          rsmType: editFormData.rsmType,
+        },
+        { headers: { Authorization: `Bearer ${asmToken}` } }
+      );
+
+      toast.success("RSM updated successfully!");
+      dispatch(fetchRsmList());
+      setEditingRsm(null);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to update RSM";
+      toast.error(msg);
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
   const asmRsmColumns = [
     {
-      title: "RSM name",
+      title: "ASM name",
       key: "name",
       render: (_, rsm) => (
         <span className="align-top text-sm font-medium text-gray-900">
@@ -340,20 +459,47 @@ export default function AsmRSM() {
     },
     { title: "User ID", dataIndex: "employeeId", key: "employeeId" },
     {
-      title: "RSM type",
+      title: "Specialty type",
       dataIndex: "rsmType",
       key: "rsmType",
-      render: (type) => (
-        <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-            (type || "").toUpperCase() === "PERSONAL"
-              ? "bg-purple-100 text-purple-800"
-              : "bg-blue-100 text-blue-800"
-          }`}
-        >
-          {type || "N/A"}
-        </span>
-      ),
+      render: (type, rsm) => {
+        const norm = (rsm.asmType || rsm.rsmType || "").toUpperCase();
+        let colorClasses = "bg-amber-50 text-amber-900 border-amber-300 focus:border-amber-500";
+        if (norm === "PERSONAL") {
+          colorClasses = "bg-blue-50 text-blue-900 border-blue-300 focus:border-blue-500";
+        } else if (norm === "BUSINESS") {
+          colorClasses = "bg-purple-50 text-purple-900 border-purple-300 focus:border-purple-500";
+        } else if (norm === "HOME_LAP") {
+          colorClasses = "bg-emerald-50 text-emerald-900 border-emerald-300 focus:border-emerald-500";
+        }
+
+        const isUpdating = updatingRsmId === rsm._id;
+
+        return (
+          <div className="relative inline-block min-w-[200px]">
+            <select
+              value={norm}
+              disabled={isUpdating}
+              onChange={(e) => handleInlineTypeChange(rsm, e.target.value)}
+              className={`w-full cursor-pointer appearance-none text-xs font-semibold px-3 py-1.5 pr-7 rounded-lg border shadow-sm outline-none transition-all ${colorClasses} ${
+                isUpdating ? "opacity-50 cursor-wait" : "hover:shadow"
+              }`}
+            >
+              {(!rsm.rsmType || rsm.rsmType === "BUSINESS_HOME") && (
+                <option value="BUSINESS_HOME" disabled>
+                  Business &amp; Home ASM (Legacy)
+                </option>
+              )}
+              <option value="PERSONAL">Personal Loan ASM</option>
+              <option value="BUSINESS">Business Loan ASM</option>
+              <option value="HOME_LAP">Home &amp; LAP Loan ASM</option>
+            </select>
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+              {isUpdating ? "..." : "▼"}
+            </span>
+          </div>
+        );
+      },
     },
     {
       title: "Contact",
@@ -433,6 +579,14 @@ export default function AsmRSM() {
         <div className="flex h-full flex-wrap items-center gap-2">
           <button
             type="button"
+            className="rounded px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-1"
+            onClick={() => handleStartEdit(rsm)}
+          >
+            <Edit2 className="w-3 h-3" />
+            Edit / Role
+          </button>
+          <button
+            type="button"
             className="rounded px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
             onClick={() => openTransferModal(rsm)}
           >
@@ -471,8 +625,8 @@ export default function AsmRSM() {
   return (
     <>
       <DashboardTablePage
-        title="Regional Sales Managers"
-        subtitle={`Total ${formatNumber(filteredRsms?.length || 0)} RSMs found`}
+        title="Area Sales Managers"
+        subtitle={`Total ${formatNumber(filteredRsms?.length || 0)} ASMs found`}
         headerRight={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="relative">
@@ -483,7 +637,7 @@ export default function AsmRSM() {
               <input
                 type="text"
                 className="w-72 max-w-[80vw] rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-primary sm:w-80 sm:py-2.5"
-                placeholder="Search by name, employee ID, or RSM type"
+                placeholder="Search by name, employee ID, or specialty type"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -533,14 +687,12 @@ export default function AsmRSM() {
         onSearchChange={setReplacementSearch}
         searchPlaceholder="Search replacement RSM..."
         candidates={(rsms || [])
-          .filter(
-            (r) =>
-              rsmToDeactivate &&
-              r._id !== rsmToDeactivate._id &&
-              r.status === "ACTIVE" &&
-              String(r.rsmType || "").toUpperCase() ===
-                String(rsmToDeactivate.rsmType || "").toUpperCase()
-          )
+          .filter((r) => {
+            if (!rsmToDeactivate || r._id === rsmToDeactivate._id || r.status !== "ACTIVE") return false;
+            const t1 = String(r.rsmType || "").toUpperCase();
+            const t2 = String(rsmToDeactivate.rsmType || "").toUpperCase();
+            return t1 === t2 || (t1 === "BUSINESS_HOME" && (t2 === "BUSINESS" || t2 === "HOME_LAP")) || (t2 === "BUSINESS_HOME" && (t1 === "BUSINESS" || t1 === "HOME_LAP"));
+          })
           .filter((r) =>
             `${r.firstName || ""} ${r.lastName || ""} ${r.employeeId || ""}`
               .toLowerCase()
@@ -723,6 +875,138 @@ export default function AsmRSM() {
         confirmLabel={workloadSubmitting ? "Transferring..." : "Confirm & Transfer Workload"}
         confirmDisabled={!targetRsmWorkloadId || workloadSubmitting}
       />
+
+      {/* Edit RSM / Change Role Modal */}
+      {editingRsm && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 text-white flex items-center justify-between" style={{ backgroundColor: colors.primary }}>
+              <div>
+                <h3 className="text-lg font-bold">Edit RSM / Change Role Type</h3>
+                <p className="text-xs text-white/90">
+                  {editingRsm.firstName} {editingRsm.lastName} ({editingRsm.employeeId || "No Emp ID"})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingRsm(null)}
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSaveEditRsm} className="p-6 overflow-y-auto space-y-4 flex-1">
+              {editingRsm.rsmType === "BUSINESS_HOME" && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
+                  <span className="font-bold">Notice:</span> This RSM is currently configured under the legacy combined <strong>"Business &amp; Home RSM"</strong> role. Please reassign this RSM to either <strong>Business Loan RSM</strong> or <strong>Home &amp; LAP Loan RSM</strong>.
+                </div>
+              )}
+
+              {/* RSM Type Selector as Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  RSM Type *
+                </label>
+                <select
+                  name="rsmType"
+                  value={editFormData.rsmType}
+                  onChange={handleEditInputChange}
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary"
+                >
+                  <option value="">Select RSM Type</option>
+                  <option value="PERSONAL">Personal Loan RSM</option>
+                  <option value="BUSINESS">Business Loan RSM</option>
+                  <option value="HOME_LAP">Home &amp; LAP Loan RSM</option>
+                </select>
+                {editFormErrors.rsmType && (
+                  <p className="text-xs text-red-600 mt-1">{editFormErrors.rsmType}</p>
+                )}
+              </div>
+
+              {/* Basic Details Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={editFormData.firstName}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.firstName && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.firstName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={editFormData.lastName}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.lastName && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.lastName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={editFormData.phone}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.phone && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.phone}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={editFormData.email}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.email && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.email}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-4 border-t border-gray-200 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingRsm(null)}
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="px-5 py-2 text-sm font-semibold rounded-lg text-white disabled:opacity-50 transition-colors"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  {editSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

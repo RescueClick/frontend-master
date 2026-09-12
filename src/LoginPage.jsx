@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { GoogleLogin } from '@react-oauth/google';
 import { loginUser } from './feature/thunks/adminThunks';
 import { clearAuthData, getAuthData, saveAuthData } from './utils/localStorage';
+import { getSessionDashboardBasePath } from './utils/sessionDashboardPath';
 import {
   isGoogleLoginConfigured,
   loginWithGoogleIdToken,
@@ -174,6 +175,7 @@ const LoginPage = () => {
     const r = String(role || '').toUpperCase();
     const map = {
       SUPER_ADMIN: '/admin',
+      ADMIN: '/admin',
       ASM: '/asm',
       RSM: '/rsm',
       RM: '/rm',
@@ -251,12 +253,7 @@ const LoginPage = () => {
         loginUser({ email: formData.username.trim(), password: formData.password })
       ).unwrap();
 
-      const { impersonationStack = [] } = getAuthData();
-      const impersonated =
-        impersonationStack.length > 0
-          ? impersonationStack[impersonationStack.length - 1]?.user?.role
-          : null;
-      const role = impersonated || result?.user?.role;
+      const role = result?.user?.role;
       const path = routeForRole(role);
 
       if (path) {

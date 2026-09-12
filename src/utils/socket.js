@@ -24,7 +24,13 @@ class SocketManager {
     }
 
     const authData = getAuthData();
-    const token = authData?.adminToken || authData?.asmToken || authData?.rmToken || authData?.partnerToken || authData?.customerToken;
+    const token =
+      authData?.adminToken ||
+      authData?.asmToken ||
+      authData?.rsmToken ||
+      authData?.rmToken ||
+      authData?.partnerToken ||
+      authData?.customerToken;
 
     if (!token) {
       return null;

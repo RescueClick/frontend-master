@@ -21,6 +21,7 @@ import {
   FileCheck,
   Crown,
   Sparkles,
+  MessageSquare,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -33,6 +34,7 @@ import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
 import DhanSourceLoader from "../components/DhanSourceLoader";
 import { useSidebarNotifications } from "../hooks/useSidebarNotifications";
+import StaffChatWidget from "./users/shared/chat/StaffChatWidget";
 
 // Admin sidebar component
 const AdminSideBar = () => {
@@ -99,6 +101,8 @@ const AdminSideBar = () => {
 
   const getBadgeCount = (name) => {
     switch (name) {
+      case "Chat":
+        return counts.chat;
       case "Partner":
         return counts.partner;
       case "Payout":
@@ -113,8 +117,8 @@ const AdminSideBar = () => {
   // Sidebar navigation items with icons and routes
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: "/admin/dashboard" },
-    { name: "ASM", icon: Users, path: "/admin/asm" },
     { name: "RSM", icon: Users, path: "/admin/rsm" },
+    { name: "ASM", icon: Users, path: "/admin/asm" },
     { name: "RM", icon: Users, path: "/admin/rm" },
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
     { name: "Move Partners", icon: Users, path: "/admin/move-partners", highlight: true },
@@ -349,6 +353,8 @@ const AdminSideBar = () => {
         </main>
       </div>
 
+      {/* Floating Bottom-Right Staff Chat Widget */}
+      <StaffChatWidget currentRole="SUPER_ADMIN" />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Mail,
   Phone,
@@ -17,14 +17,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData } from "../../../../utils/localStorage";
-import { createRSM, fetchAsms } from "../../../../feature/thunks/adminThunks";
+import { createRSM } from "../../../../feature/thunks/adminThunks";
 import { INDIAN_STATES } from "../../../../utils/indianStates";
 
 const AddRSMPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const { data: asms } = useSelector((state) => state.admin.asm);
   const { loading } = useSelector((state) => state.admin.createRSMAdmin || { loading: false });
 
   const [formData, setFormData] = useState({
@@ -36,8 +35,6 @@ const AddRSMPage = () => {
     region: "",
     password: "",
     confirmPassword: "",
-    asmId: "",
-    rsmType: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -68,14 +65,6 @@ const AddRSMPage = () => {
     hasNumber: /\d/.test(password),
     hasSpecial: /[^A-Za-z\d]/.test(password),
   });
-
-  // Load available ASMs when page opens
-  useEffect(() => {
-    const { adminToken } = getAuthData() || {};
-    if (adminToken) {
-      dispatch(fetchAsms(adminToken));
-    }
-  }, [dispatch]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -116,8 +105,6 @@ const AddRSMPage = () => {
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
-    if (!formData.asmId) newErrors.asmId = "ASM is required";
-    if (!formData.rsmType) newErrors.rsmType = "RSM type is required";
     if (formData?.dob && getAgeFromDOB(formData?.dob) < 18) {
       newErrors.dob = "Must be at least 18 years old";
     }
@@ -170,15 +157,13 @@ const AddRSMPage = () => {
     try {
       await dispatch(
         createRSM({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          email: formData.email,
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
           dob: formData.dob,
-          region: formData.region,
+          region: formData.region.trim(),
           password: formData.password,
-          asmId: formData.asmId,
-          rsmType: formData.rsmType,
           token: adminToken,
         })
       ).unwrap();
@@ -196,8 +181,6 @@ const AddRSMPage = () => {
         region: "",
         password: "",
         confirmPassword: "",
-        asmId: "",
-        rsmType: "",
       });
     } catch (err) {
       setIsSuccess(false);
@@ -218,7 +201,7 @@ const AddRSMPage = () => {
       className="min-h-screen"
       style={{ backgroundColor: colors.background }}
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center mb-4">
@@ -232,20 +215,23 @@ const AddRSMPage = () => {
             </button>
           </div>
           <h1 className="text-3xl font-bold" style={{ color: colors.text }}>
-            Add New RSM
+            Add New Regional Sales Manager (RSM)
           </h1>
           <p className="text-gray-600 mt-2">
-            Fill in the details to add a new Regional Sales Manager
+            Fill in the details to create a senior Regional Sales Manager reporting to Admin
           </p>
         </div>
 
         {/* Success/Failure popup */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
               <div className="relative p-6 pb-4">
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    if (isSuccess) navigate("/admin/rsm");
+                  }}
                   className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                   type="button"
                 >
@@ -274,11 +260,23 @@ const AddRSMPage = () => {
                     "We couldn't process your request. Please try again or contact support."}
                 </p>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-3">
+                  {isSuccess && (
+                    <button
+                      type="button"
+                      onClick={() => navigate("/admin/rsm")}
+                      className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-all"
+                    >
+                      View RSM List
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-6 py-3 rounded-lg text-white font-medium transition-all duration-200"
+                    onClick={() => {
+                      setShowModal(false);
+                      if (isSuccess) navigate("/admin/rsm");
+                    }}
+                    className="px-6 py-2.5 rounded-lg text-white font-medium transition-all duration-200"
                     style={{ backgroundColor: "var(--color-brand-primary)" }}
                   >
                     OK
@@ -352,7 +350,7 @@ const AddRSMPage = () => {
                     value={formData.phone}
                     onChange={handleInputChange}
                     className={`${inputClassName("phone")} pl-10`}
-                    placeholder="Enter phone number"
+                    placeholder="Enter 10-digit phone number"
                   />
                 </div>
                 {errors.phone && (
@@ -410,7 +408,7 @@ const AddRSMPage = () => {
               {/* State */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  State *
+                  State / Region *
                 </label>
                 <select
                   name="region"
@@ -428,53 +426,6 @@ const AddRSMPage = () => {
                 {errors.region && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">
                     <AlertCircle className="w-4 h-4 mr-1" /> {errors.region}
-                  </p>
-                )}
-              </div>
-
-              {/* ASM Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Assign to ASM *
-                </label>
-                <select
-                  name="asmId"
-                  value={formData.asmId}
-                  onChange={handleInputChange}
-                  className={inputClassName("asmId")}
-                >
-                  <option value="">Select ASM</option>
-                  {(asms || []).map((asm) => (
-                    <option key={asm._id} value={asm._id}>
-                      {asm.firstName} {asm.lastName} ({asm.employeeId})
-                    </option>
-                  ))}
-                </select>
-                {errors.asmId && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.asmId}
-                  </p>
-                )}
-              </div>
-
-              {/* RSM Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  RSM Type *
-                </label>
-                <select
-                  name="rsmType"
-                  value={formData.rsmType}
-                  onChange={handleInputChange}
-                  className={inputClassName("rsmType")}
-                >
-                  <option value="">Select RSM Type</option>
-                  <option value="PERSONAL">Personal Loan RSM</option>
-                  <option value="BUSINESS_HOME">Business & Home Loan RSM</option>
-                </select>
-                {errors.rsmType && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.rsmType}
                   </p>
                 )}
               </div>
@@ -567,8 +518,6 @@ const AddRSMPage = () => {
               </div>
             </div>
 
-            {/* (Success/Failure is shown via the popup above) */}
-
             {/* Actions */}
             <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">
               <button
@@ -605,5 +554,3 @@ const AddRSMPage = () => {
 };
 
 export default AddRSMPage;
-
-

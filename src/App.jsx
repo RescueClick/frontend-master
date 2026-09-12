@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { getAuthData } from "./utils/localStorage";
+import { getSessionDashboardBasePath } from "./utils/sessionDashboardPath";
 import DhanSourceLoader from "./components/DhanSourceLoader";
 
 /** Keep Suspense fallback visible at least this long so the loader does not flash off. */
@@ -57,28 +58,23 @@ function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      const { impersonationStack = [], adminToken } = getAuthData();
+      const { impersonationStack = [] } = getAuthData();
 
+      // Only intervene when there is an active impersonation stack to unwind
       if (impersonationStack.length > 0) {
         const stack = [...impersonationStack];
         stack.pop();
         localStorage.setItem("impersonation_stack", JSON.stringify(stack));
 
         if (stack.length > 0) {
-          navigate(
-            `/${stack[stack.length - 1].user.role.toLowerCase()}`,
-            { replace: true }
-          );
-        } else if (adminToken) {
-          navigate("/admin/dashboard", { replace: true });
+          const nextRole = stack[stack.length - 1].user?.role?.toLowerCase() || "admin";
+          navigate(`/${nextRole}`, { replace: true });
         } else {
-          navigate("/", { replace: true });
+          const homePath = getSessionDashboardBasePath() || "/LoginPage";
+          navigate(homePath, { replace: true });
         }
-      } else if (adminToken) {
-        navigate("/admin/dashboard", { replace: true });
-      } else {
-        navigate("/", { replace: true });
       }
+      // When not impersonating, let standard browser routing handle back/forward naturally!
     };
 
     window.addEventListener("popstate", handlePopState);

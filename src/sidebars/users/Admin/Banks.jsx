@@ -35,7 +35,9 @@ const loanTypeOptions = [
 
 const rsmTypeOptions = [
   { value: "PERSONAL", label: "Personal Loan RSM" },
-  { value: "BUSINESS_HOME", label: "Business & Home Loan RSM" },
+  { value: "BUSINESS", label: "Business Loan RSM" },
+  { value: "HOME_LAP", label: "Home & LAP Loan RSM" },
+  { value: "BUSINESS_HOME", label: "Business & Home Loan RSM (Legacy)" },
 ];
 
 const maskText = (text) => {

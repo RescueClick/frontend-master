@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Eye, Search, Download, Plus, X, User, Mail, Phone, Lock, Calendar, AlertCircle, CheckCircle, Trash2 } from "lucide-react";
+import { Eye, Search, Download, Plus, X, User, Mail, Phone, Lock, Calendar, AlertCircle, CheckCircle, Trash2, Edit2, KeyRound } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchRSMs, createRSM, fetchAsms, activateRSM, adminDeactivateRsm, deleteRsm } from "../../../feature/thunks/adminThunks";
+import { fetchRSMs, createRSM, updateRsm, fetchAsms, activateRSM, adminDeactivateRsm, deleteRsm } from "../../../feature/thunks/adminThunks";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
+import AdminChangePasswordModal from "../../../components/shared/AdminChangePasswordModal";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
@@ -47,6 +48,7 @@ export default function RSM() {
   const [targetRsmWorkloadId, setTargetRsmWorkloadId] = useState("");
   const [workloadSearch, setWorkloadSearch] = useState("");
   const [workloadSubmitting, setWorkloadSubmitting] = useState(false);
+  const [passwordUser, setPasswordUser] = useState(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -62,6 +64,46 @@ export default function RSM() {
   const [formErrors, setFormErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Edit RSM State
+  const [editingRsm, setEditingRsm] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    region: "",
+    asmId: "",
+    rsmType: "",
+  });
+  const [editFormErrors, setEditFormErrors] = useState({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [updatingRsmId, setUpdatingRsmId] = useState(null);
+
+  const handleInlineTypeChange = async (rsm, newType) => {
+    if (!newType || newType === rsm.rsmType) return;
+    setUpdatingRsmId(rsm._id);
+    try {
+      await dispatch(
+        updateRsm({
+          rsmId: rsm._id,
+          data: {
+            rsmType: newType,
+          },
+        })
+      ).unwrap();
+      const typeNames = {
+        PERSONAL: "Personal Loan RSM",
+        BUSINESS: "Business Loan RSM",
+        HOME_LAP: "Home & LAP Loan RSM",
+      };
+      toast.success(`${rsm.firstName} ${rsm.lastName} updated to ${typeNames[newType] || newType}!`);
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : err?.message || "Failed to update RSM type");
+    } finally {
+      setUpdatingRsmId(null);
+    }
+  };
 
   // Fetch RSMs and ASMs on mount
   useEffect(() => {
@@ -188,12 +230,28 @@ export default function RSM() {
   
       // Navigate to role
       switch (user.role) {
-        case "ASM": navigate("/asm"); break;
-        case "RSM": navigate("/rsm"); break;
-        case "RM": navigate("/rm"); break;
-        case "PARTNER": navigate("/partner"); break;
-        case "CUSTOMER": navigate("/customer"); break;
-        default: navigate("/"); break;
+        case "SUPER_ADMIN":
+        case "ADMIN":
+          navigate("/admin");
+          break;
+        case "RSM":
+          navigate("/rsm");
+          break;
+        case "ASM":
+          navigate("/asm");
+          break;
+        case "RM":
+          navigate("/rm");
+          break;
+        case "PARTNER":
+          navigate("/partner");
+          break;
+        case "CUSTOMER":
+          navigate("/customer");
+          break;
+        default:
+          navigate("/rsm");
+          break;
       }
     } catch (err) {
       console.error("Login as user failed:", err.response?.data || err.message);
@@ -219,13 +277,12 @@ export default function RSM() {
     if (!rsmToDeactivate || !Array.isArray(rsms)) return [];
     const term = (searchRsm || "").trim().toLowerCase();
     return rsms
-      .filter(
-        (r) =>
-          r._id !== rsmToDeactivate._id &&
-          r.status === "ACTIVE" &&
-          (r.rsmType || "").toUpperCase() ===
-            (rsmToDeactivate.rsmType || "").toUpperCase()
-      )
+      .filter((r) => {
+        if (r._id === rsmToDeactivate._id || r.status !== "ACTIVE") return false;
+        const t1 = (r.rsmType || "").toUpperCase();
+        const t2 = (rsmToDeactivate.rsmType || "").toUpperCase();
+        return t1 === t2 || (t1 === "BUSINESS_HOME" && (t2 === "BUSINESS" || t2 === "HOME_LAP")) || (t2 === "BUSINESS_HOME" && (t1 === "BUSINESS" || t1 === "HOME_LAP"));
+      })
       .filter((r) =>
         term
           ? `${r.firstName} ${r.lastName}`.toLowerCase().includes(term) ||
@@ -244,13 +301,12 @@ export default function RSM() {
     if (!rsmWorkloadSource || !Array.isArray(rsms)) return [];
     const term = (workloadSearch || "").trim().toLowerCase();
     return rsms
-      .filter(
-        (r) =>
-          r._id !== rsmWorkloadSource._id &&
-          r.status === "ACTIVE" &&
-          (r.rsmType || "").toUpperCase() ===
-            (rsmWorkloadSource.rsmType || "").toUpperCase()
-      )
+      .filter((r) => {
+        if (r._id === rsmWorkloadSource._id || r.status !== "ACTIVE") return false;
+        const t1 = (r.rsmType || "").toUpperCase();
+        const t2 = (rsmWorkloadSource.rsmType || "").toUpperCase();
+        return t1 === t2 || (t1 === "BUSINESS_HOME" && (t2 === "BUSINESS" || t2 === "HOME_LAP")) || (t2 === "BUSINESS_HOME" && (t1 === "BUSINESS" || t1 === "HOME_LAP"));
+      })
       .filter((r) =>
         term
           ? `${r.firstName} ${r.lastName}`.toLowerCase().includes(term) ||
@@ -357,8 +413,6 @@ export default function RSM() {
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
-    if (!formData.asmId) newErrors.asmId = "ASM is required";
-    if (!formData.rsmType) newErrors.rsmType = "RSM Type is required";
     if (formData.dob && getAgeFromDOB(formData.dob) < 18) {
       newErrors.dob = "Must be at least 18 years old";
     }
@@ -479,8 +533,6 @@ export default function RSM() {
         dob: formData.dob,
         region: formData.region,
         password: formData.password,
-        asmId: formData.asmId,
-        rsmType: formData.rsmType,
         rmIds: selectedRmIdsForCreate,
         token: adminToken,
       })).unwrap();
@@ -507,6 +559,70 @@ export default function RSM() {
     }
   };
 
+  const handleStartEdit = (rsm) => {
+    setEditingRsm(rsm);
+    setEditFormData({
+      firstName: rsm.firstName || "",
+      lastName: rsm.lastName || "",
+      phone: rsm.phone || "",
+      email: rsm.email || "",
+      region: rsm.region || "",
+      asmId: rsm.asmId || "",
+      rsmType: rsm.rsmType || "",
+    });
+    setEditFormErrors({});
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+    if (editFormErrors[name]) {
+      setEditFormErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleSaveEditRsm = async (e) => {
+    e.preventDefault();
+    if (!editingRsm) return;
+
+    const errors = {};
+    if (!editFormData.firstName.trim()) errors.firstName = "First name is required";
+    if (!editFormData.lastName.trim()) errors.lastName = "Last name is required";
+    if (!editFormData.phone.trim()) errors.phone = "Phone is required";
+    if (!editFormData.email.trim()) errors.email = "Email is required";
+    if (editingRsm.rsmType && !editFormData.rsmType) errors.rsmType = "RSM Type is required";
+
+    if (Object.keys(errors).length > 0) {
+      setEditFormErrors(errors);
+      return;
+    }
+
+    setEditSubmitting(true);
+    try {
+      await dispatch(
+        updateRsm({
+          rsmId: editingRsm._id,
+          data: {
+            firstName: editFormData.firstName.trim(),
+            lastName: editFormData.lastName.trim(),
+            phone: editFormData.phone.trim(),
+            email: editFormData.email.trim(),
+            region: editFormData.region,
+            asmId: editFormData.asmId || undefined,
+            rsmType: editFormData.rsmType,
+          },
+        })
+      ).unwrap();
+
+      toast.success("RSM updated successfully!");
+      setEditingRsm(null);
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : err?.message || "Failed to update RSM");
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
   const rsmColumns = [
     {
       title: "User Name",
@@ -519,13 +635,11 @@ export default function RSM() {
     },
     { title: "User ID", dataIndex: "employeeId", key: "eid" },
     {
-      title: "RSM Type",
-      dataIndex: "rsmType",
-      key: "type",
+      title: "Region",
+      dataIndex: "region",
+      key: "region",
       render: (v) => (
-        <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
-          {v || "N/A"}
-        </span>
+        <span className="text-sm font-medium text-slate-800">{v || "All Territories"}</span>
       ),
     },
     {
@@ -537,10 +651,9 @@ export default function RSM() {
       ),
     },
     {
-      title: "ASM",
-      dataIndex: "asmName",
-      key: "asm",
-      render: (v) => <span className="text-sm">{v || "N/A"}</span>,
+      title: "Reporting To",
+      key: "reporting",
+      render: () => <span className="text-sm font-medium text-blue-700">Super Admin</span>,
     },
     {
       title: "Created On",
@@ -627,6 +740,14 @@ export default function RSM() {
         <div className="flex h-full flex-wrap items-center gap-2">
           <button
             type="button"
+            className="rounded px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-1"
+            onClick={() => handleStartEdit(rsm)}
+          >
+            <Edit2 className="w-3 h-3" />
+            Edit Details
+          </button>
+          <button
+            type="button"
             className="rounded px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
             onClick={() => openTransferModal(rsm)}
           >
@@ -642,6 +763,15 @@ export default function RSM() {
             }}
           >
             Transfer to RSM
+          </button>
+          <button
+            type="button"
+            className="rounded px-2.5 py-1 text-xs font-semibold bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-colors flex items-center gap-1"
+            onClick={() => setPasswordUser({ ...rsm, role: "RSM" })}
+            title="Change password for this RSM"
+          >
+            <KeyRound className="w-3 h-3" />
+            Password
           </button>
           <button
             type="button"
@@ -679,7 +809,7 @@ export default function RSM() {
               <input
                 type="text"
                 className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-100 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                placeholder="Search by name, RSM type, or ID"
+                placeholder="Search by name, ID, or region"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -693,6 +823,13 @@ export default function RSM() {
             >
               <Download size={16} className="inline mr-2" />
               Export
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 text-sm bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary-hover shadow-sm transition-colors"
+              onClick={() => navigate("/admin/add-rsm-page")}
+            >
+              + Add RSM
             </button>
           </>
         }
@@ -854,49 +991,6 @@ export default function RSM() {
                       </option>
                     ))}
                   </select>
-                </div>
-
-                {/* ASM Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Assign to ASM *
-                  </label>
-                  <select
-                    name="asmId"
-                    value={formData.asmId}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg ${formErrors.asmId ? "border-red-500" : "border-gray-300"}`}
-                  >
-                    <option value="">Select ASM</option>
-                    {asms && asms.map((asm) => (
-                      <option key={asm._id} value={asm._id}>
-                        {asm.firstName} {asm.lastName} ({asm.employeeId})
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.asmId && (
-                    <p className="text-xs text-red-600 mt-1">{formErrors.asmId}</p>
-                  )}
-                </div>
-
-                {/* RSM Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    RSM Type *
-                  </label>
-                  <select
-                    name="rsmType"
-                    value={formData.rsmType}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg ${formErrors.rsmType ? "border-red-500" : "border-gray-300"}`}
-                  >
-                    <option value="">Select Type</option>
-                    <option value="PERSONAL">Personal Loan RSM</option>
-                    <option value="BUSINESS_HOME">Business & Home Loan RSM</option>
-                  </select>
-                  {formErrors.rsmType && (
-                    <p className="text-xs text-red-600 mt-1">{formErrors.rsmType}</p>
-                  )}
                 </div>
 
                 {/* Password */}
@@ -1190,6 +1284,162 @@ export default function RSM() {
         onConfirm={handleConfirmWorkloadTransfer}
         confirmLabel={workloadSubmitting ? "Transferring..." : "Confirm & Transfer Workload"}
         confirmDisabled={!targetRsmWorkloadId || workloadSubmitting}
+      />
+
+      {/* Edit RSM / Change Role Modal */}
+      {editingRsm && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 text-white flex items-center justify-between" style={{ backgroundColor: colors.primary }}>
+              <div>
+                <h3 className="text-lg font-bold">Edit Regional Sales Manager</h3>
+                <p className="text-xs text-white/90">
+                  {editingRsm.firstName} {editingRsm.lastName} ({editingRsm.employeeId || "No Emp ID"})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingRsm(null)}
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSaveEditRsm} className="p-6 overflow-y-auto space-y-4 flex-1">
+              {/* Highlight if legacy */}
+              {editingRsm.rsmType === "BUSINESS_HOME" && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
+                  <span className="font-bold">Notice:</span> This RSM is currently configured under the legacy combined <strong>"Business &amp; Home RSM"</strong> role. Please reassign this RSM to either <strong>Business Loan RSM</strong> or <strong>Home &amp; LAP Loan RSM</strong>.
+                </div>
+              )}
+
+              {/* RSM Type Selector as Dropdown (if specialized) */}
+              {editingRsm.rsmType && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    RSM Type *
+                  </label>
+                  <select
+                    name="rsmType"
+                    value={editFormData.rsmType}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary"
+                  >
+                    <option value="">Select RSM Type</option>
+                    <option value="PERSONAL">Personal Loan RSM</option>
+                    <option value="BUSINESS">Business Loan RSM</option>
+                    <option value="HOME_LAP">Home &amp; LAP Loan RSM</option>
+                  </select>
+                  {editFormErrors.rsmType && (
+                    <p className="text-xs text-red-600 mt-1">{editFormErrors.rsmType}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Basic Details Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={editFormData.firstName}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.firstName && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.firstName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={editFormData.lastName}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.lastName && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.lastName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={editFormData.phone}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.phone && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.phone}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={editFormData.email}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.email && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.email}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">State / Region</label>
+                  <select
+                    name="region"
+                    value={editFormData.region}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  >
+                    <option value="">Select state</option>
+                    {INDIAN_STATES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-4 border-t border-gray-200 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingRsm(null)}
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="px-5 py-2 text-sm font-semibold rounded-lg text-white disabled:opacity-50 transition-colors"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  {editSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <AdminChangePasswordModal
+        isOpen={Boolean(passwordUser)}
+        user={passwordUser}
+        onClose={() => setPasswordUser(null)}
       />
 
     </>

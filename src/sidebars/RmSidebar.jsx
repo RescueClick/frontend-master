@@ -17,6 +17,7 @@ import {
   Edit,
   X,
   TrendingUp,
+  MessageSquare,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -28,6 +29,7 @@ import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
 import DhanSourceLoader from "../components/DhanSourceLoader";
 import { useSidebarNotifications } from "../hooks/useSidebarNotifications";
+import StaffChatWidget from "./users/shared/chat/StaffChatWidget";
 
 // Admin sidebar component
 export default function RmSidebar() {
@@ -94,6 +96,8 @@ export default function RmSidebar() {
 
   const getBadgeCount = (name) => {
     switch (name) {
+      case "Chat":
+        return counts.chat;
       case "My Partners":
         return counts.partner;
       case "Manage Loans":
@@ -325,6 +329,8 @@ export default function RmSidebar() {
         </>
       )}
 
+      {/* Floating Bottom-Right Staff Chat Widget */}
+      <StaffChatWidget currentRole="RM" />
     </div>
   );
 }

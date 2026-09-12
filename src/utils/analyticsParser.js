@@ -214,14 +214,14 @@ export const getRoleMetrics = (role) => {
     },
   ];
 
-  if (role === "ASM") {
+  if (role === "RSM") {
     return [
       {
-        title: "Total RSMs",
-        key: "totalRSMs",
+        title: "Total ASMs",
+        key: "totalASMs",
         icon: "UserCheck",
         colorIndex: 0,
-        subtitle: "Regional Sales Managers",
+        subtitle: "Area Sales Managers",
       },
       {
         title: "Total RMs",
@@ -241,7 +241,7 @@ export const getRoleMetrics = (role) => {
     ];
   }
 
-  if (role === "RSM") {
+  if (role === "ASM") {
     return [
       {
         title: "Total RMs",

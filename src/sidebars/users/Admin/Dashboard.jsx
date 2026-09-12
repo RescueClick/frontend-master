@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  X,
   RotateCcw,
   Layers,
 } from 'lucide-react';
@@ -62,6 +63,7 @@ const Dashboard = () => {
   const [month, setMonth] = useState(
     location.state?.month !== undefined ? location.state.month : currentMonth
   );
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false);
 
   const { data } = useSelector((state) => state.admin.dashboard);
   const recentActivitiesState = useSelector((state) => state.admin.recentActivities || { activities: [] });
@@ -115,6 +117,19 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [dispatch]);
 
+  // Escape key handler for breakdown modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setShowBreakdownModal(false);
+      }
+    };
+    if (showBreakdownModal) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showBreakdownModal]);
+
   // Quick preset handlers
   const handleSelectThisMonth = () => {
     setYear(currentYear);
@@ -158,6 +173,15 @@ const Dashboard = () => {
           subtitle="Monitor company performance, disbursement volumes, payouts, and partner metrics by month"
           right={
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowBreakdownModal(true)}
+                className="text-xs px-3.5 py-2 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 font-semibold shadow-xs hover:bg-emerald-100 transition-all flex items-center gap-1.5"
+                title="View 12-Month Performance Breakdown"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Monthly Breakdown</span>
+              </button>
               <button
                 type="button"
                 onClick={() => navigateWithPeriod("/admin/disbursed-loans")}
@@ -225,6 +249,15 @@ const Dashboard = () => {
                 }`}
               >
                 All Time
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBreakdownModal(true)}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-xs transition-all flex items-center gap-1.5 ml-1"
+                title="View 12-Month Performance Breakdown Table"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>12 Months Breakdown</span>
               </button>
             </div>
           </div>
@@ -734,156 +767,6 @@ const Dashboard = () => {
         })()}
       </div>
 
-      {/* 12-Month Performance Breakdown for the Year */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 mb-6">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className={typography.h3()}>
-                Monthly Performance Breakdown — Year {data?.filter?.yearForBreakdown || (year === "all" ? currentYear : year)}
-              </h2>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                12 Months Comparison
-              </span>
-            </div>
-            <p className={`${typography.caption()} mt-1 text-gray-500`}>
-              Click any month below to instantly load and filter the entire dashboard by that month
-            </p>
-          </div>
-        </div>
-
-        {/* Monthly Breakdown Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50/70 text-xs font-semibold text-gray-600">
-                <th className="py-3 px-3">Month</th>
-                <th className="py-3 px-3">Disbursed Volume</th>
-                <th className="py-3 px-3 text-center">Disbursed Loans</th>
-                <th className="py-3 px-3">Partner Payouts</th>
-                <th className="py-3 px-3">Bonus Pool</th>
-                <th className="py-3 px-3 text-center">Active Partners</th>
-                <th className="py-3 px-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-xs">
-              {monthlyBreakdown.length > 0 ? (
-                monthlyBreakdown.map((mItem) => {
-                  const isSelected =
-                    month === mItem.month &&
-                    (year === "all" || year === mItem.year);
-                  const isCurrent =
-                    mItem.month === currentMonth && mItem.year === currentYear;
-                  const revBarPct = Math.min(
-                    100,
-                    Math.round((Number(mItem.revenue || 0) / maxMonthlyRevenue) * 100)
-                  );
-
-                  return (
-                    <tr
-                      key={`month-row-${mItem.month}`}
-                      className={`hover:bg-gray-50/90 transition-colors cursor-pointer ${
-                        isSelected
-                          ? "bg-emerald-50/60 font-semibold"
-                          : isCurrent
-                          ? "bg-slate-50/40"
-                          : ""
-                      }`}
-                      onClick={() => {
-                        setYear(mItem.year);
-                        setMonth(mItem.month);
-                      }}
-                    >
-                      {/* Month Name */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-bold ${isSelected ? "text-emerald-700" : "text-gray-900"}`}>
-                            {mItem.monthName} {mItem.year}
-                          </span>
-                          {isSelected && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-emerald-600 text-white">
-                              Active
-                            </span>
-                          )}
-                          {isCurrent && !isSelected && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-gray-200 text-gray-700">
-                              Now
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Disbursed Volume */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <div className="space-y-1">
-                          <span className="font-bold text-gray-900">
-                            {formatCurrency(mItem.revenue || 0)}
-                          </span>
-                          {/* Mini volume indicator */}
-                          <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-emerald-500 rounded-full"
-                              style={{ width: `${revBarPct}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Disbursed Loans */}
-                      <td className="py-3 px-3 whitespace-nowrap text-center font-medium text-gray-700">
-                        {formatNumber(mItem.disbursedFiles || 0)}
-                      </td>
-
-                      {/* Partner Payouts */}
-                      <td className="py-3 px-3 whitespace-nowrap text-gray-700 font-medium">
-                        {formatCurrency(mItem.payoutAmount || 0)}
-                      </td>
-
-                      {/* Bonus Pool */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className={`font-semibold ${mItem.bonusUnlocked > 0 ? "text-amber-700" : "text-gray-500"}`}>
-                          {formatCurrency(mItem.bonusUnlocked || 0)}
-                        </span>
-                      </td>
-
-                      {/* Active Partners */}
-                      <td className="py-3 px-3 whitespace-nowrap text-center font-medium text-gray-700">
-                        {formatNumber(mItem.activePartners || 0)}
-                      </td>
-
-                      {/* Action */}
-                      <td className="py-3 px-3 whitespace-nowrap text-right">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setYear(mItem.year);
-                            setMonth(mItem.month);
-                          }}
-                          className={`text-xs px-2.5 py-1 rounded font-semibold transition-all ${
-                            isSelected
-                              ? "bg-emerald-600 text-white"
-                              : "bg-gray-100 hover:bg-emerald-50 hover:text-emerald-700 text-gray-700"
-                          }`}
-                        >
-                          {isSelected ? "Selected" : "Filter"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={7} className="text-center py-6 text-gray-400">
-                    No monthly breakdown data available
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* Additional Dashboard Content: Recent Activity & Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
@@ -1022,6 +905,224 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* 12-Month Performance Breakdown Modal */}
+      {showBreakdownModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto"
+          onClick={() => setShowBreakdownModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-5xl my-auto overflow-hidden flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-slate-50/70 flex-wrap gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-emerald-600" />
+                  <h2 className={typography.h3()}>
+                    Monthly Performance Breakdown — Year {data?.filter?.yearForBreakdown || (year === "all" ? currentYear : year)}
+                  </h2>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    12 Months Comparison
+                  </span>
+                </div>
+                <p className={`${typography.caption()} mt-1 text-gray-500`}>
+                  Click any month below to instantly load and filter the entire dashboard by that month
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Modal Year Selector */}
+                <div className="flex items-center gap-1.5">
+                  <label htmlFor="modal-breakdown-year" className="text-xs font-medium text-gray-500">Year:</label>
+                  <select
+                    id="modal-breakdown-year"
+                    value={year === "all" ? currentYear : year}
+                    onChange={(e) => setYear(parseInt(e.target.value, 10))}
+                    className="text-xs font-semibold px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowBreakdownModal(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Table Content */}
+            <div className="overflow-y-auto overflow-x-auto p-5 max-h-[calc(90vh-140px)]">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50/70 text-xs font-semibold text-gray-600">
+                    <th className="py-3 px-3">Month</th>
+                    <th className="py-3 px-3">Disbursed Volume</th>
+                    <th className="py-3 px-3 text-center">Disbursed Loans</th>
+                    <th className="py-3 px-3">Partner Payouts</th>
+                    <th className="py-3 px-3">Bonus Pool</th>
+                    <th className="py-3 px-3 text-center">Active Partners</th>
+                    <th className="py-3 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-xs">
+                  {monthlyBreakdown.length > 0 ? (
+                    monthlyBreakdown.map((mItem) => {
+                      const isSelected =
+                        month === mItem.month &&
+                        (year === "all" || year === mItem.year);
+                      const isCurrent =
+                        mItem.month === currentMonth && mItem.year === currentYear;
+                      const revBarPct = Math.min(
+                        100,
+                        Math.round((Number(mItem.revenue || 0) / maxMonthlyRevenue) * 100)
+                      );
+
+                      const handleSelect = () => {
+                        setYear(mItem.year);
+                        setMonth(mItem.month);
+                        setShowBreakdownModal(false);
+                      };
+
+                      return (
+                        <tr
+                          key={`modal-month-row-${mItem.month}`}
+                          className={`hover:bg-emerald-50/40 transition-colors cursor-pointer ${
+                            isSelected
+                              ? "bg-emerald-50/70 font-semibold"
+                              : isCurrent
+                              ? "bg-slate-50/50"
+                              : ""
+                          }`}
+                          onClick={handleSelect}
+                        >
+                          {/* Month Name */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-bold ${isSelected ? "text-emerald-700" : "text-gray-900"}`}>
+                                {mItem.monthName} {mItem.year}
+                              </span>
+                              {isSelected && (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-emerald-600 text-white">
+                                  Active
+                                </span>
+                              )}
+                              {isCurrent && !isSelected && (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-gray-200 text-gray-700">
+                                  Now
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Disbursed Volume */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <div className="space-y-1">
+                              <span className="font-bold text-gray-900">
+                                {formatCurrency(mItem.revenue || 0)}
+                              </span>
+                              {/* Mini volume indicator */}
+                              <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-emerald-500 rounded-full"
+                                  style={{ width: `${revBarPct}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Disbursed Loans */}
+                          <td className="py-3 px-3 whitespace-nowrap text-center font-medium text-gray-700">
+                            {formatNumber(mItem.disbursedFiles || 0)}
+                          </td>
+
+                          {/* Partner Payouts */}
+                          <td className="py-3 px-3 whitespace-nowrap text-gray-700 font-medium">
+                            {formatCurrency(mItem.payoutAmount || 0)}
+                          </td>
+
+                          {/* Bonus Pool */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className={`font-semibold ${mItem.bonusUnlocked > 0 ? "text-amber-700" : "text-gray-500"}`}>
+                              {formatCurrency(mItem.bonusUnlocked || 0)}
+                            </span>
+                          </td>
+
+                          {/* Active Partners */}
+                          <td className="py-3 px-3 whitespace-nowrap text-center font-medium text-gray-700">
+                            {formatNumber(mItem.activePartners || 0)}
+                          </td>
+
+                          {/* Action */}
+                          <td className="py-3 px-3 whitespace-nowrap text-right">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelect();
+                              }}
+                              className={`text-xs px-2.5 py-1 rounded font-semibold transition-all ${
+                                isSelected
+                                  ? "bg-emerald-600 text-white shadow-xs"
+                                  : "bg-gray-100 hover:bg-emerald-600 hover:text-white text-gray-700"
+                              }`}
+                            >
+                              {isSelected ? "Selected" : "Filter"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-gray-400">
+                        No monthly breakdown data available
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-gray-100 bg-gray-50/60 flex-wrap gap-2">
+              <span className="text-xs text-gray-500">
+                Clicking any month or Filter selects that month and updates your dashboard.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSelectAllTime();
+                    setShowBreakdownModal(false);
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Clear Filter (All Time)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBreakdownModal(false)}
+                  className="text-xs px-3.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-900 text-white font-semibold transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

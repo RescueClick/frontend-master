@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { fetchAsmDashboard } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import MetricCard from "../../../components/shared/MetricCard";
 import { designSystem, formatCurrency, formatNumber, formatPercentage, typography } from "../../../utils/designSystem";
@@ -21,20 +21,30 @@ import { designSystem, formatCurrency, formatNumber, formatPercentage, typograph
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const openRsmAnalytics = useCallback(
+  const isRsm = location.pathname.startsWith("/rsm");
+  const basePath = isRsm ? "/rsm" : "/asm";
+  // Hierarchy: RSM has ASMs under them; ASM has RMs under them
+  const subordinateLabel = isRsm ? "Area Sales Managers" : "Relationship Managers";
+  const subordinateShort = isRsm ? "ASMs" : "RMs";
+  const subordinatePath = isRsm ? "/rsm/asms" : "/asm/rms";
+
+  const openSubordinateAnalytics = useCallback(
     (performer) => {
       if (!performer?.id) return;
-      navigate("/asm/analytics", {
+      navigate(`${basePath}/analytics`, {
         state: {
           id: performer.id,
-          role: "RSM",
+          role: isRsm ? "ASM" : "RM",
           name: performer.name || "",
-          detail: performer.rsmType || "Regional Sales Manager",
+          detail: isRsm
+            ? (performer.asmType || performer.rsmType || "Area Sales Manager")
+            : "Relationship Manager",
         },
       });
     },
-    [navigate]
+    [navigate, basePath, isRsm]
   );
 
   const dispatch = useDispatch();
@@ -49,37 +59,41 @@ const Dashboard = () => {
     enabled: true,
   });
 
-  // Memoized metrics - ASM focuses on RSMs only (hierarchical access)
+  // Memoized metrics - adapts to RSM (monitoring ASMs) or ASM (monitoring RMs)
   const metrics = useMemo(() => [
     {
-      title: "Regional Sales Managers",
-      value: formatNumber(data?.totals?.totalRSMs || 0),
+      title: subordinateLabel,
+      value: isRsm
+        ? formatNumber(data?.totals?.totalASMs ?? data?.totals?.totalRSMs ?? 0)
+        : formatNumber(data?.totals?.totalRMs || 0),
       icon: Users,
-      path: "/asm/rsms",
-      subtitle: "RSMs under your management"
+      path: subordinatePath,
+      subtitle: isRsm
+        ? `${formatNumber(data?.totals?.activeASMs ?? data?.totals?.activeRSMs ?? data?.totals?.totalRSMs ?? 0)} Active • ${formatNumber(data?.totals?.allSubordinatesCount ?? data?.totals?.totalASMs ?? data?.totals?.totalRSMs ?? 0)} Total`
+        : `${formatNumber(data?.totals?.totalRMs || 0)} RMs under your management`
     },
     {
       title: "Active Partners",
       value: formatNumber(data?.totals?.activePartners || 0),
       icon: Building2,
-      path: "/asm/partners",
+      path: `${basePath}/partners`,
       subtitle: `${formatNumber(data?.totals?.activePartners || 0)} Active • ${formatNumber(data?.totals?.totalPartners || 0)} Total`
     },
     {
       title: "Total Customers",
       value: formatNumber(data?.totals?.totalCustomers || 0),
       icon: UserCheck,
-      path: "/asm/applications",
+      path: `${basePath}/applications`,
       subtitle: "Total customer base"
     },
     {
       title: "Total Disbursed",
       value: formatCurrency(data?.totals?.totalRevenue || 0),
       icon: IndianRupee,
-      path: "/asm/applications",
+      path: `${basePath}/applications`,
       subtitle: "Disbursed amount"
     },
-  ], [data?.totals]);
+  ], [data?.totals, isRsm, subordinateLabel, subordinatePath, basePath]);
 
   const targetVsAchievement = useMemo(() => {
     return (data?.targets || []).map((item) => {
@@ -116,16 +130,18 @@ const Dashboard = () => {
   }, [data?.currentMonthTarget]);
 
   const topPerformers = useMemo(() => {
-    // ASM sees top RSM performers
-    return (data?.topRSMPerformers || []).map((item, index) => ({
+    const list = isRsm
+      ? (data?.topASMPerformers || data?.topRSMPerformers || data?.topPerformers || [])
+      : (data?.topRMPerformers || data?.topPerformers || []);
+    return list.map((item, index) => ({
       id: item.id,
       name: item.name,
-      revenue: `₹${(item.totalRevenue / 10000000).toFixed(2)}Cr`,
+      revenue: item.totalRevenue ? `₹${(item.totalRevenue / 10000000).toFixed(2)}Cr` : "₹0.00",
       achievement: `${item.totalDisbursedApps || 0} Apps`,
       rank: index + 1,
-      rsmType: item.rsmType,
+      roleType: isRsm ? (item.asmType || item.rsmType || "ASM") : "RM",
     }));
-  }, [data?.topRSMPerformers]);
+  }, [isRsm, data?.topASMPerformers, data?.topRSMPerformers, data?.topRMPerformers, data?.topPerformers]);
 
 
   const currentDate = new Date();
@@ -141,10 +157,12 @@ const Dashboard = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className={typography.h1()} style={{ color: designSystem.colors.text.primary }}>
-            ASM Dashboard
+            {isRsm ? "RSM Dashboard" : "ASM Dashboard"}
           </h1>
           <p className={`${typography.bodySmall()} mt-2`} style={{ color: designSystem.colors.text.secondary }}>
-            Area Sales Manager - Monitor RSM Performance, Manage Payouts & Incentives
+            {isRsm
+              ? "Regional Sales Manager - Monitor ASM Performance, Manage Payouts & Incentives"
+              : "Area Sales Manager - Monitor RM Performance, Manage Applications"}
           </p>
         </div>
 
@@ -180,7 +198,9 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <span className={`${typography.label()} block`}>Disbursement Target</span>
-                    <span className={typography.caption()}>Sum of all RSM targets in your region</span>
+                    <span className={typography.caption()}>
+                      {isRsm ? "Sum of all ASM targets in your region" : "Sum of all RM targets in your area"}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-2 ml-auto">
                     {currentMonthTarget.disbursementTargetMet ? (
@@ -233,7 +253,7 @@ const Dashboard = () => {
                   Performance Analytics
                 </h3>
                 <p className={typography.bodySmall()}>
-                  Monthly target vs achievement comparison (RSM Performance)
+                  Monthly target vs achievement comparison ({subordinateShort} Performance)
                 </p>
               </div>
               <BarChart3 className="text-gray-400" size={20} />
@@ -288,11 +308,11 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Top Performers - RSMs */}
+          {/* Top Performers */}
           <div className={`${designSystem.card.base} ${designSystem.card.padding}`}>
             <div className="flex items-center mb-6">
               <Award className="text-amber-500 mr-2" size={24} />
-              <h3 className="text-xl font-bold text-gray-900">Top RSM Performers</h3>
+              <h3 className="text-xl font-bold text-gray-900">Top {subordinateShort} Performers</h3>
             </div>
             <div className="space-y-4">
               {topPerformers.length > 0 ? (
@@ -320,7 +340,7 @@ const Dashboard = () => {
                           {performer.name}
                         </p>
                         <p className="text-gray-500 text-xs">
-                          {performer.rsmType || "RSM"} • Rank {performer.rank}
+                          {performer.roleType} • Rank {performer.rank}
                         </p>
                       </div>
                     </div>
@@ -328,7 +348,7 @@ const Dashboard = () => {
                       <button
                         type="button"
                         className="text-[11px] font-medium text-slate-600 hover:text-brand-primary hover:underline"
-                        onClick={() => openRsmAnalytics(performer)}
+                        onClick={() => openSubordinateAnalytics(performer)}
                       >
                         Analytics
                       </button>
@@ -345,7 +365,7 @@ const Dashboard = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  <p>No RSM performance data available</p>
+                  <p>No {subordinateShort} performance data available</p>
                 </div>
               )}
             </div>

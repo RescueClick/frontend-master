@@ -25,6 +25,7 @@ export const useSidebarNotifications = () => {
     application: 0,
     delete_request: 0,
     incentive: 0,
+    chat: 0,
     total: 0,
   });
 
@@ -33,30 +34,50 @@ export const useSidebarNotifications = () => {
       const token = getAuthToken();
       if (!token || !backendurl) return;
 
-      const response = await axios.get(`${backendurl}/notifications/sidebar-counts`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 10000,
-      });
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
 
-      if (response.data) {
-        const payout = response.data.payout || 0;
-        const partner = response.data.partner || 0;
-        const application = response.data.application || 0;
-        const delete_request = response.data.delete_request || 0;
-        const incentive = response.data.incentive || 0;
+      const [notifRes, chatRes] = await Promise.allSettled([
+        axios.get(`${backendurl}/notifications/sidebar-counts`, {
+          headers,
+          timeout: 10000,
+        }),
+        axios.get(`${backendurl}/chat/unread-count`, {
+          headers,
+          timeout: 10000,
+        }),
+      ]);
 
-        setCounts({
-          payout,
-          partner,
-          application,
-          delete_request,
-          incentive,
-          total: payout + partner + application + delete_request + incentive,
-        });
+      let payout = 0;
+      let partner = 0;
+      let application = 0;
+      let delete_request = 0;
+      let incentive = 0;
+      let chat = 0;
+
+      if (notifRes.status === "fulfilled" && notifRes.value?.data) {
+        payout = notifRes.value.data.payout || 0;
+        partner = notifRes.value.data.partner || 0;
+        application = notifRes.value.data.application || 0;
+        delete_request = notifRes.value.data.delete_request || 0;
+        incentive = notifRes.value.data.incentive || 0;
       }
+
+      if (chatRes.status === "fulfilled" && chatRes.value?.data) {
+        chat = chatRes.value.data.unreadCount || 0;
+      }
+
+      setCounts({
+        payout,
+        partner,
+        application,
+        delete_request,
+        incentive,
+        chat,
+        total: payout + partner + application + delete_request + incentive + chat,
+      });
     } catch (error) {
       console.error("Error loading notification counts in sidebar:", error);
     }
@@ -83,6 +104,8 @@ export const useSidebarNotifications = () => {
     subscribe("payoutStatusChanged", handleUpdate);
     subscribe("newPartnerRegistered", handleUpdate);
     subscribe("newCustomerRegistered", handleUpdate);
+    subscribe("chat:incoming_message", handleUpdate);
+    subscribe("chat:messages_read", handleUpdate);
 
     return () => {
       unsubscribe("applicationUpdated", handleUpdate);
@@ -91,6 +114,8 @@ export const useSidebarNotifications = () => {
       unsubscribe("payoutStatusChanged", handleUpdate);
       unsubscribe("newPartnerRegistered", handleUpdate);
       unsubscribe("newCustomerRegistered", handleUpdate);
+      unsubscribe("chat:incoming_message", handleUpdate);
+      unsubscribe("chat:messages_read", handleUpdate);
     };
   }, [subscribe, unsubscribe, isConnected]);
 

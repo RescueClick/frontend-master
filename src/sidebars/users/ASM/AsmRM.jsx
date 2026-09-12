@@ -88,6 +88,9 @@ export default function AsmRM() {
       "Employee ID": r.employeeId || "",
       "RM Code": r.rmCode || "",
       Status: r.status || "",
+      "Personal Loan RSM": r.personalRsmName || (r.personalRsm ? `${r.personalRsm.firstName} ${r.personalRsm.lastName}` : ""),
+      "Business Loan RSM": r.businessRsmName || (r.businessRsm ? `${r.businessRsm.firstName} ${r.businessRsm.lastName}` : ""),
+      "Home & LAP RSM": r.homeLapRsmName || (r.homeLapRsm ? `${r.homeLapRsm.firstName} ${r.homeLapRsm.lastName}` : ""),
       Email: r.email || "",
       Phone: r.phone || "",
     }));
@@ -162,11 +165,28 @@ export default function AsmRM() {
   
       // Navigate to role
       switch (user.role) {
-        case "ASM": navigate("/asm"); break;
-        case "RM": navigate("/rm"); break;
-        case "PARTNER": navigate("/partner"); break;
-        case "CUSTOMER": navigate("/customer"); break;
-        default: navigate("/"); break;
+        case "SUPER_ADMIN":
+        case "ADMIN":
+          navigate("/admin");
+          break;
+        case "RSM":
+          navigate("/rsm");
+          break;
+        case "ASM":
+          navigate("/asm");
+          break;
+        case "RM":
+          navigate("/rm");
+          break;
+        case "PARTNER":
+          navigate("/partner");
+          break;
+        case "CUSTOMER":
+          navigate("/customer");
+          break;
+        default:
+          navigate("/asm");
+          break;
       }
     } catch (err) {
       console.error("Login as user failed:", err.response?.data || err.message);
@@ -219,6 +239,26 @@ loginAsUser(userId, navigate);
       ),
     },
     { title: "User ID", dataIndex: "employeeId", key: "employeeId" },
+    {
+      title: "Assigned RSMs",
+      key: "rsms",
+      render: (_, rm) => (
+        <div className="text-xs space-y-0.5">
+          <div className="text-slate-700">
+            <span className="font-semibold text-blue-700">PL:</span>{" "}
+            {rm.personalRsmName || (rm.personalRsm ? `${rm.personalRsm.firstName} ${rm.personalRsm.lastName}` : "—")}
+          </div>
+          <div className="text-slate-700">
+            <span className="font-semibold text-purple-700">BL:</span>{" "}
+            {rm.businessRsmName || (rm.businessRsm ? `${rm.businessRsm.firstName} ${rm.businessRsm.lastName}` : "—")}
+          </div>
+          <div className="text-slate-700">
+            <span className="font-semibold text-emerald-700">HL/LAP:</span>{" "}
+            {rm.homeLapRsmName || (rm.homeLapRsm ? `${rm.homeLapRsm.firstName} ${rm.homeLapRsm.lastName}` : "—")}
+          </div>
+        </div>
+      ),
+    },
     {
       title: "Contact",
       key: "phone",

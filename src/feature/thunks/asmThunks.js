@@ -14,9 +14,13 @@ export const fetchAsmProfile = createAsyncThunk(
   "asm/fetchProfile",
   async (token, { rejectWithValue }) => {
     try {
+      const effectiveToken = token || getAuthData()?.asmToken;
+      if (!effectiveToken) {
+        return rejectWithValue("Authentication token not found");
+      }
       const response = await axios.get(`${backendurl}/asm/profile`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${effectiveToken}`,
         },
       });
 
@@ -67,20 +71,21 @@ export const updateAsmProfile = createAsyncThunk(
   }
 );
 
-// Fetch RSMs under current ASM
+// Fetch RSMs under current ASM (or subordinate ASMs under RSM)
 export const fetchRsmList = createAsyncThunk(
   "asm/fetchRsmList",
   async (_, { rejectWithValue }) => {
-    const { asmToken } = getAuthData();
+    const { rsmToken, asmToken, adminToken } = getAuthData();
+    const token = rsmToken || asmToken || adminToken;
 
     try {
       const response = await axios.get(`${backendurl}/asm/get-rsms`, {
         headers: {
-          Authorization: `Bearer ${asmToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      return response.data; // list of RSMs
+      return response.data; // list of ASMs / subordinates
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch RSM list"
@@ -89,16 +94,17 @@ export const fetchRsmList = createAsyncThunk(
   }
 );
 
-// Fetch RMs under ASM (existing behavior)
+// Fetch RMs under ASM / RSM
 export const fetchRmList = createAsyncThunk(
   "asm/fetchRmList",
   async (_, { rejectWithValue }) => {
-    const { asmToken } = getAuthData();
+    const { rsmToken, asmToken, adminToken } = getAuthData();
+    const token = rsmToken || asmToken || adminToken;
 
     try {
       const response = await axios.get(`${backendurl}/asm/get-rm`, {
         headers: {
-          Authorization: `Bearer ${asmToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -140,6 +146,9 @@ export const fetchAsmDashboard = createAsyncThunk(
   "asm/fetchDashboard",
   async (_, { rejectWithValue }) => {
     const { asmToken } = getAuthData();
+    if (!asmToken) {
+      return rejectWithValue("Authentication token not found");
+    }
     try {
       const response = await axios.get(`${backendurl}/asm/dashboard`, {
         headers: {

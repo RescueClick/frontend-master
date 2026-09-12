@@ -8,52 +8,46 @@ import {
   Lock,
   Eye,
   EyeOff,
-  CheckCircle, 
-  X, 
-  User ,
+  CheckCircle,
+  X,
+  User,
   Calendar,
-  XCircle
+  XCircle,
+  Briefcase,
+  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData } from "../../../../utils/localStorage";
-import { createAsm } from "../../../../feature/thunks/adminThunks";
+import { createAsm, fetchRSMs } from "../../../../feature/thunks/adminThunks";
 import { INDIAN_STATES } from "../../../../utils/indianStates";
 
 const AddASMPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const { loading, error, success } = useSelector((state) => state.admin.createAsmAdmin);
+  const { loading } = useSelector((state) => state.admin.createAsmAdmin || { loading: false });
+  const rsms = useSelector((state) => state.admin.rsm?.data || []);
 
   const [formData, setFormData] = useState({
     firstName: "",
-    lastName: ``,
-    phone: ``,
-    email: ``,
-    dob:"",
-    region:"",
+    lastName: "",
+    phone: "",
+    email: "",
+    dob: "",
+    region: "",
     password: "",
     confirmPassword: "",
+    rsmId: "",
+    asmType: "",
   });
-  
-  // ✅ Re-generate formData when count changes
 
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [showModal, setShowModal] = useState(false);
-
-  const [message, setMessage] = useState("")
-
-  const handleAddASM = () => {
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-  };
+  const [message, setMessage] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const colors = {
     primary: "var(--color-brand-primary)",
@@ -66,7 +60,6 @@ const AddASMPage = () => {
     name: /^[A-Za-z][A-Za-z\s'-]{1,49}$/,
     phone: /^[6-9]\d{9}$/,
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    // Minimum 8 chars with upper, lower, number, and special char
     password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/,
   };
 
@@ -78,7 +71,13 @@ const AddASMPage = () => {
     hasSpecial: /[^A-Za-z\d]/.test(password),
   });
 
-  // ✅ Validation
+  useEffect(() => {
+    const { adminToken } = getAuthData() || {};
+    if (adminToken) {
+      dispatch(fetchRSMs(adminToken));
+    }
+  }, [dispatch]);
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -87,6 +86,7 @@ const AddASMPage = () => {
     } else if (!VALIDATION_PATTERNS.name.test(formData.firstName.trim())) {
       newErrors.firstName = "Enter a valid first name";
     }
+
     if (!formData.lastName.trim()) {
       newErrors.lastName = "Last name is required";
     } else if (!VALIDATION_PATTERNS.name.test(formData.lastName.trim())) {
@@ -108,8 +108,17 @@ const AddASMPage = () => {
     if (!formData.dob) {
       newErrors.dob = "Date of birth is required";
     }
+
     if (!formData.region.trim()) {
       newErrors.region = "State is required";
+    }
+
+    if (!formData.rsmId) {
+      newErrors.rsmId = "Reporting RSM is required";
+    }
+
+    if (!formData.asmType) {
+      newErrors.asmType = "ASM specialty type is required";
     }
 
     if (!formData.password.trim()) {
@@ -133,28 +142,20 @@ const AddASMPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-
-
   function getAgeFromDOB(dobString) {
-    if (!dobString) return null; // handle empty or invalid input
-  
+    if (!dobString) return null;
     const dob = new Date(dobString);
-    if (isNaN(dob)) return null; // handle invalid date format
-  
+    if (isNaN(dob)) return null;
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
     const monthDiff = today.getMonth() - dob.getMonth();
     const dayDiff = today.getDate() - dob.getDate();
-  
-    // If birthday hasn't occurred yet this year, subtract one
     if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
       age--;
     }
-  
     return age;
   }
 
-  // ✅ Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let nextValue = value;
@@ -164,434 +165,502 @@ const AddASMPage = () => {
     if (name === "email") {
       nextValue = value.trim().toLowerCase();
     }
-    setFormData((prev) => ({ ...prev, [name]: nextValue }));
+
+    // If selecting RSM, auto-populate region if not yet set
+    if (name === "rsmId") {
+      const selectedRsm = (Array.isArray(rsms) ? rsms : []).find((r) => r._id === value);
+      if (selectedRsm?.region && (!formData.region || formData.region === "N/A")) {
+        setFormData((prev) => ({
+          ...prev,
+          rsmId: value,
+          region: selectedRsm.region,
+        }));
+        if (errors.region) {
+          setErrors((prev) => ({ ...prev, region: "" }));
+        }
+      } else {
+        setFormData((prev) => ({ ...prev, [name]: nextValue }));
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: nextValue }));
+    }
 
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
-// ✅ Handle form submit
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!validateForm()) return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
-  const { adminToken } = getAuthData();
-  const {
-    firstName,
-    lastName,
-    phone,
-    email,
-    dob,
-    region,
-    password,
-  } = formData;
+    const { adminToken } = getAuthData();
+    if (!adminToken) {
+      setIsSuccess(false);
+      setMessage("Not authenticated. Please log in again.");
+      setShowModal(true);
+      return;
+    }
 
-  try {
-    // ✅ Await dispatch to ensure success
-    await dispatch(
-      createAsm({
-        firstName,
-        lastName,
-        phone,
-        email,
-        dob,
-        region,
-        password,
-        token: adminToken,
-      })
-    ).unwrap();
+    try {
+      await dispatch(
+        createAsm({
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          dob: formData.dob,
+          region: formData.region.trim(),
+          password: formData.password,
+          rsmId: formData.rsmId,
+          asmType: formData.asmType,
+          token: adminToken,
+        })
+      ).unwrap();
 
-    // ✅ Show success message only if ASM creation succeeds
-    setMessage("Area Sales Manager has been added successfully to your team.");
+      setIsSuccess(true);
+      setMessage("Area Sales Manager has been added successfully to your team.");
+      setShowModal(true);
 
-    handleAddASM(); // Call after success
-    resetFields();  // Reset form fields
-  } catch (error) {
-    console.error("Failed to create ASM:", error);
+      setFormData({
+        firstName: "",
+        lastName: "",
+        phone: "",
+        email: "",
+        dob: "",
+        region: "",
+        password: "",
+        confirmPassword: "",
+        rsmId: "",
+        asmType: "",
+      });
+    } catch (err) {
+      setIsSuccess(false);
+      setMessage(typeof err === "string" ? err : err?.message || "Failed to create ASM");
+      setShowModal(true);
+    }
+  };
 
-    // ✅ Show error message
-    setMessage(error?.message || "Failed to create ASM. Please try again.");
-    handleAddASM();
-  }
-};
-
-
-  // ✅ Input styling
   const inputClassName = (fieldName) =>
     `w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
       errors[fieldName]
         ? "border-red-300 focus:ring-red-200 focus:border-red-500"
-        : "border-gray-300 focus:ring-opacity-50 focus:border-opacity-50"
+        : "border-gray-300 focus:ring-primary/30 focus:border-primary/50"
     }`;
 
-
-
-    
-  const resetFields =()=>{
-
-    setFormData({
-        firstName: "",
-        lastName: ``,
-        phone: ``,
-        email: ``,
-        dob:"",
-        region:"",
-        password: "",
-        confirmPassword: "",
-      })
-
-  }
-
-
   return (
-    <>
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
-          {/* Modal Content */}
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
-            {/* Modal Header */}
-            <div className="relative p-6 pb-4">
-              <button
-                onClick={handleCloseModal}
-                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: colors.background }}
+    >
+      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center mb-4">
+            <button
+              onClick={() => navigate("/admin/dashboard")}
+              className="flex items-center text-gray-600 hover:text-gray-800 transition-colors mr-4"
+              type="button"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Dashboard
+            </button>
+          </div>
+          <h1 className="text-3xl font-bold" style={{ color: colors.text }}>
+            Add New Area Sales Manager (ASM)
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Assign loan specialty type and link this ASM to a reporting Regional Sales Manager
+          </p>
+        </div>
 
-            {/* Modal Body */}
-            <div className="px-6 pb-8 text-center">
-              {/* Success Icon */}
-              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-
-              { message === "Area Sales Manager has been added successfully to your team."
-              ?   <CheckCircle size={32} className="text-green-500" />: <XCircle size={32} className="text-red-500" />
-              }
-              
+        {/* Success/Error Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+              <div className="relative p-6 pb-4">
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    if (isSuccess) navigate("/admin/asm");
+                  }}
+                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                  type="button"
+                >
+                  <X size={20} />
+                </button>
               </div>
 
-              {/* Success Message */}
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <div className="px-6 pb-8 text-center">
+                <div
+                  className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                    isSuccess ? "bg-green-100" : "bg-red-100"
+                  }`}
+                >
+                  {isSuccess ? (
+                    <CheckCircle size={32} className="text-green-500" />
+                  ) : (
+                    <XCircle size={32} className="text-red-500" />
+                  )}
+                </div>
 
-              { message === "Area Sales Manager has been added successfully to your team."
-              ?  'Success!' : "Something went wrong"
-              }
-              
-              </h2>
-              <p className="text-gray-600 mb-6">
-               {message || "We couldn't process your request. Please try again or contact support."}
-              </p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  {isSuccess ? "Success!" : "Failed to Add ASM"}
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  {message || "An unexpected error occurred. Please try again."}
+                </p>
 
-   
+                <div className="flex justify-end gap-3">
+                  {isSuccess && (
+                    <button
+                      type="button"
+                      onClick={() => navigate("/admin/asm")}
+                      className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-all"
+                    >
+                      View ASM List
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      if (isSuccess) navigate("/admin/asm");
+                    }}
+                    className="px-6 py-2.5 rounded-lg text-white font-medium transition-all duration-200"
+                    style={{ backgroundColor: colors.primary }}
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="min-h-screen" style={{ backgroundColor: colors.background }}>
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center mb-4">
-              <button
-                onClick={() => navigate("/admin/dashboard")}
-                className="flex items-center text-gray-600 hover:text-gray-800 transition-colors mr-4"
-              >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                Back
-              </button>
-            </div>
-            <h1 className="text-3xl font-bold" style={{ color: colors.text }}>
-              Add New Area Sales Manager
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Fill in the details to add a new ASM to your team
-            </p>
-          </div>
+        {/* Form Card */}
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Reporting RSM */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reporting Regional Sales Manager (RSM) *
+                </label>
+                <div className="relative">
+                  <Users className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                  <select
+                    name="rsmId"
+                    value={formData.rsmId}
+                    onChange={handleInputChange}
+                    className={`${inputClassName("rsmId")} pl-10`}
+                  >
+                    <option value="">Select Reporting RSM</option>
+                    {(Array.isArray(rsms) ? rsms : []).map((rsm) => (
+                      <option key={rsm._id} value={rsm._id}>
+                        {rsm.firstName} {rsm.lastName} ({rsm.employeeId || rsm.rsmCode || "RSM"}) {rsm.region ? `• ${rsm.region}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {errors.rsmId && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.rsmId}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  The senior RSM whom this Area Sales Manager reports to
+                </p>
+              </div>
 
-          {/* Form */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* First Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    First Name *
-                  </label>
+              {/* ASM Specialty Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ASM Specialty Type *
+                </label>
+                <div className="relative">
+                  <Briefcase className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                  <select
+                    name="asmType"
+                    value={formData.asmType}
+                    onChange={handleInputChange}
+                    className={`${inputClassName("asmType")} pl-10`}
+                  >
+                    <option value="">Select Specialty Type</option>
+                    <option value="PERSONAL">Personal Loan ASM</option>
+                    <option value="BUSINESS">Business Loan ASM</option>
+                    <option value="HOME_LAP">Home &amp; LAP Loan ASM</option>
+                  </select>
+                </div>
+                {errors.asmType && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.asmType}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Loan product line this specialized ASM oversees
+                </p>
+              </div>
+
+              {/* First Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  First Name *
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
-                    className={inputClassName("firstName")}
+                    className={`${inputClassName("firstName")} pl-10`}
                     placeholder="Enter first name"
                   />
-                  {errors.firstName && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" /> {errors.firstName}
-                    </p>
-                  )}
                 </div>
+                {errors.firstName && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.firstName}
+                  </p>
+                )}
+              </div>
 
-                {/* Last Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Last Name *
-                  </label>
+              {/* Last Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Name *
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
-                    className={inputClassName("lastName")}
+                    className={`${inputClassName("lastName")} pl-10`}
                     placeholder="Enter last name"
                   />
-                  {errors.lastName && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" /> {errors.lastName}
-                    </p>
-                  )}
                 </div>
+                {errors.lastName && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.lastName}
+                  </p>
+                )}
+              </div>
 
-                {/* Phone */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number *
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className={`${inputClassName("phone")} pl-10`}
-                      placeholder="Enter phone number"
-                    />
-                  </div>
-                  {errors.phone && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" /> {errors.phone}
-                    </p>
-                  )}
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number *
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className={`${inputClassName("phone")} pl-10`}
+                    placeholder="Enter 10-digit phone number"
+                  />
                 </div>
+                {errors.phone && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.phone}
+                  </p>
+                )}
+              </div>
 
-                {/* Email */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address *
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className={`${inputClassName("email")} pl-10`}
-                      placeholder="Enter email address"
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" /> {errors.email}
-                    </p>
-                  )}
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className={`${inputClassName("email")} pl-10`}
+                    placeholder="Enter email address"
+                  />
                 </div>
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.email}
+                  </p>
+                )}
+              </div>
 
-                {/* DOB */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date of Birth *
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-                    <input
-                      type="date"
-                      name="dob"
-                      value={formData.dob || ""}
-                      onChange={handleInputChange}
-                      className={`${inputClassName("dob")} pl-10`}
-                    />
-                  </div>
-                  {errors.dob && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" /> {errors.dob}
-                    </p>
-                  )}
+              {/* DOB */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date of Birth *
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                  <input
+                    type="date"
+                    name="dob"
+                    value={formData.dob || ""}
+                    onChange={handleInputChange}
+                    className={`${inputClassName("dob")} pl-10`}
+                  />
                 </div>
+                {errors.dob && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.dob}
+                  </p>
+                )}
+              </div>
 
-                {/* State */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State *
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="region"
-                      value={formData.region || ""}
-                      onChange={handleInputChange}
-                      className={`${inputClassName("region")} pl-3`}
-                    >
-                      <option value="">Select state</option>
-                      {INDIAN_STATES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {errors.region && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" /> {errors.region}
-                    </p>
-                  )}
+              {/* State */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  State / Region *
+                </label>
+                <select
+                  name="region"
+                  value={formData.region || ""}
+                  onChange={handleInputChange}
+                  className={inputClassName("region")}
+                >
+                  <option value="">Select state</option>
+                  {INDIAN_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                {errors.region && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.region}
+                  </p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className={`${inputClassName("password")} pl-10 pr-10`}
+                    placeholder="Enter password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-
-
-
-
-
-                {/* Password */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password *
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className={`${inputClassName("password")} pl-10 pr-10`}
-                      placeholder="Enter password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" /> {errors.password}
-                    </p>
-                  )}
-                  <div className="mt-2 space-y-1 text-xs">
-                    {(() => {
-                      const checks = getPasswordChecks(formData.password);
-                      const rules = [
-                        { ok: checks.minLength, label: "At least 8 characters" },
-                        { ok: checks.hasUpper, label: "At least 1 uppercase letter" },
-                        { ok: checks.hasLower, label: "At least 1 lowercase letter" },
-                        { ok: checks.hasNumber, label: "At least 1 number" },
-                        { ok: checks.hasSpecial, label: "At least 1 special character" },
-                      ];
-                      return rules.map((rule) => (
-                        <p
-                          key={rule.label}
-                          className={`flex items-center ${
-                            rule.ok ? "text-green-600" : "text-gray-500"
-                          }`}
-                        >
-                          {rule.ok ? (
-                            <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                          ) : (
-                            <AlertCircle className="w-3.5 h-3.5 mr-1.5" />
-                          )}
-                          {rule.label}
-                        </p>
-                      ));
-                    })()}
-                  </div>
-                </div>
-
-                {/* Confirm Password */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm Password *
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      className={`${inputClassName("confirmPassword")} pl-10 pr-10`}
-                      placeholder="Confirm password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" />{" "}
-                      {errors.confirmPassword}
-                    </p>
-                  )}
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.password}
+                  </p>
+                )}
+                <div className="mt-2 space-y-1 text-xs">
+                  {(() => {
+                    const checks = getPasswordChecks(formData.password);
+                    const rules = [
+                      { ok: checks.minLength, label: "At least 8 characters" },
+                      { ok: checks.hasUpper, label: "At least 1 uppercase letter" },
+                      { ok: checks.hasLower, label: "At least 1 lowercase letter" },
+                      { ok: checks.hasNumber, label: "At least 1 number" },
+                      { ok: checks.hasSpecial, label: "At least 1 special character" },
+                    ];
+                    return rules.map((rule) => (
+                      <p
+                        key={rule.label}
+                        className={`flex items-center ${
+                          rule.ok ? "text-green-600" : "text-gray-500"
+                        }`}
+                      >
+                        {rule.ok ? (
+                          <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        {rule.label}
+                      </p>
+                    ));
+                  })()}
                 </div>
               </div>
 
-              {/* Error from API */}
-              {!showModal && error && (
-                <p className="mt-4 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" /> {error}
-                </p>
-              )}
-
-              {/* Actions */}
-              <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
-                  onClick={() => navigate("/admin/dashboard")}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-3 rounded-lg text-white font-medium transition-all duration-200 flex items-center disabled:opacity-70 hover:shadow-lg"
-                  style={{ backgroundColor: colors.primary }}
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Adding ASM...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Add ASM
-                    </>
-                  )}
-                </button>
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm Password *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className={`${inputClassName("confirmPassword")} pl-10 pr-10`}
+                    placeholder="Confirm password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" /> {errors.confirmPassword}
+                  </p>
+                )}
               </div>
-            </form>
-          </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">
+              <button
+                type="button"
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                onClick={() => navigate("/admin/dashboard")}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-3 rounded-lg text-white font-medium transition-all duration-200 flex items-center disabled:opacity-70 hover:shadow-lg"
+                style={{ backgroundColor: colors.primary }}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Adding ASM...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Add ASM
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

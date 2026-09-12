@@ -20,6 +20,7 @@ import {
   IndianRupee,
   Award,
   TrendingUp,
+  MessageSquare,
 } from "lucide-react";
 
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -33,6 +34,7 @@ import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
 import DhanSourceLoader from "../components/DhanSourceLoader";
 import { useSidebarNotifications } from "../hooks/useSidebarNotifications";
+import StaffChatWidget from "./users/shared/chat/StaffChatWidget";
 
 // Admin sidebar component
 const AsmSiderbar = () => {
@@ -75,16 +77,17 @@ const AsmSiderbar = () => {
 
   // Fetch profile when component mounts or token changes
   useEffect(() => {
-    const { asmToken } = getAuthData();
-    if (asmToken) {
-      dispatch(fetchAsmProfile(asmToken));
+    const { asmToken, rsmToken } = getAuthData();
+    const token = rsmToken || asmToken;
+    if (token) {
+      dispatch(fetchAsmProfile(token));
     }
   }, [dispatch]);
 
   // Get fallback user data from localStorage (for initial render before Redux loads)
   const getFallbackUser = () => {
     const authData = getAuthData();
-    return authData?.asmUser || null;
+    return authData?.rsmUser || authData?.asmUser || null;
   };
 
   const fallbackUser = getFallbackUser();
@@ -98,6 +101,8 @@ const AsmSiderbar = () => {
 
   const getBadgeCount = (name) => {
     switch (name) {
+      case "Chat":
+        return counts.chat;
       case "Payouts":
         return counts.payout;
       case "Incentives":
@@ -110,17 +115,21 @@ const AsmSiderbar = () => {
   };
 
   // Sidebar navigation items with icons and routes
+  // Hierarchy: RSM manages ASMs (/rsm/asms); ASM manages RMs (/asm/rms)
+  const basePath = location.pathname.startsWith("/asm") ? "/asm" : "/rsm";
+  const subordinateLabel = basePath === "/rsm" ? "ASMs" : "RMs";
+  const subordinatePath = basePath === "/rsm" ? `${basePath}/asms` : `${basePath}/rms`;
 
   const sidebarItems = [
-    { name: "Dashboard", icon: LayoutGrid, path: "/asm/dashboard" },
-    { name: "RSMs", icon: Users, path: "/asm/rsms" },
-    { name: "Partners", icon: UserCheck, path: "/asm/partners" },
-    { name: "Move Partners", icon: Users, path: "/asm/move-partners", highlight: true },
-    { name: "Applications", icon: FileText, path: "/asm/applications" },
-    { name: "Payouts", icon: IndianRupee, path: "/asm/payouts", highlight: true },
-    { name: "Incentives", icon: Award, path: "/asm/incentives", highlight: true },
-    { name: "Follow Up", icon: CalendarCheck, path: "/asm/follow-ups" },
-    { name: "Settings", icon: Settings, path: "/asm/settings" },
+    { name: "Dashboard", icon: LayoutGrid, path: `${basePath}/dashboard` },
+    { name: subordinateLabel, icon: Users, path: subordinatePath },
+    { name: "Partners", icon: UserCheck, path: `${basePath}/partners` },
+    { name: "Move Partners", icon: Users, path: `${basePath}/move-partners`, highlight: true },
+    { name: "Applications", icon: FileText, path: `${basePath}/applications` },
+    { name: "Payouts", icon: IndianRupee, path: `${basePath}/payouts`, highlight: true },
+    { name: "Incentives", icon: Award, path: `${basePath}/incentives`, highlight: true },
+    { name: "Follow Up", icon: CalendarCheck, path: `${basePath}/follow-ups` },
+    { name: "Settings", icon: Settings, path: `${basePath}/settings` },
   ];
 
 
@@ -241,7 +250,7 @@ const AsmSiderbar = () => {
                 <Menu size={20} className="text-gray-600" />
               </button>
               <h1 className="text-base sm:text-xl font-semibold text-gray-800 truncate">
-                ASM Dashboard
+                {basePath === "/rsm" ? "RSM Dashboard" : "ASM Dashboard"}
               </h1>
             </div>
 
@@ -330,6 +339,8 @@ const AsmSiderbar = () => {
         </>
       )}
 
+      {/* Floating Bottom-Right Staff Chat Widget */}
+      <StaffChatWidget currentRole="ASM" />
     </div>
   );
 };

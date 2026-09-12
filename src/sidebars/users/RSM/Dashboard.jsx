@@ -40,11 +40,13 @@ import { designSystem, formatCurrency, formatNumber, formatPercentage, typograph
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/asm") ? "/asm" : "/rsm";
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   const openRmAnalytics = useCallback((rm) => {
     if (!rm?.id) return;
-    navigate("/rsm/analytics", {
+    navigate(`${basePath}/analytics`, {
       state: {
         id: rm.id,
         role: "RM",
@@ -52,7 +54,7 @@ const Dashboard = () => {
         detail: "Relationship Manager",
       },
     });
-  }, [navigate]);
+  }, [navigate, basePath]);
 
   const dispatch = useDispatch();
   const { data, loading, error } = useSelector((state) => state.rsm?.dashboard || { data: null, loading: false, error: null });
@@ -121,21 +123,28 @@ const Dashboard = () => {
   // Get RSM user data for profile modal
   const { rsmUser } = getAuthData();
 
+  const isRsm = basePath === "/rsm";
+  const subordinateTitle = isRsm ? "Area Sales Managers" : "Relationship Managers";
+  const subordinatePath = isRsm ? `${basePath}/asms` : `${basePath}/rms`;
+  const subordinateCount = isRsm
+    ? (data?.totals?.totalASMs ?? data?.totals?.totalRSMs ?? data?.totals?.totalRMs ?? 0)
+    : (data?.totals?.totalRMs || 0);
+
   const metricCards = useMemo(
     () => [
       {
-        title: "Relationship Managers",
-        value: data?.totals?.totalRMs || 0,
+        title: subordinateTitle,
+        value: subordinateCount,
         icon: Users,
-        onClick: () => navigate("/rsm/rms"),
-        subtitle: "Under your management",
+        onClick: () => navigate(subordinatePath),
+        subtitle: isRsm ? "ASMs under your management" : "RMs under your management",
         colorIndex: 0,
       },
       {
         title: "Active Partners",
         value: data?.totals?.activePartners || 0,
         icon: Building2,
-        onClick: () => navigate("/rsm/partners"),
+        onClick: () => navigate(`${basePath}/partners`),
         subtitle: `${data?.totals?.activePartners || 0} Active • ${data?.totals?.totalPartners || 0} Total`,
         colorIndex: 1,
       },
@@ -143,7 +152,7 @@ const Dashboard = () => {
         title: "Total Customers",
         value: data?.totals?.totalCustomers || 0,
         icon: UserCheck,
-        onClick: () => navigate("/rsm/applications"),
+        onClick: () => navigate(`${basePath}/applications`),
         subtitle: "Customer base",
         colorIndex: 2,
       },
@@ -155,7 +164,7 @@ const Dashboard = () => {
         colorIndex: 3,
       },
     ],
-    [data?.totals, navigate]
+    [data?.totals, navigate, basePath, isRsm, subordinateTitle, subordinatePath, subordinateCount]
   );
 
   return (
@@ -185,7 +194,7 @@ const Dashboard = () => {
                 className="w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-4"
                 style={{ backgroundColor: "var(--color-brand-primary)" }} // primary color
               >
-                <span className="text-white font-bold text-xl">RSM</span>
+                <span className="text-white font-bold text-xl">{isRsm ? "RSM" : "ASM"}</span>
               </div>
               <h2
                 className="text-lg font-semibold mb-1"
@@ -194,7 +203,7 @@ const Dashboard = () => {
                 {rsmUser?.firstName} {rsmUser?.lastName}
               </h2>
               <p className="text-sm mb-2" style={{ color: "#111827" }}>
-                Regional Sales Manager
+                {isRsm ? "Regional Sales Manager" : "Area Sales Manager"}
               </p>
               <p className="text-sm" style={{ color: "#111827" }}>
                 Email: {rsmUser?.email || "N/A"}
@@ -209,7 +218,7 @@ const Dashboard = () => {
                   backgroundColor: "var(--color-brand-primary)", // primary color
                   color: "white",
                 }}
-                onClick={() => navigate("/rsm/settings")}
+                onClick={() => navigate(`${basePath}/settings`)}
               >
                 Edit Profile
               </button>
@@ -253,7 +262,9 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <span className="text-sm font-semibold text-gray-900 block">Disbursement Target</span>
-                    <span className="text-xs text-gray-600">Sum of all RM targets under you</span>
+                    <span className="text-xs text-gray-600">
+                      {isRsm ? "Sum of all ASM targets in your region" : "Sum of all RM targets under you"}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-2 ml-auto">
                     {currentMonthTarget.disbursementTargetMet ? (
@@ -375,7 +386,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Top Performing RMs */}
+          {/* Top Performing Subordinates */}
           <div className="bg-white rounded-2xl p-6 lg:col-span-1 border shadow-md border-gray-200">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -383,10 +394,10 @@ const Dashboard = () => {
                   className="text-lg font-semibold"
                   style={{ color: "#111827" }}
                 >
-                  Top Performing RMs
+                  {isRsm ? "Top Performing ASMs" : "Top Performing RMs"}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Best performing relationship managers
+                  {isRsm ? "Best performing area sales managers" : "Best performing relationship managers"}
                 </p>
               </div>
               <PieChart className="text-gray-400" size={20} />
@@ -465,7 +476,7 @@ const Dashboard = () => {
                   <div
                     key={index}
                     className="p-4 border rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate("/rsm/applications")}
+                    onClick={() => navigate(`${basePath}/applications`)}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-3">

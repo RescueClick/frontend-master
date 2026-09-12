@@ -107,12 +107,12 @@ export default function Profile({
         </div>
 
         {data?.personalRsmName ? (
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 space-y-1 text-left w-full">
+          <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 space-y-1 text-left w-full">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <Users className="w-4 h-4 text-brand-primary" />
+              <Users className="w-4 h-4 text-blue-600" />
               Personal loan RSM
             </div>
-            <p className="text-sm text-gray-800">{data.personalRsmName}</p>
+            <p className="text-sm font-medium text-gray-900">{data.personalRsmName}</p>
             {data.personalRsmEmployeeId ? (
               <p className="text-xs text-gray-600">ID: {data.personalRsmEmployeeId}</p>
             ) : null}
@@ -122,18 +122,34 @@ export default function Profile({
           </div>
         ) : null}
 
-        {data?.businessHomeRsmName ? (
+        {data?.businessRsmName || data?.businessHomeRsmName ? (
+          <div className="rounded-xl border border-purple-100 bg-purple-50/50 p-4 space-y-1 text-left w-full">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+              <Users className="w-4 h-4 text-purple-600" />
+              Business loan RSM
+            </div>
+            <p className="text-sm font-medium text-gray-900">{data.businessRsmName || data.businessHomeRsmName}</p>
+            {data.businessRsmEmployeeId || data.businessHomeRsmEmployeeId ? (
+              <p className="text-xs text-gray-600">ID: {data.businessRsmEmployeeId || data.businessHomeRsmEmployeeId}</p>
+            ) : null}
+            {data.businessRsmPhone || data.businessHomeRsmPhone ? (
+              <p className="text-xs text-gray-600">Phone: {data.businessRsmPhone || data.businessHomeRsmPhone}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {data?.homeLapRsmName ? (
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 space-y-1 text-left w-full">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <Users className="w-4 h-4 text-brand-primary" />
-              Business &amp; home loan RSM
+              <Users className="w-4 h-4 text-emerald-600" />
+              Home &amp; LAP loan RSM
             </div>
-            <p className="text-sm text-gray-800">{data.businessHomeRsmName}</p>
-            {data.businessHomeRsmEmployeeId ? (
-              <p className="text-xs text-gray-600">ID: {data.businessHomeRsmEmployeeId}</p>
+            <p className="text-sm font-medium text-gray-900">{data.homeLapRsmName}</p>
+            {data.homeLapRsmEmployeeId ? (
+              <p className="text-xs text-gray-600">ID: {data.homeLapRsmEmployeeId}</p>
             ) : null}
-            {data.businessHomeRsmPhone ? (
-              <p className="text-xs text-gray-600">Phone: {data.businessHomeRsmPhone}</p>
+            {data.homeLapRsmPhone ? (
+              <p className="text-xs text-gray-600">Phone: {data.homeLapRsmPhone}</p>
             ) : null}
           </div>
         ) : null}

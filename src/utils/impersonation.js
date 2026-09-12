@@ -37,6 +37,9 @@
   
 
 // src/utils/impersonation.js
+import axios from "axios";
+import toast from "react-hot-toast";
+import { backendurl } from "../feature/urldata";
 import { restoreParentAuth, getAuthData, clearChildAuthData, saveAuthData } from "./localStorage";
 
 // Format role name for display
@@ -75,9 +78,12 @@ export const getOriginalRole = () => {
     };
   }
   
-  // Fallback: Check in priority order: Admin > ASM > RM
+  // Fallback: Check in priority order: Admin > RSM > ASM > RM
   if (authData.adminToken) {
     return { role: "SUPER_ADMIN", displayName: "Admin", route: "/admin" };
+  }
+  if (authData.rsmToken) {
+    return { role: "RSM", displayName: "RSM", route: "/rsm" };
   }
   if (authData.asmToken) {
     return { role: "ASM", displayName: "ASM", route: "/asm" };
@@ -217,6 +223,7 @@ export const backToPreviousRole = (navigate) => {
       // Navigate to previous role dashboard
       const routeMap = {
         SUPER_ADMIN: "/admin",
+        RSM: "/rsm",
         ASM: "/asm",
         RM: "/rm",
         PARTNER: "/partner",
@@ -225,12 +232,13 @@ export const backToPreviousRole = (navigate) => {
       navigate(routeMap[prev.role] || "/LoginPage");
     } else {
       // If stack empty, fallback to original role
-      const roles = ["super_admin", "asm", "rm", "partner", "customer"];
+      const roles = ["super_admin", "rsm", "asm", "rm", "partner", "customer"];
       for (let role of roles) {
         const token = localStorage.getItem(`${role}_token`);
         if (token) {
           const routeMap = {
             super_admin: "/admin",
+            rsm: "/rsm",
             asm: "/asm",
             rm: "/rm",
             partner: "/partner",
@@ -245,12 +253,13 @@ export const backToPreviousRole = (navigate) => {
     }
   } else {
     // If stack empty, fallback to first valid token
-    const roles = ["super_admin", "asm", "rm", "partner", "customer"];
+    const roles = ["super_admin", "rsm", "asm", "rm", "partner", "customer"];
     for (let role of roles) {
       const token = localStorage.getItem(`${role}_token`);
       if (token) {
         const routeMap = {
           super_admin: "/admin",
+          rsm: "/rsm",
           asm: "/asm",
           rm: "/rm",
           partner: "/partner",
@@ -303,5 +312,63 @@ export const backToAdmin = (navigate) => {
   } catch (err) {
     console.error("Error in backToAdmin:", err);
     navigate("/LoginPage");
+  }
+};
+
+// Universal Login-As handler for Admin and senior managers
+export const loginAsUser = async (userId, navigate) => {
+  try {
+    const authData = getAuthData();
+    const currentToken =
+      authData.adminToken ||
+      authData.rsmToken ||
+      authData.asmToken ||
+      authData.rmToken ||
+      authData.partnerToken;
+
+    if (!currentToken) {
+      toast.error("Not authenticated. Please log in.");
+      return;
+    }
+
+    const res = await axios.post(
+      `${backendurl}/auth/login-as/${userId}`,
+      {},
+      { headers: { Authorization: `Bearer ${currentToken}` } }
+    );
+
+    const { token, user, parent } = res.data;
+
+    const currentUser =
+      authData.adminUser ||
+      authData.rsmUser ||
+      authData.asmUser ||
+      authData.rmUser ||
+      authData.partnerUser;
+    const currentUserToken = currentToken;
+
+    const parentInfo =
+      parent || (currentUser ? { ...currentUser, token: currentUserToken } : null);
+
+    saveAuthData(token, user, true, parentInfo);
+
+    toast.success(`Logged in as ${user.firstName || ""} (${user.role})`);
+
+    const routeMap = {
+      SUPER_ADMIN: "/admin",
+      ADMIN: "/admin",
+      RSM: "/rsm",
+      ASM: "/asm",
+      RM: "/rm",
+      PARTNER: "/partner",
+      CUSTOMER: "/customer",
+    };
+
+    const targetRoute = routeMap[user.role] || routeMap[String(user.role).toUpperCase()] || "/admin";
+    navigate(targetRoute);
+  } catch (err) {
+    console.error("Login as user failed:", err.response?.data || err.message);
+    const msg = err.response?.data?.message || err.message || "Login as user failed";
+    toast.error(msg);
   }
 };

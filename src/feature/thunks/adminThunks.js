@@ -582,6 +582,29 @@ export const deleteRsm = createAsyncThunk(
   }
 );
 
+// Update RSM (SUPER_ADMIN) — PATCH /admin/rsm/:rsmId
+export const updateRsm = createAsyncThunk(
+  "admin/updateRsm",
+  async ({ rsmId, data }, { dispatch, rejectWithValue }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.patch(
+        `${backendurl}/admin/rsm/${rsmId}`,
+        data,
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+      dispatch(fetchRSMs(adminToken));
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update RSM"
+      );
+    }
+  }
+);
+
 // Permanently delete partner (SUPER_ADMIN) — DELETE /admin/partner/:partnerId
 export const rejectPartner = createAsyncThunk(
   "admin/rejectPartner",

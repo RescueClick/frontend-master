@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Eye, Download, Trash2, Search, X } from "lucide-react";
+import { Eye, Download, Trash2, Search, X, KeyRound } from "lucide-react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { getAllCustomers } from "../../../feature/thunks/adminThunks";
@@ -10,6 +10,7 @@ import { backendurl } from "../../../feature/urldata";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
+import AdminChangePasswordModal from "../../../components/shared/AdminChangePasswordModal";
 import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
@@ -32,6 +33,7 @@ export default function CustomerTable() {
   const [deleting, setDeleting] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("All")
+  const [passwordUser, setPasswordUser] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -123,27 +125,57 @@ export default function CustomerTable() {
 
       const loginAsUser = async (userId, navigate) => {
         try {
-          const { adminToken } = getAuthData();
-          if (!adminToken) throw new Error("Admin not authenticated");
+          const authData = getAuthData();
+          const currentToken =
+            authData.adminToken ||
+            authData.rsmToken ||
+            authData.asmToken ||
+            authData.rmToken ||
+            authData.partnerToken;
+          if (!currentToken) throw new Error("Not authenticated");
       
           const res = await axios.post(
             `${backendurl}/auth/login-as/${userId}`,
             {},
-            { headers: { Authorization: `Bearer ${adminToken}` } }
+            { headers: { Authorization: `Bearer ${currentToken}` } }
           );
       
-          const { token, user } = res.data;
+          const { token, user, parent } = res.data;
+          const currentUser =
+            authData.adminUser ||
+            authData.rsmUser ||
+            authData.asmUser ||
+            authData.rmUser ||
+            authData.partnerUser;
+          const parentInfo = parent || (currentUser ? { ...currentUser, token: currentToken } : null);
       
-          // Save impersonated token without removing admin token
-          saveAuthData(token, user, true);
+          // Save impersonated token with parent tracking
+          saveAuthData(token, user, true, parentInfo);
       
           // Navigate to role
           switch (user.role) {
-            case "ASM": navigate("/asm"); break;
-            case "RM": navigate("/rm"); break;
-            case "PARTNER": navigate("/partner"); break;
-            case "CUSTOMER": navigate("/customer"); break;
-            default: navigate("/"); break;
+            case "SUPER_ADMIN":
+            case "ADMIN":
+              navigate("/admin");
+              break;
+            case "RSM":
+              navigate("/rsm");
+              break;
+            case "ASM":
+              navigate("/asm");
+              break;
+            case "RM":
+              navigate("/rm");
+              break;
+            case "PARTNER":
+              navigate("/partner");
+              break;
+            case "CUSTOMER":
+              navigate("/customer");
+              break;
+            default:
+              navigate("/customer");
+              break;
           }
         } catch (err) {
           console.error("Login as user failed:", err.response?.data || err.message);
@@ -270,6 +302,26 @@ export default function CustomerTable() {
               title="View Details"
             >
               <Eye size={14} />
+            </button>
+            <button
+              type="button"
+              className="p-1 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-700 transition-colors"
+              onClick={() => {
+                const targetCustomer = {
+                  _id: c.customerId?._id || c.customerId || c._id,
+                  id: c.customerId?._id || c.customerId || c._id,
+                  firstName: c.customerId?.firstName || c.firstName,
+                  lastName: c.customerId?.lastName || c.lastName,
+                  email: c.customerId?.email || c.email,
+                  phone: c.customerId?.phone || c.phone,
+                  employeeId: c.customerId?.employeeId || c.employeeId,
+                  role: "CUSTOMER",
+                };
+                setPasswordUser(targetCustomer);
+              }}
+              title="Change Customer Password"
+            >
+              <KeyRound size={14} />
             </button>
             <button
               type="button"
@@ -562,6 +614,11 @@ export default function CustomerTable() {
       />
     </DashboardTablePage>
 
+    <AdminChangePasswordModal
+      isOpen={Boolean(passwordUser)}
+      user={passwordUser}
+      onClose={() => setPasswordUser(null)}
+    />
 
     </>
 
