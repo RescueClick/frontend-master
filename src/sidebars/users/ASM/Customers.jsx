@@ -299,9 +299,22 @@ const Customer = () => {
         <div>
           <h3 className="font-semibold text-gray-700 mb-3 text-center">Management Team</h3>
           <div className="space-y-3">
+            {model.rsmName && (
+              <>
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <p className="text-xs text-gray-500">RSM Employee ID</p>
+                  <p className="font-medium text-gray-800">{model.rsmEmployeeId || "—"}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <p className="text-xs text-gray-500">RSM Name</p>
+                  <p className="font-medium text-gray-800">{model.rsmName || "—"}</p>
+                </div>
+              </>
+            )}
+
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
               <p className="text-xs text-gray-500">ASM Employee ID</p>
-              <p className="font-medium text-gray-800">{model.asmEmployeeId}</p>
+              <p className="font-medium text-gray-800">{model.asmEmployeeId || "—"}</p>
             </div>
 
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">

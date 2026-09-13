@@ -72,6 +72,7 @@ export default function CustomerTable() {
       const mongoId = String(c._id || c.applicationId || "").toLowerCase();
       const appNo = String(c.appNo ?? "").toLowerCase();
       const loanType = (c.loanType || "").toLowerCase();
+      const rsmName = (c.rsmName || "").toLowerCase();
       const asmName = (c.asmName || "").toLowerCase();
       const rmName = (c.rmName || "").toLowerCase();
       const partnerName = (c.partnerName || "").toLowerCase();
@@ -84,6 +85,7 @@ export default function CustomerTable() {
         mongoId.includes(term) ||
         appNo.includes(term) ||
         loanType.includes(term) ||
+        rsmName.includes(term) ||
         asmName.includes(term) ||
         rmName.includes(term) ||
         partnerName.includes(term) ||
@@ -498,6 +500,8 @@ export default function CustomerTable() {
             </h3>
             <dl className="space-y-3">
               {[
+                ["RSM employee ID", model.rsmEmployeeId ?? "—"],
+                ["RSM name", model.rsmName ?? "—"],
                 ["ASM employee ID", model.asmEmployeeId ?? "—"],
                 ["ASM name", model.asmName ?? "—"],
                 ["RM employee ID", model.rmEmployeeId ?? "—"],
