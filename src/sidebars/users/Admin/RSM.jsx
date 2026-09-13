@@ -93,9 +93,9 @@ export default function RSM() {
         })
       ).unwrap();
       const typeNames = {
-        PERSONAL: "Personal Loan RSM",
-        BUSINESS: "Business Loan RSM",
-        HOME_LAP: "Home & LAP Loan RSM",
+        PERSONAL: "Personal Loan (Specialty)",
+        BUSINESS: "Business Loan (Specialty)",
+        HOME_LAP: "Home & LAP Loan (Specialty)",
       };
       toast.success(`${rsm.firstName} ${rsm.lastName} updated to ${typeNames[newType] || newType}!`);
     } catch (err) {
@@ -1330,10 +1330,10 @@ export default function RSM() {
                     onChange={handleEditInputChange}
                     className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary"
                   >
-                    <option value="">Select RSM Type</option>
-                    <option value="PERSONAL">Personal Loan RSM</option>
-                    <option value="BUSINESS">Business Loan RSM</option>
-                    <option value="HOME_LAP">Home &amp; LAP Loan RSM</option>
+                    <option value="">Select Specialty</option>
+                    <option value="PERSONAL">Personal Loan</option>
+                    <option value="BUSINESS">Business Loan</option>
+                    <option value="HOME_LAP">Home &amp; LAP Loan</option>
                   </select>
                   {editFormErrors.rsmType && (
                     <p className="text-xs text-red-600 mt-1">{editFormErrors.rsmType}</p>

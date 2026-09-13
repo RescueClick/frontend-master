@@ -565,103 +565,108 @@ const PartnerProfile = ({ inModal = false }) => {
                   </li>
                 ) : null}
 
-                {/* Personal Loan RSM */}
-                {data?.personalRsmName || data?.personalRsmEmployeeId ? (
+                {/* Personal Loan ASM */}
+                {data?.personalAsmName || data?.personalRsmName || data?.personalAsmEmployeeId || data?.personalRsmEmployeeId ? (
                   <li className="border-l-2 border-teal-400 pl-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      RSM — Personal loans
+                      Personal Loan ASM
                     </p>
                     <p className="font-medium text-gray-900">
-                      {data.personalRsmName || "—"}
+                      {data.personalAsmName || data.personalRsmName || "—"}
                     </p>
-                    <p className="text-gray-600">
-                      RSM ID:{" "}
-                      <span className="font-mono text-xs">
-                        {data.personalRsmEmployeeId || "—"}
+                    <p className="text-gray-600 text-xs">
+                      ASM ID:{" "}
+                      <span className="font-mono">
+                        {data.personalAsmEmployeeId || data.personalRsmEmployeeId || "—"}
                       </span>
                     </p>
-                    {(data.personalRsmEmail || data.personalRsmPhone) && (
-                      <p className="text-gray-600 text-xs mt-1">
-                        {[data.personalRsmEmail, data.personalRsmPhone]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    )}
-                    {data.personalRsmAsmName && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        ASM: {data.personalRsmAsmName}{" "}
-                        <span className="font-mono">
-                          ({data.personalRsmAsmEmployeeId || "—"})
-                        </span>
-                      </p>
-                    )}
-                  </li>
-                ) : null}
-
-                {/* Business Loan RSM */}
-                {(data?.businessRsmName || data?.businessRsmEmployeeId || data?.businessHomeRsmName) ? (
-                  <li className="border-l-2 border-teal-400 pl-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      RSM — Business loans
-                    </p>
-                    <p className="font-medium text-gray-900">
-                      {data.businessRsmName || data.businessHomeRsmName || "—"}
-                    </p>
-                    <p className="text-gray-600">
-                      RSM ID:{" "}
-                      <span className="font-mono text-xs">
-                        {data.businessRsmEmployeeId || data.businessHomeRsmEmployeeId || "—"}
-                      </span>
-                    </p>
-                    {(data.businessRsmEmail || data.businessRsmPhone || data.businessHomeRsmEmail || data.businessHomeRsmPhone) && (
+                    {(data.personalAsmEmail || data.personalAsmPhone || data.personalRsmEmail || data.personalRsmPhone) && (
                       <p className="text-gray-600 text-xs mt-1">
                         {[
-                          data.businessRsmEmail || data.businessHomeRsmEmail,
-                          data.businessRsmPhone || data.businessHomeRsmPhone,
+                          data.personalAsmEmail || data.personalRsmEmail,
+                          data.personalAsmPhone || data.personalRsmPhone,
                         ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
                     )}
-                    {(data.businessRsmAsmName || data.businessHomeRsmAsmName) && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        ASM: {data.businessRsmAsmName || data.businessHomeRsmAsmName}{" "}
-                        <span className="font-mono">
-                          ({data.businessRsmAsmEmployeeId || data.businessHomeRsmAsmEmployeeId || "—"})
-                        </span>
+                  </li>
+                ) : null}
+
+                {/* Business Loan ASM */}
+                {data?.businessAsmName || data?.businessRsmName || data?.businessHomeRsmName || data?.businessAsmEmployeeId || data?.businessRsmEmployeeId ? (
+                  <li className="border-l-2 border-teal-400 pl-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Business Loan ASM
+                    </p>
+                    <p className="font-medium text-gray-900">
+                      {data.businessAsmName || data.businessRsmName || data.businessHomeRsmName || "—"}
+                    </p>
+                    <p className="text-gray-600 text-xs">
+                      ASM ID:{" "}
+                      <span className="font-mono">
+                        {data.businessAsmEmployeeId || data.businessRsmEmployeeId || data.businessHomeRsmEmployeeId || "—"}
+                      </span>
+                    </p>
+                    {(data.businessAsmEmail || data.businessAsmPhone || data.businessRsmEmail || data.businessRsmPhone) && (
+                      <p className="text-gray-600 text-xs mt-1">
+                        {[
+                          data.businessAsmEmail || data.businessRsmEmail || data.businessHomeRsmEmail,
+                          data.businessAsmPhone || data.businessRsmPhone || data.businessHomeRsmPhone,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     )}
                   </li>
                 ) : null}
 
-                {/* Home & LAP Loan RSM */}
-                {(data?.homeLapRsmName || data?.homeLapRsmEmployeeId) ? (
+                {/* Home & LAP Loan ASM */}
+                {data?.homeLapAsmName || data?.homeLapRsmName || data?.homeLapAsmEmployeeId || data?.homeLapRsmEmployeeId ? (
                   <li className="border-l-2 border-teal-400 pl-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      RSM — Home &amp; LAP loans
+                      Home &amp; LAP Loan ASM
                     </p>
                     <p className="font-medium text-gray-900">
-                      {data.homeLapRsmName || "—"}
+                      {data.homeLapAsmName || data.homeLapRsmName || "—"}
                     </p>
-                    <p className="text-gray-600">
-                      RSM ID:{" "}
-                      <span className="font-mono text-xs">
-                        {data.homeLapRsmEmployeeId || "—"}
+                    <p className="text-gray-600 text-xs">
+                      ASM ID:{" "}
+                      <span className="font-mono">
+                        {data.homeLapAsmEmployeeId || data.homeLapRsmEmployeeId || "—"}
                       </span>
                     </p>
-                    {(data.homeLapRsmEmail || data.homeLapRsmPhone) && (
+                    {(data.homeLapAsmEmail || data.homeLapAsmPhone || data.homeLapRsmEmail || data.homeLapRsmPhone) && (
                       <p className="text-gray-600 text-xs mt-1">
-                        {[data.homeLapRsmEmail, data.homeLapRsmPhone]
+                        {[
+                          data.homeLapAsmEmail || data.homeLapRsmEmail,
+                          data.homeLapAsmPhone || data.homeLapRsmPhone,
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
                     )}
-                    {data.homeLapRsmAsmName && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        ASM: {data.homeLapRsmAsmName}{" "}
-                        <span className="font-mono">
-                          ({data.homeLapRsmAsmEmployeeId || "—"})
-                        </span>
+                  </li>
+                ) : null}
+
+                {/* Senior Regional Sales Manager */}
+                {data?.rsmName || data?.rsmEmployeeId ? (
+                  <li className="border-l-2 border-teal-400 pl-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Regional Sales Manager (RSM)
+                    </p>
+                    <p className="font-medium text-gray-900">
+                      {data.rsmName || "—"}
+                    </p>
+                    <p className="text-gray-600 text-xs">
+                      RSM ID:{" "}
+                      <span className="font-mono">
+                        {data.rsmEmployeeId || "—"}
+                      </span>
+                    </p>
+                    {(data.rsmEmail || data.rsmPhone) && (
+                      <p className="text-gray-600 text-xs mt-1">
+                        {[data.rsmEmail, data.rsmPhone].filter(Boolean).join(" · ")}
                       </p>
                     )}
                   </li>

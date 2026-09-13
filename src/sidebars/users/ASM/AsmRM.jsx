@@ -88,9 +88,9 @@ export default function AsmRM() {
       "Employee ID": r.employeeId || "",
       "RM Code": r.rmCode || "",
       Status: r.status || "",
-      "Personal Loan RSM": r.personalRsmName || (r.personalRsm ? `${r.personalRsm.firstName} ${r.personalRsm.lastName}` : ""),
-      "Business Loan RSM": r.businessRsmName || (r.businessRsm ? `${r.businessRsm.firstName} ${r.businessRsm.lastName}` : ""),
-      "Home & LAP RSM": r.homeLapRsmName || (r.homeLapRsm ? `${r.homeLapRsm.firstName} ${r.homeLapRsm.lastName}` : ""),
+      "Personal Loan ASM": r.personalAsmName || r.personalRsmName || (r.personalAsm ? `${r.personalAsm.firstName} ${r.personalAsm.lastName}` : (r.personalRsm ? `${r.personalRsm.firstName} ${r.personalRsm.lastName}` : "")),
+      "Business Loan ASM": r.businessAsmName || r.businessRsmName || (r.businessAsm ? `${r.businessAsm.firstName} ${r.businessAsm.lastName}` : (r.businessRsm ? `${r.businessRsm.firstName} ${r.businessRsm.lastName}` : "")),
+      "Home & LAP Loan ASM": r.homeLapAsmName || r.homeLapRsmName || (r.homeLapAsm ? `${r.homeLapAsm.firstName} ${r.homeLapAsm.lastName}` : (r.homeLapRsm ? `${r.homeLapRsm.firstName} ${r.homeLapRsm.lastName}` : "")),
       Email: r.email || "",
       Phone: r.phone || "",
     }));
@@ -240,21 +240,21 @@ loginAsUser(userId, navigate);
     },
     { title: "User ID", dataIndex: "employeeId", key: "employeeId" },
     {
-      title: "Assigned RSMs",
-      key: "rsms",
+      title: "Assigned ASMs",
+      key: "asms",
       render: (_, rm) => (
         <div className="text-xs space-y-0.5">
           <div className="text-slate-700">
             <span className="font-semibold text-blue-700">PL:</span>{" "}
-            {rm.personalRsmName || (rm.personalRsm ? `${rm.personalRsm.firstName} ${rm.personalRsm.lastName}` : "—")}
+            {rm.personalAsmName || rm.personalRsmName || (rm.personalAsm ? `${rm.personalAsm.firstName} ${rm.personalAsm.lastName}` : (rm.personalRsm ? `${rm.personalRsm.firstName} ${rm.personalRsm.lastName}` : "—"))}
           </div>
           <div className="text-slate-700">
             <span className="font-semibold text-purple-700">BL:</span>{" "}
-            {rm.businessRsmName || (rm.businessRsm ? `${rm.businessRsm.firstName} ${rm.businessRsm.lastName}` : "—")}
+            {rm.businessAsmName || rm.businessRsmName || (rm.businessAsm ? `${rm.businessAsm.firstName} ${rm.businessAsm.lastName}` : (rm.businessRsm ? `${rm.businessRsm.firstName} ${rm.businessRsm.lastName}` : "—"))}
           </div>
           <div className="text-slate-700">
             <span className="font-semibold text-emerald-700">HL/LAP:</span>{" "}
-            {rm.homeLapRsmName || (rm.homeLapRsm ? `${rm.homeLapRsm.firstName} ${rm.homeLapRsm.lastName}` : "—")}
+            {rm.homeLapAsmName || rm.homeLapRsmName || (rm.homeLapAsm ? `${rm.homeLapAsm.firstName} ${rm.homeLapAsm.lastName}` : (rm.homeLapRsm ? `${rm.homeLapRsm.firstName} ${rm.homeLapRsm.lastName}` : "—"))}
           </div>
         </div>
       ),

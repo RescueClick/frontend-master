@@ -69,9 +69,9 @@ export default function AsmRSM() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const typeNames = {
-        PERSONAL: "Personal Loan RSM",
-        BUSINESS: "Business Loan RSM",
-        HOME_LAP: "Home & LAP Loan RSM",
+        PERSONAL: "Personal Loan ASM",
+        BUSINESS: "Business Loan ASM",
+        HOME_LAP: "Home & LAP Loan ASM",
       };
       toast.success(`${rsm.firstName} ${rsm.lastName} updated to ${typeNames[newType] || newType}!`);
       dispatch(fetchRsmList());
@@ -918,10 +918,10 @@ export default function AsmRSM() {
                   onChange={handleEditInputChange}
                   className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary"
                 >
-                  <option value="">Select RSM Type</option>
-                  <option value="PERSONAL">Personal Loan RSM</option>
-                  <option value="BUSINESS">Business Loan RSM</option>
-                  <option value="HOME_LAP">Home &amp; LAP Loan RSM</option>
+                  <option value="">Select Specialty</option>
+                  <option value="PERSONAL">Personal Loan ASM</option>
+                  <option value="BUSINESS">Business Loan ASM</option>
+                  <option value="HOME_LAP">Home &amp; LAP Loan ASM</option>
                 </select>
                 {editFormErrors.rsmType && (
                   <p className="text-xs text-red-600 mt-1">{editFormErrors.rsmType}</p>
