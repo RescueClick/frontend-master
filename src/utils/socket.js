@@ -14,16 +14,28 @@ class SocketManager {
   }
 
   getToken() {
-    const authData = getAuthData();
+    const authData = getAuthData() || {};
+    const path = typeof window !== "undefined" ? window.location.pathname || "" : "";
+
+    // Match the page the user is on (critical for presence / chat identity)
+    if (path.startsWith("/admin") && authData.adminToken) return authData.adminToken;
+    if (path.startsWith("/rsm") && (authData.rawRsmToken || authData.rsmToken)) {
+      return authData.rawRsmToken || authData.rsmToken;
+    }
+    if (path.startsWith("/asm") && (authData.rawAsmToken || authData.asmToken)) {
+      return authData.rawAsmToken || authData.asmToken;
+    }
+    if (path.startsWith("/rm") && authData.rmToken) return authData.rmToken;
+
     // Prefer the active role session (user object present) to avoid mixed tokens
-    if (authData?.rmUser && authData?.rmToken) return authData.rmToken;
+    if (authData?.adminUser && authData?.adminToken) return authData.adminToken;
     if (authData?.rsmUser && (authData?.rawRsmToken || authData?.rsmToken)) {
       return authData.rawRsmToken || authData.rsmToken;
     }
     if (authData?.asmUser && (authData?.rawAsmToken || authData?.asmToken)) {
       return authData.rawAsmToken || authData.asmToken;
     }
-    if (authData?.adminUser && authData?.adminToken) return authData.adminToken;
+    if (authData?.rmUser && authData?.rmToken) return authData.rmToken;
     if (authData?.partnerUser && authData?.partnerToken) return authData.partnerToken;
     if (authData?.customerUser && authData?.customerToken) return authData.customerToken;
     return (
@@ -128,11 +140,13 @@ class SocketManager {
     }
 
     if (this.socket?.connected) {
+      // Token/role changed (e.g. /admin vs leftover RSM) — must reconnect as new user
+      if (this.socket.auth?.token !== token) {
+        this.disconnect(false);
+        return this.connect();
+      }
       this.isConnected = true;
       this._connecting = false;
-      if (this.socket.auth?.token !== token) {
-        this.socket.auth = { token };
-      }
       // Re-notify late subscribers (chat UI mounted after connect)
       this.emit("socketConnected", { connected: true, socketId: this.socket.id, synced: true });
       return this.socket;
@@ -303,7 +317,8 @@ class SocketManager {
   }
 
   getIsConnected() {
-    return this.isConnected && !!this.socket?.connected;
+    // Trust the live socket.io connected flag (avoids stale isConnected boolean)
+    return !!this.socket?.connected;
   }
 
   notifyApplicationStatusChanged(applicationId, newStatus, oldStatus) {

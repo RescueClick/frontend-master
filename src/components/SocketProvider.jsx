@@ -9,8 +9,8 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     const tryConnect = () => {
       try {
-        if (socketManager.getIsConnected()) return;
         if (!socketManager.getToken()) return;
+        // Always call ensureConnected — it reconnects when token/role changes
         socketManager.ensureConnected();
       } catch (error) {
         console.error("SocketProvider connect failed:", error);

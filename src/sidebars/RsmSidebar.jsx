@@ -18,6 +18,7 @@ import {
   X,
   TrendingUp,
   MessageSquare,
+  Search,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -118,6 +119,7 @@ const RsmSidebar = () => {
     { name: "Applications", icon: FileText, path: `${basePath}/applications` },
     { name: "Follow Up", icon: CalendarCheck, path: `${basePath}/follow-ups` },
     { name: "Banks", icon: Building2, path: `${basePath}/banks`, highlight: true },
+    { name: "Find Bank RM", icon: Search, path: `${basePath}/find-bank-rm` },
     { name: "Settings", icon: Settings, path: `${basePath}/settings` },
   ];
 
@@ -332,7 +334,7 @@ const RsmSidebar = () => {
       )}
 
       {/* Floating Bottom-Right Staff Chat Widget */}
-      <StaffChatWidget currentRole="RSM" />
+      <StaffChatWidget currentRole="ASM" />
     </div>
   );
 };

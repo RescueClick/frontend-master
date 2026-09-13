@@ -21,6 +21,7 @@ import {
   Award,
   TrendingUp,
   MessageSquare,
+  Search,
 } from "lucide-react";
 
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -129,6 +130,7 @@ const AsmSiderbar = () => {
     { name: "Payouts", icon: IndianRupee, path: `${basePath}/payouts`, highlight: true },
     { name: "Incentives", icon: Award, path: `${basePath}/incentives`, highlight: true },
     { name: "Follow Up", icon: CalendarCheck, path: `${basePath}/follow-ups` },
+    { name: "Find Bank RM", icon: Search, path: `${basePath}/find-bank-rm` },
     { name: "Settings", icon: Settings, path: `${basePath}/settings` },
   ];
 
@@ -340,7 +342,7 @@ const AsmSiderbar = () => {
       )}
 
       {/* Floating Bottom-Right Staff Chat Widget */}
-      <StaffChatWidget currentRole="ASM" />
+      <StaffChatWidget currentRole="RSM" />
     </div>
   );
 };

@@ -166,13 +166,41 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
   };
 
   const refreshOnlineStaff = () => {
+    // REST heartbeat is reliable even when Socket.IO is flaky
+    syncOnlineFromApi();
     if (!socket?.connected) return;
     socket.emit("chat:get_online_staff", (res) => {
       if (res?.onlineUserIds) {
-        setOnlineUserIds(res.onlineUserIds.map(String));
+        setOnlineUserIds((prev) => {
+          const merged = new Set([...(prev || []).map(String), ...res.onlineUserIds.map(String)]);
+          return Array.from(merged);
+        });
       }
     });
   };
+
+  const syncOnlineFromApi = async () => {
+    try {
+      const data = await chatService.sendHeartbeat();
+      if (Array.isArray(data?.onlineUserIds)) {
+        setOnlineUserIds(data.onlineUserIds.map(String));
+        return;
+      }
+      const list = await chatService.getOnlineStaff();
+      if (Array.isArray(list?.onlineUserIds)) {
+        setOnlineUserIds(list.onlineUserIds.map(String));
+      }
+    } catch (_) {
+      // socket presence may still work
+    }
+  };
+
+  // Keep me Online while this chat page is open
+  useEffect(() => {
+    syncOnlineFromApi();
+    const beat = setInterval(syncOnlineFromApi, 8000);
+    return () => clearInterval(beat);
+  }, []);
 
   // Socket room joining and event listeners
   useEffect(() => {

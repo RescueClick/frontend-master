@@ -13,32 +13,68 @@ export const sameId = (a, b) => {
 };
 
 /**
+ * Pick the staff session for the page the user is actually on.
+ * Avoids mixed localStorage (e.g. leftover RSM session while on /admin)
+ * which made Admin always appear Offline in chat.
+ */
+export const getActiveStaffSession = () => {
+  const authData = getAuthData() || {};
+  const path = typeof window !== "undefined" ? window.location.pathname || "" : "";
+
+  if (path.startsWith("/admin") && authData.adminUser && authData.adminToken) {
+    return { user: authData.adminUser, token: authData.adminToken, role: "SUPER_ADMIN" };
+  }
+  if (path.startsWith("/rsm") && authData.rsmUser && (authData.rawRsmToken || authData.rsmToken)) {
+    return {
+      user: authData.rsmUser,
+      token: authData.rawRsmToken || authData.rsmToken,
+      role: "RSM",
+    };
+  }
+  if (path.startsWith("/asm") && authData.asmUser && (authData.rawAsmToken || authData.asmToken)) {
+    return {
+      user: authData.asmUser,
+      token: authData.rawAsmToken || authData.asmToken,
+      role: "ASM",
+    };
+  }
+  if (path.startsWith("/rm") && authData.rmUser && authData.rmToken) {
+    return { user: authData.rmUser, token: authData.rmToken, role: "RM" };
+  }
+
+  // Fallback: first available staff session
+  if (authData.adminUser && authData.adminToken) {
+    return { user: authData.adminUser, token: authData.adminToken, role: "SUPER_ADMIN" };
+  }
+  if (authData.rsmUser && (authData.rawRsmToken || authData.rsmToken)) {
+    return {
+      user: authData.rsmUser,
+      token: authData.rawRsmToken || authData.rsmToken,
+      role: "RSM",
+    };
+  }
+  if (authData.asmUser && (authData.rawAsmToken || authData.asmToken)) {
+    return {
+      user: authData.asmUser,
+      token: authData.rawAsmToken || authData.asmToken,
+      role: "ASM",
+    };
+  }
+  if (authData.rmUser && authData.rmToken) {
+    return { user: authData.rmUser, token: authData.rmToken, role: "RM" };
+  }
+  return { user: null, token: null, role: null };
+};
+
+/**
  * Returns active staff auth token (Admin, ASM, RSM, RM)
  */
-export const getStaffToken = () => {
-  const authData = getAuthData();
-  return (
-    authData?.adminToken ||
-    authData?.asmToken ||
-    authData?.rsmToken ||
-    authData?.rmToken ||
-    null
-  );
-};
+export const getStaffToken = () => getActiveStaffSession().token || null;
 
 /**
  * Returns active staff user profile
  */
-export const getStaffUser = () => {
-  const authData = getAuthData();
-  return (
-    authData?.adminUser ||
-    authData?.asmUser ||
-    authData?.rsmUser ||
-    authData?.rmUser ||
-    null
-  );
-};
+export const getStaffUser = () => getActiveStaffSession().user || null;
 
 const getHeaders = () => {
   const token = getStaffToken();
@@ -140,6 +176,24 @@ export const chatService = {
   // Get total unread count across all conversations
   getUnreadCount: async () => {
     const res = await axios.get(`${backendurl}/chat/unread-count`, {
+      headers: getHeaders(),
+    });
+    return res.data;
+  },
+
+  // Mark current user online while chat UI is open
+  sendHeartbeat: async () => {
+    const res = await axios.post(
+      `${backendurl}/chat/heartbeat`,
+      {},
+      { headers: getHeaders() }
+    );
+    return res.data;
+  },
+
+  // Online staff ids (socket + heartbeat)
+  getOnlineStaff: async () => {
+    const res = await axios.get(`${backendurl}/chat/online-staff`, {
       headers: getHeaders(),
     });
     return res.data;

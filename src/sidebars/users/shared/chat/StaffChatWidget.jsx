@@ -73,6 +73,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [onlineUserIds, setOnlineUserIds] = useState([]);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const [presenceReady, setPresenceReady] = useState(false);
 
   const typingTimeoutRef = useRef(null);
   const remoteTypingClearRef = useRef(null);
@@ -167,18 +168,50 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     return () => clearInterval(timer);
   }, []);
 
+  const syncOnlineFromApi = async () => {
+    try {
+      // Heartbeat marks ME online; response includes full online list
+      const data = await chatService.sendHeartbeat();
+      setPresenceReady(true);
+      if (Array.isArray(data?.onlineUserIds)) {
+        setOnlineUserIds(data.onlineUserIds.map(String));
+        return;
+      }
+      const list = await chatService.getOnlineStaff();
+      if (Array.isArray(list?.onlineUserIds)) {
+        setOnlineUserIds(list.onlineUserIds.map(String));
+      }
+    } catch (_) {
+      // silent — socket presence may still work
+    }
+  };
+
+  // Presence while staff sidebar is loaded (chat available)
+  useEffect(() => {
+    ensureConnected?.();
+    syncOnlineFromApi();
+    const beat = setInterval(syncOnlineFromApi, 8000);
+    return () => clearInterval(beat);
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
     ensureConnected?.();
     loadConversations();
+    syncOnlineFromApi();
   }, [isOpen]);
 
   const refreshOnlineStaff = () => {
+    // Prefer REST (reliable). Also ask socket when connected.
+    syncOnlineFromApi();
     const sock = socket;
     if (!sock?.connected) return;
     sock.emit("chat:get_online_staff", (res) => {
       if (res?.onlineUserIds) {
-        setOnlineUserIds(res.onlineUserIds.map(String));
+        setOnlineUserIds((prev) => {
+          const merged = new Set([...(prev || []).map(String), ...res.onlineUserIds.map(String)]);
+          return Array.from(merged);
+        });
       }
     });
   };
@@ -627,8 +660,8 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
                         </>
                       )}
                       <span className="text-white/40">·</span>
-                      <span className={isConnected ? "text-emerald-200" : "text-amber-200"}>
-                        {isConnected ? "Live" : "Connecting…"}
+                      <span className={(isConnected || presenceReady) ? "text-emerald-200" : "text-amber-200"}>
+                        {(isConnected || presenceReady) ? "Live" : "Connecting…"}
                       </span>
                     </p>
                   </div>
@@ -637,7 +670,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
                 <div>
                   <h3 className="font-semibold text-[15px]">Staff Chat</h3>
                   <p className="text-[11px] text-emerald-100/80">
-                    {isConnected ? "Connected · realtime" : "Connecting…"}
+                    {(isConnected || presenceReady) ? "Connected · realtime" : "Connecting…"}
                   </p>
                 </div>
               )}
