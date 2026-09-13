@@ -18,7 +18,7 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import { chatService, getStaffUser } from "./chatService";
+import { chatService, getStaffUser, sameId } from "./chatService";
 import { useSocket } from "../../../../hooks/useSocket";
 import NewChatModal from "./NewChatModal";
 import LoanPickerModal from "./LoanPickerModal";
@@ -47,6 +47,9 @@ function formatDateDivider(dateStr) {
   if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
+
+const isUserOnline = (onlineUserIds, userId) =>
+  onlineUserIds.some((id) => sameId(id, userId));
 
 export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
   const currentUser = getStaffUser();
@@ -77,10 +80,21 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
   const [onlineUserIds, setOnlineUserIds] = useState([]);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
+  const remoteTypingClearRef = useRef(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const activeConversationRef = useRef(null);
+  const isOpenRef = useRef(false);
 
   const { socket, subscribe, unsubscribe } = useSocket();
+
+  useEffect(() => {
+    activeConversationRef.current = activeConversation;
+  }, [activeConversation]);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   const scrollToBottom = (behavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -125,110 +139,116 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     }
   }, [isOpen]);
 
+  const refreshOnlineStaff = () => {
+    if (!socket?.connected) return;
+    socket.emit("chat:get_online_staff", (res) => {
+      if (res?.onlineUserIds) {
+        setOnlineUserIds(res.onlineUserIds.map(String));
+      }
+    });
+  };
+
   // Socket event subscriptions
   useEffect(() => {
     if (!socket) return;
 
-    socket.emit("chat:get_online_staff", (res) => {
-      if (res?.onlineUserIds) {
-        setOnlineUserIds(res.onlineUserIds);
-      }
-    });
+    refreshOnlineStaff();
 
     const handlePresence = ({ userId, isOnline }) => {
+      const uid = String(userId);
       setOnlineUserIds((prev) => {
         if (isOnline) {
-          return prev.includes(userId) ? prev : [...prev, userId];
-        } else {
-          return prev.filter((id) => id !== userId);
+          return prev.some((id) => sameId(id, uid)) ? prev : [...prev, uid];
         }
+        return prev.filter((id) => !sameId(id, uid));
       });
     };
 
-    const handleOnlineStaffList = ({ onlineUserIds }) => {
-      if (Array.isArray(onlineUserIds)) {
-        setOnlineUserIds(onlineUserIds);
+    const handleOnlineStaffList = ({ onlineUserIds: ids }) => {
+      if (Array.isArray(ids)) {
+        setOnlineUserIds(ids.map(String));
       }
     };
 
     // When someone sends a message in current conversation
     const handleNewMessage = ({ message, conversationId }) => {
-      if (activeConversation && activeConversation._id === conversationId) {
+      const active = activeConversationRef.current;
+      const open = isOpenRef.current;
+
+      if (active && sameId(active._id, conversationId)) {
         setMessages((prev) => {
-          if (prev.some((m) => m._id === message._id)) return prev;
+          if (prev.some((m) => sameId(m._id, message._id))) return prev;
           return [...prev, message];
         });
         scrollToBottom();
+        setIsOtherUserTyping(false);
 
-        if (
-          message.recipient?._id === currentUserIdStr ||
-          message.recipient === currentUserIdStr
-        ) {
+        if (sameId(message.recipient, currentUserIdStr)) {
           chatService.markAsRead(conversationId);
         }
       }
 
       setConversations((prev) =>
         prev.map((c) => {
-          if (c._id === conversationId) {
-            const isCurrentlyViewing =
-              isOpen && activeConversation?._id === conversationId;
-            return {
-              ...c,
-              lastMessage: {
-                text:
-                  message.text ||
-                  (message.attachments?.length ? "📎 Attachment" : "Message"),
-                sender: message.sender?._id || message.sender,
-                senderName: `${message.sender?.firstName || ""} ${
-                  message.sender?.lastName || ""
-                }`.trim(),
-                createdAt: message.createdAt || new Date(),
-              },
-              unreadCount: isCurrentlyViewing ? 0 : (c.unreadCount || 0) + 1,
-            };
-          }
-          return c;
+          if (!sameId(c._id, conversationId)) return c;
+          const isCurrentlyViewing = open && active && sameId(active._id, conversationId);
+          return {
+            ...c,
+            lastMessage: {
+              text:
+                message.text ||
+                (message.attachments?.length ? "📎 Attachment" : "Message"),
+              sender: message.sender?._id || message.sender,
+              senderName: `${message.sender?.firstName || ""} ${
+                message.sender?.lastName || ""
+              }`.trim(),
+              createdAt: message.createdAt || new Date(),
+            },
+            unreadCount: isCurrentlyViewing
+              ? 0
+              : (c.unreadCount || 0) + (sameId(message.sender, currentUserIdStr) ? 0 : 1),
+          };
         })
       );
 
-      if (!isOpen || activeConversation?._id !== conversationId) {
-        setUnreadCount((prev) => prev + 1);
+      if (!open || !active || !sameId(active._id, conversationId)) {
+        if (!sameId(message.sender, currentUserIdStr)) {
+          setUnreadCount((prev) => prev + 1);
+        }
       }
     };
 
     // Incoming message from outside active chat
-    const handleIncomingMessage = ({ message, conversationId, conversation }) => {
-      if (!activeConversation || activeConversation._id !== conversationId) {
-        setConversations((prev) => {
-          const exists = prev.some((c) => c._id === conversationId);
-          if (exists) {
-            return prev.map((c) =>
-              c._id === conversationId
-                ? {
-                    ...c,
-                    lastMessage: conversation.lastMessage,
-                    unreadCount: (c.unreadCount || 0) + 1,
-                  }
-                : c
-            );
-          } else {
-            loadConversations();
-            return prev;
-          }
-        });
-        setUnreadCount((prev) => prev + 1);
-      }
+    const handleIncomingMessage = ({ conversationId, conversation }) => {
+      const active = activeConversationRef.current;
+      if (active && sameId(active._id, conversationId)) return;
+
+      setConversations((prev) => {
+        const exists = prev.some((c) => sameId(c._id, conversationId));
+        if (exists) {
+          return prev.map((c) =>
+            sameId(c._id, conversationId)
+              ? {
+                  ...c,
+                  lastMessage: conversation.lastMessage,
+                  unreadCount: (c.unreadCount || 0) + 1,
+                }
+              : c
+          );
+        }
+        loadConversations();
+        return prev;
+      });
+      setUnreadCount((prev) => prev + 1);
     };
 
     // Read receipt
     const handleMessagesRead = ({ conversationId }) => {
-      if (activeConversation && activeConversation._id === conversationId) {
+      const active = activeConversationRef.current;
+      if (active && sameId(active._id, conversationId)) {
         setMessages((prev) =>
           prev.map((m) =>
-            m.sender?._id === currentUserIdStr || m.sender === currentUserIdStr
-              ? { ...m, status: "READ" }
-              : m
+            sameId(m.sender, currentUserIdStr) ? { ...m, status: "READ" } : m
           )
         );
       }
@@ -236,14 +256,29 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
 
     // Typing
     const handleUserTyping = ({ conversationId }) => {
-      if (activeConversation && activeConversation._id === conversationId) {
+      const active = activeConversationRef.current;
+      if (active && sameId(active._id, conversationId)) {
         setIsOtherUserTyping(true);
+        if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
+        remoteTypingClearRef.current = setTimeout(() => {
+          setIsOtherUserTyping(false);
+        }, 3000);
       }
     };
 
     const handleUserStopTyping = ({ conversationId }) => {
-      if (activeConversation && activeConversation._id === conversationId) {
+      const active = activeConversationRef.current;
+      if (active && sameId(active._id, conversationId)) {
         setIsOtherUserTyping(false);
+        if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
+      }
+    };
+
+    const handleSocketConnected = () => {
+      refreshOnlineStaff();
+      const active = activeConversationRef.current;
+      if (active?._id) {
+        socket.emit("chat:join_conversation", { conversationId: active._id });
       }
     };
 
@@ -254,6 +289,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     subscribe("chat:messages_read", handleMessagesRead);
     subscribe("chat:user_typing", handleUserTyping);
     subscribe("chat:user_stop_typing", handleUserStopTyping);
+    subscribe("socketConnected", handleSocketConnected);
 
     return () => {
       unsubscribe("chat:presence", handlePresence);
@@ -263,12 +299,17 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
       unsubscribe("chat:messages_read", handleMessagesRead);
       unsubscribe("chat:user_typing", handleUserTyping);
       unsubscribe("chat:user_stop_typing", handleUserStopTyping);
+      unsubscribe("socketConnected", handleSocketConnected);
+      if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
     };
-  }, [socket, activeConversation, currentUserIdStr, isOpen, subscribe, unsubscribe]);
+  }, [socket, currentUserIdStr, subscribe, unsubscribe]);
 
   // Load messages when selecting a conversation
   useEffect(() => {
-    if (!activeConversation) return;
+    if (!activeConversation) {
+      setIsOtherUserTyping(false);
+      return;
+    }
 
     if (socket) {
       socket.emit("chat:join_conversation", {
@@ -278,6 +319,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
 
     const loadMessages = async () => {
       setLoadingMessages(true);
+      setIsOtherUserTyping(false);
       try {
         const data = await chatService.getMessages(activeConversation._id, 1, 50);
         setMessages(data.messages || []);
@@ -286,7 +328,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
         const currentUnreadForThis = activeConversation.unreadCount || 0;
         setConversations((prev) =>
           prev.map((c) =>
-            c._id === activeConversation._id ? { ...c, unreadCount: 0 } : c
+            sameId(c._id, activeConversation._id) ? { ...c, unreadCount: 0 } : c
           )
         );
         setUnreadCount((prev) => Math.max(0, prev - currentUnreadForThis));
@@ -308,7 +350,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
         });
       }
     };
-  }, [activeConversation?._id]);
+  }, [activeConversation?._id, socket]);
 
   const handleInputChange = (e) => {
     setMessageText(e.target.value);
@@ -365,11 +407,18 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     setPendingAttachments([]);
     setSelectedLoan(null);
 
+    if (socket && activeConversation) {
+      socket.emit("chat:stop_typing", {
+        conversationId: activeConversation._id,
+        recipientId: activeConversation.otherParticipant?._id,
+      });
+    }
+
     try {
       const data = await chatService.sendMessage(activeConversation._id, payload);
       if (data.message) {
         setMessages((prev) => {
-          if (prev.some((m) => m._id === data.message._id)) return prev;
+          if (prev.some((m) => sameId(m._id, data.message._id))) return prev;
           return [...prev, data.message];
         });
         scrollToBottom();
@@ -520,18 +569,22 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
                   <p className="text-[11px] text-slate-300 flex items-center">
                     <span
                       className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${
-                        onlineUserIds.includes(
+                        isUserOnline(
+                          onlineUserIds,
                           activeConversation.otherParticipant?._id
                         )
                           ? "bg-emerald-400"
                           : "bg-slate-400"
                       }`}
                     />
-                    {onlineUserIds.includes(
-                      activeConversation.otherParticipant?._id
-                    )
-                      ? "Online"
-                      : "Offline"}
+                    {isOtherUserTyping
+                      ? "typing..."
+                      : isUserOnline(
+                          onlineUserIds,
+                          activeConversation.otherParticipant?._id
+                        )
+                        ? "Online"
+                        : "Offline"}
                     {activeConversation.otherParticipant?.employeeId && (
                       <span className="ml-2 font-mono text-[10px] opacity-80">
                         {activeConversation.otherParticipant?.employeeId}
@@ -633,7 +686,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
                     const other = conv.otherParticipant;
                     if (!other) return null;
 
-                    const isOnline = onlineUserIds.includes(other._id);
+                    const isOnline = isUserOnline(onlineUserIds, other._id);
                     const badge = ROLE_CONFIG[other.role] || {
                       label: other.role,
                       badge: "bg-slate-100 text-slate-600 border-slate-200",
@@ -740,9 +793,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
                   </div>
                 ) : (
                   messages.map((msg, idx) => {
-                    const isMe =
-                      msg.sender?._id === currentUserIdStr ||
-                      msg.sender === currentUserIdStr;
+                    const isMe = sameId(msg.sender, currentUserIdStr);
                     const prevMsg = messages[idx - 1];
                     const showDateDivider =
                       !prevMsg ||
@@ -759,16 +810,17 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
                           </div>
                         )}
 
+                        {/* Own = right (teal), other = left (white) */}
                         <div
-                          className={`flex flex-col ${
-                            isMe ? "items-end" : "items-start"
+                          className={`flex w-full ${
+                            isMe ? "justify-end" : "justify-start"
                           }`}
                         >
                           <div
                             className={`max-w-[85%] rounded-2xl p-2.5 shadow-2xs text-xs ${
                               isMe
-                                ? "bg-gradient-to-br from-teal-600 to-emerald-600 text-white rounded-tr-xs"
-                                : "bg-white text-slate-800 border border-slate-200/80 rounded-tl-xs"
+                                ? "bg-gradient-to-br from-teal-600 to-emerald-600 text-white rounded-br-sm"
+                                : "bg-white text-slate-800 border border-slate-200/80 rounded-bl-sm"
                             }`}
                           >
                             {/* Embedded loan tag */}

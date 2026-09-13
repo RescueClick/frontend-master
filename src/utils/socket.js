@@ -60,13 +60,14 @@ class SocketManager {
       auth: {
         token: token,
       },
-      transports: ["polling", "websocket"], // Try polling first, then websocket
+      // Prefer websocket for low-latency realtime chat; fall back to polling
+      transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: this.maxReconnectAttempts,
-      timeout: 20000, // 20 second timeout
-      forceNew: false, // Don't force new connection if one exists
+      timeout: 20000,
+      forceNew: false,
     });
 
     this.setupEventHandlers();
@@ -193,6 +194,24 @@ class SocketManager {
 
     this.socket.on("userOffline", (data) => {
       this.emit("userOffline", data);
+    });
+
+    // ========== INTERNAL STAFF CHAT (realtime) ==========
+    // Must forward these so useSocket().subscribe("chat:*") receives them
+    const chatEvents = [
+      "chat:presence",
+      "chat:online_staff_list",
+      "chat:new_message",
+      "chat:incoming_message",
+      "chat:message_sent",
+      "chat:messages_read",
+      "chat:user_typing",
+      "chat:user_stop_typing",
+    ];
+    chatEvents.forEach((eventName) => {
+      this.socket.on(eventName, (data) => {
+        this.emit(eventName, data);
+      });
     });
   }
 

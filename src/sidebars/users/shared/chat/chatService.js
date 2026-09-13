@@ -3,6 +3,16 @@ import { backendurl } from "../../../../feature/urldata";
 import { getAuthData } from "../../../../utils/localStorage";
 
 /**
+ * Normalize Mongo/user ids for reliable equality checks (string vs ObjectId)
+ */
+export const sameId = (a, b) => {
+  if (a == null || b == null) return false;
+  const left = typeof a === "object" && a._id != null ? a._id : a;
+  const right = typeof b === "object" && b._id != null ? b._id : b;
+  return String(left) === String(right);
+};
+
+/**
  * Returns active staff auth token (Admin, ASM, RSM, RM)
  */
 export const getStaffToken = () => {

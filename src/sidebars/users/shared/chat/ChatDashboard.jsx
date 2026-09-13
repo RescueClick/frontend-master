@@ -20,7 +20,7 @@ import {
   Loader2,
   Image as ImageIcon,
 } from "lucide-react";
-import { chatService, getStaffUser } from "./chatService";
+import { chatService, getStaffUser, sameId } from "./chatService";
 import { useSocket } from "../../../../hooks/useSocket";
 import NewChatModal from "./NewChatModal";
 import LoanPickerModal from "./LoanPickerModal";
@@ -50,6 +50,9 @@ function formatDateDivider(dateStr) {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
+const isUserOnline = (onlineUserIds, userId) =>
+  onlineUserIds.some((id) => sameId(id, userId));
+
 export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
   const navigate = useNavigate();
   const currentUser = getStaffUser();
@@ -75,10 +78,17 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
   const [onlineUserIds, setOnlineUserIds] = useState([]);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
+  const remoteTypingClearRef = useRef(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const activeConversationRef = useRef(null);
 
   const { socket, isConnected, subscribe, unsubscribe } = useSocket();
+
+  // Keep ref in sync so socket handlers always see latest conversation
+  useEffect(() => {
+    activeConversationRef.current = activeConversation;
+  }, [activeConversation]);
 
   // Scroll messages to bottom smoothly
   const scrollToBottom = (behavior = "smooth") => {
@@ -102,45 +112,50 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
     }
   };
 
+  const refreshOnlineStaff = () => {
+    if (!socket?.connected) return;
+    socket.emit("chat:get_online_staff", (res) => {
+      if (res?.onlineUserIds) {
+        setOnlineUserIds(res.onlineUserIds.map(String));
+      }
+    });
+  };
+
   // Socket room joining and event listeners
   useEffect(() => {
     if (!socket) return;
 
-    // Ask server for list of currently online staff
-    socket.emit("chat:get_online_staff", (res) => {
-      if (res?.onlineUserIds) {
-        setOnlineUserIds(res.onlineUserIds);
-      }
-    });
+    refreshOnlineStaff();
 
     const handlePresence = ({ userId, isOnline }) => {
+      const uid = String(userId);
       setOnlineUserIds((prev) => {
         if (isOnline) {
-          return prev.includes(userId) ? prev : [...prev, userId];
-        } else {
-          return prev.filter((id) => id !== userId);
+          return prev.some((id) => sameId(id, uid)) ? prev : [...prev, uid];
         }
+        return prev.filter((id) => !sameId(id, uid));
       });
     };
 
-    const handleOnlineStaffList = ({ onlineUserIds }) => {
-      if (Array.isArray(onlineUserIds)) {
-        setOnlineUserIds(onlineUserIds);
+    const handleOnlineStaffList = ({ onlineUserIds: ids }) => {
+      if (Array.isArray(ids)) {
+        setOnlineUserIds(ids.map(String));
       }
     };
 
     // When someone sends a message in current conversation
     const handleNewMessage = ({ message, conversationId }) => {
-      if (activeConversation && activeConversation._id === conversationId) {
+      const active = activeConversationRef.current;
+      if (active && sameId(active._id, conversationId)) {
         setMessages((prev) => {
-          // Prevent duplicates
-          if (prev.some((m) => m._id === message._id)) return prev;
+          if (prev.some((m) => sameId(m._id, message._id))) return prev;
           return [...prev, message];
         });
         scrollToBottom();
+        setIsOtherUserTyping(false);
 
         // Mark as read immediately if current user is the recipient
-        if (message.recipient?._id === currentUserIdStr || message.recipient === currentUserIdStr) {
+        if (sameId(message.recipient, currentUserIdStr)) {
           chatService.markAsRead(conversationId);
         }
       }
@@ -148,74 +163,84 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
       // Update conversations list preview
       setConversations((prev) =>
         prev.map((c) => {
-          if (c._id === conversationId) {
-            return {
-              ...c,
-              lastMessage: {
-                text: message.text || (message.attachments?.length ? "📎 Attachment" : "Message"),
-                sender: message.sender?._id || message.sender,
-                senderName: `${message.sender?.firstName || ""} ${message.sender?.lastName || ""}`.trim(),
-                createdAt: message.createdAt || new Date(),
-              },
-              unreadCount:
-                activeConversation?._id === conversationId
-                  ? 0
-                  : (c.unreadCount || 0) + 1,
-            };
-          }
-          return c;
+          if (!sameId(c._id, conversationId)) return c;
+          return {
+            ...c,
+            lastMessage: {
+              text: message.text || (message.attachments?.length ? "📎 Attachment" : "Message"),
+              sender: message.sender?._id || message.sender,
+              senderName: `${message.sender?.firstName || ""} ${message.sender?.lastName || ""}`.trim(),
+              createdAt: message.createdAt || new Date(),
+            },
+            unreadCount:
+              active && sameId(active._id, conversationId)
+                ? 0
+                : (c.unreadCount || 0) + (sameId(message.sender, currentUserIdStr) ? 0 : 1),
+          };
         })
       );
     };
 
     // When an incoming message arrives from anywhere
-    const handleIncomingMessage = ({ message, conversationId, conversation }) => {
-      if (!activeConversation || activeConversation._id !== conversationId) {
-        // Update list
-        setConversations((prev) => {
-          const exists = prev.some((c) => c._id === conversationId);
-          if (exists) {
-            return prev.map((c) =>
-              c._id === conversationId
-                ? {
-                    ...c,
-                    lastMessage: conversation.lastMessage,
-                    unreadCount: (c.unreadCount || 0) + 1,
-                  }
-                : c
-            );
-          } else {
-            // New conversation started by another user
-            loadConversations();
-            return prev;
-          }
-        });
-      }
+    const handleIncomingMessage = ({ conversationId, conversation }) => {
+      const active = activeConversationRef.current;
+      if (active && sameId(active._id, conversationId)) return;
+
+      setConversations((prev) => {
+        const exists = prev.some((c) => sameId(c._id, conversationId));
+        if (exists) {
+          return prev.map((c) =>
+            sameId(c._id, conversationId)
+              ? {
+                  ...c,
+                  lastMessage: conversation.lastMessage,
+                  unreadCount: (c.unreadCount || 0) + 1,
+                }
+              : c
+          );
+        }
+        loadConversations();
+        return prev;
+      });
     };
 
     // When other user reads our messages
-    const handleMessagesRead = ({ conversationId, readBy }) => {
-      if (activeConversation && activeConversation._id === conversationId) {
+    const handleMessagesRead = ({ conversationId }) => {
+      const active = activeConversationRef.current;
+      if (active && sameId(active._id, conversationId)) {
         setMessages((prev) =>
           prev.map((m) =>
-            m.sender?._id === currentUserIdStr || m.sender === currentUserIdStr
-              ? { ...m, status: "READ" }
-              : m
+            sameId(m.sender, currentUserIdStr) ? { ...m, status: "READ" } : m
           )
         );
       }
     };
 
-    // Typing indicators
-    const handleUserTyping = ({ conversationId, name }) => {
-      if (activeConversation && activeConversation._id === conversationId) {
+    // Typing indicators — auto-clear after 3s if stop event is missed
+    const handleUserTyping = ({ conversationId }) => {
+      const active = activeConversationRef.current;
+      if (active && sameId(active._id, conversationId)) {
         setIsOtherUserTyping(true);
+        if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
+        remoteTypingClearRef.current = setTimeout(() => {
+          setIsOtherUserTyping(false);
+        }, 3000);
       }
     };
 
     const handleUserStopTyping = ({ conversationId }) => {
-      if (activeConversation && activeConversation._id === conversationId) {
+      const active = activeConversationRef.current;
+      if (active && sameId(active._id, conversationId)) {
         setIsOtherUserTyping(false);
+        if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
+      }
+    };
+
+    const handleSocketConnected = () => {
+      refreshOnlineStaff();
+      const active = activeConversationRef.current;
+      if (active?._id) {
+        socket.emit("chat:join_conversation", { conversationId: active._id });
       }
     };
 
@@ -226,6 +251,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
     subscribe("chat:messages_read", handleMessagesRead);
     subscribe("chat:user_typing", handleUserTyping);
     subscribe("chat:user_stop_typing", handleUserStopTyping);
+    subscribe("socketConnected", handleSocketConnected);
 
     return () => {
       unsubscribe("chat:presence", handlePresence);
@@ -235,12 +261,17 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
       unsubscribe("chat:messages_read", handleMessagesRead);
       unsubscribe("chat:user_typing", handleUserTyping);
       unsubscribe("chat:user_stop_typing", handleUserStopTyping);
+      unsubscribe("socketConnected", handleSocketConnected);
+      if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
     };
-  }, [socket, activeConversation, currentUserIdStr, subscribe, unsubscribe]);
+  }, [socket, currentUserIdStr, subscribe, unsubscribe]);
 
   // Load messages when active conversation changes
   useEffect(() => {
-    if (!activeConversation) return;
+    if (!activeConversation) {
+      setIsOtherUserTyping(false);
+      return;
+    }
 
     // Join conversation room in socket
     if (socket) {
@@ -249,13 +280,14 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
 
     const loadMessages = async () => {
       setLoadingMessages(true);
+      setIsOtherUserTyping(false);
       try {
         const data = await chatService.getMessages(activeConversation._id, 1, 60);
         setMessages(data.messages || []);
         // Reset unread count locally
         setConversations((prev) =>
           prev.map((c) =>
-            c._id === activeConversation._id ? { ...c, unreadCount: 0 } : c
+            sameId(c._id, activeConversation._id) ? { ...c, unreadCount: 0 } : c
           )
         );
         setTimeout(() => scrollToBottom("auto"), 100);
@@ -273,7 +305,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
         socket.emit("chat:leave_conversation", { conversationId: activeConversation._id });
       }
     };
-  }, [activeConversation?._id]);
+  }, [activeConversation?._id, socket]);
 
   // Handle typing debounce
   const handleInputChange = (e) => {
@@ -334,14 +366,41 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
     setPendingAttachments([]);
     setSelectedLoan(null);
 
+    // Stop typing indicator for the other user
+    if (socket && activeConversation) {
+      socket.emit("chat:stop_typing", {
+        conversationId: activeConversation._id,
+        recipientId: activeConversation.otherParticipant?._id,
+      });
+    }
+
     try {
       const data = await chatService.sendMessage(activeConversation._id, payload);
       if (data.message) {
         setMessages((prev) => {
-          if (prev.some((m) => m._id === data.message._id)) return prev;
+          if (prev.some((m) => sameId(m._id, data.message._id))) return prev;
           return [...prev, data.message];
         });
         scrollToBottom();
+
+        // Bump conversation preview locally
+        setConversations((prev) =>
+          prev.map((c) =>
+            sameId(c._id, activeConversation._id)
+              ? {
+                  ...c,
+                  lastMessage: {
+                    text:
+                      data.message.text ||
+                      (data.message.attachments?.length ? "📎 Attachment" : "Message"),
+                    sender: currentUserIdStr,
+                    senderName: "You",
+                    createdAt: data.message.createdAt || new Date(),
+                  },
+                }
+              : c
+          )
+        );
       }
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -514,7 +573,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
               if (!other) return null;
 
               const isSelected = activeConversation?._id === conv._id;
-              const isOnline = onlineUserIds.includes(other._id);
+              const isOnline = isUserOnline(onlineUserIds, other._id);
               const badge = ROLE_CONFIG[other.role] || {
                 label: other.role,
                 badge: "bg-slate-100 text-slate-600 border-slate-200",
@@ -610,7 +669,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
                 </div>
                 <span
                   className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
-                    onlineUserIds.includes(activeConversation.otherParticipant?._id)
+                    isUserOnline(onlineUserIds, activeConversation.otherParticipant?._id)
                       ? "bg-emerald-500"
                       : "bg-slate-300"
                   }`}
@@ -637,15 +696,17 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
                 <div className="flex items-center space-x-3 text-xs text-slate-500">
                   <span
                     className={`flex items-center font-medium ${
-                      onlineUserIds.includes(activeConversation.otherParticipant?._id)
+                      isUserOnline(onlineUserIds, activeConversation.otherParticipant?._id)
                         ? "text-emerald-600"
                         : "text-slate-400"
                     }`}
                   >
                     ●{" "}
-                    {onlineUserIds.includes(activeConversation.otherParticipant?._id)
-                      ? "Online"
-                      : "Offline"}
+                    {isOtherUserTyping
+                      ? "typing..."
+                      : isUserOnline(onlineUserIds, activeConversation.otherParticipant?._id)
+                        ? "Online"
+                        : "Offline"}
                   </span>
                   {activeConversation.otherParticipant?.employeeId && (
                     <span className="font-mono text-slate-500">
@@ -725,8 +786,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
               </div>
             ) : (
               messages.map((msg, idx) => {
-                const isMe =
-                  msg.sender?._id === currentUserIdStr || msg.sender === currentUserIdStr;
+                const isMe = sameId(msg.sender, currentUserIdStr);
                 const prevMsg = messages[idx - 1];
                 const showDateDivider =
                   !prevMsg ||
@@ -743,16 +803,17 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
                       </div>
                     )}
 
+                    {/* Own messages = right (teal), other user = left (white) */}
                     <div
-                      className={`flex flex-col ${
-                        isMe ? "items-end" : "items-start"
+                      className={`flex w-full ${
+                        isMe ? "justify-end" : "justify-start"
                       }`}
                     >
                       <div
                         className={`max-w-[85%] sm:max-w-md lg:max-w-lg rounded-2xl p-3 shadow-xs transition-all ${
                           isMe
-                            ? "bg-linear-to-br from-teal-600 to-emerald-600 text-white rounded-tr-xs"
-                            : "bg-white text-slate-800 border border-slate-200/70 rounded-tl-xs"
+                            ? "bg-linear-to-br from-teal-600 to-emerald-600 text-white rounded-br-sm"
+                            : "bg-white text-slate-800 border border-slate-200/70 rounded-bl-sm"
                         }`}
                       >
                         {/* Linked Loan Card Preview inside message */}

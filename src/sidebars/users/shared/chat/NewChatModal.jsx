@@ -139,7 +139,9 @@ export default function NewChatModal({ isOpen, onClose, onSelectContact, onlineU
             </div>
           ) : (
             filteredContacts.map((contact) => {
-              const isOnline = onlineUserIds.includes(contact._id);
+              const isOnline = onlineUserIds.some(
+                (id) => String(id) === String(contact._id)
+              );
               const badge = ROLE_BADGES[contact.role] || {
                 label: contact.role,
                 bg: "bg-slate-100 text-slate-600 border-slate-200",
