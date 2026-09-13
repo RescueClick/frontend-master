@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
   MessageSquare,
   X,
@@ -12,7 +12,6 @@ import {
   Check,
   CheckCheck,
   Download,
-  ExternalLink,
   Loader2,
   Sparkles,
   Maximize2,
@@ -25,16 +24,15 @@ import LoanPickerModal from "./LoanPickerModal";
 import { TypingBubble } from "./TypingBubble";
 
 const ROLE_CONFIG = {
-  SUPER_ADMIN: { label: "Admin", badge: "bg-purple-100 text-purple-700 border-purple-200" },
-  ASM: { label: "ASM", badge: "bg-blue-100 text-blue-700 border-blue-200" },
-  RSM: { label: "RSM", badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  RM: { label: "RM", badge: "bg-amber-100 text-amber-700 border-amber-200" },
+  SUPER_ADMIN: { label: "Admin", badge: "bg-purple-500/20 text-purple-100 border-purple-300/30" },
+  ASM: { label: "ASM", badge: "bg-sky-500/20 text-sky-100 border-sky-300/30" },
+  RSM: { label: "RSM", badge: "bg-emerald-500/20 text-emerald-100 border-emerald-300/30" },
+  RM: { label: "RM", badge: "bg-amber-500/20 text-amber-100 border-amber-300/30" },
 };
 
 function formatMessageTime(dateStr) {
   if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function formatDateDivider(dateStr) {
@@ -43,7 +41,6 @@ function formatDateDivider(dateStr) {
   const now = new Date();
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
-
   if (d.toDateString() === now.toDateString()) return "Today";
   if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
@@ -52,15 +49,12 @@ function formatDateDivider(dateStr) {
 const isUserOnline = (onlineUserIds, userId) =>
   onlineUserIds.some((id) => sameId(id, userId));
 
-export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
+export default function StaffChatWidget() {
   const currentUser = getStaffUser();
   const currentUserIdStr = currentUser?._id?.toString() || "";
 
-  // Widget Open / View states
   const [isOpen, setIsOpen] = useState(false);
-  const [isDockedPanel, setIsDockedPanel] = useState(false); // false = bottom-right floating modal, true = full height right-side panel
-
-  // Conversations & active chat
+  const [isDockedPanel, setIsDockedPanel] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -69,23 +63,22 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
-
-  // Modals & attachments
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isLoanPickerOpen, setIsLoanPickerOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [pendingAttachments, setPendingAttachments] = useState([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
-
-  // Real-time state
   const [onlineUserIds, setOnlineUserIds] = useState([]);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+
   const typingTimeoutRef = useRef(null);
   const remoteTypingClearRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const activeConversationRef = useRef(null);
   const isOpenRef = useRef(false);
+  const shouldStickToBottomRef = useRef(true);
 
   const { socket, isConnected, subscribe, unsubscribe, ensureConnected } = useSocket();
 
@@ -98,14 +91,31 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
   }, [isOpen]);
 
   const scrollToBottom = (behavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    const el = messagesContainerRef.current;
+    if (el) {
+      if (behavior === "auto") {
+        el.scrollTop = el.scrollHeight;
+      } else {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      }
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
   };
+
+  // Keep view pinned to latest messages
+  useLayoutEffect(() => {
+    if (!activeConversation) return;
+    if (shouldStickToBottomRef.current) {
+      scrollToBottom("auto");
+    }
+  }, [messages, isOtherUserTyping, activeConversation?._id]);
 
   const appendMessage = (message, conversationId) => {
     if (!message) return;
     const active = activeConversationRef.current;
     if (!active || !sameId(active._id, conversationId)) return;
 
+    shouldStickToBottomRef.current = true;
     setMessages((prev) => {
       if (prev.some((m) => sameId(m._id, message._id))) return prev;
       const withoutTemp = prev.filter((m) => {
@@ -120,21 +130,17 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     });
     setIsOtherUserTyping(false);
     if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
-    setTimeout(() => scrollToBottom(), 30);
 
     if (sameId(message.recipient, currentUserIdStr)) {
       chatService.markAsRead(conversationId).catch(() => {});
     }
   };
 
-  // Fetch unread count & conversations
   const loadUnreadCount = async () => {
     try {
       const data = await chatService.getUnreadCount();
       setUnreadCount(data.unreadCount || 0);
-    } catch (err) {
-      // silent catch
-    }
+    } catch (_) {}
   };
 
   const loadConversations = async () => {
@@ -143,8 +149,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
       const data = await chatService.getConversations();
       const list = data.conversations || [];
       setConversations(list);
-      const totalUnread = list.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-      setUnreadCount(totalUnread);
+      setUnreadCount(list.reduce((sum, c) => sum + (c.unreadCount || 0), 0));
     } catch (err) {
       console.error("Failed to load conversations:", err);
     } finally {
@@ -152,7 +157,6 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     }
   };
 
-  // Initial load on mount
   useEffect(() => {
     ensureConnected?.();
     loadUnreadCount();
@@ -160,24 +164,23 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     return () => clearInterval(timer);
   }, []);
 
-  // When widget opens, refresh conversations
   useEffect(() => {
-    if (isOpen) {
-      ensureConnected?.();
-      loadConversations();
-    }
+    if (!isOpen) return;
+    ensureConnected?.();
+    loadConversations();
   }, [isOpen]);
 
   const refreshOnlineStaff = () => {
-    if (!socket?.connected) return;
-    socket.emit("chat:get_online_staff", (res) => {
+    const sock = socket;
+    if (!sock?.connected) return;
+    sock.emit("chat:get_online_staff", (res) => {
       if (res?.onlineUserIds) {
         setOnlineUserIds(res.onlineUserIds.map(String));
       }
     });
   };
 
-  // Socket event subscriptions
+  // Socket subscriptions
   useEffect(() => {
     ensureConnected?.();
     if (!socket) return;
@@ -187,78 +190,66 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     const handlePresence = ({ userId, isOnline }) => {
       const uid = String(userId);
       setOnlineUserIds((prev) => {
-        if (isOnline) {
-          return prev.some((id) => sameId(id, uid)) ? prev : [...prev, uid];
-        }
+        if (isOnline) return prev.some((id) => sameId(id, uid)) ? prev : [...prev, uid];
         return prev.filter((id) => !sameId(id, uid));
       });
     };
 
     const handleOnlineStaffList = ({ onlineUserIds: ids }) => {
-      if (Array.isArray(ids)) {
-        setOnlineUserIds(ids.map(String));
-      }
+      if (Array.isArray(ids)) setOnlineUserIds(ids.map(String));
     };
 
     const handleNewMessage = ({ message, conversationId }) => {
       const active = activeConversationRef.current;
       const open = isOpenRef.current;
-
       appendMessage(message, conversationId);
 
       setConversations((prev) =>
         prev.map((c) => {
           if (!sameId(c._id, conversationId)) return c;
-          const isCurrentlyViewing = open && active && sameId(active._id, conversationId);
+          const viewing = open && active && sameId(active._id, conversationId);
           return {
             ...c,
             lastMessage: {
-              text:
-                message?.text ||
-                (message?.attachments?.length ? "📎 Attachment" : "Message"),
+              text: message?.text || (message?.attachments?.length ? "📎 Attachment" : "Message"),
               sender: message?.sender?._id || message?.sender,
-              senderName: `${message?.sender?.firstName || ""} ${
-                message?.sender?.lastName || ""
-              }`.trim(),
+              senderName: `${message?.sender?.firstName || ""} ${message?.sender?.lastName || ""}`.trim(),
               createdAt: message?.createdAt || new Date(),
             },
-            unreadCount: isCurrentlyViewing
+            unreadCount: viewing
               ? 0
               : (c.unreadCount || 0) + (sameId(message?.sender, currentUserIdStr) ? 0 : 1),
           };
         })
       );
 
-      if (!open || !active || !sameId(active._id, conversationId)) {
-        if (!sameId(message?.sender, currentUserIdStr)) {
-          setUnreadCount((prev) => prev + 1);
-        }
+      if ((!open || !active || !sameId(active._id, conversationId)) && !sameId(message?.sender, currentUserIdStr)) {
+        setUnreadCount((n) => n + 1);
       }
     };
 
     const handleIncomingMessage = ({ message, conversationId, conversation }) => {
       appendMessage(message, conversationId);
-
       const active = activeConversationRef.current;
       if (active && sameId(active._id, conversationId)) return;
 
       setConversations((prev) => {
         const exists = prev.some((c) => sameId(c._id, conversationId));
-        if (exists) {
-          return prev.map((c) =>
-            sameId(c._id, conversationId)
-              ? {
-                  ...c,
-                  lastMessage: conversation?.lastMessage || c.lastMessage,
-                  unreadCount: (c.unreadCount || 0) + 1,
-                }
-              : c
-          );
+        if (!exists) {
+          loadConversations();
+          return prev;
         }
-        loadConversations();
-        return prev;
+        return prev.map((c) =>
+          sameId(c._id, conversationId)
+            ? {
+                ...c,
+                lastMessage: conversation?.lastMessage || c.lastMessage,
+                unreadCount: (c.unreadCount || 0) + 1,
+              }
+            : c
+        );
       });
-      setUnreadCount((prev) => prev + 1);
+      setUnreadCount((n) => n + 1);
     };
 
     const handleMessageSent = ({ message, conversationId }) => {
@@ -267,19 +258,17 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
 
     const handleMessagesRead = ({ conversationId }) => {
       const active = activeConversationRef.current;
-      if (active && sameId(active._id, conversationId)) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            sameId(m.sender, currentUserIdStr) ? { ...m, status: "READ" } : m
-          )
-        );
-      }
+      if (!active || !sameId(active._id, conversationId)) return;
+      setMessages((prev) =>
+        prev.map((m) => (sameId(m.sender, currentUserIdStr) ? { ...m, status: "READ" } : m))
+      );
     };
 
     const handleUserTyping = ({ conversationId, userId }) => {
       const active = activeConversationRef.current;
       if (!active || !sameId(active._id, conversationId)) return;
       if (sameId(userId, currentUserIdStr)) return;
+      shouldStickToBottomRef.current = true;
       setIsOtherUserTyping(true);
       if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
       remoteTypingClearRef.current = setTimeout(() => setIsOtherUserTyping(false), 2800);
@@ -296,7 +285,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     const handleSocketConnected = () => {
       refreshOnlineStaff();
       const active = activeConversationRef.current;
-      if (active?._id && socket) {
+      if (active?._id) {
         socket.emit("chat:join_conversation", { conversationId: String(active._id) });
       }
     };
@@ -311,7 +300,11 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     subscribe("chat:user_stop_typing", handleUserStopTyping);
     subscribe("socketConnected", handleSocketConnected);
 
+    // Keep online list fresh while chat is open
+    const presencePulse = setInterval(refreshOnlineStaff, 5000);
+
     return () => {
+      clearInterval(presencePulse);
       unsubscribe("chat:presence", handlePresence);
       unsubscribe("chat:online_staff_list", handleOnlineStaffList);
       unsubscribe("chat:new_message", handleNewMessage);
@@ -325,7 +318,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     };
   }, [socket, isConnected, currentUserIdStr, subscribe, unsubscribe]);
 
-  // Load messages when selecting a conversation
+  // Load messages + soft poll
   useEffect(() => {
     if (!activeConversation) {
       setIsOtherUserTyping(false);
@@ -333,9 +326,10 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     }
 
     const conversationId = String(activeConversation._id);
+    shouldStickToBottomRef.current = true;
     ensureConnected?.();
 
-    if (socket) {
+    if (socket?.connected) {
       socket.emit("chat:join_conversation", { conversationId });
     }
 
@@ -345,7 +339,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
         setIsOtherUserTyping(false);
       }
       try {
-        const data = await chatService.getMessages(conversationId, 1, 50);
+        const data = await chatService.getMessages(conversationId, 1, 80);
         const next = data.messages || [];
         setMessages((prev) => {
           const temps = prev.filter((m) => String(m._id || "").startsWith("temp-"));
@@ -363,15 +357,12 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
           return merged;
         });
 
-        const currentUnreadForThis = activeConversation.unreadCount || 0;
+        const wasUnread = activeConversation.unreadCount || 0;
         setConversations((prev) =>
-          prev.map((c) =>
-            sameId(c._id, conversationId) ? { ...c, unreadCount: 0 } : c
-          )
+          prev.map((c) => (sameId(c._id, conversationId) ? { ...c, unreadCount: 0 } : c))
         );
-        if (!silent) {
-          setUnreadCount((prev) => Math.max(0, prev - currentUnreadForThis));
-          setTimeout(() => scrollToBottom("auto"), 80);
+        if (!silent && wasUnread) {
+          setUnreadCount((n) => Math.max(0, n - wasUnread));
         }
       } catch (err) {
         console.error("Error loading chat messages:", err);
@@ -381,12 +372,11 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     };
 
     loadMessages();
-
-    const poll = setInterval(() => loadMessages({ silent: true }), isConnected ? 8000 : 3000);
+    const poll = setInterval(() => loadMessages({ silent: true }), isConnected ? 6000 : 2500);
 
     return () => {
       clearInterval(poll);
-      if (socket) {
+      if (socket?.connected) {
         socket.emit("chat:leave_conversation", { conversationId });
       }
     };
@@ -394,33 +384,29 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
 
   const handleInputChange = (e) => {
     setMessageText(e.target.value);
+    if (!socket?.connected || !activeConversation) return;
 
-    if (socket?.connected && activeConversation) {
-      socket.emit("chat:typing", {
+    socket.emit("chat:typing", {
+      conversationId: String(activeConversation._id),
+      recipientId: String(activeConversation.otherParticipant?._id || ""),
+    });
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("chat:stop_typing", {
         conversationId: String(activeConversation._id),
-        recipientId: activeConversation.otherParticipant?._id,
+        recipientId: String(activeConversation.otherParticipant?._id || ""),
       });
-
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        socket.emit("chat:stop_typing", {
-          conversationId: String(activeConversation._id),
-          recipientId: activeConversation.otherParticipant?._id,
-        });
-      }, 1200);
-    }
+    }, 1000);
   };
 
   const handleFileChange = async (e) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
-
+    if (!files?.length) return;
     setUploadingFiles(true);
     try {
       const data = await chatService.uploadFiles(files);
-      if (data.attachments) {
-        setPendingAttachments((prev) => [...prev, ...data.attachments]);
-      }
+      if (data.attachments) setPendingAttachments((prev) => [...prev, ...data.attachments]);
     } catch (err) {
       console.error("File upload failed:", err);
       alert("Failed to upload file(s). Max 20MB (JPG, PNG, PDF).");
@@ -446,27 +432,27 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     setMessageText("");
     setPendingAttachments([]);
     setSelectedLoan(null);
+    shouldStickToBottomRef.current = true;
 
-    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const optimistic = {
-      _id: tempId,
-      conversationId: activeConversation._id,
-      sender: { _id: currentUserIdStr },
-      recipient: activeConversation.otherParticipant,
-      text: trimmed,
-      attachments: payload.attachments,
-      loanRef: payload.loanRef,
-      status: "SENT",
-      createdAt: new Date().toISOString(),
-      pending: true,
-    };
-    setMessages((prev) => [...prev, optimistic]);
-    scrollToBottom();
+    const tempId = `temp-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        _id: tempId,
+        sender: { _id: currentUserIdStr },
+        text: trimmed,
+        attachments: payload.attachments,
+        loanRef: payload.loanRef,
+        status: "SENT",
+        createdAt: new Date().toISOString(),
+        pending: true,
+      },
+    ]);
 
     if (socket?.connected) {
       socket.emit("chat:stop_typing", {
         conversationId: String(activeConversation._id),
-        recipientId: activeConversation.otherParticipant?._id,
+        recipientId: String(activeConversation.otherParticipant?._id || ""),
       });
     }
 
@@ -478,7 +464,21 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
           if (withoutTemp.some((m) => sameId(m._id, data.message._id))) return withoutTemp;
           return [...withoutTemp, data.message];
         });
-        scrollToBottom();
+        setConversations((prev) =>
+          prev.map((c) =>
+            sameId(c._id, activeConversation._id)
+              ? {
+                  ...c,
+                  lastMessage: {
+                    text: data.message.text || "Message",
+                    sender: currentUserIdStr,
+                    senderName: "You",
+                    createdAt: data.message.createdAt || new Date(),
+                  },
+                }
+              : c
+          )
+        );
       }
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -498,317 +498,238 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
       const res = await chatService.createOrGetConversation(contact._id);
       if (res.conversation) {
         setConversations((prev) => {
-          const exists = prev.find((c) => c._id === res.conversation._id);
-          if (exists) return prev;
+          if (prev.some((c) => sameId(c._id, res.conversation._id))) return prev;
           return [res.conversation, ...prev];
         });
         setActiveConversation(res.conversation);
+        setIsNewChatOpen(false);
       }
     } catch (err) {
-      console.error("Failed to start chat with contact:", err);
+      console.error("Failed to start chat:", err);
     }
   };
 
   const filteredConversations = conversations.filter((c) => {
     const other = c.otherParticipant;
     if (!other) return false;
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      return (
-        other.fullName?.toLowerCase().includes(term) ||
-        other.role?.toLowerCase().includes(term) ||
-        other.employeeId?.toLowerCase().includes(term)
-      );
-    }
-    return true;
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      other.fullName?.toLowerCase().includes(term) ||
+      other.role?.toLowerCase().includes(term) ||
+      other.employeeId?.toLowerCase().includes(term)
+    );
   });
+
+  const other = activeConversation?.otherParticipant;
+  const otherOnline = other ? isUserOnline(onlineUserIds, other._id) : false;
+  const otherInitials =
+    `${other?.firstName?.[0] || ""}${other?.lastName?.[0] || ""}`.toUpperCase() || "DS";
+
+  const onMessagesScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    shouldStickToBottomRef.current = distanceFromBottom < 80;
+  };
 
   return (
     <>
-      {/* =====================================================================
-          FLOATING LAUNCHER BUTTON (Bottom-Right of the Screen)
-      ====================================================================== */}
-      <div className="fixed bottom-5 right-5 z-40 flex items-center space-x-2">
+      {/* Launcher */}
+      <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
         {!isOpen && (
-          <div
+          <button
+            type="button"
             onClick={() => setIsOpen(true)}
-            className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 bg-white/95 backdrop-blur-md rounded-full border border-slate-200/80 shadow-md cursor-pointer hover:bg-white transition-all text-xs font-semibold text-slate-700 hover:text-teal-700"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full border border-slate-200 shadow-md text-xs font-semibold text-slate-700 hover:text-teal-700"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Staff Chat</span>
-          </div>
+            <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-amber-400 animate-pulse"}`} />
+            Staff Chat
+          </button>
         )}
-
         <button
-          onClick={() => {
-            setIsOpen((prev) => !prev);
-          }}
-          className={`relative flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all duration-300 transform active:scale-95 cursor-pointer ${
+          type="button"
+          onClick={() => setIsOpen((v) => !v)}
+          className={`relative flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all active:scale-95 ${
             isOpen
-              ? "bg-slate-800 text-white hover:bg-slate-900 rotate-90"
-              : "bg-gradient-to-r from-teal-500 to-emerald-600 text-white hover:shadow-2xl hover:scale-105"
+              ? "bg-slate-800 text-white"
+              : "bg-gradient-to-br from-teal-500 to-emerald-600 text-white hover:scale-105"
           }`}
-          title="Internal Staff Chat (Admin, ASM, RSM, RM)"
-          aria-label="Toggle Staff Chat"
         >
-          {isOpen ? (
-            <X className="w-6 h-6 transition-transform" />
-          ) : (
-            <MessageSquare className="w-6 h-6" />
-          )}
-
-          {/* Unread badge */}
+          {isOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
           {unreadCount > 0 && !isOpen && (
-            <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center text-xs font-bold text-white bg-rose-500 rounded-full border-2 border-white shadow-md animate-bounce">
+            <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1 flex items-center justify-center text-[11px] font-bold text-white bg-rose-500 rounded-full border-2 border-white">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
         </button>
       </div>
 
-      {/* =====================================================================
-          RIGHT SIDE PANEL / MODAL POPUP (Not Full Screen!)
-      ====================================================================== */}
       {isOpen && (
         <div
-          className={`fixed z-50 bg-white shadow-2xl border border-slate-200 flex flex-col transition-all duration-300 overflow-hidden ${
+          className={`fixed z-50 bg-[#efeae2] shadow-2xl border border-slate-200 flex flex-col overflow-hidden ${
             isDockedPanel
-              ? "top-0 right-0 h-full w-full sm:w-[440px] md:w-[480px] rounded-none border-l animate-in slide-in-from-right"
-              : "bottom-22 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-[420px] md:w-[450px] h-[640px] max-h-[82vh] rounded-2xl animate-in fade-in zoom-in-95"
+              ? "top-0 right-0 h-full w-full sm:w-[440px] md:w-[480px] rounded-none border-l"
+              : "bottom-22 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-[420px] md:w-[460px] h-[680px] max-h-[85vh] rounded-2xl"
           }`}
         >
-          {/* Top Header of Chat Panel */}
-          <div className="px-4 py-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center justify-between shrink-0 select-none">
-            <div className="flex items-center space-x-2.5 min-w-0">
+          {/* Header */}
+          <div className="px-3 py-2.5 bg-[#075e54] text-white flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               {activeConversation ? (
-                <button
-                  onClick={() => setActiveConversation(null)}
-                  className="p-1 rounded-lg hover:bg-white/10 text-white transition-colors"
-                  title="Back to conversations list"
-                >
+                <button type="button" onClick={() => setActiveConversation(null)} className="p-1 rounded-full hover:bg-white/10">
                   <ArrowLeft className="w-5 h-5" />
                 </button>
               ) : (
-                <div className="w-7 h-7 rounded-lg bg-teal-500/20 text-teal-300 flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4" />
+                <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center">
+                  <MessageSquare className="w-4.5 h-4.5" />
                 </div>
               )}
 
-              <div className="min-w-0">
-                {activeConversation ? (
-                  <div className="flex items-center space-x-1.5 truncate">
-                    <span className="font-semibold text-sm truncate">
-                      {activeConversation.otherParticipant?.fullName}
-                    </span>
+              {activeConversation ? (
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="relative shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-300 to-emerald-500 text-[#075e54] font-bold text-sm flex items-center justify-center">
+                      {otherInitials}
+                    </div>
                     <span
-                      className={`text-[9px] font-bold px-1.5 py-0.2 rounded border uppercase tracking-wider ${
-                        ROLE_CONFIG[activeConversation.otherParticipant?.role]?.badge ||
-                        "bg-white/20 text-white"
-                      }`}
-                    >
-                      {activeConversation.otherParticipant?.role === "RSM" &&
-                      activeConversation.otherParticipant?.rsmType
-                        ? `RSM (${activeConversation.otherParticipant?.rsmType})`
-                        : activeConversation.otherParticipant?.role}
-                    </span>
-                  </div>
-                ) : (
-                  <div>
-                    <h3 className="font-semibold text-sm flex items-center">
-                      Staff Chat
-                      <span className="ml-2 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-teal-500/30 text-teal-300">
-                        RSM • ASM • RM • Admin
-                      </span>
-                    </h3>
-                  </div>
-                )}
-
-                {activeConversation && (
-                  <p className="text-[11px] text-slate-300 flex items-center">
-                    <span
-                      className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${
-                        isUserOnline(
-                          onlineUserIds,
-                          activeConversation.otherParticipant?._id
-                        )
-                          ? "bg-emerald-400"
-                          : "bg-slate-400"
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#075e54] ${
+                        otherOnline ? "bg-emerald-400" : "bg-slate-400"
                       }`}
                     />
-                    {isOtherUserTyping
-                      ? "typing..."
-                      : isUserOnline(
-                          onlineUserIds,
-                          activeConversation.otherParticipant?._id
-                        )
-                        ? isConnected
-                          ? "Online · Live"
-                          : "Online"
-                        : "Offline"}
-                    {activeConversation.otherParticipant?.employeeId && (
-                      <span className="ml-2 font-mono text-[10px] opacity-80">
-                        {activeConversation.otherParticipant?.employeeId}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-semibold text-[15px] truncate">{other?.fullName}</h3>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase ${ROLE_CONFIG[other?.role]?.badge || "bg-white/15"}`}>
+                        {ROLE_CONFIG[other?.role]?.label || other?.role}
                       </span>
-                    )}
+                    </div>
+                    <p className="text-[12px] text-emerald-100/90 flex items-center gap-1.5">
+                      {isOtherUserTyping ? (
+                        <span className="text-emerald-200 font-medium italic">typing…</span>
+                      ) : (
+                        <>
+                          <span className={`w-1.5 h-1.5 rounded-full ${otherOnline ? "bg-emerald-300" : "bg-white/40"}`} />
+                          <span className={otherOnline ? "text-emerald-100 font-medium" : "text-white/70"}>
+                            {otherOnline ? "Online" : "Offline"}
+                          </span>
+                        </>
+                      )}
+                      <span className="text-white/40">·</span>
+                      <span className={isConnected ? "text-emerald-200" : "text-amber-200"}>
+                        {isConnected ? "Live" : "Connecting…"}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="font-semibold text-[15px]">Staff Chat</h3>
+                  <p className="text-[11px] text-emerald-100/80">
+                    {isConnected ? "Connected · realtime" : "Connecting…"}
                   </p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
-            {/* Right Header Buttons */}
-            <div className="flex items-center space-x-1">
-              {/* Call button if phone available */}
-              {activeConversation?.otherParticipant?.phone && (
-                <a
-                  href={`tel:${activeConversation.otherParticipant.phone}`}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors"
-                  title={`Call ${activeConversation.otherParticipant.phone}`}
-                >
+            <div className="flex items-center gap-0.5">
+              {other?.phone && (
+                <a href={`tel:${other.phone}`} className="p-2 rounded-full hover:bg-white/10 text-white/90">
                   <Phone className="w-4 h-4" />
                 </a>
               )}
-
-              {/* Toggle right-docked drawer vs bottom-right popup */}
-              <button
-                onClick={() => setIsDockedPanel((prev) => !prev)}
-                className="hidden sm:inline-flex p-1.5 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors"
-                title={isDockedPanel ? "Floating window mode" : "Dock to right side panel"}
-              >
-                {isDockedPanel ? (
-                  <Minimize2 className="w-4 h-4" />
-                ) : (
-                  <Maximize2 className="w-4 h-4" />
-                )}
+              <button type="button" onClick={() => setIsDockedPanel((v) => !v)} className="hidden sm:inline-flex p-2 rounded-full hover:bg-white/10">
+                {isDockedPanel ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </button>
-
-              {/* Close Widget */}
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors"
-                title="Minimize chat"
-              >
+              <button type="button" onClick={() => setIsOpen(false)} className="p-2 rounded-full hover:bg-white/10">
                 <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* ===================================================================
-              VIEW 1: CONVERSATION LIST (When no active conversation)
-          ==================================================================== */}
+          {/* Conversation list */}
           {!activeConversation && (
-            <div className="flex-1 flex flex-col bg-slate-50 min-h-0 overflow-hidden">
-              {/* Search Bar + New Chat Button */}
-              <div className="p-3 bg-white border-b border-slate-100 flex items-center space-x-2">
+            <div className="flex-1 flex flex-col bg-white min-h-0">
+              <div className="p-3 border-b border-slate-100 flex items-center gap-2">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Search staff chats..."
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    placeholder="Search chats…"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsNewChatOpen(true)}
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-semibold rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer shrink-0"
+                  className="flex items-center gap-1 px-3 py-2 bg-[#128c7e] text-white text-xs font-semibold rounded-xl hover:bg-[#0f7a6e]"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>New Chat</span>
+                  New
                 </button>
               </div>
 
-              {/* List */}
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+              <div className="flex-1 overflow-y-auto">
                 {loadingConversations ? (
-                  <div className="py-16 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                  <div className="py-16 flex flex-col items-center text-slate-400 gap-2">
                     <Loader2 className="w-5 h-5 animate-spin text-teal-600" />
-                    <span className="text-xs">Loading staff chats...</span>
+                    <span className="text-xs">Loading chats…</span>
                   </div>
                 ) : filteredConversations.length === 0 ? (
                   <div className="py-16 px-4 text-center">
-                    <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 mx-auto flex items-center justify-center mb-2">
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <p className="text-xs font-semibold text-slate-700">No chats found</p>
-                    <p className="text-[11px] text-slate-400 mt-1 max-w-[200px] mx-auto">
-                      Start chatting with any Admin, ASM, RSM, or RM colleague.
-                    </p>
+                    <Sparkles className="w-8 h-8 text-teal-500 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-slate-700">No chats yet</p>
+                    <p className="text-xs text-slate-500 mt-1">Start a conversation with Admin, ASM, RSM or RM.</p>
                     <button
+                      type="button"
                       onClick={() => setIsNewChatOpen(true)}
-                      className="mt-3 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+                      className="mt-3 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg"
                     >
-                      + Start First Chat
+                      + Start chat
                     </button>
                   </div>
                 ) : (
                   filteredConversations.map((conv) => {
-                    const other = conv.otherParticipant;
-                    if (!other) return null;
-
-                    const isOnline = isUserOnline(onlineUserIds, other._id);
-                    const badge = ROLE_CONFIG[other.role] || {
-                      label: other.role,
-                      badge: "bg-slate-100 text-slate-600 border-slate-200",
-                    };
-                    const initials = `${other.firstName?.[0] || ""}${other.lastName?.[0] || ""}`.toUpperCase() || "DS";
-
+                    const p = conv.otherParticipant;
+                    if (!p) return null;
+                    const online = isUserOnline(onlineUserIds, p._id);
+                    const initials = `${p.firstName?.[0] || ""}${p.lastName?.[0] || ""}`.toUpperCase() || "DS";
                     return (
-                      <div
+                      <button
                         key={conv._id}
+                        type="button"
                         onClick={() => setActiveConversation(conv)}
-                        className="flex items-center space-x-3 p-3 bg-white hover:bg-teal-50/60 cursor-pointer transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-slate-50 border-b border-slate-50"
                       >
                         <div className="relative shrink-0">
-                          <div className="w-10 h-10 rounded-full bg-linear-to-br from-teal-500 to-emerald-600 text-white font-semibold text-xs flex items-center justify-center shadow-xs">
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white font-semibold text-xs flex items-center justify-center">
                             {initials}
                           </div>
-                          <span
-                            className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
-                              isOnline ? "bg-emerald-500" : "bg-slate-300"
-                            }`}
-                          />
+                          <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${online ? "bg-emerald-500" : "bg-slate-300"}`} />
                         </div>
-
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="font-semibold text-slate-900 text-xs truncate">
-                              {other.fullName}
-                            </span>
-                            <span className="text-[10px] text-slate-400 whitespace-nowrap ml-1">
-                              {conv.lastMessage?.createdAt
-                                ? formatMessageTime(conv.lastMessage.createdAt)
-                                : ""}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-slate-900 text-sm truncate">{p.fullName}</span>
+                            <span className="text-[10px] text-slate-400 shrink-0">
+                              {conv.lastMessage?.createdAt ? formatMessageTime(conv.lastMessage.createdAt) : ""}
                             </span>
                           </div>
-
-                          <div className="flex items-center space-x-1.5 mb-1">
-                            <span
-                              className={`text-[9px] font-bold px-1.5 py-0.2 rounded border uppercase tracking-wider ${badge.badge}`}
-                            >
-                              {other.role === "RSM" && other.rsmType
-                                ? `RSM (${other.rsmType})`
-                                : badge.label}
-                            </span>
-                            {other.employeeId && (
-                              <span className="text-[10px] font-mono text-slate-500 truncate">
-                                {other.employeeId}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-slate-500 truncate min-w-0 pr-2">
+                          <div className="flex items-center justify-between gap-2 mt-0.5">
+                            <p className="text-xs text-slate-500 truncate">
+                              {online ? <span className="text-emerald-600 font-medium">Online · </span> : null}
                               {conv.lastMessage?.text || "No messages yet"}
                             </p>
                             {conv.unreadCount > 0 && (
-                              <span className="shrink-0 bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full shadow-xs">
+                              <span className="shrink-0 bg-[#25d366] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
                                 {conv.unreadCount}
                               </span>
                             )}
                           </div>
                         </div>
-                      </div>
+                      </button>
                     );
                   })
                 )}
@@ -816,123 +737,81 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
             </div>
           )}
 
-          {/* ===================================================================
-              VIEW 2: ACTIVE CONVERSATION MESSAGES & INPUT
-          ==================================================================== */}
+          {/* Active chat */}
           {activeConversation && (
-            <div className="flex-1 flex flex-col bg-slate-50 min-h-0 overflow-hidden">
-              {/* Optional Loan Attached Banner */}
-              {activeConversation.loanRef?.applicationNumber && (
-                <div className="bg-teal-50 border-b border-teal-100 px-3 py-1.5 flex items-center justify-between text-xs shrink-0">
-                  <div className="flex items-center space-x-1.5 truncate">
-                    <FileText className="w-3.5 h-3.5 text-teal-700 shrink-0" />
-                    <span className="font-mono font-semibold text-teal-900 truncate">
-                      {activeConversation.loanRef.applicationNumber}
-                    </span>
-                    <span className="text-slate-500 truncate text-[11px]">
-                      ({activeConversation.loanRef.applicantName})
-                    </span>
-                  </div>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase bg-white border border-teal-200 text-teal-800 shrink-0 ml-1">
-                    {activeConversation.loanRef.status}
-                  </span>
-                </div>
-              )}
-
-              {/* Message Feed */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            <div className="flex-1 flex flex-col min-h-0">
+              <div
+                ref={messagesContainerRef}
+                onScroll={onMessagesScroll}
+                className="flex-1 overflow-y-auto px-3 py-3 space-y-1.5"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.35) 0, transparent 40%), radial-gradient(circle at 80% 0%, rgba(7,94,84,0.06) 0, transparent 35%)",
+                }}
+              >
                 {loadingMessages ? (
-                  <div className="py-16 flex flex-col items-center justify-center text-slate-400 space-y-2">
-                    <Loader2 className="w-5 h-5 animate-spin text-teal-600" />
-                    <span className="text-xs">Loading conversation...</span>
+                  <div className="py-20 flex flex-col items-center text-slate-500 gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-teal-700" />
+                    <span className="text-xs">Loading messages…</span>
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="py-16 text-center text-xs text-slate-500">
-                    <Sparkles className="w-6 h-6 text-teal-500 mx-auto mb-2 opacity-80" />
-                    Say hello to {activeConversation.otherParticipant?.fullName}!
+                  <div className="py-16 text-center">
+                    <div className="inline-block bg-white/90 px-4 py-2 rounded-xl shadow-sm text-xs text-slate-600">
+                      Say hello to {other?.firstName} 👋
+                    </div>
                   </div>
                 ) : (
                   messages.map((msg, idx) => {
                     const isMe = sameId(msg.sender, currentUserIdStr);
                     const prevMsg = messages[idx - 1];
-                    const showDateDivider =
+                    const showDate =
                       !prevMsg ||
-                      new Date(msg.createdAt).toDateString() !==
-                        new Date(prevMsg.createdAt).toDateString();
+                      new Date(msg.createdAt).toDateString() !== new Date(prevMsg.createdAt).toDateString();
 
                     return (
                       <React.Fragment key={msg._id || idx}>
-                        {showDateDivider && (
-                          <div className="flex items-center justify-center my-2">
-                            <span className="bg-slate-200/80 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        {showDate && (
+                          <div className="flex justify-center my-2">
+                            <span className="bg-white/90 text-slate-600 text-[10px] font-semibold px-2.5 py-0.5 rounded-full shadow-sm">
                               {formatDateDivider(msg.createdAt)}
                             </span>
                           </div>
                         )}
-
-                        {/* Own = right (teal), other = left (white) */}
-                        <div
-                          className={`flex w-full ${
-                            isMe ? "justify-end" : "justify-start"
-                          }`}
-                        >
+                        <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
                           <div
-                            className={`max-w-[85%] rounded-2xl p-2.5 shadow-2xs text-xs ${
+                            className={`max-w-[82%] rounded-xl px-2.5 py-1.5 shadow-sm text-[13px] leading-snug ${
                               isMe
-                                ? "bg-gradient-to-br from-teal-600 to-emerald-600 text-white rounded-br-sm"
-                                : "bg-white text-slate-800 border border-slate-200/80 rounded-bl-sm"
-                            }`}
+                                ? "bg-[#d9fdd3] text-slate-900 rounded-br-sm"
+                                : "bg-white text-slate-900 rounded-bl-sm"
+                            } ${msg.pending ? "opacity-70" : ""}`}
                           >
-                            {/* Embedded loan tag */}
                             {msg.loanRef?.applicationNumber && (
-                              <div
-                                className={`mb-1.5 p-2 rounded-lg border text-[11px] ${
-                                  isMe
-                                    ? "bg-teal-700/60 border-teal-400/30 text-teal-50"
-                                    : "bg-teal-50/80 border-teal-200 text-slate-800"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between font-semibold">
+                              <div className="mb-1.5 p-2 rounded-lg bg-black/5 text-[11px]">
+                                <div className="font-semibold flex justify-between gap-2">
                                   <span>{msg.loanRef.applicationNumber}</span>
-                                  <span className="text-[9px] uppercase">
-                                    {msg.loanRef.status}
-                                  </span>
+                                  <span className="uppercase text-[9px] opacity-70">{msg.loanRef.status}</span>
                                 </div>
-                                <div className="text-[10px] opacity-90">
-                                  {msg.loanRef.applicantName} • ₹
-                                  {Number(msg.loanRef.amount || 0).toLocaleString("en-IN")}
+                                <div className="opacity-80">
+                                  {msg.loanRef.applicantName}
+                                  {msg.loanRef.amount
+                                    ? ` · ₹${Number(msg.loanRef.amount).toLocaleString("en-IN")}`
+                                    : ""}
                                 </div>
                               </div>
                             )}
 
-                            {/* Message text */}
-                            {msg.text && (
-                              <p className="whitespace-pre-wrap leading-relaxed break-words">
-                                {msg.text}
-                              </p>
-                            )}
+                            {msg.text && <p className="whitespace-pre-wrap break-words">{msg.text}</p>}
 
-                            {/* Attachments */}
-                            {msg.attachments && msg.attachments.length > 0 && (
+                            {msg.attachments?.length > 0 && (
                               <div className="mt-1.5 space-y-1">
                                 {msg.attachments.map((att, aIdx) => {
                                   const isImg =
                                     att.mimeType?.startsWith("image/") ||
-                                    /\.(jpe?g|png|webp)$/i.test(att.url);
+                                    /\.(jpe?g|png|webp)$/i.test(att.url || "");
                                   if (isImg) {
                                     return (
-                                      <a
-                                        key={aIdx}
-                                        href={att.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="block overflow-hidden rounded-lg border border-black/10 hover:opacity-95"
-                                      >
-                                        <img
-                                          src={att.url}
-                                          alt="Attachment"
-                                          className="max-h-48 w-full object-cover"
-                                        />
+                                      <a key={aIdx} href={att.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg">
+                                        <img src={att.url} alt="" className="max-h-44 w-full object-cover" />
                                       </a>
                                     );
                                   }
@@ -942,40 +821,25 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
                                       href={att.url}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className={`flex items-center space-x-1.5 p-1.5 rounded-lg border text-[11px] ${
-                                        isMe
-                                          ? "bg-teal-700/60 border-teal-400/30 text-teal-50"
-                                          : "bg-slate-50 border-slate-200 text-slate-800"
-                                      }`}
+                                      className="flex items-center gap-1.5 p-1.5 rounded-lg bg-black/5 text-[11px]"
                                     >
-                                      <FileText className="w-3.5 h-3.5 shrink-0 text-red-400" />
-                                      <span className="truncate flex-1">
-                                        {att.name || "Document.pdf"}
-                                      </span>
-                                      <Download className="w-3 h-3 shrink-0" />
+                                      <FileText className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                      <span className="truncate flex-1">{att.name || "Document.pdf"}</span>
+                                      <Download className="w-3 h-3 shrink-0 opacity-60" />
                                     </a>
                                   );
                                 })}
                               </div>
                             )}
 
-                            {/* Time & status tick */}
-                            <div
-                              className={`flex items-center justify-end space-x-1 mt-1 text-[9px] ${
-                                isMe ? "text-teal-100/90" : "text-slate-400"
-                              }`}
-                            >
-                              <span>{formatMessageTime(msg.createdAt)}</span>
+                            <div className="flex items-center justify-end gap-1 mt-0.5">
+                              <span className="text-[10px] text-slate-500">{formatMessageTime(msg.createdAt)}</span>
                               {isMe && (
-                                <span>
-                                  {msg.status === "READ" ? (
-                                    <CheckCheck className="w-3 h-3 text-sky-200" />
-                                  ) : msg.status === "DELIVERED" ? (
-                                    <CheckCheck className="w-3 h-3 opacity-70" />
-                                  ) : (
-                                    <Check className="w-3 h-3 opacity-70" />
-                                  )}
-                                </span>
+                                msg.status === "READ" ? (
+                                  <CheckCheck className="w-3.5 h-3.5 text-sky-500" />
+                                ) : (
+                                  <Check className={`w-3.5 h-3.5 ${msg.pending ? "text-slate-400" : "text-slate-500"}`} />
+                                )
                               )}
                             </div>
                           </div>
@@ -985,125 +849,81 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
                   })
                 )}
 
-                {/* Typing indicator */}
-                {isOtherUserTyping && (
-                  <TypingBubble name={activeConversation.otherParticipant?.firstName} />
-                )}
-
+                {isOtherUserTyping && <TypingBubble name={other?.firstName} />}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Attachments / Loan tray */}
               {(selectedLoan || pendingAttachments.length > 0 || uploadingFiles) && (
-                <div className="bg-white border-t border-slate-200 px-3 py-1.5 flex flex-wrap gap-1.5 items-center shrink-0">
+                <div className="bg-white border-t border-slate-200 px-3 py-2 flex flex-wrap gap-1.5">
                   {uploadingFiles && (
-                    <div className="flex items-center space-x-1 text-[11px] text-teal-600 bg-teal-50 px-2 py-0.5 rounded">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      <span>Uploading...</span>
-                    </div>
+                    <span className="text-xs text-teal-700 flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Uploading…
+                    </span>
                   )}
                   {selectedLoan && (
-                    <div className="flex items-center space-x-1 bg-teal-50 border border-teal-200 text-teal-800 text-[11px] px-2 py-0.5 rounded">
+                    <span className="inline-flex items-center gap-1 text-[11px] bg-teal-50 text-teal-800 border border-teal-200 px-2 py-1 rounded-lg">
                       <FileText className="w-3 h-3" />
-                      <span className="font-semibold">{selectedLoan.applicationNumber}</span>
-                      <button
-                        onClick={() => setSelectedLoan(null)}
-                        className="ml-1 text-slate-400 hover:text-slate-600"
-                      >
+                      {selectedLoan.applicationNumber}
+                      <button type="button" onClick={() => setSelectedLoan(null)}>
                         <X className="w-3 h-3" />
                       </button>
-                    </div>
+                    </span>
                   )}
                   {pendingAttachments.map((att, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center space-x-1 bg-slate-100 border border-slate-200 text-slate-800 text-[11px] px-2 py-0.5 rounded"
-                    >
+                    <span key={idx} className="inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-700 px-2 py-1 rounded-lg">
                       <Paperclip className="w-3 h-3" />
-                      <span className="truncate max-w-[90px]">{att.name}</span>
-                      <button
-                        onClick={() =>
-                          setPendingAttachments((prev) =>
-                            prev.filter((_, i) => i !== idx)
-                          )
-                        }
-                        className="ml-1 text-slate-400 hover:text-slate-600"
-                      >
+                      <span className="max-w-[100px] truncate">{att.name}</span>
+                      <button type="button" onClick={() => setPendingAttachments((p) => p.filter((_, i) => i !== idx))}>
                         <X className="w-3 h-3" />
                       </button>
-                    </div>
+                    </span>
                   ))}
                 </div>
               )}
 
-              {/* Input Area */}
-              <div className="bg-white border-t border-slate-200 p-2.5 shrink-0">
-                <form
-                  onSubmit={handleSendMessage}
-                  className="flex items-center space-x-1.5"
+              {/* Composer */}
+              <form onSubmit={handleSendMessage} className="bg-[#f0f2f5] border-t border-slate-200 p-2 flex items-end gap-1.5">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-full text-slate-500 hover:bg-white">
+                  <Paperclip className="w-5 h-5" />
+                </button>
+                <button type="button" onClick={() => setIsLoanPickerOpen(true)} className="p-2.5 rounded-full text-slate-500 hover:bg-white">
+                  <FileText className="w-5 h-5" />
+                </button>
+                <textarea
+                  rows={1}
+                  placeholder="Type a message"
+                  className="flex-1 resize-none py-2.5 px-3.5 text-sm bg-white border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-teal-500/30 max-h-28 shadow-sm"
+                  value={messageText}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                />
+                <button
+                  type="submit"
+                  disabled={!messageText.trim() && pendingAttachments.length === 0 && !selectedLoan}
+                  className="p-2.5 rounded-full bg-[#128c7e] text-white disabled:opacity-40 hover:bg-[#0f7a6e] shadow-sm"
                 >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    multiple
-                    accept="image/*,application/pdf"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                    title="Attach file (PDF/Image)"
-                  >
-                    <Paperclip className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsLoanPickerOpen(true)}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                    title="Attach loan application"
-                  >
-                    <FileText className="w-4 h-4" />
-                  </button>
-
-                  <input
-                    type="text"
-                    placeholder="Type message... (Enter to send)"
-                    className="flex-1 py-1.5 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
-                    value={messageText}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                  />
-
-                  <button
-                    type="submit"
-                    disabled={
-                      !messageText.trim() &&
-                      pendingAttachments.length === 0 &&
-                      !selectedLoan
-                    }
-                    className="p-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs hover:shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </form>
-              </div>
+                  <Send className="w-5 h-5" />
+                </button>
+              </form>
             </div>
           )}
         </div>
       )}
 
-      {/* Start New Chat Modal */}
       <NewChatModal
         isOpen={isNewChatOpen}
         onClose={() => setIsNewChatOpen(false)}
         onSelectContact={handleSelectContact}
         onlineUserIds={onlineUserIds}
       />
-
-      {/* Loan Picker Modal */}
       <LoanPickerModal
         isOpen={isLoanPickerOpen}
         onClose={() => setIsLoanPickerOpen(false)}

@@ -15,11 +15,24 @@ class SocketManager {
 
   getToken() {
     const authData = getAuthData();
+    // Prefer the active role session (user object present) to avoid mixed tokens
+    if (authData?.rmUser && authData?.rmToken) return authData.rmToken;
+    if (authData?.rsmUser && (authData?.rawRsmToken || authData?.rsmToken)) {
+      return authData.rawRsmToken || authData.rsmToken;
+    }
+    if (authData?.asmUser && (authData?.rawAsmToken || authData?.asmToken)) {
+      return authData.rawAsmToken || authData.asmToken;
+    }
+    if (authData?.adminUser && authData?.adminToken) return authData.adminToken;
+    if (authData?.partnerUser && authData?.partnerToken) return authData.partnerToken;
+    if (authData?.customerUser && authData?.customerToken) return authData.customerToken;
     return (
       authData?.adminToken ||
-      authData?.asmToken ||
-      authData?.rsmToken ||
       authData?.rmToken ||
+      authData?.rawRsmToken ||
+      authData?.rawAsmToken ||
+      authData?.rsmToken ||
+      authData?.asmToken ||
       authData?.partnerToken ||
       authData?.customerToken ||
       null
@@ -27,12 +40,9 @@ class SocketManager {
   }
 
   getSocketUrl() {
-    // Dev: same-origin so Vite proxies /socket.io (avoids CORS)
-    if (import.meta.env.DEV && typeof window !== "undefined") {
-      return window.location.origin;
-    }
-
-    let socketUrl = backendurl.replace("/api", "").replace(/\/+$/, "");
+    // Always hit the API host directly.
+    // Vite's /socket.io proxy often breaks (ECONNRESET/ECONNREFUSED) and kills realtime chat.
+    let socketUrl = backendurl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
     if (!socketUrl.includes("://")) {
       socketUrl = `http://${socketUrl}`;
     }
@@ -51,7 +61,6 @@ class SocketManager {
 
     // Already connecting / existing instance — reuse and ensure handlers
     if (this.socket && !this.socket.connected) {
-      // Update auth token in case login changed
       this.socket.auth = { token };
       if (!this._connecting) {
         this._connecting = true;
@@ -69,16 +78,17 @@ class SocketManager {
 
     this.socket = io(socketUrl, {
       auth: { token },
-      // Polling first is more reliable through Vite proxy; then upgrades
-      transports: ["polling", "websocket"],
+      path: "/socket.io",
+      transports: ["websocket", "polling"],
       upgrade: true,
       reconnection: true,
-      reconnectionDelay: 800,
-      reconnectionDelayMax: 5000,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 4000,
       reconnectionAttempts: this.maxReconnectAttempts,
-      timeout: 20000,
+      timeout: 15000,
       forceNew: false,
       autoConnect: true,
+      withCredentials: true,
     });
 
     this.setupEventHandlers();
@@ -94,11 +104,29 @@ class SocketManager {
     const token = this.getToken();
     if (!token) return null;
 
-    if (this.socket?.connected) return this.socket;
+    // Rebuild if socket is pointed at the wrong host (e.g. old Vite proxy origin)
+    if (this.socket) {
+      try {
+        const desiredHost = new URL(this.getSocketUrl()).host;
+        const currentUri = this.socket.io?.uri || "";
+        const currentHost = currentUri ? new URL(currentUri).host : "";
+        if (currentHost && currentHost !== desiredHost) {
+          this.disconnect(false);
+        }
+      } catch (_) {
+        // ignore URL parse issues
+      }
+    }
 
-    // Token changed (different role login) — rebuild connection
+    if (this.socket?.connected) {
+      if (this.socket.auth?.token !== token) {
+        this.socket.auth = { token };
+      }
+      return this.socket;
+    }
+
+    // Token changed — rebuild connection
     if (this.socket && this.socket.auth?.token !== token) {
-      this.socket.auth = { token };
       this.disconnect(false);
     }
 
