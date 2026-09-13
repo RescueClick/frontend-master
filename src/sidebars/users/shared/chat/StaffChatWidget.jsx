@@ -945,6 +945,16 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
         isOpen={isLoanPickerOpen}
         onClose={() => setIsLoanPickerOpen(false)}
         onSelectLoan={(loan) => setSelectedLoan(loan)}
+        peerUserId={activeConversation?.otherParticipant?._id || null}
+        peerName={
+          activeConversation?.otherParticipant?.fullName ||
+          [
+            activeConversation?.otherParticipant?.firstName,
+            activeConversation?.otherParticipant?.lastName,
+          ]
+            .filter(Boolean)
+            .join(" ")
+        }
       />
     </>
   );

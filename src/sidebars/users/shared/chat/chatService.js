@@ -164,11 +164,14 @@ export const chatService = {
     return res.data;
   },
 
-  // Search active loans by ID / name
-  searchLoans: async (q) => {
+  // Search loans under the chat peer only (not whole DB)
+  searchLoans: async (q, forUserId) => {
     const res = await axios.get(`${backendurl}/chat/search-loans`, {
       headers: getHeaders(),
-      params: { q },
+      params: {
+        q: q || "",
+        forUserId: forUserId || undefined,
+      },
     });
     return res.data;
   },

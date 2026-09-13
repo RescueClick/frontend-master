@@ -45,7 +45,6 @@ export default function NewChatModal({ isOpen, onClose, onSelectContact, onlineU
   if (!isOpen) return null;
 
   const filteredContacts = contacts.filter((c) => {
-    if (roleFilter === "TEAM") return c.isMyTeam;
     if (roleFilter !== "ALL") return c.role === roleFilter;
     return true;
   });
@@ -64,7 +63,7 @@ export default function NewChatModal({ isOpen, onClose, onSelectContact, onlineU
                 Start a New Chat
               </h3>
               <p className="text-xs text-slate-500">
-                Select a colleague from Admin, ASM, RSM, or RM
+                Admin can chat everyone · others only their reporting line
               </p>
             </div>
           </div>
@@ -101,11 +100,10 @@ export default function NewChatModal({ isOpen, onClose, onSelectContact, onlineU
             )}
           </div>
 
-          {/* Role Filters */}
+          {/* Role Filters (within allowed hierarchy only) */}
           <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
             {[
-              { id: "ALL", label: "All Staff" },
-              { id: "TEAM", label: "My Reporting Line" },
+              { id: "ALL", label: "My Access" },
               { id: "SUPER_ADMIN", label: "Admin" },
               { id: "ASM", label: "ASM" },
               { id: "RSM", label: "RSM" },
@@ -134,8 +132,9 @@ export default function NewChatModal({ isOpen, onClose, onSelectContact, onlineU
               <span className="text-xs">Loading staff directory...</span>
             </div>
           ) : filteredContacts.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-xs sm:text-sm">
-              No staff members found matching criteria.
+            <div className="py-12 text-center text-slate-400 text-xs sm:text-sm px-4">
+              No colleagues in your reporting line match this search.
+              Only Admin and your hierarchy can be messaged.
             </div>
           ) : (
             filteredContacts.map((contact) => {

@@ -13,25 +13,34 @@ const STATUS_STYLE = {
   SUBMITTED: "bg-slate-100 text-slate-700",
 };
 
-export default function LoanPickerModal({ isOpen, onClose, onSelectLoan }) {
+export default function LoanPickerModal({
+  isOpen,
+  onClose,
+  onSelectLoan,
+  peerUserId = null,
+  peerName = "",
+}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [scopedPeerName, setScopedPeerName] = useState(peerName || "");
 
   useEffect(() => {
     if (!isOpen) {
       setSearchTerm("");
       setResults([]);
       setError("");
+      setScopedPeerName(peerName || "");
     }
-  }, [isOpen]);
+  }, [isOpen, peerName]);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    if (searchTerm.trim().length < 2) {
+    if (!peerUserId) {
       setResults([]);
+      setError("Open a chat with a colleague first — loans are limited to that person.");
       return;
     }
 
@@ -39,21 +48,24 @@ export default function LoanPickerModal({ isOpen, onClose, onSelectLoan }) {
       setLoading(true);
       setError("");
       try {
-        const data = await chatService.searchLoans(searchTerm);
+        const data = await chatService.searchLoans(searchTerm, peerUserId);
         setResults(data.loans || []);
+        if (data.peerName) setScopedPeerName(data.peerName);
       } catch (err) {
         console.error("Error searching loans:", err);
-        setError("Failed to search applications");
+        setError(err?.response?.data?.message || "Failed to search applications");
         setResults([]);
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, searchTerm.trim() ? 300 : 0);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, isOpen]);
+  }, [searchTerm, isOpen, peerUserId]);
 
   if (!isOpen) return null;
+
+  const scopeLabel = scopedPeerName || peerName || "this colleague";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
@@ -68,7 +80,7 @@ export default function LoanPickerModal({ isOpen, onClose, onSelectLoan }) {
                 Attach Loan Application
               </h3>
               <p className="text-xs text-slate-500">
-                Search by App No, name, mobile, PAN or email
+                Only files under <span className="font-semibold text-slate-700">{scopeLabel}</span>
               </p>
             </div>
           </div>
@@ -88,9 +100,10 @@ export default function LoanPickerModal({ isOpen, onClose, onSelectLoan }) {
               type="text"
               autoFocus
               className="w-full pl-9 pr-9 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              placeholder="e.g. TLC0192, applicant name, mobile…"
+              placeholder="Filter by App No, name, mobile…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={!peerUserId}
             />
             {loading ? (
               <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-teal-600 animate-spin" />
@@ -108,15 +121,17 @@ export default function LoanPickerModal({ isOpen, onClose, onSelectLoan }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {searchTerm.trim().length < 2 && (
+          {!peerUserId && (
             <div className="py-10 text-center text-slate-400 text-sm">
-              Type at least 2 characters to search…
+              Open a conversation first to see that person’s loan files.
             </div>
           )}
 
-          {searchTerm.trim().length >= 2 && !loading && results.length === 0 && !error && (
+          {peerUserId && !loading && results.length === 0 && !error && (
             <div className="py-10 text-center text-slate-400 text-sm">
-              No applications matching &quot;{searchTerm}&quot;
+              {searchTerm.trim()
+                ? `No files under ${scopeLabel} matching “${searchTerm}”`
+                : `No loan files under ${scopeLabel} yet`}
             </div>
           )}
 
