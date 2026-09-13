@@ -80,12 +80,15 @@ class SocketManager {
     }
 
     this._connecting = true;
+    this._connectingSince = Date.now();
     const socketUrl = this.getSocketUrl();
+    console.log("🔌 Socket connecting to:", socketUrl);
 
     this.socket = io(socketUrl, {
       auth: { token },
       path: "/socket.io",
-      transports: ["websocket", "polling"],
+      // Polling first is more reliable across nginx / local; then upgrades
+      transports: ["polling", "websocket"],
       upgrade: true,
       reconnection: true,
       reconnectionDelay: 500,
@@ -94,7 +97,7 @@ class SocketManager {
       timeout: 15000,
       forceNew: false,
       autoConnect: true,
-      withCredentials: true,
+      withCredentials: false,
     });
 
     this.setupEventHandlers();
@@ -125,10 +128,22 @@ class SocketManager {
     }
 
     if (this.socket?.connected) {
+      this.isConnected = true;
+      this._connecting = false;
       if (this.socket.auth?.token !== token) {
         this.socket.auth = { token };
       }
+      // Re-notify late subscribers (chat UI mounted after connect)
+      this.emit("socketConnected", { connected: true, socketId: this.socket.id, synced: true });
       return this.socket;
+    }
+
+    // Reset stuck connecting flag so retries can proceed
+    if (this._connecting && this.socket && !this.socket.connected) {
+      const startedAgo = this._connectingSince ? Date.now() - this._connectingSince : 99999;
+      if (startedAgo > 8000) {
+        this._connecting = false;
+      }
     }
 
     // Token changed — rebuild connection

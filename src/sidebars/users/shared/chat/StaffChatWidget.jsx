@@ -11,7 +11,6 @@ import {
   Phone,
   Check,
   CheckCheck,
-  Download,
   Loader2,
   Sparkles,
   Maximize2,
@@ -22,6 +21,9 @@ import { useSocket } from "../../../../hooks/useSocket";
 import NewChatModal from "./NewChatModal";
 import LoanPickerModal from "./LoanPickerModal";
 import { TypingBubble } from "./TypingBubble";
+import ChatMediaAttachment from "./ChatMediaAttachment";
+import ChatLoanCard, { getLoanNavigation } from "./ChatLoanCard";
+import { useNavigate } from "react-router-dom";
 
 const ROLE_CONFIG = {
   SUPER_ADMIN: { label: "Admin", badge: "bg-purple-500/20 text-purple-100 border-purple-300/30" },
@@ -49,7 +51,8 @@ function formatDateDivider(dateStr) {
 const isUserOnline = (onlineUserIds, userId) =>
   onlineUserIds.some((id) => sameId(id, userId));
 
-export default function StaffChatWidget() {
+export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
+  const navigate = useNavigate();
   const currentUser = getStaffUser();
   const currentUserIdStr = currentUser?._id?.toString() || "";
 
@@ -493,6 +496,13 @@ export default function StaffChatWidget() {
     }
   };
 
+  const handleOpenLoan = (loanRef) => {
+    const nav = getLoanNavigation(currentRole, loanRef);
+    if (!nav?.path) return;
+    navigate(nav.path, { state: nav.state });
+    setIsOpen(false);
+  };
+
   const handleSelectContact = async (contact) => {
     try {
       const res = await chatService.createOrGetConversation(contact._id);
@@ -785,50 +795,24 @@ export default function StaffChatWidget() {
                                 : "bg-white text-slate-900 rounded-bl-sm"
                             } ${msg.pending ? "opacity-70" : ""}`}
                           >
-                            {msg.loanRef?.applicationNumber && (
-                              <div className="mb-1.5 p-2 rounded-lg bg-black/5 text-[11px]">
-                                <div className="font-semibold flex justify-between gap-2">
-                                  <span>{msg.loanRef.applicationNumber}</span>
-                                  <span className="uppercase text-[9px] opacity-70">{msg.loanRef.status}</span>
-                                </div>
-                                <div className="opacity-80">
-                                  {msg.loanRef.applicantName}
-                                  {msg.loanRef.amount
-                                    ? ` · ₹${Number(msg.loanRef.amount).toLocaleString("en-IN")}`
-                                    : ""}
-                                </div>
-                              </div>
+                            {(msg.loanRef?.applicationId ||
+                              (msg.loanRef?.applicationNumber &&
+                                msg.loanRef.applicationNumber !== "N/A") ||
+                              msg.loanRef?.applicantName) && (
+                              <ChatLoanCard
+                                loanRef={msg.loanRef}
+                                compact
+                                onOpen={handleOpenLoan}
+                              />
                             )}
 
                             {msg.text && <p className="whitespace-pre-wrap break-words">{msg.text}</p>}
 
                             {msg.attachments?.length > 0 && (
-                              <div className="mt-1.5 space-y-1">
-                                {msg.attachments.map((att, aIdx) => {
-                                  const isImg =
-                                    att.mimeType?.startsWith("image/") ||
-                                    /\.(jpe?g|png|webp)$/i.test(att.url || "");
-                                  if (isImg) {
-                                    return (
-                                      <a key={aIdx} href={att.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg">
-                                        <img src={att.url} alt="" className="max-h-44 w-full object-cover" />
-                                      </a>
-                                    );
-                                  }
-                                  return (
-                                    <a
-                                      key={aIdx}
-                                      href={att.url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="flex items-center gap-1.5 p-1.5 rounded-lg bg-black/5 text-[11px]"
-                                    >
-                                      <FileText className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                      <span className="truncate flex-1">{att.name || "Document.pdf"}</span>
-                                      <Download className="w-3 h-3 shrink-0 opacity-60" />
-                                    </a>
-                                  );
-                                })}
+                              <div className="mt-1.5 space-y-1.5">
+                                {msg.attachments.map((att, aIdx) => (
+                                  <ChatMediaAttachment key={aIdx} att={att} compact />
+                                ))}
                               </div>
                             )}
 

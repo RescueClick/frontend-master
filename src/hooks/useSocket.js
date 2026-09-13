@@ -6,50 +6,53 @@ export const useSocket = () => {
   const [socket, setSocket] = useState(() => socketManager.getSocket());
   const listenersRef = useRef([]);
 
+  const syncConnectionState = useCallback(() => {
+    const connected = socketManager.getIsConnected();
+    const sock = socketManager.getSocket();
+    setIsConnected(connected);
+    setSocket(sock);
+    return connected;
+  }, []);
+
   useEffect(() => {
     // Connect (or reconnect) whenever a staff/partner token is available
-    const sock = socketManager.ensureConnected();
-    setSocket(sock || socketManager.getSocket());
-    setIsConnected(socketManager.getIsConnected());
+    socketManager.ensureConnected();
+    syncConnectionState();
 
-    const handleConnect = () => {
-      setIsConnected(true);
-      setSocket(socketManager.getSocket());
-    };
-    const handleDisconnect = () => {
-      setIsConnected(false);
-      setSocket(socketManager.getSocket());
-    };
+    const handleConnect = () => syncConnectionState();
+    const handleDisconnect = () => syncConnectionState();
 
     socketManager.on("socketConnected", handleConnect);
     socketManager.on("socketDisconnected", handleDisconnect);
 
-    // Retry if login happens after first mount (token appears in storage)
-    const retryTimer = setInterval(() => {
+    // Keep UI in sync even if the connect event was missed
+    const syncTimer = setInterval(() => {
       if (!socketManager.getIsConnected() && socketManager.getToken()) {
         socketManager.ensureConnected();
-        setSocket(socketManager.getSocket());
       }
-    }, 4000);
+      syncConnectionState();
+    }, 2000);
 
-    const onStorage = () => {
-      if (socketManager.getToken()) {
+    const onAuthChanged = () => {
+      setTimeout(() => {
         socketManager.ensureConnected();
-        setSocket(socketManager.getSocket());
-      }
+        syncConnectionState();
+      }, 150);
     };
-    window.addEventListener("storage", onStorage);
-    // Custom event fired by login flows in some apps
-    window.addEventListener("auth-changed", onStorage);
+
+    window.addEventListener("storage", onAuthChanged);
+    window.addEventListener("auth-changed", onAuthChanged);
+    window.addEventListener("focus", onAuthChanged);
 
     return () => {
-      clearInterval(retryTimer);
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("auth-changed", onStorage);
+      clearInterval(syncTimer);
+      window.removeEventListener("storage", onAuthChanged);
+      window.removeEventListener("auth-changed", onAuthChanged);
+      window.removeEventListener("focus", onAuthChanged);
       socketManager.off("socketConnected", handleConnect);
       socketManager.off("socketDisconnected", handleDisconnect);
     };
-  }, []);
+  }, [syncConnectionState]);
 
   useEffect(() => {
     return () => {
@@ -84,8 +87,7 @@ export const useSocket = () => {
     emit,
     ensureConnected: () => {
       const s = socketManager.ensureConnected();
-      setSocket(s || socketManager.getSocket());
-      setIsConnected(socketManager.getIsConnected());
+      syncConnectionState();
       return s;
     },
     notifyApplicationStatusChanged: socketManager.notifyApplicationStatusChanged.bind(socketManager),
