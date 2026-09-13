@@ -55,6 +55,7 @@ import AdminPayouts from "./sidebars/users/Admin/AdminPayouts";
 import SetTarget from "./sidebars/users/Admin/SetTarget.jsx"
 import PartnerTargets from "./sidebars/users/Admin/PartnerTargets";
 import AdiminBanks from "./sidebars/users/Admin/Banks";
+import AdminFindBankRm from "./sidebars/users/Admin/FindBankRm";
 import Analytics from "./sidebars/users/Admin/Analytics";
 import Banner from "./sidebars/users/Admin/Banner";
 import RMpartner from "./sidebars/users/Admin/RMpartner";
@@ -101,6 +102,7 @@ import RsmPartnerTargets from "./sidebars/users/RSM/RsmPartnerTargets";
 import RsmPartners from "./sidebars/users/RSM/RsmPartners";
 import RsmAnalytics from "./sidebars/users/RSM/RsmAnalytics";
 import Banks from "./sidebars/users/RSM/Banks";
+import AsmFindBankRm from "./sidebars/users/RSM/FindBankRm";
 
 
 // Import RM user pages
@@ -344,6 +346,7 @@ const AppRoutes = () => {
         <Route path="target" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="partner-targets" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="banks" element={<AdiminBanks />} />
+        <Route path="find-bank-rm" element={<AdminFindBankRm />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="Analytics" element={<Analytics />} />
         <Route path="rm-partner" element={<RMpartner />} />
@@ -393,6 +396,7 @@ const AppRoutes = () => {
         <Route path="done-incentive" element={<Navigate to="/rsm/incentives" replace state={{ defaultTab: "paid" }} />} />
         <Route path="withdrawals" element={<Navigate to="/rsm/payouts" replace />} />
         <Route path="follow-ups" element={<AsmFollowUps />} />
+        <Route path="find-bank-rm" element={<AdminFindBankRm />} />
         <Route path="partner-targets" element={<Navigate to="/rsm/incentives" replace />} />
         <Route path="settings" element={<PasswordSettings  />} />
         <Route path="EditProfile" element={<EditProfile />} />
@@ -414,6 +418,7 @@ const AppRoutes = () => {
         <Route path="analytics" element={<RsmAnalytics />} />
         <Route path="follow-ups" element={<RsmFollowUps />} />
         <Route path="banks" element={<Banks />} />
+        <Route path="find-bank-rm" element={<AsmFindBankRm />} />
         <Route path="settings" element={<PasswordSettings />} />
         <Route path="EditProfile" element={<EditProfile />} />
       </Route>

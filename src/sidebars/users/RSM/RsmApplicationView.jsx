@@ -35,7 +35,8 @@ import {
   RotateCw,
   RefreshCw,
   Maximize,
-  Clock
+  Clock,
+  Search
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
@@ -43,6 +44,7 @@ import { fetchRsmApplication, transitionRsmApplication } from "../../../feature/
 import { useDispatch } from "react-redux";
 import { getLoanStatusLabel } from "../../../utils/loanStatus";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import BankRmResultsTable from "../../../components/shared/BankRmResultsTable";
 
 // ================== FIELD DEFINITIONS (Outside component) ==================
 const customerFields = [
@@ -194,6 +196,27 @@ const RsmApplicationView = () => {
   const [searchPincode, setSearchPincode] = useState("");
   const [showBankPassword, setShowBankPassword] = useState({});
   const [copiedBankField, setCopiedBankField] = useState(null);
+
+  // Find Bank RM (directory) state
+  const [rmFilters, setRmFilters] = useState({
+    bank: "",
+    product: "",
+    marketType: "",
+    state: "",
+    city: "",
+  });
+  const [rmOptions, setRmOptions] = useState({
+    banks: [],
+    products: [],
+    marketTypes: [],
+    states: [],
+    cities: [],
+  });
+  const [rmResults, setRmResults] = useState([]);
+  const [rmOptionsLoading, setRmOptionsLoading] = useState(false);
+  const [rmSearching, setRmSearching] = useState(false);
+  const [rmHasSearched, setRmHasSearched] = useState(false);
+  const [copiedRmCode, setCopiedRmCode] = useState(null);
 
   const toggleBankPassword = (bankId) => {
     setShowBankPassword((prev) => ({
@@ -458,11 +481,150 @@ const RsmApplicationView = () => {
     }
   };
 
+  const fetchRmFilterOptions = async (nextFilters = rmFilters) => {
+    try {
+      setRmOptionsLoading(true);
+      const { rsmToken } = getAuthData();
+      const params = {};
+      if (nextFilters.bank) params.bank = nextFilters.bank;
+      if (nextFilters.product) params.product = nextFilters.product;
+      if (nextFilters.marketType) params.marketType = nextFilters.marketType;
+      if (nextFilters.state) params.state = nextFilters.state;
+
+      const res = await axios.get(`${backendurl}/rsm/bank-rms/filter-options`, {
+        headers: { Authorization: `Bearer ${rsmToken}` },
+        params,
+      });
+
+      setRmOptions({
+        banks: res.data?.banks || [],
+        products: res.data?.products || [],
+        marketTypes: res.data?.marketTypes || [],
+        states: res.data?.states || [],
+        cities: res.data?.cities || [],
+      });
+    } catch (err) {
+      console.error("Error fetching Bank RM filters:", err);
+      toast.error(err?.response?.data?.message || "Failed to load Find Bank RM filters");
+    } finally {
+      setRmOptionsLoading(false);
+    }
+  };
+
+  const handleRmFilterChange = async (field, value) => {
+    let next = { ...rmFilters, [field]: value };
+    if (field === "bank") {
+      next = { bank: value, product: "", marketType: "", state: "", city: "" };
+    } else if (field === "product") {
+      next = {
+        bank: rmFilters.bank,
+        product: value,
+        marketType: "",
+        state: "",
+        city: "",
+      };
+    } else if (field === "marketType") {
+      next = {
+        bank: rmFilters.bank,
+        product: rmFilters.product,
+        marketType: value,
+        state: "",
+        city: "",
+      };
+    } else if (field === "state") {
+      next = { ...rmFilters, state: value, city: "" };
+    }
+
+    setRmFilters(next);
+    setRmHasSearched(false);
+    setRmResults([]);
+    await fetchRmFilterOptions(next);
+  };
+
+  const handleFindBankRmSearch = async () => {
+    if (
+      !rmFilters.bank ||
+      !rmFilters.product ||
+      !rmFilters.marketType ||
+      !rmFilters.state ||
+      !rmFilters.city
+    ) {
+      toast.error("Please select Bank, Product, Market Type, State and City");
+      return;
+    }
+
+    try {
+      setRmSearching(true);
+      setRmHasSearched(true);
+      const { rsmToken } = getAuthData();
+      const res = await axios.get(`${backendurl}/rsm/bank-rms`, {
+        headers: { Authorization: `Bearer ${rsmToken}` },
+        params: {
+          bank: rmFilters.bank,
+          product: rmFilters.product,
+          marketType: rmFilters.marketType,
+          state: rmFilters.state,
+          city: rmFilters.city,
+        },
+      });
+      setRmResults(Array.isArray(res.data?.bankRms) ? res.data.bankRms : []);
+    } catch (err) {
+      console.error("Error searching Bank RMs:", err);
+      toast.error(err?.response?.data?.message || "Failed to search Bank RMs");
+      setRmResults([]);
+    } finally {
+      setRmSearching(false);
+    }
+  };
+
+  const handleCopyRmLoginCode = async (code, id) => {
+    if (!code) {
+      toast.error("No login code available");
+      return;
+    }
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = code;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopiedRmCode(id);
+      toast.success("Login code copied");
+      setTimeout(() => {
+        setCopiedRmCode((prev) => (prev === id ? null : prev));
+      }, 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+      toast.error("Failed to copy login code");
+    }
+  };
+
   useEffect(() => {
     if (searchPincode && applicationData?.loanType && !banksFetched) {
       fetchEligibleBanks();
     }
   }, [searchPincode, applicationData?.loanType, banksFetched]);
+
+  useEffect(() => {
+    if (applicationId) {
+      fetchRmFilterOptions({
+        bank: "",
+        product: "",
+        marketType: "",
+        state: "",
+        city: "",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicationId]);
 
   useEffect(() => {
     if (applicationId) {
@@ -1803,6 +1965,149 @@ const RsmApplicationView = () => {
                   </div>
 
                 </div>
+
+                  {/* 4. Find Bank RM — last section */}
+                  <div className="mt-8 bg-white rounded-xl border border-rose-200 shadow-sm overflow-hidden">
+                    <div className="bg-gradient-to-r from-rose-500 to-rose-600 p-4">
+                      <h3 className="text-base font-bold text-white flex items-center">
+                        <Search className="w-5 h-5 mr-2 text-rose-100" />
+                        Find Bank RM
+                      </h3>
+                      <p className="text-rose-100 text-xs mt-1 opacity-90">
+                        Search bank RM login codes by bank, product, market type, state and city.
+                      </p>
+                    </div>
+
+                    <div className="p-5 space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+                        <label className="space-y-1 text-sm">
+                          <span className="font-medium text-slate-600">Bank</span>
+                          <select
+                            value={rmFilters.bank}
+                            onChange={(e) => handleRmFilterChange("bank", e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500"
+                          >
+                            <option value="">Please Select Bank</option>
+                            {rmOptions.banks.map((bank) => (
+                              <option key={bank} value={bank}>
+                                {bank}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="space-y-1 text-sm">
+                          <span className="font-medium text-slate-600">Product</span>
+                          <select
+                            value={rmFilters.product}
+                            onChange={(e) => handleRmFilterChange("product", e.target.value)}
+                            disabled={!rmFilters.bank}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500 disabled:bg-slate-50"
+                          >
+                            <option value="">Please Select Product</option>
+                            {rmOptions.products.map((product) => (
+                              <option key={product} value={product}>
+                                {product}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="space-y-1 text-sm">
+                          <span className="font-medium text-slate-600">Market Type</span>
+                          <select
+                            value={rmFilters.marketType}
+                            onChange={(e) => handleRmFilterChange("marketType", e.target.value)}
+                            disabled={!rmFilters.product}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500 disabled:bg-slate-50"
+                          >
+                            <option value="">Please Select Market Type</option>
+                            {rmOptions.marketTypes.map((marketType) => (
+                              <option key={marketType} value={marketType}>
+                                {marketType}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="space-y-1 text-sm">
+                          <span className="font-medium text-slate-600">State</span>
+                          <select
+                            value={rmFilters.state}
+                            onChange={(e) => handleRmFilterChange("state", e.target.value)}
+                            disabled={!rmFilters.marketType}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500 disabled:bg-slate-50"
+                          >
+                            <option value="">Please Select State</option>
+                            {rmOptions.states.map((state) => (
+                              <option key={state} value={state}>
+                                {state}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="space-y-1 text-sm">
+                          <span className="font-medium text-slate-600">City</span>
+                          <select
+                            value={rmFilters.city}
+                            onChange={(e) => handleRmFilterChange("city", e.target.value)}
+                            disabled={!rmFilters.state}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500 disabled:bg-slate-50"
+                          >
+                            <option value="">Please Select City</option>
+                            {rmOptions.cities.map((city) => (
+                              <option key={city} value={city}>
+                                {city}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleFindBankRmSearch}
+                          disabled={rmSearching || rmOptionsLoading}
+                          className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                        >
+                          {rmSearching ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Search className="w-4 h-4" />
+                          )}
+                          {rmSearching ? "Searching..." : "Submit"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            fetchRmFilterOptions(rmFilters)
+                          }
+                          disabled={rmOptionsLoading}
+                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          <RefreshCw className={`w-4 h-4 ${rmOptionsLoading ? "animate-spin" : ""}`} />
+                          Refresh Filters
+                        </button>
+                      </div>
+
+                      <div className="overflow-hidden rounded-xl border border-slate-200">
+                        <BankRmResultsTable
+                          rows={rmResults}
+                          loading={rmSearching}
+                          compact
+                          emptyMessage={
+                            !rmHasSearched
+                              ? "Select filters and click Submit to view Bank RM details"
+                              : "No matching Bank RM records found"
+                          }
+                          copiedLoginCodeId={copiedRmCode}
+                          onCopyLoginCode={handleCopyRmLoginCode}
+                        />
+                      </div>
+                    </div>
+                  </div>
               </div>
             </div>
           </div>

@@ -75,21 +75,46 @@ export const updateAsmProfile = createAsyncThunk(
 export const fetchRsmList = createAsyncThunk(
   "asm/fetchRsmList",
   async (_, { rejectWithValue }) => {
-    const { rsmToken, asmToken, adminToken } = getAuthData();
+    const { rsmToken, asmToken, adminToken, rsmUser, asmUser, adminUser } =
+      getAuthData();
     const token = rsmToken || asmToken || adminToken;
 
-    try {
-      const response = await axios.get(`${backendurl}/asm/get-rsms`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    if (!token) {
+      return rejectWithValue("Authentication token not found. Please log in again.");
+    }
 
-      return response.data; // list of ASMs / subordinates
+    // RSM → list ASMs; ASM/Admin → same hierarchy endpoint (aliases supported)
+    const role = String(
+      rsmUser?.role || asmUser?.role || adminUser?.role || ""
+    ).toUpperCase();
+    const primaryPath =
+      role === "RSM" ? `${backendurl}/rsm/my-asms` : `${backendurl}/asm/get-rsms`;
+    const fallbackPath =
+      role === "RSM" ? `${backendurl}/asm/get-rsms` : `${backendurl}/rsm/my-asms`;
+
+    const headers = { Authorization: `Bearer ${token}` };
+
+    try {
+      try {
+        const response = await axios.get(primaryPath, { headers });
+        return unwrapApiData(response.data);
+      } catch (primaryError) {
+        // Fall back if primary mount 404s on an older deployment
+        if (primaryError.response?.status === 404) {
+          const response = await axios.get(fallbackPath, { headers });
+          return unwrapApiData(response.data);
+        }
+        throw primaryError;
+      }
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch RSM list"
-      );
+      const apiMessage = error.response?.data?.message;
+      if (apiMessage) return rejectWithValue(apiMessage);
+      if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
+        return rejectWithValue(
+          "Cannot reach API server. Check that the backend is running and VITE_API_URL is correct."
+        );
+      }
+      return rejectWithValue(error.message || "Failed to fetch RSM list");
     }
   }
 );

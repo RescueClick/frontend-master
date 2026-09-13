@@ -61,11 +61,12 @@ export default function AsmRSM() {
     if (!newType || newType === rsm.rsmType) return;
     setUpdatingRsmId(rsm._id);
     try {
-      const { asmToken } = getAuthData() || {};
+      const { rsmToken, asmToken, adminToken } = getAuthData() || {};
+      const token = rsmToken || asmToken || adminToken;
       await axios.patch(
         `${backendurl}/asm/rsm/${rsm._id}`,
         { rsmType: newType },
-        { headers: { Authorization: `Bearer ${asmToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       const typeNames = {
         PERSONAL: "Personal Loan RSM",
@@ -189,8 +190,8 @@ export default function AsmRSM() {
   const fetchRmsForTransfer = async () => {
     setLoadingRms(true);
     try {
-      const { asmToken, adminToken } = getAuthData() || {};
-      const token = asmToken || adminToken;
+      const { rsmToken, asmToken, adminToken } = getAuthData() || {};
+      const token = rsmToken || asmToken || adminToken;
       const res = await axios.get(`${backendurl}/asm/get-rms-for-transfer`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -217,8 +218,8 @@ export default function AsmRSM() {
     }
     setTransferSubmitting(true);
     try {
-      const { asmToken, adminToken } = getAuthData() || {};
-      const token = asmToken || adminToken;
+      const { rsmToken, asmToken, adminToken } = getAuthData() || {};
+      const token = rsmToken || asmToken || adminToken;
       const res = await axios.post(
         `${backendurl}/asm/transfer-rm-to-rsm`,
         {
@@ -269,8 +270,8 @@ export default function AsmRSM() {
     }
     setWorkloadSubmitting(true);
     try {
-      const { asmToken, adminToken } = getAuthData() || {};
-      const token = asmToken || adminToken;
+      const { rsmToken, asmToken, adminToken } = getAuthData() || {};
+      const token = rsmToken || asmToken || adminToken;
       const res = await axios.post(
         `${backendurl}/asm/transfer-rsm-workload`,
         {
@@ -293,10 +294,10 @@ export default function AsmRSM() {
   // Login as RSM
   const loginAsUser = async (userId) => {
     try {
-      const { asmToken, adminToken } = getAuthData();
+      const { rsmToken, asmToken, adminToken } = getAuthData();
       
       // Determine which token to use (prioritize current role token)
-      let currentToken = asmToken || adminToken;
+      let currentToken = rsmToken || asmToken || adminToken;
       if (!currentToken) {
         alert("Not authenticated");
         return;
@@ -312,8 +313,8 @@ export default function AsmRSM() {
 
       // Get current user info to store as parent
       const currentAuth = getAuthData();
-      let currentUser = currentAuth.asmUser || currentAuth.adminUser;
-      let currentUserToken = currentAuth.asmToken || currentAuth.adminToken;
+      let currentUser = currentAuth.rsmUser || currentAuth.asmUser || currentAuth.adminUser;
+      let currentUserToken = currentAuth.rsmToken || currentAuth.asmToken || currentAuth.adminToken;
       
       // If parent info is provided from backend, use it; otherwise use current user
       const parentInfo = parent || (currentUser ? { ...currentUser, token: currentUserToken } : null);
@@ -422,7 +423,8 @@ export default function AsmRSM() {
 
     setEditSubmitting(true);
     try {
-      const { asmToken } = getAuthData() || {};
+      const { rsmToken, asmToken, adminToken } = getAuthData() || {};
+      const token = rsmToken || asmToken || adminToken;
       await axios.patch(
         `${backendurl}/asm/rsm/${editingRsm._id}`,
         {
@@ -433,7 +435,7 @@ export default function AsmRSM() {
           region: editFormData.region,
           rsmType: editFormData.rsmType,
         },
-        { headers: { Authorization: `Bearer ${asmToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       toast.success("RSM updated successfully!");

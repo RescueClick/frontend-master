@@ -22,6 +22,7 @@ import {
   Crown,
   Sparkles,
   MessageSquare,
+  Search,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -150,6 +151,7 @@ const AdminSideBar = () => {
     { name: "Banner", icon: Download, path: "/admin/banner" },
     { name: "Admin → Partner", icon: UserCheck, path: "/admin/rm-partner" },
     { name: "Add Bank", icon: Building2, path: "/admin/banks", highlight: true },
+    { name: "Find Bank RM", icon: Search, path: "/admin/find-bank-rm" },
     {
       name: "Delete Requests",
       icon: Trash2,

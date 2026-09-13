@@ -150,17 +150,28 @@ export const fetchRMs = createAsyncThunk(
 // Fetch RSMs
 export const fetchRSMs = createAsyncThunk(
   "admin/fetchRSMs",
-  async (_, { rejectWithValue }) => {
+  async (tokenArg, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
+      const token = tokenArg || adminToken;
+      if (!token) {
+        return rejectWithValue(
+          "Authentication token not found. Please log in again."
+        );
+      }
       const response = await axios.get(`${backendurl}/admin/get-rsm`, {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       return unwrapApiData(response.data);
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch RSMs"
-      );
+      const apiMessage = error.response?.data?.message;
+      if (apiMessage) return rejectWithValue(apiMessage);
+      if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
+        return rejectWithValue(
+          "Cannot reach API server. Check that the backend is running and VITE_API_URL is correct."
+        );
+      }
+      return rejectWithValue(error.message || "Failed to fetch RSMs");
     }
   }
 );

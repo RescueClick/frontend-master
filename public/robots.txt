@@ -1,5 +1,15 @@
 User-agent: *
 Allow: /
 
-# Sitemaps
+# Block private / authenticated areas from crawling
+Disallow: /admin
+Disallow: /partner
+Disallow: /rm
+Disallow: /rsm
+Disallow: /asm
+Disallow: /customer
+Disallow: /LoginPage
+Disallow: /reset-password/
+Disallow: /email-change/
+
 Sitemap: https://dhansourcecapital.com/sitemap.xml

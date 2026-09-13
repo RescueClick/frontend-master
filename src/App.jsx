@@ -37,6 +37,7 @@ function App() {
             );
 
           if (!isAuthAttempt) {
+            localStorage.removeItem("super_admin_token");
             localStorage.removeItem("admin_token");
             localStorage.removeItem("partner_token");
             localStorage.removeItem("asm_token");
