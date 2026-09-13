@@ -47,6 +47,7 @@ import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import PayoutStatusBadge from "../../../components/shared/PayoutStatusBadge";
 import PartnerInvoiceModal from "../../../components/shared/PartnerInvoiceModal";
+import InvoiceSettingsModal from "../../../components/shared/InvoiceSettingsModal";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -113,15 +114,13 @@ const AdminPayouts = () => {
     tdsSection: "194T",
     tdsPercentage: 10,
     companyName: "DhanSource Capital Pvt Ltd",
-    companyAddress: "Corporate Office: 402, Trade Avenue, Andheri East, Mumbai, Maharashtra - 400069",
+    companyAddress: "Office No -31, C Wing, Ashoka Nagar, Kharadi, Pune, Maharashtra 411014",
     companyGstin: "27AAACD1234F1Z5",
     companyPan: "AAACD1234F",
     companyTan: "MUMA12345E",
     invoiceNotes: "Tax has been deducted at source under Section 194T of the Income Tax Act, 1961. TDS certificate (Form 16A) will be issued quarterly on TRACES portal.",
   });
-  const [policyModalOpen, setPolicyModalOpen] = useState(false);
-  const [policyTab, setPolicyTab] = useState("commission"); // 'commission' | 'tds'
-  const [isSavingPolicy, setIsSavingPolicy] = useState(false);
+  const [invoiceSettingsOpen, setInvoiceSettingsOpen] = useState(false);
 
   // Modal form data
   const [modalForm, setModalForm] = useState({
@@ -431,27 +430,6 @@ const AdminPayouts = () => {
   const handleCloseModal = () => {
     setModalOpen(false);
     setSelectedRecord(null);
-  };
-
-  // Save Payout Policy
-  const handleSavePolicy = async (e) => {
-    e?.preventDefault();
-    try {
-      setIsSavingPolicy(true);
-      const { adminToken } = getAuthData();
-      await axios.put(
-        `${backendurl}/admin/payout-policy`,
-        { policy: payoutPolicy },
-        { headers: { Authorization: `Bearer ${adminToken}` } }
-      );
-      toast.success("Default payout commission policy & TDS settings saved successfully!");
-      setPolicyModalOpen(false);
-    } catch (err) {
-      console.error("Failed to save payout policy:", err);
-      toast.error(err?.response?.data?.message || "Failed to save payout policy");
-    } finally {
-      setIsSavingPolicy(false);
-    }
   };
 
   // Live Financial & Section 194T TDS Recalculation
@@ -1104,12 +1082,12 @@ const AdminPayouts = () => {
 
                 <button
                   type="button"
-                  onClick={() => setPolicyModalOpen(true)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm transition"
-                  title="Configure Default Commission % by Loan Product"
+                  onClick={() => setInvoiceSettingsOpen(true)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 shadow-sm transition"
+                  title="Company details on invoices"
                 >
-                  <Settings className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Payout Settings</span>
+                  <FileText className="w-3.5 h-3.5 text-teal-700" />
+                  <span>Invoice Settings</span>
                 </button>
 
                 <button
@@ -1346,29 +1324,12 @@ const AdminPayouts = () => {
               {/* RIGHT COLUMN: Calculation & Payout Action */}
               <div className="md:col-span-7 bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 p-4 rounded-xl border border-emerald-100 flex flex-col justify-between space-y-3">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs">
-                      <Calculator className="w-4 h-4 text-emerald-600" />
-                      <span>Commission Calculation &amp; Section 194T TDS</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleOpenInvoiceModal({
-                          ...selectedRecord,
-                          ...modalForm,
-                          payoutId: selectedRecord?.payoutId || selectedRecord?._id,
-                        })
-                      }
-                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition flex items-center gap-1 shadow-sm"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-teal-600" />
-                      <span>Build &amp; Preview Invoice</span>
-                    </button>
+                  <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs">
+                    <Calculator className="w-4 h-4 text-emerald-600" />
+                    <span>Commission &amp; TDS (edit for this payout)</span>
                   </div>
 
-                  {/* Commission % & Gross Amount */}
+                  {/* Commission % & Gross Amount — editable per payout */}
                   <div className="grid grid-cols-2 gap-3">
                     {/* Payout % Input */}
                     <div>
@@ -1657,440 +1618,6 @@ const AdminPayouts = () => {
         </div>
       )}
 
-      {/* Payout Policy & TDS Settings Modal */}
-      {policyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-brand-primary/20 text-brand-primary">
-                  <Settings className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">
-                    Payout Commission &amp; TDS Policy Settings
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Configure default commission rates, Section 194T TDS, and Invoice details
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPolicyModalOpen(false)}
-                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* TAB SELECTOR */}
-            <div className="flex border-b border-slate-200 bg-slate-50 text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setPolicyTab("commission")}
-                className={`flex-1 py-2.5 text-center transition border-b-2 ${
-                  policyTab === "commission"
-                    ? "border-brand-primary text-brand-primary bg-white"
-                    : "border-transparent text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Loan Commission Rates
-              </button>
-              <button
-                type="button"
-                onClick={() => setPolicyTab("tds")}
-                className={`flex-1 py-2.5 text-center transition border-b-2 ${
-                  policyTab === "tds"
-                    ? "border-brand-primary text-brand-primary bg-white"
-                    : "border-transparent text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                TDS (Sec 194T) &amp; Invoice
-              </button>
-            </div>
-
-            {/* Body */}
-            <form onSubmit={handleSavePolicy} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
-              {policyTab === "commission" ? (
-                <div className="space-y-3 text-xs">
-                  {/* Personal Loan */}
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                    <div>
-                      <span className="font-bold text-slate-900 block">Personal Loan (PL)</span>
-                      <span className="text-[11px] text-slate-500">Unsecured salaried / professional loans</span>
-                    </div>
-                    <div className="relative w-28">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={payoutPolicy.PERSONAL ?? 2.0}
-                        onChange={(e) =>
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            PERSONAL: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                      />
-                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                    </div>
-                  </div>
-
-                  {/* Business Loan */}
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                    <div>
-                      <span className="font-bold text-slate-900 block">Business Loan (BL)</span>
-                      <span className="text-[11px] text-slate-500">SME / MSME business working capital</span>
-                    </div>
-                    <div className="relative w-28">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={payoutPolicy.BUSINESS ?? 1.8}
-                        onChange={(e) =>
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            BUSINESS: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                      />
-                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                    </div>
-                  </div>
-
-                  {/* Home Loan Salaried */}
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                    <div>
-                      <span className="font-bold text-slate-900 block">Home Loan (Salaried)</span>
-                      <span className="text-[11px] text-slate-500">Secured home purchase for salaried clients</span>
-                    </div>
-                    <div className="relative w-28">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={payoutPolicy.HOME_LOAN_SALARIED ?? 0.75}
-                        onChange={(e) =>
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            HOME_LOAN_SALARIED: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                      />
-                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                    </div>
-                  </div>
-
-                  {/* Home Loan Self-Employed */}
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                    <div>
-                      <span className="font-bold text-slate-900 block">Home Loan (Self-Employed)</span>
-                      <span className="text-[11px] text-slate-500">Secured home purchase for self-employed</span>
-                    </div>
-                    <div className="relative w-28">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={payoutPolicy.HOME_LOAN_SELF_EMPLOYED ?? 0.85}
-                        onChange={(e) =>
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            HOME_LOAN_SELF_EMPLOYED: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                      />
-                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                    </div>
-                  </div>
-
-                  {/* LAP Loan Salaried */}
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                    <div>
-                      <span className="font-bold text-slate-900 block">LAP (Salaried)</span>
-                      <span className="text-[11px] text-slate-500">Loan against property for salaried individual</span>
-                    </div>
-                    <div className="relative w-28">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={payoutPolicy.LAP_SALARIED ?? payoutPolicy.LAP ?? 1.0}
-                        onChange={(e) =>
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            LAP_SALARIED: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                      />
-                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                    </div>
-                  </div>
-
-                  {/* LAP Loan Self-Employed */}
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                    <div>
-                      <span className="font-bold text-slate-900 block">LAP (Self-Employed)</span>
-                      <span className="text-[11px] text-slate-500">Loan against property for business owners</span>
-                    </div>
-                    <div className="relative w-28">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={payoutPolicy.LAP_SELF_EMPLOYED ?? payoutPolicy.LAP ?? 1.0}
-                        onChange={(e) =>
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            LAP_SELF_EMPLOYED: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                      />
-                      <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                    </div>
-                  </div>
-
-                  {/* Default Fallback */}
-                  <div className="flex items-center justify-between p-3 bg-emerald-50/50 rounded-xl border border-emerald-200/80">
-                    <div>
-                      <span className="font-bold text-emerald-900 block">Default Fallback Rate</span>
-                      <span className="text-[11px] text-emerald-700">Applied when product type is unclassified</span>
-                    </div>
-                    <div className="relative w-28">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={payoutPolicy.DEFAULT ?? 2.0}
-                        onChange={(e) =>
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            DEFAULT: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full pl-3 pr-7 py-1.5 bg-white border border-emerald-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary text-right"
-                      />
-                      <Percent className="w-3 h-3 text-emerald-600 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3 text-xs">
-                  {/* TDS Enable Switch */}
-                  <div className="flex items-center justify-between p-3 bg-teal-50/60 rounded-xl border border-teal-200">
-                    <div>
-                      <span className="font-bold text-teal-950 block">Deduct TDS by Default</span>
-                      <span className="text-[11px] text-teal-700">
-                        Section 194T of Income Tax Act 1961
-                      </span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={payoutPolicy.tdsApplicable !== false}
-                      onChange={(e) =>
-                        setPayoutPolicy((prev) => ({
-                          ...prev,
-                          tdsApplicable: e.target.checked,
-                        }))
-                      }
-                      className="w-5 h-5 rounded text-teal-600 focus:ring-teal-500 border-slate-300"
-                    />
-                  </div>
-
-                  {/* TDS Section & Default % */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Default TDS Section
-                      </label>
-                      <select
-                        value={payoutPolicy.tdsSection || "194T"}
-                        onChange={(e) => {
-                          const sec = e.target.value;
-                          let rate = payoutPolicy.tdsPercentage;
-                          if (sec === "194T") rate = 10;
-                          else if (sec === "194H") rate = 5;
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            tdsSection: sec,
-                            tdsPercentage: rate,
-                          }));
-                        }}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                      >
-                        <option value="194T">Section 194T (Partner Payment - 10%)</option>
-                        <option value="194H">Section 194H (Commission - 5%)</option>
-                        <option value="CUSTOM">Custom Section</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Default TDS Rate (%)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          value={payoutPolicy.tdsPercentage ?? 10}
-                          onChange={(e) =>
-                            setPayoutPolicy((prev) => ({
-                              ...prev,
-                              tdsPercentage: parseFloat(e.target.value) || 0,
-                            }))
-                          }
-                          className="w-full pl-3 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                        />
-                        <Percent className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Company Details for Invoice */}
-                  <div className="space-y-2 pt-2 border-t border-slate-100">
-                    <span className="font-bold text-slate-900 block">
-                      Company Details (Printed on Tax Invoice)
-                    </span>
-
-                    <div>
-                      <label className="block text-[11px] text-slate-500 mb-0.5">
-                        Company Name
-                      </label>
-                      <input
-                        type="text"
-                        value={payoutPolicy.companyName || ""}
-                        onChange={(e) =>
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            companyName: e.target.value,
-                          }))
-                        }
-                        placeholder="DhanSource Capital Pvt Ltd"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="block text-[11px] text-slate-500 mb-0.5">
-                          PAN
-                        </label>
-                        <input
-                          type="text"
-                          value={payoutPolicy.companyPan || ""}
-                          onChange={(e) =>
-                            setPayoutPolicy((prev) => ({
-                              ...prev,
-                              companyPan: e.target.value,
-                            }))
-                          }
-                          placeholder="AAACD1234F"
-                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-500 mb-0.5">
-                          TAN
-                        </label>
-                        <input
-                          type="text"
-                          value={payoutPolicy.companyTan || ""}
-                          onChange={(e) =>
-                            setPayoutPolicy((prev) => ({
-                              ...prev,
-                              companyTan: e.target.value,
-                            }))
-                          }
-                          placeholder="MUMA12345E"
-                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-500 mb-0.5">
-                          GSTIN
-                        </label>
-                        <input
-                          type="text"
-                          value={payoutPolicy.companyGstin || ""}
-                          onChange={(e) =>
-                            setPayoutPolicy((prev) => ({
-                              ...prev,
-                              companyGstin: e.target.value,
-                            }))
-                          }
-                          placeholder="27AAACD1234F1Z5"
-                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] text-slate-500 mb-0.5">
-                        Statutory Invoice Note
-                      </label>
-                      <textarea
-                        rows="2"
-                        value={payoutPolicy.invoiceNotes || ""}
-                        onChange={(e) =>
-                          setPayoutPolicy((prev) => ({
-                            ...prev,
-                            invoiceNotes: e.target.value,
-                          }))
-                        }
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setPolicyModalOpen(false)}
-                  className="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingPolicy}
-                  className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-brand-primary hover:bg-[#0f9b82] shadow-sm transition flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {isSavingPolicy ? (
-                    <>
-                      <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <span>Save Policy Settings</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* PARTNER TAX INVOICE BUILDER & PREVIEW MODAL */}
       <PartnerInvoiceModal
         isOpen={invoiceModalOpen}
@@ -2101,6 +1628,15 @@ const AdminPayouts = () => {
         record={invoiceModalRecord}
         policy={payoutPolicy}
         onSuccess={loadData}
+      />
+
+      <InvoiceSettingsModal
+        isOpen={invoiceSettingsOpen}
+        onClose={() => setInvoiceSettingsOpen(false)}
+        initialPolicy={payoutPolicy}
+        onSaved={(saved) => {
+          if (saved) setPayoutPolicy((prev) => ({ ...prev, ...saved }));
+        }}
       />
     </div>
   );

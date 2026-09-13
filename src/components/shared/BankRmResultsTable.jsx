@@ -7,6 +7,7 @@ const contactPhone = (row, role) =>
   row?.[role]?.phone || (role === "rm" ? row?.rmPhone : "") || "";
 const contactEmail = (row, role) =>
   row?.[role]?.email || (role === "rm" ? row?.rmEmail : "") || "";
+const contactProduct = (row, role) => row?.[role]?.product || "";
 
 export const BANK_RM_TABLE_COLUMNS = [
   "Bank NBFC Name",
@@ -42,13 +43,18 @@ function formatDateTime(value) {
   });
 }
 
-function ContactCell({ name, phone, email }) {
-  if (!name && !phone && !email) {
+function ContactCell({ name, phone, email, product }) {
+  if (!name && !phone && !email && !product) {
     return <span className="text-slate-400">—</span>;
   }
   return (
     <div className="space-y-0.5 min-w-[140px]">
       <p className="font-medium text-slate-800">{name || "—"}</p>
+      {product ? (
+        <p className="text-xs font-semibold text-indigo-700 bg-indigo-50 inline-block px-1.5 py-0.5 rounded">
+          {product}
+        </p>
+      ) : null}
       {phone ? (
         <a href={`tel:${phone}`} className="block text-xs text-teal-700 hover:underline">
           {phone}
@@ -152,6 +158,7 @@ export default function BankRmResultsTable({
                       name={contactName(row, "rm")}
                       phone={contactPhone(row, "rm")}
                       email={contactEmail(row, "rm")}
+                      product={contactProduct(row, "rm")}
                     />
                   </td>
                   <td className={tdPad}>
@@ -159,6 +166,7 @@ export default function BankRmResultsTable({
                       name={contactName(row, "asm")}
                       phone={contactPhone(row, "asm")}
                       email={contactEmail(row, "asm")}
+                      product={contactProduct(row, "asm")}
                     />
                   </td>
                   <td className={tdPad}>
@@ -166,6 +174,7 @@ export default function BankRmResultsTable({
                       name={contactName(row, "rsm")}
                       phone={contactPhone(row, "rsm")}
                       email={contactEmail(row, "rsm")}
+                      product={contactProduct(row, "rsm")}
                     />
                   </td>
                   <td className={`${tdPad} text-slate-700 whitespace-nowrap`}>

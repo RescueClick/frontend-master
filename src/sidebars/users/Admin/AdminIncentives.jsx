@@ -28,6 +28,8 @@ import {
   Sparkles,
   Calculator,
   Zap,
+  FileText,
+  Mail,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -42,6 +44,8 @@ import {
 import { matchesSearchTerm } from "../../../utils/tableFilter";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
+import PartnerInvoiceModal from "../../../components/shared/PartnerInvoiceModal";
+import InvoiceSettingsModal from "../../../components/shared/InvoiceSettingsModal";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -127,15 +131,31 @@ const AdminIncentives = () => {
   const [simulatorOpen, setSimulatorOpen] = useState(false);
   const [simVolume, setSimVolume] = useState("2000000");
 
-  // Modal form data for settlement
+  // Modal form data for settlement + Sec 194T invoice (same as payouts)
   const [modalForm, setModalForm] = useState({
     id: "",
     partnerId: "",
     amount: "",
+    grossAmount: "",
+    tdsApplicable: true,
+    tdsSection: "194T",
+    tdsPercentage: "10",
+    tdsAmount: "0",
+    netAmount: "0",
+    invoiceNumber: "",
+    invoiceDate: new Date().toISOString().split("T")[0],
+    sendInvoiceEmail: true,
+    invoiceNotes:
+      "Tax deducted under Section 194T of the Income Tax Act, 1961 on incentive/bonus.",
     note: "",
     utrNumber: "",
     status: "PAID",
   });
+
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [invoiceModalRecord, setInvoiceModalRecord] = useState(null);
+  const [isSendingInvoiceId, setIsSendingInvoiceId] = useState(null);
+  const [invoiceSettingsOpen, setInvoiceSettingsOpen] = useState(false);
 
   // Redux Data
   const { data: rawData = [], loading = false } = useSelector(
@@ -297,12 +317,47 @@ const AdminIncentives = () => {
   // Open Settlement Modal
   const handleOpenModal = (record) => {
     setSelectedRecord(record);
-    const incAmt = Number(record.incentiveAmount || record.amount || 1000);
+    const gross =
+      Number(record.grossAmount) > 0
+        ? Number(record.grossAmount)
+        : Number(record.incentiveAmount || record.amount || 1000);
+    const isTds = record.tdsApplicable !== undefined ? Boolean(record.tdsApplicable) : true;
+    const tdsPct = record.tdsPercentage != null ? Number(record.tdsPercentage) : 10;
+    const tdsAmt =
+      record.tdsAmount != null && Number(record.tdsAmount) > 0
+        ? Number(record.tdsAmount)
+        : isTds
+        ? Number(((gross * tdsPct) / 100).toFixed(2))
+        : 0;
+    const netAmt =
+      record.netAmount != null && Number(record.netAmount) > 0
+        ? Number(record.netAmount)
+        : Number(Math.max(0, gross - tdsAmt).toFixed(2));
+
+    const partnerCode = record.partnerEmployeeId || "PARTNER";
+    const periodRef = `${record.year || year}-${String(record.month || month).padStart(2, "0")}`;
+    const defaultInvNo =
+      record.invoiceNumber ||
+      `INV-IN-${new Date().getFullYear()}-INC${periodRef}${partnerCode}`.toUpperCase().slice(0, 28);
 
     setModalForm({
       id: record.incentiveRecordId || record.id || "",
       partnerId: record.partnerId || "",
-      amount: String(incAmt),
+      amount: String(netAmt),
+      grossAmount: String(gross.toFixed(2)),
+      tdsApplicable: isTds,
+      tdsSection: record.tdsSection || "194T",
+      tdsPercentage: String(tdsPct),
+      tdsAmount: String(tdsAmt),
+      netAmount: String(netAmt),
+      invoiceNumber: defaultInvNo,
+      invoiceDate: record.invoiceDate
+        ? new Date(record.invoiceDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      sendInvoiceEmail: true,
+      invoiceNotes:
+        record.invoiceNotes ||
+        "Tax deducted under Section 194T of the Income Tax Act, 1961 on incentive/bonus.",
       note: record.notes || record.utrNumber || "",
       utrNumber: record.utrNumber || record.notes || "",
       status: "PAID",
@@ -311,9 +366,113 @@ const AdminIncentives = () => {
     setModalOpen(true);
   };
 
+  const recalcIncentiveTds = (overrides = {}) => {
+    setModalForm((prev) => {
+      const merged = { ...prev, ...overrides };
+      const gross = Number(merged.grossAmount) || 0;
+      const isTds = Boolean(merged.tdsApplicable);
+      const rate = Number(merged.tdsPercentage) || 10;
+      const tdsAmt = isTds ? Number(((gross * rate) / 100).toFixed(2)) : 0;
+      const netAmt = Number(Math.max(0, gross - tdsAmt).toFixed(2));
+      return {
+        ...merged,
+        tdsAmount: String(tdsAmt),
+        netAmount: String(netAmt),
+        amount: String(netAmt),
+      };
+    });
+  };
+
   const handleCloseModal = () => {
     setModalOpen(false);
     setSelectedRecord(null);
+  };
+
+  const buildIncentiveInvoiceRecord = (record, form = modalForm) => ({
+    ...record,
+    invoiceType: "INCENTIVE",
+    incentiveRecordId: form.id || record.incentiveRecordId || record.id,
+    id: form.id || record.incentiveRecordId || record.id,
+    approvedAmount: Number(record.disbursedAmount || 0),
+    disbursedAmount: Number(record.disbursedAmount || 0),
+    grossAmount: Number(form.grossAmount || 0),
+    tdsApplicable: form.tdsApplicable,
+    tdsSection: form.tdsSection,
+    tdsPercentage: Number(form.tdsPercentage || 10),
+    tdsAmount: Number(form.tdsAmount || 0),
+    netAmount: Number(form.netAmount || form.amount || 0),
+    payoutAmount: Number(form.netAmount || form.amount || 0),
+    amount: Number(form.netAmount || form.amount || 0),
+    invoiceNumber: form.invoiceNumber,
+    invoiceDate: form.invoiceDate,
+    invoiceNotes: form.invoiceNotes,
+    invoiceSentAt: record.invoiceSentAt,
+    invoiceSentTo: record.invoiceSentTo,
+    note: form.utrNumber || form.note,
+    utrNumber: form.utrNumber || form.note,
+    notes: form.utrNumber || form.note,
+    month: record.month || month,
+    year: record.year || year,
+    tier: record.tier,
+  });
+
+  const handleOpenInvoice = (record) => {
+    const form = {
+      id: record.incentiveRecordId || record.id || "",
+      grossAmount: String(
+        Number(record.grossAmount) > 0
+          ? record.grossAmount
+          : record.incentiveAmount || record.amount || 0
+      ),
+      tdsApplicable: record.tdsApplicable !== undefined ? Boolean(record.tdsApplicable) : true,
+      tdsSection: record.tdsSection || "194T",
+      tdsPercentage: String(record.tdsPercentage != null ? record.tdsPercentage : 10),
+      tdsAmount: String(record.tdsAmount || 0),
+      netAmount: String(
+        Number(record.netAmount) > 0
+          ? record.netAmount
+          : record.amount || record.incentiveAmount || 0
+      ),
+      amount: String(record.amount || record.incentiveAmount || 0),
+      invoiceNumber: record.invoiceNumber || "",
+      invoiceDate: record.invoiceDate
+        ? new Date(record.invoiceDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      invoiceNotes: record.invoiceNotes || "",
+      utrNumber: record.utrNumber || record.notes || "",
+      note: record.notes || "",
+    };
+    setInvoiceModalRecord(buildIncentiveInvoiceRecord(record, form));
+    setInvoiceModalOpen(true);
+  };
+
+  const handleSendIncentiveInvoice = async (record) => {
+    const incentiveId = record.incentiveRecordId || record.id;
+    if (!incentiveId) {
+      toast.error("Settle the incentive first, then send the tax invoice email.");
+      return;
+    }
+    const email = record.partnerEmail;
+    if (!email) {
+      toast.error("Partner has no registered email address.");
+      return;
+    }
+    try {
+      setIsSendingInvoiceId(String(incentiveId));
+      const { adminToken } = getAuthData();
+      const res = await axios.post(
+        `${backendurl}/admin/incentives/${incentiveId}/send-invoice`,
+        {},
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+      toast.success(res?.data?.message || `Tax invoice email sent to ${email}`);
+      loadData();
+    } catch (err) {
+      console.error("Error sending incentive invoice email:", err);
+      toast.error(err?.response?.data?.message || "Failed to send invoice email");
+    } finally {
+      setIsSendingInvoiceId(null);
+    }
   };
 
   // Submit Incentive Settlement
@@ -326,19 +485,34 @@ const AdminIncentives = () => {
 
     try {
       setIsSaving(true);
-      await dispatch(
+      const result = await dispatch(
         payAdminIncentive({
           id: modalForm.id || undefined,
           partnerId: modalForm.partnerId,
           month,
           year,
-          amount: Number(modalForm.amount),
+          amount: Number(modalForm.netAmount || modalForm.amount),
+          grossAmount: Number(modalForm.grossAmount || modalForm.amount),
+          tdsApplicable: modalForm.tdsApplicable,
+          tdsSection: modalForm.tdsSection,
+          tdsPercentage: Number(modalForm.tdsPercentage || 10),
+          tdsAmount: Number(modalForm.tdsAmount || 0),
+          netAmount: Number(modalForm.netAmount || modalForm.amount),
+          invoiceNumber: modalForm.invoiceNumber,
+          invoiceDate: modalForm.invoiceDate,
+          invoiceNotes: modalForm.invoiceNotes,
+          sendInvoiceEmail: modalForm.sendInvoiceEmail,
           note: modalForm.utrNumber || modalForm.note || "",
           utrNumber: modalForm.utrNumber || modalForm.note || "",
         })
       ).unwrap();
 
-      toast.success("Incentive bonus settled and marked as PAID!");
+      toast.success(
+        result?.message ||
+          (modalForm.sendInvoiceEmail
+            ? "Incentive settled! Section 194T tax invoice emailed to partner."
+            : "Incentive bonus settled and marked as PAID!")
+      );
       handleCloseModal();
       loadData();
     } catch (err) {
@@ -592,22 +766,47 @@ const AdminIncentives = () => {
     {
       title: "Action",
       key: "action",
-      width: 120,
+      width: 180,
       align: "center",
       render: (_, r) => {
         const isPaid = r.status === "PAID" || r.incentivePaid;
         const isEligible = r.eligibleForIncentive || r.status === "PENDING";
+        const incentiveId = r.incentiveRecordId || r.id;
 
         if (isPaid) {
           return (
-            <button
-              type="button"
-              onClick={() => handleOpenModal(r)}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-sm transition"
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>Receipt</span>
-            </button>
+            <div className="flex items-center justify-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleOpenInvoice(r)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 shadow-sm transition"
+                title="Build & View Tax Invoice (Section 194T)"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Invoice</span>
+              </button>
+              <button
+                type="button"
+                disabled={!incentiveId || isSendingInvoiceId === String(incentiveId)}
+                onClick={() => handleSendIncentiveInvoice(r)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-brand-primary hover:bg-[#0f9b82] text-white shadow-sm transition disabled:opacity-50"
+                title="Share Tax Invoice Email to Partner"
+              >
+                {isSendingInvoiceId === String(incentiveId) ? (
+                  <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Mail className="w-3.5 h-3.5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenModal(r)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-sm transition"
+                title="Edit settlement / invoice details"
+              >
+                <Eye className="w-3.5 h-3.5" />
+              </button>
+            </div>
           );
         }
 
@@ -619,7 +818,7 @@ const AdminIncentives = () => {
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-primary hover:bg-[#0f9b82] text-white shadow-sm transition"
             >
               <Award className="w-3.5 h-3.5" />
-              <span>Pay Bonus</span>
+              <span>Pay & Invoice</span>
             </button>
           );
         }
@@ -1118,25 +1317,128 @@ const AdminIncentives = () => {
                 </div>
               </div>
 
-              {/* Right Column: Settlement Form */}
+              {/* Right Column: Settlement Form + Invoice (Sec 194T) */}
               <div className="md:col-span-6 bg-gradient-to-br from-slate-50 via-white to-amber-50/20 p-4 rounded-xl border border-amber-100 flex flex-col justify-between space-y-3">
                 <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                    <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs">
+                      <Calculator className="w-4 h-4 text-amber-600" />
+                      <span>Bonus for this settle (dynamic)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInvoiceModalRecord(
+                          buildIncentiveInvoiceRecord(selectedRecord, modalForm)
+                        );
+                        setInvoiceModalOpen(true);
+                      }}
+                      className="px-2 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg flex items-center gap-1 transition"
+                    >
+                      <FileText className="w-3 h-3" />
+                      <span>Preview Invoice</span>
+                    </button>
+                  </div>
+
+                  <p className="text-[10px] text-slate-500 -mt-1">
+                    Edit amount / TDS for this partner &amp; month — not locked to payout commission %.
+                  </p>
+
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-slate-700 block">
-                      Incentive Bonus Amount (₹)
+                      Gross Incentive Bonus (₹) — this payment
                     </label>
                     <div className="relative">
                       <input
                         type="number"
                         min="1"
-                        value={modalForm.amount}
-                        onChange={(e) =>
-                          setModalForm((prev) => ({ ...prev, amount: e.target.value }))
-                        }
+                        value={modalForm.grossAmount}
+                        onChange={(e) => recalcIncentiveTds({ grossAmount: e.target.value })}
                         placeholder="e.g. 1000"
                         className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-black text-amber-800 focus:outline-none focus:ring-2 focus:ring-brand-primary"
                       />
                       <IndianRupee className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-2.5 py-2">
+                      <input
+                        type="checkbox"
+                        checked={modalForm.tdsApplicable}
+                        onChange={(e) =>
+                          recalcIncentiveTds({ tdsApplicable: e.target.checked })
+                        }
+                        className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                      />
+                      Apply TDS 194T
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={modalForm.tdsPercentage}
+                        onChange={(e) =>
+                          recalcIncentiveTds({ tdsPercentage: e.target.value })
+                        }
+                        className="w-full pl-3 pr-7 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      />
+                      <Percent className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 bg-red-50 rounded-lg border border-red-100">
+                      <span className="text-[10px] uppercase font-bold text-red-500 block">
+                        TDS Deducted
+                      </span>
+                      <span className="font-bold text-red-700">
+                        {formatInrPrecise(modalForm.tdsAmount)}
+                      </span>
+                    </div>
+                    <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                      <span className="text-[10px] uppercase font-bold text-emerald-600 block">
+                        Net Payable
+                      </span>
+                      <span className="font-black text-emerald-800">
+                        {formatInrPrecise(modalForm.netAmount)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        Invoice Number
+                      </label>
+                      <input
+                        type="text"
+                        value={modalForm.invoiceNumber}
+                        onChange={(e) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            invoiceNumber: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        Invoice Date
+                      </label>
+                      <input
+                        type="date"
+                        value={modalForm.invoiceDate}
+                        onChange={(e) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            invoiceDate: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      />
                     </div>
                   </div>
 
@@ -1148,22 +1450,39 @@ const AdminIncentives = () => {
                       type="text"
                       value={modalForm.utrNumber}
                       onChange={(e) =>
-                        setModalForm((prev) => ({ ...prev, utrNumber: e.target.value, note: e.target.value }))
+                        setModalForm((prev) => ({
+                          ...prev,
+                          utrNumber: e.target.value,
+                          note: e.target.value,
+                        }))
                       }
                       placeholder="e.g. UTR 948275928120 / NEFT Completed"
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-primary"
                     />
                   </div>
 
-                  <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/60 text-xs text-amber-900 space-y-1">
-                    <p className="font-semibold flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-700" />
-                      <span>Instant Partner Notification</span>
-                    </p>
-                    <p className="text-[11px] text-amber-800">
-                      When marked as PAID, an automated official DhanSource Incentive Settlement email with the UTR number will be sent to the partner.
-                    </p>
-                  </div>
+                  <label className="flex items-start gap-2 p-3 bg-amber-50/60 rounded-xl border border-amber-200/60 text-xs text-amber-900 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={modalForm.sendInvoiceEmail}
+                      onChange={(e) =>
+                        setModalForm((prev) => ({
+                          ...prev,
+                          sendInvoiceEmail: e.target.checked,
+                        }))
+                      }
+                      className="mt-0.5 rounded border-amber-300 text-brand-primary focus:ring-brand-primary"
+                    />
+                    <span>
+                      <span className="font-semibold flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-amber-700" />
+                        Email formal Tax Invoice on settle
+                      </span>
+                      <span className="block text-[11px] text-amber-800 mt-0.5">
+                        Same as payouts: HTML Section 194T invoice is emailed to the partner automatically when you mark PAID.
+                      </span>
+                    </span>
+                  </label>
                 </div>
 
                 <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
@@ -1188,7 +1507,11 @@ const AdminIncentives = () => {
                     ) : (
                       <>
                         <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Confirm & Settle Bonus</span>
+                        <span>
+                          {selectedRecord.status === "PAID"
+                            ? "Update Invoice & Settlement"
+                            : "Confirm, Settle & Invoice"}
+                        </span>
                       </>
                     )}
                   </button>
@@ -1494,6 +1817,25 @@ const AdminIncentives = () => {
           </div>
         </div>
       )}
+
+      <PartnerInvoiceModal
+        isOpen={invoiceModalOpen}
+        onClose={() => {
+          setInvoiceModalOpen(false);
+          setInvoiceModalRecord(null);
+        }}
+        record={invoiceModalRecord}
+        invoiceType="INCENTIVE"
+        onSuccess={() => {
+          loadData();
+        }}
+      />
+
+      <InvoiceSettingsModal
+        isOpen={invoiceSettingsOpen}
+        onClose={() => setInvoiceSettingsOpen(false)}
+        onSaved={() => loadData()}
+      />
     </div>
   );
 };

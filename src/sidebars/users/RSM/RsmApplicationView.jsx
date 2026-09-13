@@ -1542,88 +1542,210 @@ const RsmApplicationView = () => {
               </div>
 
               {/* Application Management - RSM can only change processing statuses */}
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-6 border border-gray-100">
-                <div className="flex items-center mb-6">
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-4 sm:p-5 border border-gray-100">
+                <div className="flex items-center mb-4">
                   <div className="p-2 rounded-lg bg-indigo-100">
-                    <Calendar className="w-6 h-6 text-indigo-600" />
+                    <Calendar className="w-5 h-5 text-indigo-600" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 ml-3">Application Management</h2>
+                  <h2 className="text-lg font-bold text-gray-900 ml-2.5">Application Management</h2>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* 1. Current Status */}
-                  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                      <Clock className="w-5 h-5 mr-2 text-blue-500" />
-                      Current Status
-                    </h3>
-                    <div className="space-y-4">
-                      {submittedStatus ? (
-                        <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
+                    {/* 1. Current Status */}
+                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden flex flex-col h-[420px]">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                      <div className="flex items-center justify-between gap-2 mb-2.5 pl-1 shrink-0">
+                        <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                          <Clock className="w-4 h-4 mr-1.5 text-blue-500" />
+                          Current Status
+                        </h3>
+                        {submittedStatus ? (
                           <LoanStatusBadge
                             status={submittedStatus.status}
-                            className="!px-4 !py-2 !rounded-xl !text-sm"
+                            className="!px-2.5 !py-1 !rounded-lg !text-xs"
                           />
-                          {submittedStatus.remark && (
-                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                              <p className="text-sm font-semibold text-gray-700 mb-1">Latest Remark:</p>
-                              <p className="text-gray-600 text-sm">{submittedStatus.remark}</p>
-                            </div>
-                          )}
-                          {submittedStatus.approvedLoanAmount && (
-                            <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                              <p className="text-sm font-semibold text-emerald-800 mb-1">Approved Loan Amount:</p>
-                              <p className="text-emerald-700 font-bold text-lg">
-                                ₹{formatCurrency(submittedStatus.approvedLoanAmount)}
+                        ) : (
+                          <LoanStatusBadge
+                            status={applicationData.status}
+                            className="!px-2.5 !py-1 !rounded-lg !text-xs"
+                          />
+                        )}
+                      </div>
+                      <div className="pl-1 space-y-2 flex-1 min-h-0 overflow-y-auto">
+                        {submittedStatus ? (
+                          <>
+                            {submittedStatus.remark && (
+                              <div className="bg-gray-50 px-2.5 py-2 rounded-lg border border-gray-100">
+                                <p className="text-[11px] font-semibold text-gray-500 mb-0.5">Latest Remark</p>
+                                <p className="text-gray-700 text-xs leading-snug">{submittedStatus.remark}</p>
+                              </div>
+                            )}
+                            {submittedStatus.approvedLoanAmount && (
+                              <div className="bg-emerald-50 px-2.5 py-2 rounded-lg border border-emerald-200 flex items-center justify-between gap-2">
+                                <p className="text-[11px] font-semibold text-emerald-800">Approved</p>
+                                <p className="text-emerald-700 font-bold text-sm">
+                                  ₹{formatCurrency(submittedStatus.approvedLoanAmount)}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {applicationData.approvedLoanAmount && (
+                              <p className="text-xs font-semibold text-gray-800">
+                                Approved: ₹{formatCurrency(applicationData.approvedLoanAmount)}
+                              </p>
+                            )}
+                            {applicationData.stageHistory && applicationData.stageHistory.length > 0 && (
+                              <div className="border-t border-gray-100 pt-2">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Timeline</p>
+                                <div className="space-y-1.5">
+                                  {applicationData.stageHistory.map((stage, index) => (
+                                    <div key={index} className="relative pl-3 border-l-2 border-blue-200">
+                                      <div className="absolute w-1.5 h-1.5 bg-blue-500 rounded-full -left-[5px] top-1"></div>
+                                      <p className="text-[11px] font-semibold text-gray-900 leading-tight">{stage.to}</p>
+                                      <p className="text-[10px] text-gray-500">{new Date(stage.at).toLocaleDateString()} — {stage.note}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. Update Application Status */}
+                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex flex-col h-[420px] overflow-hidden">
+                      <h3 className="text-sm font-semibold text-gray-900 flex items-center shrink-0 mb-2.5">
+                        <Send className="w-4 h-4 mr-1.5 text-brand-primary" />
+                        Update Status
+                      </h3>
+
+                      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                          Select New Status
+                        </label>
+                        <select
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all font-medium text-sm text-gray-700 bg-gray-50 hover:bg-white"
+                          value={status}
+                          onChange={(e) => setStatus(e.target.value)}
+                          disabled={allowedStatuses.length === 0}
+                        >
+                          <option value="">Select Status</option>
+                          {allowedStatuses.map((allowedStatus) => (
+                            <option key={allowedStatus} value={allowedStatus}>
+                              {allowedStatus}
+                            </option>
+                          ))}
+                        </select>
+
+                        {allowedStatuses.length === 0 && (
+                          <div className="mt-2 p-2.5 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start">
+                            <AlertCircle className="w-4 h-4 text-yellow-600 mr-1.5 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-yellow-800 font-medium">
+                              No further transitions are allowed from {getLoanStatusLabel(applicationData.status)}.
+                            </p>
+                          </div>
+                        )}
+
+                        {status && allowedStatuses.includes(status) && (
+                          <div className="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
+                            <AlertCircle className="w-4 h-4 text-blue-600 mr-1.5 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-blue-800 font-medium">
+                              {status === "REJECTED"
+                                ? "Please enter a rejection reason. This cannot be done after Disbursed."
+                                : status === "DISBURSED"
+                                ? "Please enter the approved loan amount below."
+                                : "Please add a remark explaining this status change."}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                          Add Remark
+                        </label>
+                        <div className="relative">
+                          <MessageSquare className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                          <textarea
+                            placeholder="Enter your remarks here..."
+                            className="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all resize-none h-16 text-sm"
+                            value={remark}
+                            onChange={(e) => setRemark(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {status === "APPROVED" && (
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center">
+                            <label className="block text-xs font-semibold text-gray-700">
+                              Approved Loan Amount (₹) *
+                            </label>
+                            <span className="text-[10px] text-gray-600 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
+                              Requested: ₹{(applicationData.customer?.loanAmount || applicationData.loan?.amount || 0).toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            placeholder="Enter approved loan amount"
+                            className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all font-medium text-sm ${
+                              approvalAmount && parseInt(approvalAmount) <= 0 ? "border-red-500 ring-2 ring-red-200" : "border-gray-300"
+                            }`}
+                            value={approvalAmount}
+                            onChange={(e) => setApprovalAmount(e.target.value)}
+                            min="1"
+                            required
+                          />
+                          {approvalAmount && (
+                            <div className="space-y-0.5">
+                              {parseInt(approvalAmount) > (applicationData.customer?.loanAmount || applicationData.loan?.amount || 0) && (
+                                <p className="text-[11px] font-semibold text-amber-600 flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3 shrink-0" />
+                                  Amount exceeds requested amount.
+                                </p>
+                              )}
+                              <p className="text-[11px] font-medium text-brand-primary italic">
+                                In words: {toIndianWords(parseInt(approvalAmount))}
                               </p>
                             </div>
                           )}
                         </div>
-                      ) : (
-                        <div className="text-center py-6 bg-gray-50 rounded-xl border border-gray-100">
-                          <LoanStatusBadge
-                            status={applicationData.status}
-                            className="mx-auto !px-4 !py-2 !rounded-xl !text-sm mb-3"
-                          />
-                          {applicationData.approvedLoanAmount && (
-                            <p className="text-sm font-semibold text-gray-800 mb-2">
-                              Approved: ₹{formatCurrency(applicationData.approvedLoanAmount)}
-                            </p>
-                          )}
-                          
-                          {applicationData.stageHistory && applicationData.stageHistory.length > 0 && (
-                            <div className="mt-4 text-left border-t border-gray-200 pt-4 px-4">
-                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Timeline</p>
-                              <div className="space-y-3">
-                                {applicationData.stageHistory.map((stage, index) => (
-                                  <div key={index} className="relative pl-4 border-l-2 border-blue-200">
-                                    <div className="absolute w-2 h-2 bg-blue-500 rounded-full -left-[5px] top-1.5"></div>
-                                    <p className="text-xs font-semibold text-gray-900">{stage.to}</p>
-                                    <p className="text-[11px] text-gray-500 mt-0.5">{new Date(stage.at).toLocaleDateString()} - {stage.note}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
                       )}
-                    </div>
-                  </div>
+                      </div>
 
-                  {/* 2. Bank Matcher Panel (Smart Auto-Fetch) */}
-                  <div className="bg-white rounded-xl border border-emerald-200 shadow-sm overflow-hidden">
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
-                      <h3 className="text-base font-bold text-white flex items-center">
-                        <Building2 className="w-5 h-5 mr-2 text-emerald-100" />
+                      <button
+                        onClick={handleSubmit}
+                        disabled={submitLoading || !status || !remark.trim() || (status === "APPROVED" && !approvalAmount)}
+                        className="mt-2.5 w-full flex items-center justify-center bg-gray-900 text-white py-2.5 px-4 rounded-lg shadow-sm hover:bg-gray-800 transition-all font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                      >
+                        {submitLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <span>Updating...</span>
+                          </>
+                        ) : (
+                          <span>Submit Update</span>
+                        )}
+                      </button>
+                    </div>
+
+                  {/* 3. Smart Bank Matcher — same row, same size, scrollable */}
+                  <div className="bg-white rounded-xl border border-emerald-200 shadow-sm overflow-hidden flex flex-col h-[420px] md:col-span-2 xl:col-span-1">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 shrink-0">
+                      <h3 className="text-sm font-bold text-white flex items-center">
+                        <Building2 className="w-4 h-4 mr-1.5 text-emerald-100" />
                         Smart Bank Matcher
                       </h3>
-                      <p className="text-emerald-100 text-xs mt-1 opacity-90">Auto-matching eligible banks for this applicant.</p>
+                      <p className="text-emerald-100 text-[11px] mt-0.5 opacity-90">Auto-matching eligible banks for this applicant.</p>
                     </div>
-                    
-                    <div className="p-5">
-                      <div className="flex gap-2 mb-2 relative">
-                        <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+
+                    <div className="p-3.5 flex flex-col flex-1 min-h-0 overflow-hidden">
+                      <div className="flex gap-2 mb-2 relative shrink-0">
+                        <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                         <input
                           type="text"
                           value={searchPincode}
@@ -1634,19 +1756,19 @@ const RsmApplicationView = () => {
                         <button
                           onClick={fetchEligibleBanks}
                           disabled={fetchingBanks || !searchPincode}
-                          className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
+                          className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
                         >
                           {fetchingBanks ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
                         </button>
                       </div>
 
                       {fetchingBanks && !banksFetched ? (
-                        <div className="py-8 flex flex-col items-center justify-center text-emerald-600">
-                          <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                        <div className="py-8 flex flex-col items-center justify-center text-emerald-600 flex-1">
+                          <Loader2 className="w-7 h-7 animate-spin mb-2" />
                           <p className="text-sm font-medium">Finding best matches...</p>
                         </div>
                       ) : banksFetched && (
-                        <div className="space-y-3 mt-4 max-h-[460px] overflow-y-auto pr-1">
+                        <div className="space-y-2.5 mt-1 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5">
                           {eligibleBanks.length > 0 ? (
                             eligibleBanks.map(bank => {
                               const isPwVisible = showBankPassword[bank._id] === true;
@@ -1659,7 +1781,6 @@ const RsmApplicationView = () => {
                                   key={bank._id}
                                   className="border border-gray-200/90 hover:border-emerald-300 rounded-xl p-3 bg-white shadow-2xs space-y-2.5 transition-all"
                                 >
-                                  {/* Bank Header Row */}
                                   <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2.5 min-w-0">
                                       {bank.bankLogoUrl ? (
@@ -1697,9 +1818,7 @@ const RsmApplicationView = () => {
                                     )}
                                   </div>
 
-                                  {/* Portal Credentials Subpanel */}
                                   <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2.5 space-y-1.5 text-xs">
-                                    {/* Bank Login ID */}
                                     <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded px-2 py-1 shadow-2xs">
                                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide shrink-0">
                                         ID:
@@ -1735,7 +1854,6 @@ const RsmApplicationView = () => {
                                       )}
                                     </div>
 
-                                    {/* Bank Password */}
                                     <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded px-2 py-1 shadow-2xs">
                                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide shrink-0">
                                         Password:
@@ -1803,7 +1921,6 @@ const RsmApplicationView = () => {
                                       </div>
                                     </div>
 
-                                    {/* Quick Copy Both Credentials */}
                                     {(bank.portalLoginId || bank.portalPassword) && (
                                       <div className="flex justify-end pt-0.5">
                                         <button
@@ -1846,142 +1963,22 @@ const RsmApplicationView = () => {
                     </div>
                   </div>
 
-                  {/* 3. Update Application Status */}
-                  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-5">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <Send className="w-5 h-5 mr-2 text-brand-primary" />
-                      Update Status
-                    </h3>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Select New Status
-                      </label>
-                      <select
-                        className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 font-medium text-gray-700 bg-gray-50 hover:bg-white"
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value)}
-                        disabled={allowedStatuses.length === 0}
-                      >
-                        <option value="">Select Status</option>
-                        {allowedStatuses.map((allowedStatus) => (
-                          <option key={allowedStatus} value={allowedStatus}>
-                            {allowedStatus}
-                          </option>
-                        ))}
-                      </select>
-                      
-                      {allowedStatuses.length === 0 && (
-                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start">
-                          <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 shrink-0" />
-                          <p className="text-xs text-yellow-800 font-medium">
-                            No further transitions are allowed from {getLoanStatusLabel(applicationData.status)}.
-                          </p>
-                        </div>
-                      )}
-
-                      {status && allowedStatuses.includes(status) && (
-                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
-                          <AlertCircle className="w-5 h-5 text-blue-600 mr-2 shrink-0" />
-                          <p className="text-xs text-blue-800 font-medium">
-                            {status === "REJECTED"
-                              ? "Please enter a rejection reason. This cannot be done after Disbursed."
-                              : status === "DISBURSED"
-                              ? "Please enter the approved loan amount below."
-                              : "Please add a remark explaining this status change."}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Add Remark
-                      </label>
-                      <div className="relative">
-                        <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                        <textarea
-                          placeholder="Enter your remarks here..."
-                          className="w-full border border-gray-300 rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300 resize-none h-20 text-sm"
-                          value={remark}
-                          onChange={(e) => setRemark(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    {status === "APPROVED" && (
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Approved Loan Amount (₹) *
-                          </label>
-                          <span className="text-xs text-gray-600 font-medium bg-slate-100 px-2 py-1 rounded-md">
-                            Requested: ₹{(applicationData.customer?.loanAmount || applicationData.loan?.amount || 0).toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                        <input
-                          type="number"
-                          placeholder="Enter approved loan amount"
-                          className={`w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all duration-300 font-medium ${
-                            approvalAmount && parseInt(approvalAmount) <= 0 ? "border-red-500 ring-2 ring-red-200" : "border-gray-300"
-                          }`}
-                          value={approvalAmount}
-                          onChange={(e) => setApprovalAmount(e.target.value)}
-                          min="1"
-                          required
-                        />
-                        {approvalAmount && (
-                          <div className="mt-2 space-y-1">
-                            {parseInt(approvalAmount) > (applicationData.customer?.loanAmount || applicationData.loan?.amount || 0) && (
-                              <p className="text-[11px] font-semibold text-amber-600 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3 shrink-0" />
-                                Amount exceeds requested amount.
-                              </p>
-                            )}
-                            <p className="text-[11px] font-medium text-brand-primary italic">
-                              In words: {toIndianWords(parseInt(approvalAmount))}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={handleSubmit}
-                      disabled={submitLoading || !status || !remark.trim() || (status === "APPROVED" && !approvalAmount)}
-                      className="w-full flex items-center justify-center bg-gray-900 text-white py-3 px-6 rounded-xl shadow-md hover:bg-gray-800 transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {submitLoading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          <span>Updating...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Submit Update</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                </div>
-
-                  {/* 4. Find Bank RM — last section */}
-                  <div className="mt-8 bg-white rounded-xl border border-rose-200 shadow-sm overflow-hidden">
-                    <div className="bg-gradient-to-r from-rose-500 to-rose-600 p-4">
-                      <h3 className="text-base font-bold text-white flex items-center">
-                        <Search className="w-5 h-5 mr-2 text-rose-100" />
+                  {/* 4. Find Bank RM — full-width bottom card */}
+                  <div className="md:col-span-2 xl:col-span-3 bg-white rounded-xl border border-rose-200 shadow-sm overflow-hidden">
+                    <div className="bg-gradient-to-r from-rose-500 to-rose-600 px-4 py-3">
+                      <h3 className="text-sm font-bold text-white flex items-center">
+                        <Search className="w-4 h-4 mr-1.5 text-rose-100" />
                         Find Bank RM
                       </h3>
-                      <p className="text-rose-100 text-xs mt-1 opacity-90">
+                      <p className="text-rose-100 text-[11px] mt-0.5 opacity-90">
                         Search bank RM login codes by bank, product, market type, state and city.
                       </p>
                     </div>
 
-                    <div className="p-5 space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+                    <div className="p-3.5 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5">
                         <label className="space-y-1 text-sm">
-                          <span className="font-medium text-slate-600">Bank</span>
+                          <span className="font-medium text-slate-600 text-xs">Bank</span>
                           <select
                             value={rmFilters.bank}
                             onChange={(e) => handleRmFilterChange("bank", e.target.value)}
@@ -1997,7 +1994,7 @@ const RsmApplicationView = () => {
                         </label>
 
                         <label className="space-y-1 text-sm">
-                          <span className="font-medium text-slate-600">Product</span>
+                          <span className="font-medium text-slate-600 text-xs">Product</span>
                           <select
                             value={rmFilters.product}
                             onChange={(e) => handleRmFilterChange("product", e.target.value)}
@@ -2014,7 +2011,7 @@ const RsmApplicationView = () => {
                         </label>
 
                         <label className="space-y-1 text-sm">
-                          <span className="font-medium text-slate-600">Market Type</span>
+                          <span className="font-medium text-slate-600 text-xs">Market Type</span>
                           <select
                             value={rmFilters.marketType}
                             onChange={(e) => handleRmFilterChange("marketType", e.target.value)}
@@ -2031,7 +2028,7 @@ const RsmApplicationView = () => {
                         </label>
 
                         <label className="space-y-1 text-sm">
-                          <span className="font-medium text-slate-600">State</span>
+                          <span className="font-medium text-slate-600 text-xs">State</span>
                           <select
                             value={rmFilters.state}
                             onChange={(e) => handleRmFilterChange("state", e.target.value)}
@@ -2048,7 +2045,7 @@ const RsmApplicationView = () => {
                         </label>
 
                         <label className="space-y-1 text-sm">
-                          <span className="font-medium text-slate-600">City</span>
+                          <span className="font-medium text-slate-600 text-xs">City</span>
                           <select
                             value={rmFilters.city}
                             onChange={(e) => handleRmFilterChange("city", e.target.value)}
@@ -2070,7 +2067,7 @@ const RsmApplicationView = () => {
                           type="button"
                           onClick={handleFindBankRmSearch}
                           disabled={rmSearching || rmOptionsLoading}
-                          className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
                         >
                           {rmSearching ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -2085,7 +2082,7 @@ const RsmApplicationView = () => {
                             fetchRmFilterOptions(rmFilters)
                           }
                           disabled={rmOptionsLoading}
-                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                         >
                           <RefreshCw className={`w-4 h-4 ${rmOptionsLoading ? "animate-spin" : ""}`} />
                           Refresh Filters
@@ -2108,6 +2105,7 @@ const RsmApplicationView = () => {
                       </div>
                     </div>
                   </div>
+                </div>
               </div>
             </div>
           </div>

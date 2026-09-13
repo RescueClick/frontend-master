@@ -42,6 +42,7 @@ import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import PayoutStatusBadge from "../../../components/shared/PayoutStatusBadge";
 import PartnerInvoiceModal from "../../../components/shared/PartnerInvoiceModal";
+import InvoiceSettingsModal from "../../../components/shared/InvoiceSettingsModal";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -83,6 +84,7 @@ const AdminPendingPayout = () => {
 
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [invoiceModalRecord, setInvoiceModalRecord] = useState(null);
+  const [invoiceSettingsOpen, setInvoiceSettingsOpen] = useState(false);
   const [isSendingInvoiceId, setIsSendingInvoiceId] = useState(null);
 
   const [modalForm, setModalForm] = useState({
@@ -750,6 +752,16 @@ const AdminPendingPayout = () => {
 
                 <button
                   type="button"
+                  onClick={() => setInvoiceSettingsOpen(true)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 shadow-sm transition"
+                  title="Shared invoice company settings (payout + incentive)"
+                >
+                  <FileText className="w-3.5 h-3.5 text-teal-700" />
+                  <span>Invoice Settings</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => dispatch(fetchAdminCustomersPayOutPending())}
                   className="p-1.5 rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition"
                 >
@@ -1271,9 +1283,14 @@ const AdminPendingPayout = () => {
           setInvoiceModalRecord(null);
         }}
         record={invoiceModalRecord}
-        onEmailSent={() => {
+        onSuccess={() => {
           dispatch(fetchAdminCustomersPayOutPending());
         }}
+      />
+
+      <InvoiceSettingsModal
+        isOpen={invoiceSettingsOpen}
+        onClose={() => setInvoiceSettingsOpen(false)}
       />
     </div>
   );

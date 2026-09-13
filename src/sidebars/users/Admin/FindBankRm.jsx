@@ -19,12 +19,15 @@ const EMPTY_FORM = {
   rmName: "",
   rmPhone: "",
   rmEmail: "",
+  rmProduct: "",
   asmName: "",
   asmPhone: "",
   asmEmail: "",
+  asmProduct: "",
   rsmName: "",
   rsmPhone: "",
   rsmEmail: "",
+  rsmProduct: "",
 };
 
 const BANK_REQUIRED = [
@@ -41,7 +44,80 @@ const pickContactFromRow = (row, role) => ({
   name: row?.[role]?.name || (role === "rm" ? row?.rmName : "") || "",
   phone: row?.[role]?.phone || (role === "rm" ? row?.rmPhone : "") || "",
   email: row?.[role]?.email || (role === "rm" ? row?.rmEmail : "") || "",
+  product: row?.[role]?.product || "",
 });
+
+const INPUT_CLASS =
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
+
+/** Must stay outside FindBankRm — defining it inside remounts inputs on every keystroke. */
+function ContactSection({
+  title,
+  hint,
+  nameKey,
+  phoneKey,
+  emailKey,
+  productKey,
+  form,
+  onChange,
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3 md:col-span-2">
+      <div>
+        <p className="text-sm font-semibold text-slate-800">{title}</p>
+        <p className="text-xs text-slate-500 mt-0.5">{hint}</p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700">Name</span>
+          <input
+            name={nameKey}
+            value={form[nameKey] || ""}
+            onChange={onChange}
+            className={INPUT_CLASS}
+            placeholder="Full name"
+            autoComplete="off"
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700">Phone</span>
+          <input
+            name={phoneKey}
+            type="tel"
+            value={form[phoneKey] || ""}
+            onChange={onChange}
+            className={INPUT_CLASS}
+            placeholder="10-digit mobile"
+            autoComplete="off"
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700">Email</span>
+          <input
+            name={emailKey}
+            type="email"
+            value={form[emailKey] || ""}
+            onChange={onChange}
+            className={INPUT_CLASS}
+            placeholder="name@example.com"
+            autoComplete="off"
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700">Product Type</span>
+          <input
+            name={productKey}
+            value={form[productKey] || ""}
+            onChange={onChange}
+            className={INPUT_CLASS}
+            placeholder="e.g. PL / HL / BL"
+            autoComplete="off"
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
 
 const FindBankRm = () => {
   const location = useLocation();
@@ -109,12 +185,15 @@ const FindBankRm = () => {
         r.rm?.name,
         r.rm?.phone,
         r.rm?.email,
+        r.rm?.product,
         r.asm?.name,
         r.asm?.phone,
         r.asm?.email,
+        r.asm?.product,
         r.rsm?.name,
         r.rsm?.phone,
         r.rsm?.email,
+        r.rsm?.product,
       ]
         .map((v) => String(v || "").toLowerCase())
         .join(" ");
@@ -146,12 +225,15 @@ const FindBankRm = () => {
       rmName: rm.name,
       rmPhone: rm.phone,
       rmEmail: rm.email,
+      rmProduct: rm.product,
       asmName: asm.name,
       asmPhone: asm.phone,
       asmEmail: asm.email,
+      asmProduct: asm.product,
       rsmName: rsm.name,
       rsmPhone: rsm.phone,
       rsmEmail: rsm.email,
+      rsmProduct: rsm.product,
     });
     setModalOpen(true);
   };
@@ -182,12 +264,15 @@ const FindBankRm = () => {
         rmName: form.rmName.trim(),
         rmPhone: form.rmPhone.trim(),
         rmEmail: form.rmEmail.trim(),
+        rmProduct: form.rmProduct.trim(),
         asmName: form.asmName.trim(),
         asmPhone: form.asmPhone.trim(),
         asmEmail: form.asmEmail.trim(),
+        asmProduct: form.asmProduct.trim(),
         rsmName: form.rsmName.trim(),
         rsmPhone: form.rsmPhone.trim(),
         rsmEmail: form.rsmEmail.trim(),
+        rsmProduct: form.rsmProduct.trim(),
       };
 
       if (modalMode === "create") {
@@ -238,52 +323,6 @@ const FindBankRm = () => {
       toast.error("Failed to copy login code");
     }
   };
-
-  const inputClass =
-    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
-
-  const ContactSection = ({ title, hint, nameKey, phoneKey, emailKey }) => (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3 md:col-span-2">
-      <div>
-        <p className="text-sm font-semibold text-slate-800">{title}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{hint}</p>
-      </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Name</span>
-          <input
-            name={nameKey}
-            value={form[nameKey]}
-            onChange={handleChange}
-            className={inputClass}
-            placeholder="Full name"
-          />
-        </label>
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Phone</span>
-          <input
-            name={phoneKey}
-            type="tel"
-            value={form[phoneKey]}
-            onChange={handleChange}
-            className={inputClass}
-            placeholder="10-digit mobile"
-          />
-        </label>
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Email</span>
-          <input
-            name={emailKey}
-            type="email"
-            value={form[emailKey]}
-            onChange={handleChange}
-            className={inputClass}
-            placeholder="name@example.com"
-          />
-        </label>
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6">
@@ -377,7 +416,7 @@ const FindBankRm = () => {
                       name="bankNbfcName"
                       value={form.bankNbfcName}
                       onChange={handleChange}
-                      className={inputClass}
+                      className={INPUT_CLASS}
                       required
                     />
                   </label>
@@ -387,7 +426,7 @@ const FindBankRm = () => {
                       name="loginCode"
                       value={form.loginCode}
                       onChange={handleChange}
-                      className={inputClass}
+                      className={INPUT_CLASS}
                       required
                     />
                   </label>
@@ -397,7 +436,7 @@ const FindBankRm = () => {
                       name="product"
                       value={form.product}
                       onChange={handleChange}
-                      className={inputClass}
+                      className={INPUT_CLASS}
                       placeholder="e.g. PL"
                       required
                     />
@@ -408,7 +447,7 @@ const FindBankRm = () => {
                       name="marketType"
                       value={form.marketType}
                       onChange={handleChange}
-                      className={inputClass}
+                      className={INPUT_CLASS}
                       placeholder="e.g. PL PRIME"
                       required
                     />
@@ -419,7 +458,7 @@ const FindBankRm = () => {
                       name="state"
                       value={form.state}
                       onChange={handleChange}
-                      className={inputClass}
+                      className={INPUT_CLASS}
                       required
                     >
                       <option value="">Please Select State</option>
@@ -436,7 +475,7 @@ const FindBankRm = () => {
                       name="city"
                       value={form.city}
                       onChange={handleChange}
-                      className={inputClass}
+                      className={INPUT_CLASS}
                       required
                     />
                   </label>
@@ -446,7 +485,7 @@ const FindBankRm = () => {
                       name="company"
                       value={form.company}
                       onChange={handleChange}
-                      className={inputClass}
+                      className={INPUT_CLASS}
                       placeholder="e.g. RuLoans"
                       required
                     />
@@ -456,24 +495,33 @@ const FindBankRm = () => {
 
               <ContactSection
                 title="2. RM Contact (for this bank)"
-                hint="Optional — bank relationship manager name, phone, email"
+                hint="Optional — bank relationship manager name, phone, email, product they work on"
                 nameKey="rmName"
                 phoneKey="rmPhone"
                 emailKey="rmEmail"
+                productKey="rmProduct"
+                form={form}
+                onChange={handleChange}
               />
               <ContactSection
                 title="3. ASM Contact (for this bank)"
-                hint="Optional — area sales manager linked to this bank / city"
+                hint="Optional — area sales manager linked to this bank / city, and product they handle"
                 nameKey="asmName"
                 phoneKey="asmPhone"
                 emailKey="asmEmail"
+                productKey="asmProduct"
+                form={form}
+                onChange={handleChange}
               />
               <ContactSection
                 title="4. RSM Contact (for this bank)"
-                hint="Optional — regional sales manager linked to this bank / city"
+                hint="Optional — regional sales manager linked to this bank / city, and product they handle"
                 nameKey="rsmName"
                 phoneKey="rsmPhone"
                 emailKey="rsmEmail"
+                productKey="rsmProduct"
+                form={form}
+                onChange={handleChange}
               />
 
               <div className="flex justify-end gap-2 pt-1">
