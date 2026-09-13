@@ -762,48 +762,58 @@ const AdminIncentives = () => {
       },
     },
     {
-      title: "Action",
+      title: "Action & Invoice",
       key: "action",
-      width: 180,
+      width: 220,
       align: "center",
       render: (_, r) => {
         const isPaid = r.status === "PAID" || r.incentivePaid;
         const isEligible = r.eligibleForIncentive || r.status === "PENDING";
         const incentiveId = r.incentiveRecordId || r.id;
+        const isSending = incentiveId && isSendingInvoiceId === String(incentiveId);
 
         if (isPaid) {
           return (
-            <div className="flex items-center justify-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleOpenInvoice(r)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 shadow-sm transition"
-                title="Build & View Tax Invoice (Section 194T)"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Invoice</span>
-              </button>
-              <button
-                type="button"
-                disabled={!incentiveId || isSendingInvoiceId === String(incentiveId)}
-                onClick={() => handleSendIncentiveInvoice(r)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-brand-primary hover:bg-[#0f9b82] text-white shadow-sm transition disabled:opacity-50"
-                title="Share Tax Invoice Email to Partner"
-              >
-                {isSendingInvoiceId === String(incentiveId) ? (
-                  <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Mail className="w-3.5 h-3.5" />
-                )}
-              </button>
+            <div className="flex flex-col items-stretch gap-1.5 min-w-[160px]">
+              <div className="flex items-center justify-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleOpenInvoice(r)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 shadow-sm transition"
+                  title="View Tax Invoice"
+                >
+                  <FileText className="w-3.5 h-3.5 text-teal-600" />
+                  <span>Invoice</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={!incentiveId || isSending}
+                  onClick={() => handleSendIncentiveInvoice(r)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-brand-primary hover:bg-[#0f9b82] text-white shadow-sm transition disabled:opacity-50"
+                  title={!incentiveId ? "Missing incentive record" : "Email Tax Invoice to Partner"}
+                >
+                  {isSending ? (
+                    <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="w-3.5 h-3.5" />
+                  )}
+                  <span>Email</span>
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => handleOpenModal(r)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-sm transition"
-                title="Edit settlement / invoice details"
+                className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition"
+                title="Edit settlement / UTR / amounts"
               >
-                <Eye className="w-3.5 h-3.5" />
+                <Eye className="w-3 h-3" />
+                <span>Edit / Resend</span>
               </button>
+              {r.invoiceSentAt ? (
+                <span className="text-[10px] text-emerald-600 font-semibold text-center">
+                  Invoice emailed
+                </span>
+              ) : null}
             </div>
           );
         }
@@ -816,7 +826,7 @@ const AdminIncentives = () => {
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-primary hover:bg-[#0f9b82] text-white shadow-sm transition"
             >
               <Award className="w-3.5 h-3.5" />
-              <span>Pay & Invoice</span>
+              <span>Pay &amp; Invoice</span>
             </button>
           );
         }
