@@ -45,7 +45,6 @@ import { matchesSearchTerm } from "../../../utils/tableFilter";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import PartnerInvoiceModal from "../../../components/shared/PartnerInvoiceModal";
-import InvoiceSettingsModal from "../../../components/shared/InvoiceSettingsModal";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -155,7 +154,6 @@ const AdminIncentives = () => {
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [invoiceModalRecord, setInvoiceModalRecord] = useState(null);
   const [isSendingInvoiceId, setIsSendingInvoiceId] = useState(null);
-  const [invoiceSettingsOpen, setInvoiceSettingsOpen] = useState(false);
 
   // Redux Data
   const { data: rawData = [], loading = false } = useSelector(
@@ -1320,33 +1318,14 @@ const AdminIncentives = () => {
               {/* Right Column: Settlement Form + Invoice (Sec 194T) */}
               <div className="md:col-span-6 bg-gradient-to-br from-slate-50 via-white to-amber-50/20 p-4 rounded-xl border border-amber-100 flex flex-col justify-between space-y-3">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-                    <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs">
-                      <Calculator className="w-4 h-4 text-amber-600" />
-                      <span>Bonus for this settle (dynamic)</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInvoiceModalRecord(
-                          buildIncentiveInvoiceRecord(selectedRecord, modalForm)
-                        );
-                        setInvoiceModalOpen(true);
-                      }}
-                      className="px-2 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg flex items-center gap-1 transition"
-                    >
-                      <FileText className="w-3 h-3" />
-                      <span>Preview Invoice</span>
-                    </button>
+                  <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs border-b border-slate-200/80 pb-2">
+                    <Calculator className="w-4 h-4 text-amber-600" />
+                    <span>Bonus &amp; TDS for this payment</span>
                   </div>
-
-                  <p className="text-[10px] text-slate-500 -mt-1">
-                    Edit amount / TDS for this partner &amp; month — not locked to payout commission %.
-                  </p>
 
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-slate-700 block">
-                      Gross Incentive Bonus (₹) — this payment
+                      Gross Incentive Bonus (₹)
                     </label>
                     <div className="relative">
                       <input
@@ -1829,12 +1808,6 @@ const AdminIncentives = () => {
         onSuccess={() => {
           loadData();
         }}
-      />
-
-      <InvoiceSettingsModal
-        isOpen={invoiceSettingsOpen}
-        onClose={() => setInvoiceSettingsOpen(false)}
-        onSaved={() => loadData()}
       />
     </div>
   );
