@@ -218,7 +218,7 @@ export default function RsmApplications() {
             type="button"
             className="p-2 hover:bg-gray-100 rounded transition-colors"
             onClick={() => {
-              navigate("/rsm/applications/view", {
+              navigate("/asm/applications/view", {
                 state: {
                   applicationId: app.id,
                   customerId: app.customerId,

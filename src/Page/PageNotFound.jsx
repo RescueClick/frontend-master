@@ -48,7 +48,7 @@ const PageNotFound = () => {
             </Link>
             <Link
               to="/LoginPage"
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center justify-center rounded-xl border border-brand-primary/40 bg-white px-5 py-3 text-sm font-semibold text-brand-primary transition hover:border-brand-primary hover:bg-brand-primary/5"
             >
               Go to login
             </Link>
