@@ -55,8 +55,14 @@ class SocketManager {
     // Same host as REST API (VITE_API_URL / production) — never hardcode localhost.
     // Optional override: VITE_SOCKET_URL
     const fromEnv = import.meta.env.VITE_SOCKET_URL;
+    const isBrowser = typeof window !== "undefined";
+    const isLocalhostHost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
     if (fromEnv && String(fromEnv).trim()) {
-      return String(fromEnv).trim().replace(/\/+$/, "");
+      const clean = String(fromEnv).trim().replace(/\/+$/, "");
+      if (isLocalhostHost || !clean.includes("localhost")) {
+        return clean;
+      }
     }
 
     let socketUrl = backendOrigin || backendurl.replace(/\/api\/?$/, "");
