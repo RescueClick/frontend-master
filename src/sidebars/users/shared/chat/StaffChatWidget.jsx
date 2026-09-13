@@ -22,6 +22,7 @@ import { chatService, getStaffUser, sameId } from "./chatService";
 import { useSocket } from "../../../../hooks/useSocket";
 import NewChatModal from "./NewChatModal";
 import LoanPickerModal from "./LoanPickerModal";
+import { TypingBubble } from "./TypingBubble";
 
 const ROLE_CONFIG = {
   SUPER_ADMIN: { label: "Admin", badge: "bg-purple-100 text-purple-700 border-purple-200" },
@@ -86,7 +87,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
   const activeConversationRef = useRef(null);
   const isOpenRef = useRef(false);
 
-  const { socket, subscribe, unsubscribe } = useSocket();
+  const { socket, isConnected, subscribe, unsubscribe, ensureConnected } = useSocket();
 
   useEffect(() => {
     activeConversationRef.current = activeConversation;
@@ -98,6 +99,32 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
 
   const scrollToBottom = (behavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
+  };
+
+  const appendMessage = (message, conversationId) => {
+    if (!message) return;
+    const active = activeConversationRef.current;
+    if (!active || !sameId(active._id, conversationId)) return;
+
+    setMessages((prev) => {
+      if (prev.some((m) => sameId(m._id, message._id))) return prev;
+      const withoutTemp = prev.filter((m) => {
+        if (!String(m._id || "").startsWith("temp-")) return true;
+        return !(
+          sameId(m.sender, message.sender) &&
+          (m.text || "") === (message.text || "") &&
+          Math.abs(new Date(m.createdAt) - new Date(message.createdAt || Date.now())) < 15000
+        );
+      });
+      return [...withoutTemp, message];
+    });
+    setIsOtherUserTyping(false);
+    if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
+    setTimeout(() => scrollToBottom(), 30);
+
+    if (sameId(message.recipient, currentUserIdStr)) {
+      chatService.markAsRead(conversationId).catch(() => {});
+    }
   };
 
   // Fetch unread count & conversations
@@ -127,6 +154,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
 
   // Initial load on mount
   useEffect(() => {
+    ensureConnected?.();
     loadUnreadCount();
     const timer = setInterval(loadUnreadCount, 20000);
     return () => clearInterval(timer);
@@ -135,6 +163,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
   // When widget opens, refresh conversations
   useEffect(() => {
     if (isOpen) {
+      ensureConnected?.();
       loadConversations();
     }
   }, [isOpen]);
@@ -150,6 +179,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
 
   // Socket event subscriptions
   useEffect(() => {
+    ensureConnected?.();
     if (!socket) return;
 
     refreshOnlineStaff();
@@ -170,23 +200,11 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
       }
     };
 
-    // When someone sends a message in current conversation
     const handleNewMessage = ({ message, conversationId }) => {
       const active = activeConversationRef.current;
       const open = isOpenRef.current;
 
-      if (active && sameId(active._id, conversationId)) {
-        setMessages((prev) => {
-          if (prev.some((m) => sameId(m._id, message._id))) return prev;
-          return [...prev, message];
-        });
-        scrollToBottom();
-        setIsOtherUserTyping(false);
-
-        if (sameId(message.recipient, currentUserIdStr)) {
-          chatService.markAsRead(conversationId);
-        }
-      }
+      appendMessage(message, conversationId);
 
       setConversations((prev) =>
         prev.map((c) => {
@@ -196,30 +214,31 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
             ...c,
             lastMessage: {
               text:
-                message.text ||
-                (message.attachments?.length ? "📎 Attachment" : "Message"),
-              sender: message.sender?._id || message.sender,
-              senderName: `${message.sender?.firstName || ""} ${
-                message.sender?.lastName || ""
+                message?.text ||
+                (message?.attachments?.length ? "📎 Attachment" : "Message"),
+              sender: message?.sender?._id || message?.sender,
+              senderName: `${message?.sender?.firstName || ""} ${
+                message?.sender?.lastName || ""
               }`.trim(),
-              createdAt: message.createdAt || new Date(),
+              createdAt: message?.createdAt || new Date(),
             },
             unreadCount: isCurrentlyViewing
               ? 0
-              : (c.unreadCount || 0) + (sameId(message.sender, currentUserIdStr) ? 0 : 1),
+              : (c.unreadCount || 0) + (sameId(message?.sender, currentUserIdStr) ? 0 : 1),
           };
         })
       );
 
       if (!open || !active || !sameId(active._id, conversationId)) {
-        if (!sameId(message.sender, currentUserIdStr)) {
+        if (!sameId(message?.sender, currentUserIdStr)) {
           setUnreadCount((prev) => prev + 1);
         }
       }
     };
 
-    // Incoming message from outside active chat
-    const handleIncomingMessage = ({ conversationId, conversation }) => {
+    const handleIncomingMessage = ({ message, conversationId, conversation }) => {
+      appendMessage(message, conversationId);
+
       const active = activeConversationRef.current;
       if (active && sameId(active._id, conversationId)) return;
 
@@ -230,7 +249,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
             sameId(c._id, conversationId)
               ? {
                   ...c,
-                  lastMessage: conversation.lastMessage,
+                  lastMessage: conversation?.lastMessage || c.lastMessage,
                   unreadCount: (c.unreadCount || 0) + 1,
                 }
               : c
@@ -242,7 +261,10 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
       setUnreadCount((prev) => prev + 1);
     };
 
-    // Read receipt
+    const handleMessageSent = ({ message, conversationId }) => {
+      appendMessage(message, conversationId);
+    };
+
     const handleMessagesRead = ({ conversationId }) => {
       const active = activeConversationRef.current;
       if (active && sameId(active._id, conversationId)) {
@@ -254,31 +276,28 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
       }
     };
 
-    // Typing
-    const handleUserTyping = ({ conversationId }) => {
+    const handleUserTyping = ({ conversationId, userId }) => {
       const active = activeConversationRef.current;
-      if (active && sameId(active._id, conversationId)) {
-        setIsOtherUserTyping(true);
-        if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
-        remoteTypingClearRef.current = setTimeout(() => {
-          setIsOtherUserTyping(false);
-        }, 3000);
-      }
+      if (!active || !sameId(active._id, conversationId)) return;
+      if (sameId(userId, currentUserIdStr)) return;
+      setIsOtherUserTyping(true);
+      if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
+      remoteTypingClearRef.current = setTimeout(() => setIsOtherUserTyping(false), 2800);
     };
 
-    const handleUserStopTyping = ({ conversationId }) => {
+    const handleUserStopTyping = ({ conversationId, userId }) => {
       const active = activeConversationRef.current;
-      if (active && sameId(active._id, conversationId)) {
-        setIsOtherUserTyping(false);
-        if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
-      }
+      if (!active || !sameId(active._id, conversationId)) return;
+      if (sameId(userId, currentUserIdStr)) return;
+      setIsOtherUserTyping(false);
+      if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
     };
 
     const handleSocketConnected = () => {
       refreshOnlineStaff();
       const active = activeConversationRef.current;
-      if (active?._id) {
-        socket.emit("chat:join_conversation", { conversationId: active._id });
+      if (active?._id && socket) {
+        socket.emit("chat:join_conversation", { conversationId: String(active._id) });
       }
     };
 
@@ -286,6 +305,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     subscribe("chat:online_staff_list", handleOnlineStaffList);
     subscribe("chat:new_message", handleNewMessage);
     subscribe("chat:incoming_message", handleIncomingMessage);
+    subscribe("chat:message_sent", handleMessageSent);
     subscribe("chat:messages_read", handleMessagesRead);
     subscribe("chat:user_typing", handleUserTyping);
     subscribe("chat:user_stop_typing", handleUserStopTyping);
@@ -296,13 +316,14 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
       unsubscribe("chat:online_staff_list", handleOnlineStaffList);
       unsubscribe("chat:new_message", handleNewMessage);
       unsubscribe("chat:incoming_message", handleIncomingMessage);
+      unsubscribe("chat:message_sent", handleMessageSent);
       unsubscribe("chat:messages_read", handleMessagesRead);
       unsubscribe("chat:user_typing", handleUserTyping);
       unsubscribe("chat:user_stop_typing", handleUserStopTyping);
       unsubscribe("socketConnected", handleSocketConnected);
       if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
     };
-  }, [socket, currentUserIdStr, subscribe, unsubscribe]);
+  }, [socket, isConnected, currentUserIdStr, subscribe, unsubscribe]);
 
   // Load messages when selecting a conversation
   useEffect(() => {
@@ -311,63 +332,82 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
       return;
     }
 
+    const conversationId = String(activeConversation._id);
+    ensureConnected?.();
+
     if (socket) {
-      socket.emit("chat:join_conversation", {
-        conversationId: activeConversation._id,
-      });
+      socket.emit("chat:join_conversation", { conversationId });
     }
 
-    const loadMessages = async () => {
-      setLoadingMessages(true);
-      setIsOtherUserTyping(false);
+    const loadMessages = async ({ silent = false } = {}) => {
+      if (!silent) {
+        setLoadingMessages(true);
+        setIsOtherUserTyping(false);
+      }
       try {
-        const data = await chatService.getMessages(activeConversation._id, 1, 50);
-        setMessages(data.messages || []);
+        const data = await chatService.getMessages(conversationId, 1, 50);
+        const next = data.messages || [];
+        setMessages((prev) => {
+          const temps = prev.filter((m) => String(m._id || "").startsWith("temp-"));
+          if (!temps.length) return next;
+          const merged = [...next];
+          temps.forEach((t) => {
+            const already = merged.some(
+              (m) =>
+                sameId(m.sender, t.sender) &&
+                (m.text || "") === (t.text || "") &&
+                Math.abs(new Date(m.createdAt) - new Date(t.createdAt)) < 15000
+            );
+            if (!already) merged.push(t);
+          });
+          return merged;
+        });
 
-        // Decrement unread
         const currentUnreadForThis = activeConversation.unreadCount || 0;
         setConversations((prev) =>
           prev.map((c) =>
-            sameId(c._id, activeConversation._id) ? { ...c, unreadCount: 0 } : c
+            sameId(c._id, conversationId) ? { ...c, unreadCount: 0 } : c
           )
         );
-        setUnreadCount((prev) => Math.max(0, prev - currentUnreadForThis));
-
-        setTimeout(() => scrollToBottom("auto"), 100);
+        if (!silent) {
+          setUnreadCount((prev) => Math.max(0, prev - currentUnreadForThis));
+          setTimeout(() => scrollToBottom("auto"), 80);
+        }
       } catch (err) {
         console.error("Error loading chat messages:", err);
       } finally {
-        setLoadingMessages(false);
+        if (!silent) setLoadingMessages(false);
       }
     };
 
     loadMessages();
 
+    const poll = setInterval(() => loadMessages({ silent: true }), isConnected ? 8000 : 3000);
+
     return () => {
+      clearInterval(poll);
       if (socket) {
-        socket.emit("chat:leave_conversation", {
-          conversationId: activeConversation._id,
-        });
+        socket.emit("chat:leave_conversation", { conversationId });
       }
     };
-  }, [activeConversation?._id, socket]);
+  }, [activeConversation?._id, socket, isConnected]);
 
   const handleInputChange = (e) => {
     setMessageText(e.target.value);
 
-    if (socket && activeConversation) {
+    if (socket?.connected && activeConversation) {
       socket.emit("chat:typing", {
-        conversationId: activeConversation._id,
+        conversationId: String(activeConversation._id),
         recipientId: activeConversation.otherParticipant?._id,
       });
 
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         socket.emit("chat:stop_typing", {
-          conversationId: activeConversation._id,
+          conversationId: String(activeConversation._id),
           recipientId: activeConversation.otherParticipant?._id,
         });
-      }, 1500);
+      }, 1200);
     }
   };
 
@@ -407,9 +447,25 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
     setPendingAttachments([]);
     setSelectedLoan(null);
 
-    if (socket && activeConversation) {
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const optimistic = {
+      _id: tempId,
+      conversationId: activeConversation._id,
+      sender: { _id: currentUserIdStr },
+      recipient: activeConversation.otherParticipant,
+      text: trimmed,
+      attachments: payload.attachments,
+      loanRef: payload.loanRef,
+      status: "SENT",
+      createdAt: new Date().toISOString(),
+      pending: true,
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    scrollToBottom();
+
+    if (socket?.connected) {
       socket.emit("chat:stop_typing", {
-        conversationId: activeConversation._id,
+        conversationId: String(activeConversation._id),
         recipientId: activeConversation.otherParticipant?._id,
       });
     }
@@ -418,13 +474,15 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
       const data = await chatService.sendMessage(activeConversation._id, payload);
       if (data.message) {
         setMessages((prev) => {
-          if (prev.some((m) => sameId(m._id, data.message._id))) return prev;
-          return [...prev, data.message];
+          const withoutTemp = prev.filter((m) => m._id !== tempId);
+          if (withoutTemp.some((m) => sameId(m._id, data.message._id))) return withoutTemp;
+          return [...withoutTemp, data.message];
         });
         scrollToBottom();
       }
     } catch (err) {
       console.error("Failed to send message:", err);
+      setMessages((prev) => prev.filter((m) => m._id !== tempId));
     }
   };
 
@@ -583,7 +641,9 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
                           onlineUserIds,
                           activeConversation.otherParticipant?._id
                         )
-                        ? "Online"
+                        ? isConnected
+                          ? "Online · Live"
+                          : "Online"
                         : "Offline"}
                     {activeConversation.otherParticipant?.employeeId && (
                       <span className="ml-2 font-mono text-[10px] opacity-80">
@@ -927,12 +987,7 @@ export default function StaffChatWidget({ currentRole = "SUPER_ADMIN" }) {
 
                 {/* Typing indicator */}
                 {isOtherUserTyping && (
-                  <div className="flex items-center space-x-1.5 text-xs text-slate-500 italic">
-                    <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce" />
-                    <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce [animation-delay:0.15s]" />
-                    <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce [animation-delay:0.3s]" />
-                    <span className="text-[11px]">typing...</span>
-                  </div>
+                  <TypingBubble name={activeConversation.otherParticipant?.firstName} />
                 )}
 
                 <div ref={messagesEndRef} />

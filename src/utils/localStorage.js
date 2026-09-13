@@ -121,6 +121,13 @@ export const saveAuthData = (token, user, impersonation = false, parent = null) 
       stack.push({ role: user.role, token, user, parent, parentToken: parent?.token });
       localStorage.setItem("impersonation_stack", JSON.stringify(stack));
     }
+
+    // Notify SocketProvider / useSocket to connect after login
+    try {
+      window.dispatchEvent(new Event("auth-changed"));
+    } catch (_) {
+      // ignore (SSR / non-browser)
+    }
   } catch (err) {
     // ignore localStorage save errors
   }

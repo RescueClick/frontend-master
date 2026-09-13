@@ -24,6 +24,7 @@ import { chatService, getStaffUser, sameId } from "./chatService";
 import { useSocket } from "../../../../hooks/useSocket";
 import NewChatModal from "./NewChatModal";
 import LoanPickerModal from "./LoanPickerModal";
+import { TypingBubble, ChatConnectionPill } from "./TypingBubble";
 
 const ROLE_CONFIG = {
   SUPER_ADMIN: { label: "Admin", badge: "bg-purple-100 text-purple-700 border-purple-200" },
@@ -83,7 +84,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
   const fileInputRef = useRef(null);
   const activeConversationRef = useRef(null);
 
-  const { socket, isConnected, subscribe, unsubscribe } = useSocket();
+  const { socket, isConnected, subscribe, unsubscribe, ensureConnected } = useSocket();
 
   // Keep ref in sync so socket handlers always see latest conversation
   useEffect(() => {
@@ -95,9 +96,61 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
+  const appendMessage = (message, conversationId) => {
+    if (!message) return;
+    const active = activeConversationRef.current;
+    if (!active || !sameId(active._id, conversationId)) return;
+
+    setMessages((prev) => {
+      if (prev.some((m) => sameId(m._id, message._id))) return prev;
+      // Drop optimistic temp messages that match this real one
+      const withoutTemp = prev.filter((m) => {
+        if (!String(m._id || "").startsWith("temp-")) return true;
+        return !(
+          sameId(m.sender, message.sender) &&
+          (m.text || "") === (message.text || "") &&
+          Math.abs(new Date(m.createdAt) - new Date(message.createdAt || Date.now())) < 15000
+        );
+      });
+      return [...withoutTemp, message];
+    });
+    setIsOtherUserTyping(false);
+    if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
+    setTimeout(() => scrollToBottom(), 30);
+
+    if (sameId(message.recipient, currentUserIdStr)) {
+      chatService.markAsRead(conversationId).catch(() => {});
+    }
+  };
+
+  const bumpConversationPreview = (message, conversationId, { forceUnread = false } = {}) => {
+    const active = activeConversationRef.current;
+    const viewing = active && sameId(active._id, conversationId);
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (!sameId(c._id, conversationId)) return c;
+        return {
+          ...c,
+          lastMessage: {
+            text: message?.text || (message?.attachments?.length ? "📎 Attachment" : "Message"),
+            sender: message?.sender?._id || message?.sender,
+            senderName: `${message?.sender?.firstName || ""} ${message?.sender?.lastName || ""}`.trim(),
+            createdAt: message?.createdAt || new Date(),
+          },
+          unreadCount: viewing
+            ? 0
+            : forceUnread || !sameId(message?.sender, currentUserIdStr)
+              ? (c.unreadCount || 0) + (sameId(message?.sender, currentUserIdStr) ? 0 : 1)
+              : c.unreadCount || 0,
+        };
+      })
+    );
+  };
+
   // Load conversations on mount
   useEffect(() => {
     loadConversations();
+    ensureConnected?.();
   }, []);
 
   const loadConversations = async () => {
@@ -123,6 +176,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
 
   // Socket room joining and event listeners
   useEffect(() => {
+    ensureConnected?.();
     if (!socket) return;
 
     refreshOnlineStaff();
@@ -143,46 +197,16 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
       }
     };
 
-    // When someone sends a message in current conversation
+    // Primary realtime path — also emitted to each user's personal room
     const handleNewMessage = ({ message, conversationId }) => {
-      const active = activeConversationRef.current;
-      if (active && sameId(active._id, conversationId)) {
-        setMessages((prev) => {
-          if (prev.some((m) => sameId(m._id, message._id))) return prev;
-          return [...prev, message];
-        });
-        scrollToBottom();
-        setIsOtherUserTyping(false);
-
-        // Mark as read immediately if current user is the recipient
-        if (sameId(message.recipient, currentUserIdStr)) {
-          chatService.markAsRead(conversationId);
-        }
-      }
-
-      // Update conversations list preview
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (!sameId(c._id, conversationId)) return c;
-          return {
-            ...c,
-            lastMessage: {
-              text: message.text || (message.attachments?.length ? "📎 Attachment" : "Message"),
-              sender: message.sender?._id || message.sender,
-              senderName: `${message.sender?.firstName || ""} ${message.sender?.lastName || ""}`.trim(),
-              createdAt: message.createdAt || new Date(),
-            },
-            unreadCount:
-              active && sameId(active._id, conversationId)
-                ? 0
-                : (c.unreadCount || 0) + (sameId(message.sender, currentUserIdStr) ? 0 : 1),
-          };
-        })
-      );
+      appendMessage(message, conversationId);
+      bumpConversationPreview(message, conversationId);
     };
 
-    // When an incoming message arrives from anywhere
-    const handleIncomingMessage = ({ conversationId, conversation }) => {
+    // Fallback path for list/unread (also appends if chat is open)
+    const handleIncomingMessage = ({ message, conversationId, conversation }) => {
+      appendMessage(message, conversationId);
+
       const active = activeConversationRef.current;
       if (active && sameId(active._id, conversationId)) return;
 
@@ -193,7 +217,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
             sameId(c._id, conversationId)
               ? {
                   ...c,
-                  lastMessage: conversation.lastMessage,
+                  lastMessage: conversation?.lastMessage || c.lastMessage,
                   unreadCount: (c.unreadCount || 0) + 1,
                 }
               : c
@@ -204,7 +228,11 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
       });
     };
 
-    // When other user reads our messages
+    const handleMessageSent = ({ message, conversationId }) => {
+      appendMessage(message, conversationId);
+      bumpConversationPreview(message, conversationId);
+    };
+
     const handleMessagesRead = ({ conversationId }) => {
       const active = activeConversationRef.current;
       if (active && sameId(active._id, conversationId)) {
@@ -216,31 +244,28 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
       }
     };
 
-    // Typing indicators — auto-clear after 3s if stop event is missed
-    const handleUserTyping = ({ conversationId }) => {
+    const handleUserTyping = ({ conversationId, userId }) => {
       const active = activeConversationRef.current;
-      if (active && sameId(active._id, conversationId)) {
-        setIsOtherUserTyping(true);
-        if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
-        remoteTypingClearRef.current = setTimeout(() => {
-          setIsOtherUserTyping(false);
-        }, 3000);
-      }
+      if (!active || !sameId(active._id, conversationId)) return;
+      if (sameId(userId, currentUserIdStr)) return;
+      setIsOtherUserTyping(true);
+      if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
+      remoteTypingClearRef.current = setTimeout(() => setIsOtherUserTyping(false), 2800);
     };
 
-    const handleUserStopTyping = ({ conversationId }) => {
+    const handleUserStopTyping = ({ conversationId, userId }) => {
       const active = activeConversationRef.current;
-      if (active && sameId(active._id, conversationId)) {
-        setIsOtherUserTyping(false);
-        if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
-      }
+      if (!active || !sameId(active._id, conversationId)) return;
+      if (sameId(userId, currentUserIdStr)) return;
+      setIsOtherUserTyping(false);
+      if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
     };
 
     const handleSocketConnected = () => {
       refreshOnlineStaff();
       const active = activeConversationRef.current;
-      if (active?._id) {
-        socket.emit("chat:join_conversation", { conversationId: active._id });
+      if (active?._id && socket) {
+        socket.emit("chat:join_conversation", { conversationId: String(active._id) });
       }
     };
 
@@ -248,6 +273,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
     subscribe("chat:online_staff_list", handleOnlineStaffList);
     subscribe("chat:new_message", handleNewMessage);
     subscribe("chat:incoming_message", handleIncomingMessage);
+    subscribe("chat:message_sent", handleMessageSent);
     subscribe("chat:messages_read", handleMessagesRead);
     subscribe("chat:user_typing", handleUserTyping);
     subscribe("chat:user_stop_typing", handleUserStopTyping);
@@ -258,72 +284,95 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
       unsubscribe("chat:online_staff_list", handleOnlineStaffList);
       unsubscribe("chat:new_message", handleNewMessage);
       unsubscribe("chat:incoming_message", handleIncomingMessage);
+      unsubscribe("chat:message_sent", handleMessageSent);
       unsubscribe("chat:messages_read", handleMessagesRead);
       unsubscribe("chat:user_typing", handleUserTyping);
       unsubscribe("chat:user_stop_typing", handleUserStopTyping);
       unsubscribe("socketConnected", handleSocketConnected);
       if (remoteTypingClearRef.current) clearTimeout(remoteTypingClearRef.current);
     };
-  }, [socket, currentUserIdStr, subscribe, unsubscribe]);
+  }, [socket, isConnected, currentUserIdStr, subscribe, unsubscribe]);
 
-  // Load messages when active conversation changes
+  // Load messages when active conversation changes + soft poll while open
   useEffect(() => {
     if (!activeConversation) {
       setIsOtherUserTyping(false);
       return;
     }
 
-    // Join conversation room in socket
+    const conversationId = String(activeConversation._id);
+    ensureConnected?.();
+
     if (socket) {
-      socket.emit("chat:join_conversation", { conversationId: activeConversation._id });
+      socket.emit("chat:join_conversation", { conversationId });
     }
 
-    const loadMessages = async () => {
-      setLoadingMessages(true);
-      setIsOtherUserTyping(false);
+    const loadMessages = async ({ silent = false } = {}) => {
+      if (!silent) setLoadingMessages(true);
       try {
-        const data = await chatService.getMessages(activeConversation._id, 1, 60);
-        setMessages(data.messages || []);
-        // Reset unread count locally
+        const data = await chatService.getMessages(conversationId, 1, 60);
+        const next = data.messages || [];
+        setMessages((prev) => {
+          // Keep optimistic temps that aren't confirmed yet
+          const temps = prev.filter((m) => String(m._id || "").startsWith("temp-"));
+          if (!temps.length) return next;
+          const merged = [...next];
+          temps.forEach((t) => {
+            const already = merged.some(
+              (m) =>
+                sameId(m.sender, t.sender) &&
+                (m.text || "") === (t.text || "") &&
+                Math.abs(new Date(m.createdAt) - new Date(t.createdAt)) < 15000
+            );
+            if (!already) merged.push(t);
+          });
+          return merged;
+        });
         setConversations((prev) =>
           prev.map((c) =>
-            sameId(c._id, activeConversation._id) ? { ...c, unreadCount: 0 } : c
+            sameId(c._id, conversationId) ? { ...c, unreadCount: 0 } : c
           )
         );
-        setTimeout(() => scrollToBottom("auto"), 100);
+        if (!silent) setTimeout(() => scrollToBottom("auto"), 80);
       } catch (err) {
         console.error("Error loading chat messages:", err);
       } finally {
-        setLoadingMessages(false);
+        if (!silent) setLoadingMessages(false);
       }
     };
 
     loadMessages();
 
+    // Soft poll: catches anything missed if socket briefly drops
+    const poll = setInterval(() => {
+      loadMessages({ silent: true });
+    }, isConnected ? 8000 : 3000);
+
     return () => {
+      clearInterval(poll);
       if (socket) {
-        socket.emit("chat:leave_conversation", { conversationId: activeConversation._id });
+        socket.emit("chat:leave_conversation", { conversationId });
       }
     };
-  }, [activeConversation?._id, socket]);
+  }, [activeConversation?._id, socket, isConnected]);
 
   // Handle typing debounce
   const handleInputChange = (e) => {
     setMessageText(e.target.value);
 
-    if (socket && activeConversation) {
+    if (socket?.connected && activeConversation) {
       socket.emit("chat:typing", {
-        conversationId: activeConversation._id,
+        conversationId: String(activeConversation._id),
         recipientId: activeConversation.otherParticipant?._id,
       });
 
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         socket.emit("chat:stop_typing", {
-          conversationId: activeConversation._id,
+          conversationId: String(activeConversation._id),
           recipientId: activeConversation.otherParticipant?._id,
         });
-      }, 1500);
+      }, 1200);
     }
   };
 
@@ -361,15 +410,29 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
       loanRef: selectedLoan,
     };
 
-    // Clear input fields immediately for responsive feel
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const optimistic = {
+      _id: tempId,
+      conversationId: activeConversation._id,
+      sender: { _id: currentUserIdStr, firstName: currentUser?.firstName, lastName: currentUser?.lastName },
+      recipient: activeConversation.otherParticipant,
+      text: trimmed,
+      attachments: pendingAttachments,
+      loanRef: selectedLoan,
+      status: "SENT",
+      createdAt: new Date().toISOString(),
+      pending: true,
+    };
+
     setMessageText("");
     setPendingAttachments([]);
     setSelectedLoan(null);
+    setMessages((prev) => [...prev, optimistic]);
+    scrollToBottom();
 
-    // Stop typing indicator for the other user
-    if (socket && activeConversation) {
+    if (socket?.connected) {
       socket.emit("chat:stop_typing", {
-        conversationId: activeConversation._id,
+        conversationId: String(activeConversation._id),
         recipientId: activeConversation.otherParticipant?._id,
       });
     }
@@ -378,12 +441,11 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
       const data = await chatService.sendMessage(activeConversation._id, payload);
       if (data.message) {
         setMessages((prev) => {
-          if (prev.some((m) => sameId(m._id, data.message._id))) return prev;
-          return [...prev, data.message];
+          const withoutTemp = prev.filter((m) => m._id !== tempId);
+          if (withoutTemp.some((m) => sameId(m._id, data.message._id))) return withoutTemp;
+          return [...withoutTemp, data.message];
         });
         scrollToBottom();
-
-        // Bump conversation preview locally
         setConversations((prev) =>
           prev.map((c) =>
             sameId(c._id, activeConversation._id)
@@ -404,6 +466,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
       }
     } catch (err) {
       console.error("Failed to send message:", err);
+      setMessages((prev) => prev.filter((m) => m._id !== tempId));
       alert("Failed to send message. Please try again.");
     }
   };
@@ -696,9 +759,11 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
                 <div className="flex items-center space-x-3 text-xs text-slate-500">
                   <span
                     className={`flex items-center font-medium ${
-                      isUserOnline(onlineUserIds, activeConversation.otherParticipant?._id)
-                        ? "text-emerald-600"
-                        : "text-slate-400"
+                      isOtherUserTyping
+                        ? "text-teal-600"
+                        : isUserOnline(onlineUserIds, activeConversation.otherParticipant?._id)
+                          ? "text-emerald-600"
+                          : "text-slate-400"
                     }`}
                   >
                     ●{" "}
@@ -708,6 +773,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
                         ? "Online"
                         : "Offline"}
                   </span>
+                  <ChatConnectionPill isConnected={isConnected} />
                   {activeConversation.otherParticipant?.employeeId && (
                     <span className="font-mono text-slate-500">
                       ID: {activeConversation.otherParticipant?.employeeId}
@@ -938,16 +1004,7 @@ export default function ChatDashboard({ currentRole = "SUPER_ADMIN" }) {
 
             {/* Typing indicator */}
             {isOtherUserTyping && (
-              <div className="flex items-center space-x-2 text-xs text-slate-500 italic">
-                <div className="flex space-x-1 items-center bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-2xs">
-                  <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                  <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce" />
-                </div>
-                <span>
-                  {activeConversation.otherParticipant?.firstName} is typing...
-                </span>
-              </div>
+              <TypingBubble name={activeConversation.otherParticipant?.firstName} />
             )}
 
             <div ref={messagesEndRef} />

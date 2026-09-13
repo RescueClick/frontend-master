@@ -1,52 +1,56 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import socketManager from "../utils/socket";
 
 export const useSocket = () => {
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(() => socketManager.getIsConnected());
+  const [socket, setSocket] = useState(() => socketManager.getSocket());
   const listenersRef = useRef([]);
 
   useEffect(() => {
-    console.log("🔌 useSocket: Initializing socket connection");
-    
-    // Don't connect here - SocketProvider handles connection
-    // Just check status and listen for changes
-    const checkConnection = () => {
-      const connected = socketManager.getIsConnected();
-      console.log("🔌 useSocket: Socket connection status:", connected);
-      setIsConnected(connected);
-    };
-    
-    // Check initial status
-    checkConnection();
-    
-    // Don't try to connect - let SocketProvider handle it
-    // This prevents multiple connection attempts
+    // Connect (or reconnect) whenever a staff/partner token is available
+    const sock = socketManager.ensureConnected();
+    setSocket(sock || socketManager.getSocket());
+    setIsConnected(socketManager.getIsConnected());
 
-    // Listen for connection status
     const handleConnect = () => {
-      console.log("✅ useSocket: Socket connected event received");
       setIsConnected(true);
+      setSocket(socketManager.getSocket());
     };
     const handleDisconnect = () => {
-      console.log("❌ useSocket: Socket disconnected event received");
       setIsConnected(false);
+      setSocket(socketManager.getSocket());
     };
 
     socketManager.on("socketConnected", handleConnect);
     socketManager.on("socketDisconnected", handleDisconnect);
 
-    // Check initial connection status
-    const initialStatus = socketManager.getIsConnected();
-    console.log("🔌 useSocket: Initial connection status:", initialStatus);
-    setIsConnected(initialStatus);
+    // Retry if login happens after first mount (token appears in storage)
+    const retryTimer = setInterval(() => {
+      if (!socketManager.getIsConnected() && socketManager.getToken()) {
+        socketManager.ensureConnected();
+        setSocket(socketManager.getSocket());
+      }
+    }, 4000);
+
+    const onStorage = () => {
+      if (socketManager.getToken()) {
+        socketManager.ensureConnected();
+        setSocket(socketManager.getSocket());
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    // Custom event fired by login flows in some apps
+    window.addEventListener("auth-changed", onStorage);
 
     return () => {
+      clearInterval(retryTimer);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("auth-changed", onStorage);
       socketManager.off("socketConnected", handleConnect);
       socketManager.off("socketDisconnected", handleDisconnect);
     };
   }, []);
 
-  // Cleanup listeners on unmount
   useEffect(() => {
     return () => {
       listenersRef.current.forEach(({ event, callback }) => {
@@ -56,24 +60,34 @@ export const useSocket = () => {
     };
   }, []);
 
-  const subscribe = (event, callback) => {
+  const subscribe = useCallback((event, callback) => {
     socketManager.on(event, callback);
     listenersRef.current.push({ event, callback });
-  };
+  }, []);
 
-  const unsubscribe = (event, callback) => {
+  const unsubscribe = useCallback((event, callback) => {
     socketManager.off(event, callback);
     listenersRef.current = listenersRef.current.filter(
       (listener) => !(listener.event === event && listener.callback === callback)
     );
-  };
+  }, []);
+
+  const emit = useCallback((event, data, ack) => {
+    return socketManager.emitToServer(event, data, ack);
+  }, []);
 
   return {
     isConnected,
-    socket: socketManager.getSocket(),
+    socket,
     subscribe,
     unsubscribe,
-    emit: socketManager.emitToServer.bind(socketManager),
+    emit,
+    ensureConnected: () => {
+      const s = socketManager.ensureConnected();
+      setSocket(s || socketManager.getSocket());
+      setIsConnected(socketManager.getIsConnected());
+      return s;
+    },
     notifyApplicationStatusChanged: socketManager.notifyApplicationStatusChanged.bind(socketManager),
     notifyNewApplication: socketManager.notifyNewApplication.bind(socketManager),
     notifyDocumentUploaded: socketManager.notifyDocumentUploaded.bind(socketManager),

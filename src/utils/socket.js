@@ -7,198 +7,159 @@ class SocketManager {
     this.socket = null;
     this.isConnected = false;
     this.listeners = new Map();
+    this.boundSocketEvents = new Set();
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
+    this.maxReconnectAttempts = 20;
+    this._connecting = false;
   }
 
-  connect() {
-    // If socket exists and is connected, return it
-    if (this.socket?.connected) {
-      return this.socket;
-    }
-
-    // If socket exists but not connected, disconnect it first
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
-
+  getToken() {
     const authData = getAuthData();
-    const token =
+    return (
       authData?.adminToken ||
       authData?.asmToken ||
       authData?.rsmToken ||
       authData?.rmToken ||
       authData?.partnerToken ||
-      authData?.customerToken;
+      authData?.customerToken ||
+      null
+    );
+  }
 
+  getSocketUrl() {
+    // Dev: same-origin so Vite proxies /socket.io (avoids CORS)
+    if (import.meta.env.DEV && typeof window !== "undefined") {
+      return window.location.origin;
+    }
+
+    let socketUrl = backendurl.replace("/api", "").replace(/\/+$/, "");
+    if (!socketUrl.includes("://")) {
+      socketUrl = `http://${socketUrl}`;
+    }
+    return socketUrl;
+  }
+
+  connect() {
+    if (this.socket?.connected) {
+      return this.socket;
+    }
+
+    const token = this.getToken();
     if (!token) {
       return null;
     }
 
-    // Dev: connect via Vite same-origin origin so /socket.io is proxied (see vite.config.js) — avoids CORS
-    let socketUrl;
-    if (import.meta.env.DEV && typeof window !== "undefined") {
-      socketUrl = window.location.origin;
-    } else {
-      // Extract base URL from backendurl
-      socketUrl = backendurl.replace("/api", "");
-      // Ensure proper URL format for socket.io
-      socketUrl = socketUrl.replace(/\/+$/, "");
-      if (socketUrl.includes("://")) {
-        socketUrl = socketUrl;
-      } else if (socketUrl.match(/^\d+\.\d+\.\d+\.\d+/)) {
-        socketUrl = `http://${socketUrl}`;
-      } else if (socketUrl.includes("localhost") || socketUrl.includes("127.0.0.1")) {
-        socketUrl = `http://${socketUrl}`;
-      } else {
-        socketUrl = `http://${socketUrl}`;
+    // Already connecting / existing instance — reuse and ensure handlers
+    if (this.socket && !this.socket.connected) {
+      // Update auth token in case login changed
+      this.socket.auth = { token };
+      if (!this._connecting) {
+        this._connecting = true;
+        this.socket.connect();
       }
+      return this.socket;
     }
 
+    if (this._connecting) {
+      return this.socket;
+    }
+
+    this._connecting = true;
+    const socketUrl = this.getSocketUrl();
+
     this.socket = io(socketUrl, {
-      auth: {
-        token: token,
-      },
-      // Prefer websocket for low-latency realtime chat; fall back to polling
-      transports: ["websocket", "polling"],
+      auth: { token },
+      // Polling first is more reliable through Vite proxy; then upgrades
+      transports: ["polling", "websocket"],
+      upgrade: true,
       reconnection: true,
-      reconnectionDelay: 1000,
+      reconnectionDelay: 800,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: this.maxReconnectAttempts,
       timeout: 20000,
       forceNew: false,
+      autoConnect: true,
     });
 
     this.setupEventHandlers();
+    this.rebindDynamicEvents();
 
     return this.socket;
+  }
+
+  /**
+   * Ensure socket is connected after login / route changes.
+   */
+  ensureConnected() {
+    const token = this.getToken();
+    if (!token) return null;
+
+    if (this.socket?.connected) return this.socket;
+
+    // Token changed (different role login) — rebuild connection
+    if (this.socket && this.socket.auth?.token !== token) {
+      this.socket.auth = { token };
+      this.disconnect(false);
+    }
+
+    return this.connect();
   }
 
   setupEventHandlers() {
     if (!this.socket) return;
 
+    this.socket.off("connect");
+    this.socket.off("disconnect");
+    this.socket.off("connect_error");
+
     this.socket.on("connect", () => {
       this.isConnected = true;
+      this._connecting = false;
       this.reconnectAttempts = 0;
-      this.emit("socketConnected", { connected: true });
-      
-      // Verify connection by emitting a test event
-      this.socket.emit("ping", { timestamp: Date.now() });
+      this.rebindDynamicEvents();
+      this.emit("socketConnected", { connected: true, socketId: this.socket.id });
     });
 
     this.socket.on("disconnect", (reason) => {
       this.isConnected = false;
+      this._connecting = false;
       this.emit("socketDisconnected", { reason });
     });
 
     this.socket.on("connect_error", (error) => {
       this.isConnected = false;
+      this._connecting = false;
+      this.reconnectAttempts += 1;
       this.emit("socketDisconnected", { reason: error.message });
-      this.reconnectAttempts++;
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         this.emit("socketConnectionFailed", { error: error.message });
-      } else {
       }
     });
 
-    // Listen for authentication success/failure
-    this.socket.on("authenticated", () => {});
-
-    this.socket.on("unauthorized", (error) => {});
-
-    // Application Events
-    this.socket.on("applicationUpdated", (data) => {
-      this.emit("applicationUpdated", data);
-    });
-
-    this.socket.on("newApplication", (data) => {
-      this.emit("newApplication", data);
-    });
-
-    // Document Events
-    this.socket.on("documentUploaded", (data) => {
-      this.emit("documentUploaded", data);
-    });
-
-    this.socket.on("documentStatusChanged", (data) => {
-      this.emit("documentStatusChanged", data);
-    });
-
-    // Partner Events
-    this.socket.on("partnerStatusChanged", (data) => {
-      this.emit("partnerStatusChanged", data);
-    });
-
-    this.socket.on("newPartnerRegistered", (data) => {
-      this.emit("newPartnerRegistered", data);
-    });
-
-    // Customer Events
-    this.socket.on("newCustomerRegistered", (data) => {
-      this.emit("newCustomerRegistered", data);
-    });
-
-    // Payout Events
-    this.socket.on("payoutStatusChanged", (data) => {
-      this.emit("payoutStatusChanged", data);
-    });
-
-    this.socket.on("incentiveStatusChanged", (data) => {
-      this.emit("incentiveStatusChanged", data);
-    });
-
-    // General Notification Event
-    this.socket.on("notification", (data) => {
-      this.emit("notification", data);
-    });
-
-    // Target Events
-    this.socket.on("targetUpdated", (data) => {
-      this.emit("targetUpdated", data);
-    });
-
-    // Dashboard Updates
-    this.socket.on("dashboardUpdate", (data) => {
-      this.emit("dashboardUpdate", data);
-    });
-
-    // Banners & Promos
-    this.socket.on("bannersUpdated", (data) => {
-      this.emit("bannersUpdated", data);
-    });
-
-    // Partner Levels & Milestones
-    this.socket.on("partnerLevelsUpdated", (data) => {
-      this.emit("partnerLevelsUpdated", data);
-    });
-
-    // Referral Banners & Benefits
-    this.socket.on("referralBannersUpdated", (data) => {
-      this.emit("referralBannersUpdated", data);
-    });
-
-    // Referral Reward Amounts & General Referral Updates
-    this.socket.on("referralRewardAmountsUpdated", (data) => {
-      this.emit("referralRewardAmountsUpdated", data);
-    });
-
-    this.socket.on("referralUpdated", (data) => {
-      this.emit("referralUpdated", data);
-    });
-
-    // User Online/Offline
-    this.socket.on("userOnline", (data) => {
-      this.emit("userOnline", data);
-    });
-
-    this.socket.on("userOffline", (data) => {
-      this.emit("userOffline", data);
-    });
-
-    // ========== INTERNAL STAFF CHAT (realtime) ==========
-    // Must forward these so useSocket().subscribe("chat:*") receives them
-    const chatEvents = [
+    // Core app events (always bound)
+    const coreEvents = [
+      "authenticated",
+      "unauthorized",
+      "applicationUpdated",
+      "newApplication",
+      "documentUploaded",
+      "documentStatusChanged",
+      "partnerStatusChanged",
+      "newPartnerRegistered",
+      "newCustomerRegistered",
+      "payoutStatusChanged",
+      "incentiveStatusChanged",
+      "notification",
+      "targetUpdated",
+      "dashboardUpdate",
+      "bannersUpdated",
+      "partnerLevelsUpdated",
+      "referralBannersUpdated",
+      "referralRewardAmountsUpdated",
+      "referralUpdated",
+      "userOnline",
+      "userOffline",
+      // Staff chat
       "chat:presence",
       "chat:online_staff_list",
       "chat:new_message",
@@ -208,79 +169,94 @@ class SocketManager {
       "chat:user_typing",
       "chat:user_stop_typing",
     ];
-    chatEvents.forEach((eventName) => {
-      this.socket.on(eventName, (data) => {
-        this.emit(eventName, data);
-      });
+
+    coreEvents.forEach((eventName) => {
+      this.bindSocketEvent(eventName);
     });
   }
 
-  // Emit event to server
-  emitToServer(event, data) {
-    if (this.socket?.connected) {
-      this.socket.emit(event, data);
-    } else {
+  bindSocketEvent(eventName) {
+    if (!this.socket || this.boundSocketEvents.has(eventName)) return;
+    this.boundSocketEvents.add(eventName);
+    this.socket.on(eventName, (data) => {
+      this.emit(eventName, data);
+    });
+  }
+
+  rebindDynamicEvents() {
+    // Re-bind any events that listeners registered before socket existed
+    for (const eventName of this.listeners.keys()) {
+      this.bindSocketEvent(eventName);
     }
   }
 
-  // Listen to custom events (internal event system)
+  emitToServer(event, data, ack) {
+    if (this.socket?.connected) {
+      if (typeof ack === "function") {
+        this.socket.emit(event, data, ack);
+      } else {
+        this.socket.emit(event, data);
+      }
+      return true;
+    }
+    return false;
+  }
+
   on(event, callback) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
     this.listeners.get(event).push(callback);
+    // Bind on live socket so late subscribers still receive server events
+    this.bindSocketEvent(event);
   }
 
-  // Remove listener
   off(event, callback) {
-    if (this.listeners.has(event)) {
-      const callbacks = this.listeners.get(event);
-      const index = callbacks.indexOf(callback);
-      if (index > -1) {
-        callbacks.splice(index, 1);
-      }
-    }
+    if (!this.listeners.has(event)) return;
+    const callbacks = this.listeners.get(event);
+    const index = callbacks.indexOf(callback);
+    if (index > -1) callbacks.splice(index, 1);
   }
 
-  // Emit internal event to listeners
   emit(eventName, data) {
-    if (this.listeners.has(eventName)) {
-      this.listeners.get(eventName).forEach((callback) => {
-        try {
-          callback(data);
-        } catch (error) {
-        }
-      });
-    }
+    const callbacks = this.listeners.get(eventName);
+    if (!callbacks?.length) return;
+    callbacks.forEach((callback) => {
+      try {
+        callback(data);
+      } catch (error) {
+        console.error(`Socket listener error (${eventName}):`, error);
+      }
+    });
   }
 
-  // Disconnect socket
-  disconnect() {
+  disconnect(clearListeners = true) {
     if (this.socket) {
+      this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
-      this.isConnected = false;
+    }
+    this.isConnected = false;
+    this._connecting = false;
+    this.boundSocketEvents.clear();
+    if (clearListeners) {
       this.listeners.clear();
     }
   }
 
-  // Reconnect socket
   reconnect() {
-    this.disconnect();
+    this.disconnect(false);
     return this.connect();
   }
 
-  // Get socket instance
   getSocket() {
     return this.socket;
   }
 
-  // Check if connected
   getIsConnected() {
-    return this.isConnected && this.socket?.connected;
+    return this.isConnected && !!this.socket?.connected;
   }
 
-  // Application-specific methods
   notifyApplicationStatusChanged(applicationId, newStatus, oldStatus) {
     this.emitToServer("applicationStatusChanged", { applicationId, newStatus, oldStatus });
   }
@@ -330,7 +306,6 @@ class SocketManager {
   }
 }
 
-// Create singleton instance
 const socketManager = new SocketManager();
 
 export default socketManager;

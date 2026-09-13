@@ -1,52 +1,41 @@
 import { useEffect } from "react";
 import socketManager from "../utils/socket";
-import { useSocket } from "../hooks/useSocket";
 
-// Socket Provider Component - Initialize socket connection on app load
+/**
+ * Keeps a single Socket.IO connection alive for the whole app.
+ * Reconnects after login when a token becomes available.
+ */
 export const SocketProvider = ({ children }) => {
-  const { isConnected } = useSocket();
-
   useEffect(() => {
-    // Connect socket when app loads (only once)
-    const connectSocket = () => {
+    const tryConnect = () => {
       try {
-        // Check if already connected
-        if (socketManager.getIsConnected()) {
-          console.log("✅ SocketProvider: Socket already connected, skipping");
-          return;
-        }
-
-        console.log("🔌 SocketProvider: Attempting to connect socket...");
-        const socket = socketManager.connect();
-        if (socket) {
-          console.log(
-            "✅ SocketProvider: Socket connection initiated, socket ID:",
-            socket.id ?? "(pending — assigned after connect)",
-          );
-          
-          // Verify connection after a short delay
-          setTimeout(() => {
-            const connected = socketManager.getIsConnected();
-            console.log("🔌 SocketProvider: Connection status check:", connected);
-            if (!connected) {
-              console.warn("⚠️ SocketProvider: Socket not connected after delay, may need retry");
-            }
-          }, 2000);
-        } else {
-          console.warn("⚠️ SocketProvider: Socket connection returned null - may retry when token is available");
-        }
+        if (socketManager.getIsConnected()) return;
+        if (!socketManager.getToken()) return;
+        socketManager.ensureConnected();
       } catch (error) {
-        console.error("❌ SocketProvider: Failed to connect socket:", error);
+        console.error("SocketProvider connect failed:", error);
       }
     };
 
-    // Small delay to ensure token is available
-    const timer = setTimeout(connectSocket, 100);
+    tryConnect();
+    const bootTimer = setTimeout(tryConnect, 300);
+    const interval = setInterval(tryConnect, 5000);
 
-    // Keep connection alive - don't disconnect on unmount
+    const onAuthChanged = () => {
+      // Small delay so localStorage write settles
+      setTimeout(tryConnect, 150);
+    };
+
+    window.addEventListener("storage", onAuthChanged);
+    window.addEventListener("auth-changed", onAuthChanged);
+    window.addEventListener("focus", tryConnect);
+
     return () => {
-      clearTimeout(timer);
-      // Don't disconnect - keep connection alive during navigation
+      clearTimeout(bootTimer);
+      clearInterval(interval);
+      window.removeEventListener("storage", onAuthChanged);
+      window.removeEventListener("auth-changed", onAuthChanged);
+      window.removeEventListener("focus", tryConnect);
     };
   }, []);
 
