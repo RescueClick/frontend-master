@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 import { getAuthData } from "./localStorage";
-import { backendurl } from "../feature/urldata";
+import { backendOrigin, backendurl } from "../feature/urldata";
 
 class SocketManager {
   constructor() {
@@ -40,11 +40,17 @@ class SocketManager {
   }
 
   getSocketUrl() {
-    // Always hit the API host directly.
-    // Vite's /socket.io proxy often breaks (ECONNRESET/ECONNREFUSED) and kills realtime chat.
-    let socketUrl = backendurl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
+    // Same host as REST API (VITE_API_URL / production) — never hardcode localhost.
+    // Optional override: VITE_SOCKET_URL
+    const fromEnv = import.meta.env.VITE_SOCKET_URL;
+    if (fromEnv && String(fromEnv).trim()) {
+      return String(fromEnv).trim().replace(/\/+$/, "");
+    }
+
+    let socketUrl = backendOrigin || backendurl.replace(/\/api\/?$/, "");
+    socketUrl = String(socketUrl).replace(/\/+$/, "");
     if (!socketUrl.includes("://")) {
-      socketUrl = `http://${socketUrl}`;
+      socketUrl = `https://${socketUrl}`;
     }
     return socketUrl;
   }
