@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, Calendar, IndianRupee, Download, Trash2, KeyRound } from "lucide-react";
+import { X, Calendar, IndianRupee, Download, Trash2, KeyRound, Edit2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
@@ -21,6 +21,7 @@ import axios from "axios";
 import { loginAsUserThunk } from "../../../feature/thunks/adminThunks";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import { INDIAN_STATES } from "../../../utils/indianStates";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import AdminChangePasswordModal from "../../../components/shared/AdminChangePasswordModal";
@@ -52,7 +53,18 @@ export default function ASM() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingState, setLoading] = useState(false);
   const [passwordUser, setPasswordUser] = useState(null);
-  
+  const [editingAsm, setEditingAsm] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    region: "",
+    rsmId: "",
+    asmType: "",
+  });
+  const [editFormErrors, setEditFormErrors] = useState({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   const [updatingAsmId, setUpdatingAsmId] = useState(null);
 
@@ -84,9 +96,83 @@ export default function ASM() {
       toast.success(`${asmUser.firstName} ${asmUser.lastName} updated to ${typeNames[newType] || newType}!`);
       dispatch(fetchAsms(adminToken));
     } catch (err) {
-      toast.error(typeof err === "string" ? err : err?.message || "Failed to update specialty");
+      toast.error(
+        err?.response?.data?.message ||
+          (typeof err === "string" ? err : err?.message) ||
+          "Failed to update specialty"
+      );
     } finally {
       setUpdatingAsmId(null);
+    }
+  };
+
+  const handleStartEditAsm = (asmUser) => {
+    const parentId =
+      asmUser.rsmId?._id || asmUser.rsmId || asmUser.asmId?._id || asmUser.asmId || "";
+    setEditingAsm(asmUser);
+    setEditFormData({
+      firstName: asmUser.firstName || "",
+      lastName: asmUser.lastName || "",
+      phone: asmUser.phone || "",
+      email: asmUser.email || "",
+      region: asmUser.region || "",
+      rsmId: parentId ? String(parentId) : "",
+      asmType: asmUser.asmType || asmUser.rsmType || "",
+    });
+    setEditFormErrors({});
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+    if (editFormErrors[name]) {
+      setEditFormErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleSaveEditAsm = async (e) => {
+    e.preventDefault();
+    if (!editingAsm) return;
+
+    const errors = {};
+    if (!editFormData.firstName.trim()) errors.firstName = "First name is required";
+    if (!editFormData.lastName.trim()) errors.lastName = "Last name is required";
+    if (!editFormData.phone.trim()) errors.phone = "Phone is required";
+    if (!editFormData.email.trim()) errors.email = "Email is required";
+    if (!editFormData.asmType) errors.asmType = "Specialty type is required";
+
+    if (Object.keys(errors).length > 0) {
+      setEditFormErrors(errors);
+      return;
+    }
+
+    setEditSubmitting(true);
+    try {
+      const { adminToken } = getAuthData() || {};
+      await axios.patch(
+        `${backendurl}/admin/asm/${editingAsm._id}`,
+        {
+          firstName: editFormData.firstName.trim(),
+          lastName: editFormData.lastName.trim(),
+          phone: editFormData.phone.trim(),
+          email: editFormData.email.trim(),
+          region: editFormData.region,
+          rsmId: editFormData.rsmId || undefined,
+          asmType: editFormData.asmType,
+        },
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+      toast.success("ASM updated successfully!");
+      setEditingAsm(null);
+      dispatch(fetchAsms(adminToken));
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message ||
+          (typeof err === "string" ? err : err?.message) ||
+          "Failed to update ASM"
+      );
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -465,6 +551,14 @@ const handleLoginAs = (userId) => {
         <div className="flex h-full flex-wrap items-center gap-3">
           <button
             type="button"
+            className="rounded px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-1"
+            onClick={() => handleStartEditAsm(c)}
+          >
+            <Edit2 className="w-3 h-3" />
+            Edit Details
+          </button>
+          <button
+            type="button"
             className="text-xs font-medium text-slate-600 hover:text-brand-primary hover:underline"
             onClick={() =>
               navigate("/admin/analytics", {
@@ -754,6 +848,160 @@ const handleLoginAs = (userId) => {
         user={passwordUser}
         onClose={() => setPasswordUser(null)}
       />
+
+      {editingAsm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div
+              className="p-4 text-white flex items-center justify-between"
+              style={{ backgroundColor: colors.primary }}
+            >
+              <div>
+                <h3 className="text-lg font-bold">Edit Area Sales Manager</h3>
+                <p className="text-xs text-white/90">
+                  {editingAsm.firstName} {editingAsm.lastName} (
+                  {editingAsm.employeeId || "No Emp ID"})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingAsm(null)}
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditAsm} className="p-6 overflow-y-auto space-y-4 flex-1">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Specialty Type *
+                </label>
+                <select
+                  name="asmType"
+                  value={editFormData.asmType}
+                  onChange={handleEditInputChange}
+                  className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                >
+                  <option value="">Select type</option>
+                  <option value="PERSONAL">Personal Loan ASM</option>
+                  <option value="BUSINESS">Business Loan ASM</option>
+                  <option value="HOME_LAP">Home &amp; LAP Loan ASM</option>
+                </select>
+                {editFormErrors.asmType && (
+                  <p className="text-xs text-red-600 mt-1">{editFormErrors.asmType}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                  <input
+                    name="firstName"
+                    value={editFormData.firstName}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.firstName && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.firstName}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                  <input
+                    name="lastName"
+                    value={editFormData.lastName}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.lastName && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.lastName}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                  <input
+                    name="phone"
+                    value={editFormData.phone}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.phone && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.phone}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    name="email"
+                    type="email"
+                    value={editFormData.email}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {editFormErrors.email && (
+                    <p className="text-xs text-red-600 mt-0.5">{editFormErrors.email}</p>
+                  )}
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State / Region</label>
+                  <select
+                    name="region"
+                    value={editFormData.region}
+                    onChange={handleEditInputChange}
+                    className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  >
+                    <option value="">Select state</option>
+                    {INDIAN_STATES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {Array.isArray(rsms) && rsms.length > 0 && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reporting RSM
+                    </label>
+                    <select
+                      name="rsmId"
+                      value={editFormData.rsmId}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 text-sm border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    >
+                      <option value="">Select RSM</option>
+                      {rsms.map((r) => (
+                        <option key={r._id} value={r._id}>
+                          {r.firstName} {r.lastName} ({r.employeeId || "RSM"})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-gray-200 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingAsm(null)}
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="px-5 py-2 text-sm font-semibold rounded-lg text-white disabled:opacity-50 transition-colors"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  {editSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

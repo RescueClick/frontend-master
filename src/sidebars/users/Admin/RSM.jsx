@@ -560,6 +560,8 @@ export default function RSM() {
   };
 
   const handleStartEdit = (rsm) => {
+    const parentId =
+      rsm.asmId?._id || rsm.asmId || rsm.rsmId?._id || rsm.rsmId || "";
     setEditingRsm(rsm);
     setEditFormData({
       firstName: rsm.firstName || "",
@@ -567,8 +569,8 @@ export default function RSM() {
       phone: rsm.phone || "",
       email: rsm.email || "",
       region: rsm.region || "",
-      asmId: rsm.asmId || "",
-      rsmType: rsm.rsmType || "",
+      asmId: parentId ? String(parentId) : "",
+      rsmType: rsm.rsmType || rsm.asmType || "",
     });
     setEditFormErrors({});
   };
