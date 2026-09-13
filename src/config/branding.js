@@ -63,6 +63,28 @@ export const PARTNER_APP_PLAY_STORE_URL = String(
     "https://play.google.com/store/apps/details?id=com.dhansourcecapital.partner&hl=en_IN"
 ).trim();
 
+/** Customer Android app on Play Store (track / apply). Override with VITE_CUSTOMER_APP_PLAY_STORE_URL. */
+export const CUSTOMER_APP_PLAY_STORE_URL = String(
+  import.meta.env.VITE_CUSTOMER_APP_PLAY_STORE_URL ||
+    "https://play.google.com/store/apps/details?id=com.dhansourcecapital.customer&hl=en_IN"
+).trim();
+
+/**
+ * Set true only after customer app is live on Google Play.
+ * Until then, track pages show “how to search” instead of a details link.
+ */
+export const CUSTOMER_APP_ON_PLAY_STORE =
+  String(import.meta.env.VITE_CUSTOMER_APP_ON_PLAY_STORE || "false").toLowerCase() ===
+  "true";
+
+/** Exact name customers should type in Play Store search */
+export const CUSTOMER_APP_PLAY_SEARCH_NAME = "DhanSource Customer";
+
+/** Opens Play Store search results (works before the app is published) */
+export const CUSTOMER_APP_PLAY_SEARCH_URL = `https://play.google.com/store/search?q=${encodeURIComponent(
+  CUSTOMER_APP_PLAY_SEARCH_NAME
+)}&c=apps`;
+
 /** Match backend `appendPartnerShareUtm` for client-built fallback URLs */
 export function appendPartnerShareUtm(url, kind = "web") {
   if (!url || typeof url !== "string") return url;

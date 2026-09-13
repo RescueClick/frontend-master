@@ -1,26 +1,24 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
   Phone,
-  User,
   Calendar,
-  Info,
-  CheckCircle,
-  XCircle,
-  Clock,
   PlusCircle,
   LogOut,
   FileText,
-  Building2,
-  ShieldCheck,
   RefreshCw,
   ArrowLeft,
+  Smartphone,
+  ExternalLink,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData, clearAuthData } from "../../../utils/localStorage";
 import { getOriginalRole, backToAdmin } from "../../../utils/impersonation";
 import { useNavigate } from "react-router-dom";
 import NotificationBell from "../../../components/NotificationBell";
+import { CUSTOMER_APP_PLAY_STORE_URL, CUSTOMER_APP_ON_PLAY_STORE, CUSTOMER_APP_PLAY_SEARCH_NAME, CUSTOMER_APP_PLAY_SEARCH_URL, COMPANY_NAME } from "../../../config/branding";
 
 const LOAN_TYPE_LABELS = {
   PERSONAL: "Personal Loan (Salaried)",
@@ -32,140 +30,109 @@ const LOAN_TYPE_LABELS = {
   LAP: "Loan Against Property",
 };
 
-const statusColors = {
-  APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  AGREEMENT: "bg-teal-100 text-teal-800 border-teal-200",
-  REJECTED: "bg-rose-100 text-rose-800 border-rose-200",
-  DISBURSED: "bg-purple-100 text-purple-800 border-purple-200",
-  UNDER_REVIEW: "bg-blue-100 text-blue-800 border-blue-200",
-  SUBMITTED: "bg-amber-100 text-amber-800 border-amber-200",
-  DOC_COMPLETE: "bg-cyan-100 text-cyan-800 border-cyan-200",
-  DOC_INCOMPLETE: "bg-orange-100 text-orange-800 border-orange-200",
-  default: "bg-slate-100 text-slate-800 border-slate-200",
-};
-
-// Progress bar configuration
-const statusSteps = [
-  { key: "SUBMITTED", label: "Submitted", icon: CheckCircle },
-  { key: "UNDER_REVIEW", label: "Review", icon: Clock },
-  { key: "APPROVED", label: "Approved", icon: CheckCircle },
-  { key: "AGREEMENT", label: "Agreement", icon: CheckCircle },
-  { key: "DISBURSED", label: "Disbursed", icon: CheckCircle },
+/** Same stage flow as Partner Customers page */
+const LOAN_STAGES = [
+  {
+    id: 1,
+    title: "Documents Incomplete",
+    description: "Upload pending documents: Aadhaar, PAN, salary slip & bank statement",
+    bgColor: "#FEFCE8",
+    iconBg: "#CA8A04",
+    statuses: ["DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_SUBMITTED", "LOGIN"],
+  },
+  {
+    id: 2,
+    title: "Documents Complete",
+    description: "All required documents uploaded. Ready for review.",
+    bgColor: "#F0FDFA",
+    iconBg: "#0D9488",
+    statuses: ["DOC_COMPLETE"],
+  },
+  {
+    id: 3,
+    title: "Under Review",
+    description: "Your file is being reviewed for credit evaluation",
+    bgColor: "#EFF6FF",
+    iconBg: "#3B82F6",
+    statuses: ["UNDER_REVIEW"],
+  },
+  {
+    id: 4,
+    title: "Approved",
+    description: "Approved — waiting for agreement",
+    bgColor: "#F0FDFA",
+    iconBg: "#0D9488",
+    statuses: ["APPROVED"],
+  },
+  {
+    id: 5,
+    title: "Agreement",
+    description: "Agreement stage — final steps before disbursement",
+    bgColor: "#FEFCE8",
+    iconBg: "#CA8A04",
+    statuses: ["AGREEMENT"],
+  },
+  {
+    id: 6,
+    title: "Disbursed",
+    description: "Loan disbursed successfully",
+    bgColor: "#F0FDFA",
+    iconBg: "#0D9488",
+    statuses: ["DISBURSED"],
+  },
+  {
+    id: 7,
+    title: "Rejected",
+    description: "Application was declined",
+    bgColor: "#FEE2E2",
+    iconBg: "#EF4444",
+    statuses: ["REJECTED"],
+  },
 ];
 
-const getStatusProgress = (currentStatus) => {
-  const s = String(currentStatus || "").toUpperCase();
-  if (s === "REJECTED") {
-    return { currentStep: -1, isRejected: true };
-  }
-  if (s === "DOC_INCOMPLETE" || s === "DOC_COMPLETE" || s === "DOC_SUBMITTED" || s === "LOGIN") {
-    return { currentStep: 0, isRejected: false };
-  }
-  const currentIndex = statusSteps.findIndex((step) => step.key === s);
-  return { currentStep: currentIndex >= 0 ? currentIndex : 0, isRejected: false };
-};
+const STATUS_FILTERS = [
+  { key: "In-Progress", label: "In-Progress" },
+  { key: "Disbursed", label: "Disbursed" },
+  { key: "Rejected", label: "Rejected" },
+];
 
-const ProgressBar = ({ status }) => {
-  const { currentStep, isRejected } = getStatusProgress(status);
+function normalizeStatus(status) {
+  const s = String(status || "").toUpperCase();
+  return s === "DRAFT" ? "SUBMITTED" : s;
+}
 
-  if (isRejected) {
-    return (
-      <div className="mb-4">
-        <div className="flex items-center justify-center p-3 bg-rose-50 border border-rose-200 rounded-xl">
-          <XCircle className="w-5 h-5 text-rose-600 mr-2 shrink-0" />
-          <span className="text-rose-700 text-sm font-semibold">Application Declined / Rejected</span>
-        </div>
-      </div>
-    );
-  }
+function matchesTopFilter(app, filterKey) {
+  const status = normalizeStatus(app.status);
+  if (filterKey === "In-Progress") return !["DISBURSED", "REJECTED"].includes(status);
+  if (filterKey === "Disbursed") return status === "DISBURSED";
+  if (filterKey === "Rejected") return status === "REJECTED";
+  return true;
+}
 
-  return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between mb-2">
-        {statusSteps.map((step, index) => {
-          const Icon = step.icon;
-          const isCompleted = index <= currentStep;
-          const isCurrent = index === currentStep;
-
-          return (
-            <div key={step.key} className="flex flex-col items-center relative flex-1">
-              {/* Connection line */}
-              {index > 0 && (
-                <div
-                  className={`absolute left-0 top-3 w-full h-0.5 -z-10 ${
-                    index <= currentStep ? "bg-teal-500" : "bg-slate-200"
-                  }`}
-                  style={{ left: "-50%", width: "100%" }}
-                />
-              )}
-
-              {/* Step circle */}
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 text-[11px] font-bold ${
-                  isCompleted
-                    ? "bg-teal-600 text-white shadow-sm"
-                    : isCurrent
-                    ? "bg-teal-500 text-white ring-2 ring-teal-200 animate-pulse"
-                    : "bg-slate-200 text-slate-400"
-                }`}
-              >
-                {isCompleted ? <Icon className="w-3.5 h-3.5" /> : index + 1}
-              </div>
-
-              {/* Step label */}
-              <span
-                className={`text-[10px] sm:text-xs text-center font-medium ${
-                  isCompleted
-                    ? "text-teal-700 font-semibold"
-                    : isCurrent
-                    ? "text-teal-600 font-bold"
-                    : "text-slate-400"
-                }`}
-              >
-                {step.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Progress line */}
-      <div className="relative">
-        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500"
-            style={{
-              width: currentStep >= 0 ? `${((currentStep + 1) / statusSteps.length) * 100}%` : "0%",
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
+function appsInStage(apps, stage) {
+  return apps.filter((a) => stage.statuses.includes(normalizeStatus(a.status)));
+}
 
 const Customer = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("In-Progress");
+  const [selectedStage, setSelectedStage] = useState(null);
 
   const navigate = useNavigate();
-
   const { parentUser } = getAuthData();
   const isImpersonating = !!parentUser;
   const originalRole = getOriginalRole();
 
   useEffect(() => {
     const { customerToken } = getAuthData();
-    if (!customerToken) {
-      navigate("/LoginPage", { replace: true });
-    }
+    if (!customerToken) navigate("/LoginPage", { replace: true });
   }, [navigate]);
 
   const fetchApplications = async (isManual = false) => {
     const { customerToken } = getAuthData();
     if (!customerToken) return;
-
     try {
       if (isManual) setRefreshing(true);
       const res = await axios.get(`${backendurl}/customer/get-applications`, {
@@ -185,6 +152,36 @@ const Customer = () => {
     fetchApplications();
   }, []);
 
+  const filteredByTop = useMemo(
+    () => applications.filter((a) => matchesTopFilter(a, statusFilter)),
+    [applications, statusFilter]
+  );
+
+  const stagesWithCounts = useMemo(() => {
+    return LOAN_STAGES.map((stage) => ({
+      ...stage,
+      applications: appsInStage(filteredByTop, stage),
+      count: appsInStage(filteredByTop, stage).length,
+    })).filter((stage) => {
+      if (statusFilter === "In-Progress") return stage.id !== 6 && stage.id !== 7;
+      if (statusFilter === "Disbursed") return stage.id === 6;
+      if (statusFilter === "Rejected") return stage.id === 7;
+      return true;
+    });
+  }, [filteredByTop, statusFilter]);
+
+  const topCounts = useMemo(() => {
+    const c = {};
+    STATUS_FILTERS.forEach((f) => {
+      c[f.key] = applications.filter((a) => matchesTopFilter(a, f.key)).length;
+    });
+    return c;
+  }, [applications]);
+
+  const stageList = selectedStage
+    ? appsInStage(filteredByTop, selectedStage)
+    : [];
+
   const handleLogout = () => {
     clearAuthData();
     navigate("/LoginPage", { replace: true });
@@ -197,227 +194,292 @@ const Customer = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-inter">
-      {/* Top Header */}
-      <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
+      <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               My Loans
             </h1>
-            <p className="text-xs text-slate-500">Track real-time progress & sanctions</p>
+            <p className="text-xs text-slate-500">Track by stage — same as Partner flow</p>
           </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             {isImpersonating && originalRole && (
               <button
                 type="button"
                 onClick={() => backToAdmin(navigate)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition shadow-sm text-xs font-semibold"
-                title="Back to Admin Dashboard (exit all impersonations)"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-full text-xs font-semibold"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Admin</span>
+                <span className="hidden sm:inline">Back to Admin</span>
               </button>
             )}
-
             <button
               type="button"
               onClick={() => fetchApplications(true)}
-              className="p-2 text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"
-              title="Refresh"
+              className="p-2 text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin text-teal-600" : ""}`} />
             </button>
-
             <button
               type="button"
               onClick={() => navigate("/apply")}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-teal-600 text-white text-xs font-semibold"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Apply Loan</span>
+              Apply
             </button>
-
             <NotificationBell />
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-              title="Logout"
-            >
+            <button type="button" onClick={handleLogout} className="p-2 text-slate-400 hover:text-rose-600 rounded-lg">
               <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6">
-        {loading ? (
-          <div className="py-20 flex flex-col items-center justify-center text-slate-500">
-            <RefreshCw className="w-8 h-8 animate-spin text-teal-600 mb-3" />
-            <p className="text-sm font-medium">Loading your loan files...</p>
-          </div>
-        ) : applications.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-8 sm:p-12 text-center max-w-lg mx-auto shadow-sm my-6">
-            <div className="w-16 h-16 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-teal-100">
-              <FileText className="w-8 h-8" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900 mb-2">No Active Applications</h2>
-            <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-              You do not have any open loan files right now. Choose a loan product below and get pre-approved sanctions with fast digital processing.
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/apply")}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md transition"
-            >
-              <PlusCircle className="w-5 h-5" />
-              <span>Apply for a Loan Now</span>
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {applications.map((app, idx) => {
-              const statusClass = statusColors[app.status] || statusColors.default;
-              const loanName =
-                LOAN_TYPE_LABELS[app.loanType] || app.loanType || "Loan Application";
-              const partnerPhone = app?.partner?.phone || "";
-              const rmPhone = app?.rm?.phone || "";
-
+        {/* Partner-style status filters only */}
+        {!loading && applications.length > 0 && !selectedStage ? (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {STATUS_FILTERS.map((f) => {
+              const active = statusFilter === f.key;
+              const colorMap = {
+                "In-Progress": active
+                  ? "bg-green-600 border-green-600 text-white"
+                  : "bg-white border-green-600 text-green-700",
+                Disbursed: active
+                  ? "bg-blue-600 border-blue-600 text-white"
+                  : "bg-white border-blue-600 text-blue-700",
+                Rejected: active
+                  ? "bg-rose-600 border-rose-600 text-white"
+                  : "bg-white border-rose-600 text-rose-700",
+              };
               return (
-                <div
-                  key={app._id || idx}
-                  className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition"
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setStatusFilter(f.key)}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border-2 text-xs font-bold ${colorMap[f.key]}`}
                 >
-                  {/* Top Header Row */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs sm:text-sm font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md">
-                        #{app.appNo}
-                      </span>
-                      <span className="text-sm sm:text-base font-bold text-slate-900">
-                        {loanName}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${statusClass}`}
-                      >
-                        {app.status}
-                      </span>
-                      {app.formFillingDate && (
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {new Date(app.formFillingDate).toLocaleDateString("en-IN")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Progress Tracker */}
-                  <ProgressBar status={app.status} />
-
-                  {/* Financial Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase">
-                        Applied Amount
-                      </p>
-                      <p className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
-                        ₹
-                        {Number(
-                          app.appliedLoanAmount || app.customer?.loanAmount || 0
-                        ).toLocaleString("en-IN")}
-                      </p>
-                    </div>
-
-                    <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100">
-                      <p className="text-[11px] font-semibold text-emerald-700 uppercase">
-                        Sanctioned Amount
-                      </p>
-                      <p className="text-base sm:text-lg font-black text-emerald-800 mt-0.5">
-                        {app.approvedLoanAmount
-                          ? `₹${Number(app.approvedLoanAmount).toLocaleString("en-IN")}`
-                          : "Under Review"}
-                      </p>
-                    </div>
-
-                    <div className="col-span-2 sm:col-span-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase">
-                        Product Stage
-                      </p>
-                      <p className="text-xs sm:text-sm font-bold text-slate-800 mt-1">
-                        {app.status === "APPROVED"
-                          ? "Sanction Ready"
-                          : app.status === "AGREEMENT"
-                          ? "eNACH Pending"
-                          : app.status === "DISBURSED"
-                          ? "Disbursed to Bank"
-                          : "Verification In-Progress"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Underwriter Remarks */}
-                  {app.remarks && (
-                    <div className="bg-amber-50/70 border border-amber-200/60 rounded-xl p-3 mb-4 text-xs text-amber-900">
-                      <span className="font-bold">Officer Remarks: </span>
-                      <span>{app.remarks}</span>
-                    </div>
-                  )}
-
-                  {/* Assistance & Contact Row */}
-                  <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
-                    <div className="flex items-center gap-4">
-                      {app?.partner && (
-                        <div>
-                          <span className="text-slate-400">Advisor: </span>
-                          <span className="font-semibold text-slate-800">
-                            {app.partner.firstName} {app.partner.lastName}
-                          </span>
-                        </div>
-                      )}
-                      {app?.rm && (
-                        <div>
-                          <span className="text-slate-400">Manager: </span>
-                          <span className="font-semibold text-slate-800">
-                            {app.rm.firstName} {app.rm.lastName}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {partnerPhone && (
-                        <button
-                          type="button"
-                          onClick={() => handleCall(partnerPhone)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-semibold transition"
-                        >
-                          <Phone className="w-3.5 h-3.5 text-teal-600" />
-                          <span>Call Advisor</span>
-                        </button>
-                      )}
-                      {rmPhone && (
-                        <button
-                          type="button"
-                          onClick={() => handleCall(rmPhone)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold transition"
-                        >
-                          <Phone className="w-3.5 h-3.5 text-slate-600" />
-                          <span>Call Support</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  {f.label} ({topCounts[f.key] || 0})
+                </button>
               );
             })}
           </div>
+        ) : null}
+
+        {loading ? (
+          <div className="py-20 flex flex-col items-center text-slate-500">
+            <RefreshCw className="w-8 h-8 animate-spin text-teal-600 mb-3" />
+            <p className="text-sm font-medium">Loading...</p>
+          </div>
+        ) : applications.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center max-w-lg mx-auto">
+            <FileText className="w-10 h-10 text-teal-600 mx-auto mb-3" />
+            <h2 className="text-lg font-bold text-slate-900 mb-2">No loan files yet</h2>
+            <button
+              type="button"
+              onClick={() => navigate("/apply")}
+              className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-teal-600 text-white text-sm font-bold"
+            >
+              <PlusCircle className="w-4 h-4" /> Apply for Loan
+            </button>
+          </div>
+        ) : !selectedStage ? (
+          /* Partner-style stage cards */
+          <div className="space-y-2.5">
+            {stagesWithCounts.map((stage) => {
+              const empty = stage.count === 0;
+              return (
+                <button
+                  key={stage.id}
+                  type="button"
+                  disabled={empty}
+                  onClick={() => setSelectedStage(stage)}
+                  className={`w-full text-left rounded-xl border p-3.5 flex items-center gap-3 transition ${
+                    empty
+                      ? "bg-slate-50 border-slate-100 opacity-80 cursor-not-allowed"
+                      : "border-transparent shadow-sm hover:shadow-md"
+                  }`}
+                  style={{ backgroundColor: empty ? "#F8FAFC" : stage.bgColor }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                    style={{ backgroundColor: empty ? "#E2E8F0" : stage.iconBg, color: empty ? "#94A3B8" : "#fff" }}
+                  >
+                    {stage.id}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold ${empty ? "text-slate-500" : "text-slate-900"}`}>
+                      {stage.title}
+                    </p>
+                    <p className={`text-xs ${empty ? "text-slate-400" : "text-slate-600"}`}>
+                      No. of Applications: <span className="font-bold">{stage.count}</span>
+                    </p>
+                    {!empty ? (
+                      <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{stage.description}</p>
+                    ) : null}
+                    {!empty ? (
+                      <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600 mt-1">
+                        View files <ChevronRight className="w-3.5 h-3.5" />
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          /* Stage detail list */
+          <div>
+            <button
+              type="button"
+              onClick={() => setSelectedStage(null)}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-teal-700 mb-3 hover:underline"
+            >
+              <ChevronLeft className="w-4 h-4" /> Back to stages
+            </button>
+            <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4">
+              <h2 className="text-lg font-bold text-slate-900">
+                {selectedStage.title} ({stageList.length})
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">{selectedStage.description}</p>
+            </div>
+
+            {stageList.length === 0 ? (
+              <p className="text-center text-sm text-slate-500 py-10">No files in this stage</p>
+            ) : (
+              <div className="space-y-3">
+                {stageList.map((app) => {
+                  const loanName =
+                    LOAN_TYPE_LABELS[app.loanType] || app.loanType || "Loan";
+                  const applied = Number(
+                    app.appliedLoanAmount || app.customer?.loanAmount || 0
+                  );
+                  return (
+                    <div
+                      key={app._id || app.appNo}
+                      className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span className="font-mono text-xs font-bold bg-slate-100 px-2 py-1 rounded">
+                          #{app.appNo}
+                        </span>
+                        {app.formFillingDate ? (
+                          <span className="text-xs text-slate-400 flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {new Date(app.formFillingDate).toLocaleDateString("en-IN")}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="text-sm font-bold text-slate-900">{loanName}</p>
+                      <p className="text-sm text-slate-700 mt-1">
+                        Applied:{" "}
+                        <span className="font-bold">
+                          ₹{applied.toLocaleString("en-IN")}
+                        </span>
+                        {app.approvedLoanAmount ? (
+                          <>
+                            {" · "}Sanctioned:{" "}
+                            <span className="font-bold text-emerald-700">
+                              ₹{Number(app.approvedLoanAmount).toLocaleString("en-IN")}
+                            </span>
+                          </>
+                        ) : null}
+                      </p>
+                      {app.remarks ? (
+                        <p className="mt-2 text-xs bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 text-amber-900">
+                          <span className="font-bold">Remark: </span>
+                          {app.remarks}
+                        </p>
+                      ) : null}
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        {app?.partner?.phone ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCall(app.partner.phone)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-50 text-teal-800 font-semibold"
+                          >
+                            <Phone className="w-3.5 h-3.5" /> Call Advisor
+                          </button>
+                        ) : null}
+                        {app?.rm?.phone ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCall(app.rm.phone)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-800 font-semibold"
+                          >
+                            <Phone className="w-3.5 h-3.5" /> Call Support
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
+
+        <div className="mt-8 mb-4 rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-700 p-5 text-white">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                <Smartphone className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-black">
+                  {CUSTOMER_APP_ON_PLAY_STORE
+                    ? `Download ${COMPANY_NAME} Customer App`
+                    : `Get ${COMPANY_NAME} Customer App`}
+                </h3>
+                <p className="text-sm text-teal-50 mt-1">
+                  Track loan stages on your phone
+                </p>
+              </div>
+            </div>
+
+            {CUSTOMER_APP_ON_PLAY_STORE ? (
+              <a
+                href={CUSTOMER_APP_PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-teal-800 font-bold text-sm self-start"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Get it on Google Play
+              </a>
+            ) : (
+              <div className="rounded-xl bg-white/10 border border-white/20 p-4">
+                <p className="text-sm font-bold text-white mb-2">
+                  How to find the app on Google Play
+                </p>
+                <ol className="text-sm text-teal-50 space-y-1.5 list-decimal list-inside">
+                  <li>Open the <strong className="text-white">Play Store</strong> on your Android phone</li>
+                  <li>
+                    Tap Search and type:{" "}
+                    <span className="inline-block mt-1 px-2.5 py-1 rounded-md bg-white text-teal-900 font-black tracking-wide">
+                      {CUSTOMER_APP_PLAY_SEARCH_NAME}
+                    </span>
+                  </li>
+                  <li>Install the official {COMPANY_NAME} Customer app</li>
+                  <li>Sign in with the email &amp; password we sent you</li>
+                </ol>
+                <a
+                  href={CUSTOMER_APP_PLAY_SEARCH_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-teal-800 font-bold text-sm"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open Play Store Search
+                </a>
+                <p className="text-xs text-teal-100/80 mt-3">
+                  App is publishing soon. If search shows no result yet, keep using this Track page online.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );
