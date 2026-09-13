@@ -42,7 +42,6 @@ import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import PayoutStatusBadge from "../../../components/shared/PayoutStatusBadge";
 import PartnerInvoiceModal from "../../../components/shared/PartnerInvoiceModal";
-import InvoiceSettingsModal from "../../../components/shared/InvoiceSettingsModal";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -84,7 +83,6 @@ const AdminPendingPayout = () => {
 
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [invoiceModalRecord, setInvoiceModalRecord] = useState(null);
-  const [invoiceSettingsOpen, setInvoiceSettingsOpen] = useState(false);
   const [isSendingInvoiceId, setIsSendingInvoiceId] = useState(null);
 
   const [modalForm, setModalForm] = useState({
@@ -752,16 +750,6 @@ const AdminPendingPayout = () => {
 
                 <button
                   type="button"
-                  onClick={() => setInvoiceSettingsOpen(true)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 shadow-sm transition"
-                  title="Shared invoice company settings (payout + incentive)"
-                >
-                  <FileText className="w-3.5 h-3.5 text-teal-700" />
-                  <span>Invoice Settings</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => dispatch(fetchAdminCustomersPayOutPending())}
                   className="p-1.5 rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition"
                 >
@@ -961,30 +949,9 @@ const AdminPendingPayout = () => {
               {/* RIGHT COLUMN: Calculation, Section 194T TDS & Invoice */}
               <div className="md:col-span-7 bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 p-4 rounded-xl border border-emerald-100 flex flex-col justify-between space-y-3.5">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-                    <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs">
-                      <Calculator className="w-4 h-4 text-emerald-600" />
-                      <span>Commission &amp; Section 194T TDS Plan</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInvoiceModalRecord({
-                          ...selectedRecord,
-                          ...modalForm,
-                          grossAmount: modalForm.grossAmount,
-                          tdsAmount: modalForm.tdsAmount,
-                          netAmount: modalForm.netAmount,
-                          payoutAmount: modalForm.netAmount,
-                        });
-                        setInvoiceModalOpen(true);
-                      }}
-                      className="px-2 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg flex items-center gap-1 transition"
-                    >
-                      <FileText className="w-3 h-3" />
-                      <span>Preview Invoice</span>
-                    </button>
+                  <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs border-b border-slate-200/80 pb-2">
+                    <Calculator className="w-4 h-4 text-emerald-600" />
+                    <span>Commission &amp; TDS (this payout)</span>
                   </div>
 
                   {/* 1. COMMISSION INPUTS */}
@@ -1286,11 +1253,6 @@ const AdminPendingPayout = () => {
         onSuccess={() => {
           dispatch(fetchAdminCustomersPayOutPending());
         }}
-      />
-
-      <InvoiceSettingsModal
-        isOpen={invoiceSettingsOpen}
-        onClose={() => setInvoiceSettingsOpen(false)}
       />
     </div>
   );
