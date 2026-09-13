@@ -106,66 +106,94 @@ export default function Profile({
           ) : null}
         </div>
 
-        {data?.personalRsmName ? (
+        {/* Personal Loan ASM */}
+        {data?.personalAsmName || data?.personalRsmName ? (
           <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 space-y-1 text-left w-full">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <Users className="w-4 h-4 text-blue-600" />
-              Personal loan RSM
+              Personal Loan ASM
             </div>
-            <p className="text-sm font-medium text-gray-900">{data.personalRsmName}</p>
-            {data.personalRsmEmployeeId ? (
-              <p className="text-xs text-gray-600">ID: {data.personalRsmEmployeeId}</p>
+            <p className="text-sm font-medium text-gray-900">
+              {data.personalAsmName || data.personalRsmName}
+            </p>
+            {data.personalAsmEmployeeId || data.personalRsmEmployeeId ? (
+              <p className="text-xs text-gray-600">
+                ID: {data.personalAsmEmployeeId || data.personalRsmEmployeeId}
+              </p>
             ) : null}
-            {data.personalRsmPhone ? (
-              <p className="text-xs text-gray-600">Phone: {data.personalRsmPhone}</p>
+            {data.personalAsmPhone || data.personalRsmPhone ? (
+              <p className="text-xs text-gray-600">
+                Phone: {data.personalAsmPhone || data.personalRsmPhone}
+              </p>
             ) : null}
           </div>
         ) : null}
 
-        {data?.businessRsmName || data?.businessHomeRsmName ? (
+        {/* Business Loan ASM */}
+        {data?.businessAsmName || data?.businessRsmName || data?.businessHomeRsmName ? (
           <div className="rounded-xl border border-purple-100 bg-purple-50/50 p-4 space-y-1 text-left w-full">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <Users className="w-4 h-4 text-purple-600" />
-              Business loan RSM
+              Business Loan ASM
             </div>
-            <p className="text-sm font-medium text-gray-900">{data.businessRsmName || data.businessHomeRsmName}</p>
-            {data.businessRsmEmployeeId || data.businessHomeRsmEmployeeId ? (
-              <p className="text-xs text-gray-600">ID: {data.businessRsmEmployeeId || data.businessHomeRsmEmployeeId}</p>
+            <p className="text-sm font-medium text-gray-900">
+              {data.businessAsmName || data.businessRsmName || data.businessHomeRsmName}
+            </p>
+            {data.businessAsmEmployeeId || data.businessRsmEmployeeId || data.businessHomeRsmEmployeeId ? (
+              <p className="text-xs text-gray-600">
+                ID: {data.businessAsmEmployeeId || data.businessRsmEmployeeId || data.businessHomeRsmEmployeeId}
+              </p>
             ) : null}
-            {data.businessRsmPhone || data.businessHomeRsmPhone ? (
-              <p className="text-xs text-gray-600">Phone: {data.businessRsmPhone || data.businessHomeRsmPhone}</p>
+            {data.businessAsmPhone || data.businessRsmPhone || data.businessHomeRsmPhone ? (
+              <p className="text-xs text-gray-600">
+                Phone: {data.businessAsmPhone || data.businessRsmPhone || data.businessHomeRsmPhone}
+              </p>
             ) : null}
           </div>
         ) : null}
 
-        {data?.homeLapRsmName ? (
+        {/* Home & LAP Loan ASM */}
+        {data?.homeLapAsmName || data?.homeLapRsmName ? (
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 space-y-1 text-left w-full">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <Users className="w-4 h-4 text-emerald-600" />
-              Home &amp; LAP loan RSM
+              Home &amp; LAP Loan ASM
             </div>
-            <p className="text-sm font-medium text-gray-900">{data.homeLapRsmName}</p>
-            {data.homeLapRsmEmployeeId ? (
-              <p className="text-xs text-gray-600">ID: {data.homeLapRsmEmployeeId}</p>
+            <p className="text-sm font-medium text-gray-900">
+              {data.homeLapAsmName || data.homeLapRsmName}
+            </p>
+            {data.homeLapAsmEmployeeId || data.homeLapRsmEmployeeId ? (
+              <p className="text-xs text-gray-600">
+                ID: {data.homeLapAsmEmployeeId || data.homeLapRsmEmployeeId}
+              </p>
             ) : null}
-            {data.homeLapRsmPhone ? (
-              <p className="text-xs text-gray-600">Phone: {data.homeLapRsmPhone}</p>
+            {data.homeLapAsmPhone || data.homeLapRsmPhone ? (
+              <p className="text-xs text-gray-600">
+                Phone: {data.homeLapAsmPhone || data.homeLapRsmPhone}
+              </p>
             ) : null}
           </div>
         ) : null}
 
-        {data?.asmName || data?.asmEmployeeId ? (
-          <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 text-left w-full">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
+        {/* Senior Regional Sales Manager (RSM) */}
+        {data?.rsmName || data?.asmName || data?.asmEmployeeId ? (
+          <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-4 text-left w-full space-y-1">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <Users className="w-4 h-4 text-brand-primary" />
-              ASM
+              Regional Sales Manager (RSM)
             </div>
-            <p className="text-sm font-medium text-gray-900">{data.asmName ?? "—"}</p>
-            <p className="text-xs text-gray-600 mt-1">
-              Employee ID: {data.asmEmployeeId ?? "—"}
+            <p className="text-sm font-medium text-gray-900">
+              {data.rsmName || data.asmName || "—"}
             </p>
-            {data.asmPhone ? (
-              <p className="text-xs text-gray-600">Phone: {data.asmPhone}</p>
+            {data.rsmEmployeeId || data.asmEmployeeId ? (
+              <p className="text-xs text-gray-600">
+                Employee ID: {data.rsmEmployeeId || data.asmEmployeeId}
+              </p>
+            ) : null}
+            {data.rsmPhone || data.asmPhone ? (
+              <p className="text-xs text-gray-600">
+                Phone: {data.rsmPhone || data.asmPhone}
+              </p>
             ) : null}
           </div>
         ) : null}
