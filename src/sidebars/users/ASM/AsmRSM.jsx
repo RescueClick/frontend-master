@@ -131,15 +131,15 @@ export default function AsmRSM() {
     }
   }, [filteredRsms]);
 
-  // Handle view RSM analytics
+  // Handle view ASM analytics (RSM manages ASMs)
   const handleViewAnalytics = (rsm) => {
     const name = `${rsm.firstName || ""} ${rsm.lastName || ""}`.trim();
-    navigate("/asm/analytics", {
+    navigate("/rsm/analytics", {
       state: {
         id: rsm._id,
-        role: "RSM",
+        role: "ASM",
         name,
-        detail: rsm.rsmType || "Regional Sales Manager",
+        detail: rsm.asmType || rsm.rsmType || "Area Sales Manager",
       },
     });
   };
@@ -659,13 +659,13 @@ export default function AsmRSM() {
           dataSource={tableData}
           rowKey="_id"
           loading={loading}
-          locale={{ emptyText: "No RSMs found" }}
+          locale={{ emptyText: "No ASMs found" }}
         />
       </DashboardTablePage>
 
       <ActivationConfirmModal
         isOpen={!!rsmToActivate}
-        title="Activate RSM"
+        title="Activate ASM"
         message="Are you sure you want to activate"
         subjectName={`${rsmToActivate?.firstName || ""} ${rsmToActivate?.lastName || ""}`.trim()}
         confirmLabel="Activate"
@@ -675,17 +675,17 @@ export default function AsmRSM() {
 
       <ReassignmentDeactivateModal
         isOpen={!!rsmToDeactivate}
-        title="Deactivate RSM"
+        title="Deactivate ASM"
         subjectName={`${rsmToDeactivate?.firstName || ""} ${rsmToDeactivate?.lastName || ""}`.trim()}
         subjectMeta={
-          rsmToDeactivate?.rsmType
-            ? `RSM type: ${rsmToDeactivate.rsmType}`
+          (rsmToDeactivate?.asmType || rsmToDeactivate?.rsmType)
+            ? `ASM type: ${rsmToDeactivate.asmType || rsmToDeactivate.rsmType}`
             : ""
         }
-        warningText="RMs reporting to this RSM must be reassigned to another active RSM of the same loan type before deactivation. Select the replacement below."
+        warningText="RMs reporting to this ASM must be reassigned to another active ASM of the same loan type before deactivation. Select the replacement below."
         searchValue={replacementSearch}
         onSearchChange={setReplacementSearch}
-        searchPlaceholder="Search replacement RSM..."
+        searchPlaceholder="Search replacement ASM..."
         candidates={(rsms || [])
           .filter((r) => {
             if (!rsmToDeactivate || r._id === rsmToDeactivate._id || r.status !== "ACTIVE") return false;
