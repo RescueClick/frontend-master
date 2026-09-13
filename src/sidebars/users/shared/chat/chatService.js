@@ -164,6 +164,32 @@ export const chatService = {
     return res.data;
   },
 
+  // Force-download via API proxy (saves file; does not open in new tab)
+  downloadAttachment: async (url, name = "download") => {
+    const res = await axios.get(`${backendurl}/chat/download`, {
+      headers: getHeaders(),
+      params: { url, name },
+      responseType: "blob",
+    });
+
+    const contentType = res.headers["content-type"] || "";
+    if (contentType.includes("application/json")) {
+      const text = await res.data.text?.() || "";
+      throw new Error(text || "Download failed");
+    }
+
+    const blob = res.data instanceof Blob ? res.data : new Blob([res.data]);
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = name || "download";
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+  },
+
   // Search loans under the chat peer only (not whole DB)
   searchLoans: async (q, forUserId) => {
     const res = await axios.get(`${backendurl}/chat/search-loans`, {
