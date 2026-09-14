@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Search, Trash2, FileText, Award, CreditCard, Edit3, X, KeyRound, UserCheck, ChevronRight, AlertTriangle } from "lucide-react";
+import { Download, Search, Trash2, FileText, Award, CreditCard, Edit3, X, KeyRound, UserCheck, ChevronRight, AlertTriangle, FileWarning, RotateCcw, CheckCircle2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   activatePartner,
@@ -7,6 +7,7 @@ import {
   adminDeactivatePartner,
   rejectPartner,
   getUnassignedPartners,
+  requestPartnerDocReupload,
 } from "../../../feature/thunks/adminThunks";
 import { getAuthData,saveAuthData } from "../../../utils/localStorage";
 import axios from "axios";
@@ -111,6 +112,58 @@ export default function PartnerTable() {
   /** null | { mode: 'single', partner } | { mode: 'all', partners: [] } */
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
+  // KYC Review & Re-upload Request Modal State
+  const [kycModalPartner, setKycModalPartner] = useState(null);
+  const [selectedDocsToReject, setSelectedDocsToReject] = useState([]);
+  const [rejectionRemark, setRejectionRemark] = useState("");
+  const [isSendingReupload, setIsSendingReupload] = useState(false);
+
+  const handleOpenKycDocsModal = (p) => {
+    setKycModalPartner(p);
+    setSelectedDocsToReject([]);
+    setRejectionRemark(p.inactiveReason || p.docRejectionRemarks || "");
+  };
+
+  const handleToggleDocToReject = (docType) => {
+    setSelectedDocsToReject((prev) =>
+      prev.includes(docType) ? prev.filter((t) => t !== docType) : [...prev, docType]
+    );
+  };
+
+  const handleSendDocReupload = async () => {
+    if (!kycModalPartner?._id) return;
+    if (selectedDocsToReject.length === 0) {
+      toast.error("Please select at least one document to request re-upload for.");
+      return;
+    }
+    if (!rejectionRemark.trim()) {
+      toast.error("Please provide a remark explaining what is wrong with the document.");
+      return;
+    }
+
+    setIsSendingReupload(true);
+    try {
+      await dispatch(
+        requestPartnerDocReupload({
+          partnerId: kycModalPartner._id,
+          remarks: rejectionRemark.trim(),
+          rejectedDocTypes: selectedDocsToReject,
+        })
+      ).unwrap();
+
+      toast.success("Document re-upload request sent to partner!");
+      const { adminToken } = getAuthData();
+      if (adminToken) {
+        dispatch(fetchPartners(adminToken));
+      }
+      setKycModalPartner(null);
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : "Failed to send re-upload request.");
+    } finally {
+      setIsSendingReupload(false);
+    }
+  };
 
   useEffect(() => {
     const { adminToken } = getAuthData();
@@ -620,6 +673,15 @@ loginAsUser(userId, navigate);
         <div className="flex h-full flex-wrap items-center gap-1.5">
           <button
             type="button"
+            title="Review Partner KYC Documents & Request Re-upload"
+            className="inline-flex items-center gap-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 text-xs font-semibold transition-colors cursor-pointer border border-indigo-200"
+            onClick={() => handleOpenKycDocsModal(p)}
+          >
+            <FileWarning size={13} className="text-indigo-600" />
+            KYC Docs
+          </button>
+          <button
+            type="button"
             title="Partner Agreement"
             className="inline-flex items-center gap-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 text-xs font-semibold transition-colors"
             onClick={() => handleOpenAgreement(p)}
@@ -1012,6 +1074,183 @@ loginAsUser(userId, navigate);
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {/* Partner KYC Documents & Verification Modal */}
+        {Boolean(kycModalPartner) && (
+          <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans"
+            onClick={() => setKycModalPartner(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 relative overflow-y-auto max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <FileWarning className="text-brand-primary h-5 w-5" />
+                    Partner KYC & Registration Documents
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {kycModalPartner.firstName} {kycModalPartner.lastName} • {kycModalPartner.phone} • {kycModalPartner.email}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setKycModalPartner(null)}
+                  className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Status Info Banner */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-200 mb-4 text-xs">
+                <div>
+                  <span className="text-gray-500">Account Status: </span>
+                  <span className={`font-bold px-2 py-0.5 rounded ${
+                    kycModalPartner.status === "ACTIVE"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : kycModalPartner.status === "SUSPENDED"
+                      ? "bg-red-100 text-red-800"
+                      : "bg-amber-100 text-amber-800"
+                  }`}>
+                    {kycModalPartner.status || "PENDING"}
+                  </span>
+                </div>
+                {kycModalPartner.canReuploadDocs && (
+                  <span className="text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                    Re-upload Granted
+                  </span>
+                )}
+              </div>
+
+              {/* Registration Documents List */}
+              <div className="mb-4">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                  Uploaded Documents ({kycModalPartner.docs?.length || 0})
+                </h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {kycModalPartner.docs && kycModalPartner.docs.length > 0 ? (
+                    kycModalPartner.docs.map((doc, index) => {
+                      const isRejected =
+                        doc.status === "REJECTED" ||
+                        (kycModalPartner.rejectedDocTypes || []).includes(doc.docType);
+                      const isSelected = selectedDocsToReject.includes(doc.docType);
+
+                      return (
+                        <div
+                          key={index}
+                          className={`flex items-center justify-between p-2.5 rounded-lg border transition ${
+                            isRejected
+                              ? "bg-red-50/70 border-red-200"
+                              : isSelected
+                              ? "bg-amber-50 border-amber-300"
+                              : "bg-white border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none text-xs">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleDocToReject(doc.docType)}
+                              className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                            />
+                            <span className="font-semibold text-gray-800">
+                              {toDocLabel(doc.docType)}
+                            </span>
+                          </label>
+
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                isRejected
+                                  ? "bg-red-100 text-red-700"
+                                  : doc.status === "VERIFIED"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {isRejected ? "REJECTED" : doc.status || "PENDING"}
+                            </span>
+
+                            {doc.url ? (
+                              <a
+                                href={doc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 text-xs font-semibold hover:underline bg-blue-50 px-2 py-0.5 rounded border border-blue-100"
+                              >
+                                View File
+                              </a>
+                            ) : (
+                              <span className="text-gray-400 text-xs italic">No URL</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-6 text-gray-500 text-xs bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                      No documents found for this partner.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Reject & Request Re-upload Action Box */}
+              <div className="pt-3 border-t border-gray-200 bg-red-50/40 p-3.5 rounded-xl border border-red-100">
+                <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                  <FileWarning className="h-4 w-4 text-red-600" />
+                  Admin Remark & Re-upload Permission
+                </p>
+                <p className="text-[11px] text-gray-600 mt-1">
+                  Select defective documents above, enter your remark/reason below, and send the re-upload request. The partner will see this remark upon logging in and can re-upload only the selected documents.
+                </p>
+
+                <textarea
+                  rows={2}
+                  placeholder="Enter rejection reason / remark for the partner (e.g. Aadhaar card photo is blurry. Please upload a clear photo of front and back)..."
+                  value={rejectionRemark}
+                  onChange={(e) => setRejectionRemark(e.target.value)}
+                  className="mt-2.5 w-full text-xs p-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500 focus:outline-none bg-white"
+                />
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-gray-500">
+                    {selectedDocsToReject.length} document(s) selected
+                  </span>
+                  <button
+                    type="button"
+                    disabled={isSendingReupload || selectedDocsToReject.length === 0}
+                    onClick={handleSendDocReupload}
+                    className="py-2 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold disabled:opacity-50 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  >
+                    {isSendingReupload ? (
+                      "Sending..."
+                    ) : (
+                      <>
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Send Re-upload Request ({selectedDocsToReject.length})
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setKycModalPartner(null)}
+                  className="px-4 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}
