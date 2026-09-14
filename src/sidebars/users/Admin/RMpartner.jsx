@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Eye, Search, Trash2, AlertTriangle, RotateCcw, CheckCircle, FileWarning } from "lucide-react";
+import { Eye, Search, Trash2, AlertTriangle, RotateCcw, CheckCircle, FileWarning, X, FileText, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { fetchRMs } from "../../../feature/thunks/adminThunks";
@@ -80,6 +80,7 @@ export default function RMpartner() {
   const [selectedDocsToReject, setSelectedDocsToReject] = useState([]);
   const [rejectionRemark, setRejectionRemark] = useState("");
   const [isSendingReupload, setIsSendingReupload] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState(null); // { url, name }
 
   const handleToggleDocToReject = (docType) => {
     setSelectedDocsToReject((prev) =>
@@ -599,14 +600,18 @@ export default function RMpartner() {
                               {isRejected ? "REJECTED" : doc.status || "PENDING"}
                             </span>
 
-                            <a
-                              href={doc.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 text-xs font-semibold hover:underline"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPreviewDoc({
+                                  url: doc.url,
+                                  name: toDocLabel(doc.docType),
+                                })
+                              }
+                              className="text-blue-600 text-xs font-semibold hover:underline cursor-pointer bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-100 transition"
                             >
                               View
-                            </a>
+                            </button>
                           </div>
                         </div>
                       );
@@ -781,6 +786,79 @@ export default function RMpartner() {
           </tbody>
         </table>
       </div>
+
+      {/* Document In-App Preview Modal Popup */}
+      {previewDoc && (
+        <div
+          className="fixed inset-0 bg-black/75 flex items-center justify-center z-160 p-4 font-sans"
+          onClick={() => setPreviewDoc(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-brand-primary" />
+                <h4 className="font-bold text-gray-900 text-sm md:text-base">
+                  {previewDoc.name || "Document Preview"}
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewDoc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50 transition flex items-center gap-1"
+                  title="Open in new window"
+                >
+                  <ExternalLink size={13} />
+                  Open in Tab
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  className="rounded-lg p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 flex-1 overflow-auto bg-gray-100 flex items-center justify-center min-h-[360px]">
+              {previewDoc.url?.toLowerCase().match(/\.(pdf)(\?.*)?$/) ? (
+                <iframe
+                  src={previewDoc.url}
+                  title={previewDoc.name}
+                  className="w-full h-[65vh] rounded-lg border border-gray-300 bg-white"
+                />
+              ) : (
+                <img
+                  src={previewDoc.url}
+                  alt={previewDoc.name}
+                  className="max-h-[68vh] max-w-full object-contain rounded-lg shadow-sm border border-gray-200 bg-white"
+                />
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-5 py-2.5 bg-gray-50 border-t border-gray-200">
+              <span className="text-xs text-gray-500 truncate max-w-md">
+                {previewDoc.url}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewDoc(null)}
+                className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
