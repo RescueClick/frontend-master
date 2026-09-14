@@ -150,8 +150,28 @@ export default function BankRmResultsTable({
                     </div>
                   </td>
                   <td className={`${tdPad} text-slate-700`}>{row.marketType || "—"}</td>
-                  <td className={`${tdPad} text-slate-700`}>{row.city || "—"}</td>
-                  <td className={`${tdPad} text-slate-700`}>{row.state || "—"}</td>
+                  <td className={`${tdPad} text-slate-700`}>
+                    {row.isPanIndia ||
+                    row.state === "PAN India" ||
+                    row.state === "Open India" ? (
+                      <span className="text-xs text-slate-500 italic">
+                        {row.city && row.city !== "All Cities" ? row.city : "All Cities (Nationwide)"}
+                      </span>
+                    ) : (
+                      row.city || "—"
+                    )}
+                  </td>
+                  <td className={`${tdPad} text-slate-700`}>
+                    {row.isPanIndia ||
+                    row.state === "PAN India" ||
+                    row.state === "Open India" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200 shadow-xs">
+                        <span className="text-xs">🌍</span> PAN India
+                      </span>
+                    ) : (
+                      row.state || "—"
+                    )}
+                  </td>
                   <td className={`${tdPad} text-slate-700`}>{row.company || "—"}</td>
                   <td className={tdPad}>
                     <ContactCell

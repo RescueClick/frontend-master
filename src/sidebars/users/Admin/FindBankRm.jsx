@@ -16,6 +16,7 @@ const EMPTY_FORM = {
   city: "",
   state: "",
   company: "",
+  isPanIndia: false,
   rmName: "",
   rmPhone: "",
   rmEmail: "",
@@ -212,6 +213,11 @@ const FindBankRm = () => {
     const rm = pickContactFromRow(row, "rm");
     const asm = pickContactFromRow(row, "asm");
     const rsm = pickContactFromRow(row, "rsm");
+    const isPan = Boolean(
+      row.isPanIndia ||
+      row.state === "PAN India" ||
+      row.state === "Open India"
+    );
     setModalMode("edit");
     setEditingId(row._id);
     setForm({
@@ -219,9 +225,10 @@ const FindBankRm = () => {
       loginCode: row.loginCode || "",
       product: row.product || "",
       marketType: row.marketType || "",
-      city: row.city || "",
-      state: row.state || "",
+      city: isPan ? (row.city || "All Cities") : (row.city || ""),
+      state: isPan ? "PAN India" : (row.state || ""),
       company: row.company || "",
+      isPanIndia: isPan,
       rmName: rm.name,
       rmPhone: rm.phone,
       rmEmail: rm.email,
@@ -240,12 +247,24 @@ const FindBankRm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "state" && (value === "PAN India" || value === "Open India")) {
+      setForm((prev) => ({
+        ...prev,
+        state: value,
+        isPanIndia: true,
+        city: prev.city || "All Cities",
+      }));
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const missing = BANK_REQUIRED.find((key) => !String(form[key] || "").trim());
+    const requiredKeys = form.isPanIndia
+      ? ["bankNbfcName", "loginCode", "product", "marketType", "company"]
+      : BANK_REQUIRED;
+    const missing = requiredKeys.find((key) => !String(form[key] || "").trim());
     if (missing) {
       toast.error("Please fill all bank details (required)");
       return;
@@ -258,8 +277,9 @@ const FindBankRm = () => {
         loginCode: form.loginCode.trim(),
         product: form.product.trim(),
         marketType: form.marketType.trim(),
-        city: form.city.trim(),
-        state: form.state.trim(),
+        isPanIndia: Boolean(form.isPanIndia),
+        city: form.isPanIndia ? (form.city.trim() || "All Cities") : form.city.trim(),
+        state: form.isPanIndia ? "PAN India" : form.state.trim(),
         company: form.company.trim(),
         rmName: form.rmName.trim(),
         rmPhone: form.rmPhone.trim(),
@@ -408,7 +428,43 @@ const FindBankRm = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4 p-5">
               <div className="rounded-xl border border-teal-100 bg-teal-50/40 p-4">
-                <p className="text-sm font-semibold text-teal-900 mb-3">1. Bank Details</p>
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-teal-900">1. Bank Details</p>
+                </div>
+
+                {/* Open India / PAN India Toggle */}
+                <div className="mb-4 flex items-center justify-between rounded-xl border border-teal-200/80 bg-white p-3.5 shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-base">🌍</span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        PAN India Coverage (Nationwide)
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Check if this Bank RM / product accepts cases nationwide across all states and cities
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      name="isPanIndia"
+                      checked={Boolean(form.isPanIndia)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setForm((prev) => ({
+                          ...prev,
+                          isPanIndia: checked,
+                          state: checked ? "PAN India" : (prev.state === "PAN India" ? "" : prev.state),
+                          city: checked ? "All Cities" : (prev.city === "All Cities" ? "" : prev.city),
+                        }));
+                      }}
+                      className="peer sr-only"
+                    />
+                    <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-teal-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
+                  </label>
+                </div>
+
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="space-y-1 text-sm">
                     <span className="font-medium text-slate-700">Bank NBFC Name *</span>
@@ -456,10 +512,10 @@ const FindBankRm = () => {
                     <span className="font-medium text-slate-700">State *</span>
                     <select
                       name="state"
-                      value={form.state}
+                      value={form.isPanIndia ? "PAN India" : form.state}
                       onChange={handleChange}
                       className={INPUT_CLASS}
-                      required
+                      required={!form.isPanIndia}
                     >
                       <option value="">Please Select State</option>
                       {INDIAN_STATES.map((state) => (
@@ -473,10 +529,11 @@ const FindBankRm = () => {
                     <span className="font-medium text-slate-700">City *</span>
                     <input
                       name="city"
-                      value={form.city}
+                      value={form.isPanIndia ? (form.city || "All Cities") : form.city}
                       onChange={handleChange}
+                      placeholder={form.isPanIndia ? "All Cities (PAN India)" : "City name"}
                       className={INPUT_CLASS}
-                      required
+                      required={!form.isPanIndia}
                     />
                   </label>
                   <label className="space-y-1 text-sm md:col-span-2">

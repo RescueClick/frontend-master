@@ -1,5 +1,6 @@
 /** Official states and union territories of India (for region/state dropdowns). */
 export const INDIAN_STATES = [
+  "PAN India",
   "Andhra Pradesh",
   "Arunachal Pradesh",
   "Assam",

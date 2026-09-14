@@ -91,10 +91,11 @@ const FindBankRm = () => {
         marketType: value,
       };
     } else if (field === "state") {
+      const isPan = value === "PAN India" || value === "Open India";
       next = {
         ...filters,
         state: value,
-        city: "",
+        city: isPan ? "All Cities" : "",
       };
     }
 
@@ -106,7 +107,10 @@ const FindBankRm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!filters.bank || !filters.product || !filters.marketType || !filters.state || !filters.city) {
+    const isPan = filters.state === "PAN India" || filters.state === "Open India";
+    const effectiveCity = isPan && !filters.city ? "All Cities" : filters.city;
+
+    if (!filters.bank || !filters.product || !filters.marketType || !filters.state || !effectiveCity) {
       toast.error("Please select Bank, Product, Market Type, State and City");
       return;
     }
@@ -121,7 +125,7 @@ const FindBankRm = () => {
           product: filters.product,
           marketType: filters.marketType,
           state: filters.state,
-          city: filters.city,
+          city: effectiveCity,
         },
       });
       setRows(Array.isArray(res.data?.bankRms) ? res.data.bankRms : []);
@@ -246,7 +250,7 @@ const FindBankRm = () => {
                 <option value="">Please Select State</option>
                 {options.states.map((state) => (
                   <option key={state} value={state}>
-                    {state}
+                    {state === "PAN India" ? "🌍 PAN India (Nationwide)" : state}
                   </option>
                 ))}
               </select>
