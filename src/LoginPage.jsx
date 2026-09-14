@@ -1,9 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Lock, User, Shield, AlertCircle, X, UserPlus, ChevronRight } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  User,
+  Shield,
+  AlertCircle,
+  AlertTriangle,
+  UploadCloud,
+  CheckCircle2,
+  FileText,
+  X,
+  UserPlus,
+  ChevronRight,
+} from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 import { GoogleLogin } from '@react-oauth/google';
-import { loginUser } from './feature/thunks/adminThunks';
+import { loginUser, reuploadPartnerKyc } from './feature/thunks/adminThunks';
 import { clearAuthData, getAuthData, saveAuthData } from './utils/localStorage';
 import { getSessionDashboardBasePath } from './utils/sessionDashboardPath';
 import {
@@ -136,6 +151,96 @@ const LoginPage = () => {
   const [modalError, setModalError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Partner Verification & Document Re-upload State
+  const [partnerInactiveData, setPartnerInactiveData] = useState(null);
+  const [showReuploadModal, setShowReuploadModal] = useState(false);
+  const [reuploadFiles, setReuploadFiles] = useState({});
+  const [isSubmittingDocs, setIsSubmittingDocs] = useState(false);
+
+  const getRequiredDocFields = (rejectedTypes = []) => {
+    const defaultList = [
+      { key: "AADHAR", fieldName: "adharCard", label: "Aadhaar Card", hint: "Upload clear front and back copy (JPG, PNG, or PDF)" },
+      { key: "PAN", fieldName: "panCard", label: "PAN Card", hint: "Upload clear front copy (JPG, PNG, or PDF)" },
+      { key: "CHEQUE", fieldName: "cheque", label: "Cancelled Cheque / Passbook", hint: "Upload bank passbook or cancelled cheque" },
+      { key: "SELFIE", fieldName: "selfie", label: "Selfie / Photo", hint: "Upload clear portrait photo" },
+    ];
+    if (!rejectedTypes || rejectedTypes.length === 0) return defaultList;
+
+    const matched = [];
+    const upperTypes = rejectedTypes.map((t) => String(t).toUpperCase());
+
+    if (upperTypes.some((t) => t.includes("ADHAR") || t.includes("AADHAR"))) {
+      matched.push({ key: "AADHAR", fieldName: "adharCard", label: "Aadhaar Card", hint: "Upload clear front and back copy (JPG, PNG, or PDF)" });
+    }
+    if (upperTypes.some((t) => t.includes("PAN"))) {
+      matched.push({ key: "PAN", fieldName: "panCard", label: "PAN Card", hint: "Upload clear front copy (JPG, PNG, or PDF)" });
+    }
+    if (upperTypes.some((t) => t.includes("CHEQUE") || t.includes("BANK") || t.includes("PASSBOOK"))) {
+      matched.push({ key: "CHEQUE", fieldName: "cheque", label: "Cancelled Cheque / Bank Passbook", hint: "Upload bank proof copy" });
+    }
+    if (upperTypes.some((t) => t.includes("SELFIE") || t.includes("PHOTO"))) {
+      matched.push({ key: "SELFIE", fieldName: "selfie", label: "Selfie / Photo", hint: "Upload clear portrait photo" });
+    }
+
+    for (const rt of rejectedTypes) {
+      const up = String(rt).toUpperCase();
+      if (!matched.some((m) => m.key === up || up.includes(m.key))) {
+        matched.push({
+          key: up,
+          fieldName: up.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+          label: up.replace(/_/g, " "),
+          hint: "Upload updated copy of this document",
+        });
+      }
+    }
+
+    return matched.length > 0 ? matched : defaultList;
+  };
+
+  const handleReuploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!partnerInactiveData?.partnerId) {
+      toast.error("Partner ID missing. Please try signing in again.");
+      return;
+    }
+
+    const fileKeys = Object.keys(reuploadFiles);
+    if (fileKeys.length === 0) {
+      toast.error("Please select at least one document to upload.");
+      return;
+    }
+
+    setIsSubmittingDocs(true);
+    try {
+      const fd = new FormData();
+      fd.append("partnerId", partnerInactiveData.partnerId);
+      fileKeys.forEach((k) => {
+        if (reuploadFiles[k]) {
+          fd.append(k, reuploadFiles[k]);
+        }
+      });
+
+      await dispatch(reuploadPartnerKyc(fd)).unwrap();
+      toast.success("Documents submitted successfully! Admin has been notified.");
+      setShowReuploadModal(false);
+      setReuploadFiles({});
+      setPartnerInactiveData((prev) =>
+        prev
+          ? {
+              ...prev,
+              canReuploadDocs: false,
+              inactiveReason:
+                "Updated documents submitted successfully. Awaiting Admin verification.",
+            }
+          : null
+      );
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : err?.message || "Failed to re-upload documents");
+    } finally {
+      setIsSubmittingDocs(false);
+    }
+  };
+
   /**
    * Non–partner-invite `ref` for public loan forms (PT/RM invites redirect in AppRoutes before this mounts).
    */
@@ -170,7 +275,6 @@ const LoginPage = () => {
     return Object.keys(newErrors).length === 0;
  };
 
-
   const routeForRole = (role) => {
     const r = String(role || '').toUpperCase();
     const map = {
@@ -185,61 +289,6 @@ const LoginPage = () => {
     return map[r] || null;
   };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-
-  //     console.log(getAuthData())
-  //   if (!validateForm()) return;
-
-  //   try {
-
-
-  //     const result = await dispatch(
-  //       loginUser({ email: formData.username, password: formData.password })
-  //     ).unwrap();
-
-     
-  //     if (result.user.role == "SUPER_ADMIN") {
-  //       navigate('/admin');
-  //     }
-  //     else if (result.user.role == "ASM") {
-  //       navigate('/asm');
-
-  //     }
-  //     else if (result.user.role == "RM") {
-  //       navigate('/rm');
-
-  //     }
-  //     else if (result.user.role == "PARTNER") {
-  //       navigate('/partner');
-
-  //     }
-  //     else if (result.user.role == "CUSTOMER") {
-  //       navigate('/customer');
-
-  //     }
-  //   } catch (err) {
-  //     console.error("Login failed:", err);
-
-  //     // Set error for modal display
-  //     let errorMessage = 'Login failed. Please check your credentials and try again.';
-
-  //     if (err?.message) {
-  //       errorMessage = err.message;
-  //     } else if (typeof err === 'string') {
-  //       errorMessage = err;
-  //     } else if (err?.response?.data?.message) {
-  //       errorMessage = err.response.data.message;
-  //     }
-
-  //     setModalError(errorMessage);
-  //     setShowErrorModal(true);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-
   const handleSubmit = async (e) => {
     e.preventDefault();
   
@@ -247,6 +296,7 @@ const LoginPage = () => {
   
     try {
       setLoading(true);
+      setPartnerInactiveData(null);
   
       // Dispatch login
       const result = await dispatch(
@@ -268,9 +318,23 @@ const LoginPage = () => {
     } catch (err) {
       console.error("Login failed:", err);
 
+      if (
+        err &&
+        typeof err === "object" &&
+        (err.code === "AUTH_INACTIVE" ||
+          err.code === "AUTH_SUSPENDED" ||
+          err.inactiveReason ||
+          err.canReuploadDocs ||
+          err.status === "PENDING" ||
+          err.status === "SUSPENDED")
+      ) {
+        setPartnerInactiveData(err);
+        setShowErrorModal(false);
+        return;
+      }
+
       let message = "Login failed. Please try again.";
 
-      // Show clearer text when a partner account is pending activation
       if (
         err === "Account is not active (status: PENDING)." ||
         err?.message === "Account is not active (status: PENDING)."
@@ -544,8 +608,56 @@ const LoginPage = () => {
                     'Sign in'
                   )}
                 </button>
-                {reduxLoginError && !showErrorModal && (
+                {reduxLoginError && !showErrorModal && !partnerInactiveData && (
                   <p className="mt-2 text-sm text-red-600 text-center">{reduxLoginError}</p>
+                )}
+
+                {/* Partner Inactive / Verification Warning Box */}
+                {partnerInactiveData && (
+                  <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50/95 p-3.5 shadow-sm text-stone-800">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-bold text-amber-950 text-xs">
+                            {partnerInactiveData.status === "SUSPENDED"
+                              ? "Account Suspended"
+                              : "Verification Pending / Inactive"}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-200 text-amber-900 border border-amber-300">
+                            {partnerInactiveData.status || "PENDING"}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 rounded-lg bg-white p-2.5 border border-amber-200 shadow-inner">
+                          <p className="text-[11px] font-bold text-amber-900 uppercase tracking-wide">
+                            Admin Remark / Reason:
+                          </p>
+                          <p className="text-xs text-stone-700 mt-0.5 whitespace-pre-wrap leading-relaxed">
+                            {partnerInactiveData.inactiveReason ||
+                              partnerInactiveData.docRejectionRemarks ||
+                              "Your account is pending verification by the Admin team."}
+                          </p>
+                        </div>
+
+                        {partnerInactiveData.canReuploadDocs && (
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() => setShowReuploadModal(true)}
+                              className="inline-flex w-full justify-center items-center gap-2 px-3.5 py-2 rounded-lg bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-bold shadow transition transform active:scale-95 cursor-pointer"
+                            >
+                              <UploadCloud className="h-4 w-4" />
+                              Upload Requested Documents
+                            </button>
+                            <p className="text-[11px] text-stone-500 mt-1 text-center">
+                              Click above to upload replacement KYC documents requested by Admin.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -613,6 +725,106 @@ const LoginPage = () => {
         onClose={handleCloseErrorModal}
         error={modalError}
       />
+
+      {/* Re-upload Documents Modal Popup */}
+      {showReuploadModal && partnerInactiveData && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => !isSubmittingDocs && setShowReuploadModal(false)}
+        >
+          <div
+            className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-stone-200 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2">
+                  <UploadCloud className="h-5 w-5 text-teal-600" />
+                  Re-upload KYC Documents
+                </h3>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Submit replacement documents for admin verification.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isSubmittingDocs}
+                onClick={() => setShowReuploadModal(false)}
+                className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="my-4 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs">
+              <span className="font-bold text-red-900 block mb-1">Admin Remark / Reason:</span>
+              <p className="text-red-800 leading-relaxed font-medium">
+                {partnerInactiveData.inactiveReason || partnerInactiveData.docRejectionRemarks}
+              </p>
+            </div>
+
+            <form onSubmit={handleReuploadSubmit} className="space-y-4">
+              {getRequiredDocFields(partnerInactiveData.rejectedDocTypes).map((doc) => (
+                <div
+                  key={doc.key}
+                  className="rounded-xl border border-stone-200 bg-stone-50/50 p-3.5"
+                >
+                  <label className="block text-xs font-bold text-stone-800 mb-1">
+                    {doc.label} <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-[11px] text-stone-500 mb-2">{doc.hint}</p>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/jpg,application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setReuploadFiles((prev) => ({ ...prev, [doc.fieldName]: file }));
+                      }
+                    }}
+                    className="block w-full text-xs text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer"
+                  />
+                  {reuploadFiles[doc.fieldName] && (
+                    <p className="mt-1.5 text-[11px] text-teal-700 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Selected: {reuploadFiles[doc.fieldName].name} (
+                      {(reuploadFiles[doc.fieldName].size / 1024).toFixed(0)} KB)
+                    </p>
+                  )}
+                </div>
+              ))}
+
+              <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-stone-200">
+                <button
+                  type="button"
+                  disabled={isSubmittingDocs}
+                  onClick={() => setShowReuploadModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 rounded-lg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingDocs}
+                  className="px-5 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg shadow disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
+                >
+                  {isSubmittingDocs ? (
+                    <>
+                      <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="h-4 w-4" />
+                      Submit Documents
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
 
   );

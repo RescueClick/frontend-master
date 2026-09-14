@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Eye, Search, Trash2 } from "lucide-react";
+import { Eye, Search, Trash2, AlertTriangle, RotateCcw, CheckCircle, FileWarning } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { fetchRMs } from "../../../feature/thunks/adminThunks";
@@ -8,6 +8,7 @@ import {
   assignPartnerToRm,
   getUnassignedPartners,
   rejectPartner,
+  requestPartnerDocReupload,
 } from "../../../feature/thunks/adminThunks";
 import { getAuthData } from "../../../utils/localStorage";
 
@@ -74,6 +75,61 @@ export default function RMpartner() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [partnerToReject, setPartnerToReject] = useState(null);
   const [assignSubmitting, setAssignSubmitting] = useState(false);
+
+  // Document Rejection & Re-upload Request State
+  const [selectedDocsToReject, setSelectedDocsToReject] = useState([]);
+  const [rejectionRemark, setRejectionRemark] = useState("");
+  const [isSendingReupload, setIsSendingReupload] = useState(false);
+
+  const handleToggleDocToReject = (docType) => {
+    setSelectedDocsToReject((prev) =>
+      prev.includes(docType)
+        ? prev.filter((t) => t !== docType)
+        : [...prev, docType]
+    );
+  };
+
+  const handleSendDocReuploadRequest = async () => {
+    if (!handleModal.partnerData?._id) return;
+    if (selectedDocsToReject.length === 0) {
+      toast.error("Please select at least one document to request re-upload for.");
+      return;
+    }
+    if (!rejectionRemark.trim()) {
+      toast.error("Please provide a remark explaining what is wrong with the document.");
+      return;
+    }
+
+    setIsSendingReupload(true);
+    try {
+      await dispatch(
+        requestPartnerDocReupload({
+          partnerId: handleModal.partnerData._id,
+          remarks: rejectionRemark.trim(),
+          rejectedDocTypes: selectedDocsToReject,
+        })
+      ).unwrap();
+
+      toast.success("Document re-upload request sent to partner!");
+      dispatch(getUnassignedPartners());
+      setHandleModal((prev) => ({
+        ...prev,
+        partnerData: {
+          ...prev.partnerData,
+          canReuploadDocs: true,
+          inactiveReason: rejectionRemark.trim(),
+          docRejectionRemarks: rejectionRemark.trim(),
+          rejectedDocTypes: selectedDocsToReject,
+        },
+      }));
+      setSelectedDocsToReject([]);
+      setRejectionRemark("");
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : err?.message || "Failed to send request");
+    } finally {
+      setIsSendingReupload(false);
+    }
+  };
 
   const dispatch = useDispatch();
   const { loading, error, data } = useSelector(
@@ -474,34 +530,128 @@ export default function RMpartner() {
                 ))}
               </div>
 
-              {/* Column 4 - Documents */}
-              <div className="flex flex-col gap-2 bg-[#F8FAFC] rounded-xl p-4 shadow-sm text-sm">
-                <h4 className="font-bold text-[#111827] border-b border-gray-300 pb-1 mb-2 text-base">
-                  Documents
-                </h4>
-                {handleModal.partnerData.docs &&
-                handleModal.partnerData.docs.length > 0 ? (
-                  handleModal.partnerData.docs.map((doc, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between py-0.5 border-b border-gray-200 last:border-b-0"
-                    >
-                      <span className="text-gray-500">{toDocLabel(doc.docType)}</span>
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 font-semibold hover:underline"
-                      >
-                        View
-                      </a>
-                    </div>
-                  ))
-                ) : (
-                  <span className="text-gray-800 font-semibold">
-                    No documents available
-                  </span>
+              {/* Column 4 - Documents & Rejection Request */}
+              <div className="flex flex-col gap-3 bg-[#F8FAFC] rounded-xl p-4 shadow-sm text-sm">
+                <div className="flex items-center justify-between border-b border-gray-300 pb-1">
+                  <h4 className="font-bold text-[#111827] text-base">
+                    Documents ({handleModal.partnerData.docs?.length || 0})
+                  </h4>
+                  {handleModal.partnerData.canReuploadDocs && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                      Re-upload Requested
+                    </span>
+                  )}
+                </div>
+
+                {/* Existing remarks banner if any */}
+                {(handleModal.partnerData.inactiveReason || handleModal.partnerData.docRejectionRemarks) && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 p-2 text-xs">
+                    <span className="font-bold text-red-900 block">Current Admin Remark:</span>
+                    <p className="text-red-800 mt-0.5 whitespace-pre-wrap">
+                      {handleModal.partnerData.inactiveReason || handleModal.partnerData.docRejectionRemarks}
+                    </p>
+                  </div>
                 )}
+
+                {/* Document List */}
+                <div className="space-y-2">
+                  {handleModal.partnerData.docs &&
+                  handleModal.partnerData.docs.length > 0 ? (
+                    handleModal.partnerData.docs.map((doc, index) => {
+                      const isRejected =
+                        doc.status === "REJECTED" ||
+                        (handleModal.partnerData.rejectedDocTypes || []).includes(doc.docType);
+                      const isSelected = selectedDocsToReject.includes(doc.docType);
+
+                      return (
+                        <div
+                          key={index}
+                          className={`flex items-center justify-between p-2 rounded-lg border transition ${
+                            isRejected
+                              ? "bg-red-50/60 border-red-200"
+                              : isSelected
+                              ? "bg-amber-50 border-amber-300"
+                              : "bg-white border-gray-200"
+                          }`}
+                        >
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleDocToReject(doc.docType)}
+                              className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                            />
+                            <span className="font-medium text-gray-800">
+                              {toDocLabel(doc.docType)}
+                            </span>
+                          </label>
+
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                isRejected
+                                  ? "bg-red-100 text-red-700"
+                                  : doc.status === "VERIFIED"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {isRejected ? "REJECTED" : doc.status || "PENDING"}
+                            </span>
+
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 text-xs font-semibold hover:underline"
+                            >
+                              View
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <span className="text-gray-500 text-xs italic">
+                      No documents available
+                    </span>
+                  )}
+                </div>
+
+                {/* Request Document Re-upload Action Box */}
+                <div className="mt-2 pt-2 border-t border-gray-200 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                  <p className="text-xs font-bold text-gray-800 flex items-center gap-1">
+                    <FileWarning className="h-3.5 w-3.5 text-amber-600" />
+                    Reject & Request Re-upload
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Select defective documents above and enter a remark for the partner.
+                  </p>
+
+                  <textarea
+                    rows={2}
+                    placeholder="Enter remark for partner (e.g. Aadhaar back is blurry, please upload clear image)..."
+                    value={rejectionRemark}
+                    onChange={(e) => setRejectionRemark(e.target.value)}
+                    className="mt-2 w-full text-xs p-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-red-500 focus:outline-none"
+                  />
+
+                  <button
+                    type="button"
+                    disabled={isSendingReupload || selectedDocsToReject.length === 0}
+                    onClick={handleSendDocReuploadRequest}
+                    className="mt-2 w-full py-1.5 px-3 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold disabled:opacity-50 transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    {isSendingReupload ? (
+                      "Sending Request..."
+                    ) : (
+                      <>
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Request Re-upload ({selectedDocsToReject.length} selected)
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -601,6 +751,8 @@ export default function RMpartner() {
                   <button
                     className="bg-emerald-500 text-white px-3 py-1 rounded hover:bg-emerald-600 transition flex items-center gap-1"
                     onClick={() => {
+                      setSelectedDocsToReject([]);
+                      setRejectionRemark(partner.inactiveReason || partner.docRejectionRemarks || "");
                       setHandleModal({
                         modalStatus: true,
                         partnerData: partner,

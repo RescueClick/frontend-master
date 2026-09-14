@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Search, Trash2, FileText, Award, CreditCard, Edit3, X, KeyRound } from "lucide-react";
+import { Download, Search, Trash2, FileText, Award, CreditCard, Edit3, X, KeyRound, UserCheck, ChevronRight, AlertTriangle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   activatePartner,
   fetchPartners,
   adminDeactivatePartner,
   rejectPartner,
+  getUnassignedPartners,
 } from "../../../feature/thunks/adminThunks";
 import { getAuthData,saveAuthData } from "../../../utils/localStorage";
 import axios from "axios";
@@ -105,7 +106,7 @@ export default function PartnerTable() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [activeTab, setActiveTab] = useState("ACTIVE"); // "ACTIVE" | "SUSPENDED"
 
   /** null | { mode: 'single', partner } | { mode: 'all', partners: [] } */
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -115,6 +116,7 @@ export default function PartnerTable() {
     const { adminToken } = getAuthData();
     if (adminToken) {
       dispatch(fetchPartners(adminToken));
+      dispatch(getUnassignedPartners());
     }
   }, [dispatch]);
 
@@ -305,16 +307,19 @@ export default function PartnerTable() {
 
   const stateOptions = INDIAN_STATE_FILTER_OPTIONS;
 
-  const { activeCount, inactiveCount, pendingCount } = useMemo(() => {
+  const unassignedPartnersData = useSelector(
+    (state) => state.admin.unassignedPartners?.data || []
+  );
+  const pendingVerificationCount = unassignedPartnersData.length;
+
+  const { activeCount, suspendedCount } = useMemo(() => {
     let act = 0;
-    let inact = 0;
-    let pend = 0;
+    let susp = 0;
     (data || []).forEach((p) => {
       if (p.status === "ACTIVE") act++;
-      else if (p.status === "PENDING") pend++;
-      else inact++;
+      else susp++;
     });
-    return { activeCount: act, inactiveCount: inact, pendingCount: pend };
+    return { activeCount: act, suspendedCount: susp };
   }, [data]);
 
   const filteredPartners = useMemo(() => {
@@ -335,9 +340,8 @@ export default function PartnerTable() {
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;
 
-      if (statusFilter === "ACTIVE" && partner.status !== "ACTIVE") return false;
-      if (statusFilter === "INACTIVE" && (partner.status === "ACTIVE" || partner.status === "PENDING")) return false;
-      if (statusFilter === "PENDING" && partner.status !== "PENDING") return false;
+      if (activeTab === "ACTIVE" && partner.status !== "ACTIVE") return false;
+      if (activeTab === "SUSPENDED" && partner.status === "ACTIVE") return false;
 
       if (!term) return true;
 
@@ -360,13 +364,14 @@ export default function PartnerTable() {
         partner.rmId,
         partner.asmId,
         partner.region,
+        partner.inactiveReason,
       ]
         .map(norm)
         .join(" ");
 
       return haystack.includes(term);
     });
-  }, [data, searchQuery, stateFilter, statusFilter]);
+  }, [data, searchQuery, stateFilter, activeTab]);
 
   const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
@@ -538,6 +543,19 @@ loginAsUser(userId, navigate);
         </button>
       ),
     },
+    ...(activeTab === "SUSPENDED"
+      ? [
+          {
+            title: "Suspension Reason / Remark",
+            key: "inactiveReason",
+            render: (_, p) => (
+              <span className="text-xs text-red-700 font-medium whitespace-pre-wrap max-w-xs block">
+                {p.inactiveReason || p.docRejectionRemarks || "Suspended by Admin"}
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       title: "Activation",
       key: "activation",
@@ -574,14 +592,23 @@ loginAsUser(userId, navigate);
             />
           </div>
           {p.status !== "ACTIVE" ? (
-            <button
-              type="button"
-              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-semibold text-red-700 shadow-sm transition-colors hover:border-red-300 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200 focus-visible:ring-offset-1"
-              onClick={() => setDeleteConfirm({ mode: "single", partner: p })}
-              aria-label={`Delete partner ${p.firstName || ""} ${p.lastName || ""}`.trim()}
-            >
-              <Trash2 size={18} strokeWidth={2.25} className="opacity-90" aria-hidden />
-            </button>
+            <>
+              <button
+                type="button"
+                className="px-2 py-1 text-xs font-semibold rounded bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-xs cursor-pointer"
+                onClick={() => setPartneractiveModel(p._id)}
+              >
+                Activate
+              </button>
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-semibold text-red-700 shadow-sm transition-colors hover:border-red-300 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200 focus-visible:ring-offset-1"
+                onClick={() => setDeleteConfirm({ mode: "single", partner: p })}
+                aria-label={`Delete partner ${p.firstName || ""} ${p.lastName || ""}`.trim()}
+              >
+                <Trash2 size={18} strokeWidth={2.25} className="opacity-90" aria-hidden />
+              </button>
+            </>
           ) : null}
         </div>
       ),
@@ -719,13 +746,13 @@ loginAsUser(userId, navigate);
         />
 
         <DashboardTablePage
-          title="Partner"
+          title="Partner Directory"
           subtitle={
             loading
               ? "Loading..."
-              : searchQuery.trim() || stateFilter !== "All" || statusFilter !== "All"
-                ? `Showing ${sortedFilteredPartners.length} of ${data?.length || 0} partners (${activeCount} Active, ${inactiveCount + pendingCount} Inactive/Pending)`
-                : `Total ${data?.length || 0} partners (${activeCount} Active, ${inactiveCount + pendingCount} Inactive/Pending)`
+              : activeTab === "ACTIVE"
+              ? `Total ${activeCount} active verified partners (showing ${sortedFilteredPartners.length})`
+              : `Total ${suspendedCount} suspended/inactive partners (showing ${sortedFilteredPartners.length})`
           }
           headerRight={
             <>
@@ -736,23 +763,12 @@ loginAsUser(userId, navigate);
                 />
                 <input
                   type="text"
-                  className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-100 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                  placeholder="Search by name, RM code, or ID"
+                  className="border border-gray-300 rounded-md pl-7 pr-2 py-2 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  placeholder="Search by name, RM, or ID"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <select
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary bg-white font-medium"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                aria-label="Filter by status"
-              >
-                <option value="All">All Statuses ({data?.length || 0})</option>
-                <option value="ACTIVE">Active ({activeCount})</option>
-                <option value="INACTIVE">Inactive / Suspended ({inactiveCount})</option>
-                <option value="PENDING">Pending ({pendingCount})</option>
-              </select>
               <select
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary bg-white"
                 value={stateFilter}
@@ -767,7 +783,7 @@ loginAsUser(userId, navigate);
               </select>
               <button
                 type="button"
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center"
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center cursor-pointer"
                 onClick={() => {
                   handleExport();
                 }}
@@ -778,12 +794,92 @@ loginAsUser(userId, navigate);
             </>
           }
         >
+          {/* Pending Partners Verification Callout Banner */}
+          {pendingVerificationCount > 0 && (
+            <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50/90 p-3.5 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-800 shrink-0">
+                  <UserCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-amber-950">
+                    {pendingVerificationCount} New Partner{pendingVerificationCount > 1 ? "s" : ""} Awaiting Verification
+                  </span>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    Unverified partners do not appear in this active directory until verified and assigned an RM in the Admin verification queue.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/admin/rm-partner")}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition shrink-0 cursor-pointer"
+              >
+                Review & Verify ({pendingVerificationCount})
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Active vs Suspended Tabs */}
+          <div className="flex items-center justify-between border-b border-gray-200 mb-4">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab("ACTIVE")}
+                className={`pb-2.5 px-4 text-sm font-semibold border-b-2 transition cursor-pointer flex items-center gap-2 ${
+                  activeTab === "ACTIVE"
+                    ? "border-brand-primary text-brand-primary font-bold"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <span>Active Partners</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs ${
+                    activeTab === "ACTIVE"
+                      ? "bg-teal-100 text-teal-800 font-bold"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {activeCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("SUSPENDED")}
+                className={`pb-2.5 px-4 text-sm font-semibold border-b-2 transition cursor-pointer flex items-center gap-2 ${
+                  activeTab === "SUSPENDED"
+                    ? "border-red-600 text-red-600 font-bold"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <span>Suspended / Inactive</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs ${
+                    activeTab === "SUSPENDED"
+                      ? "bg-red-100 text-red-800 font-bold"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {suspendedCount}
+                </span>
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-500 pb-2 hidden sm:block">
+              {activeTab === "ACTIVE"
+                ? "Active partner count only"
+                : "Suspended / deactivated accounts"}
+            </div>
+          </div>
+
           <AppAntTable
             columns={partnerColumns}
             dataSource={sortedFilteredPartners}
             rowKey="_id"
             loading={loading}
-            locale={{ emptyText: "No partners found." }}
+            locale={{ emptyText: activeTab === "ACTIVE" ? "No active partners found." : "No suspended partners found." }}
           />
         </DashboardTablePage>
         {/* Edit Partner Details Modal (CRUD) */}

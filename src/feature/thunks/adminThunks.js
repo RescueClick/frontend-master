@@ -55,6 +55,28 @@ export const loginUser = createAsyncThunk(
 
       return { token, user };
     } catch (error) {
+      const respData = error.response?.data;
+      if (
+        respData &&
+        (respData.canReuploadDocs ||
+          respData.inactiveReason ||
+          respData.code === "AUTH_INACTIVE" ||
+          respData.code === "AUTH_SUSPENDED" ||
+          respData.status === "PENDING" ||
+          respData.status === "SUSPENDED")
+      ) {
+        return rejectWithValue({
+          message: respData.message || "Account is not active.",
+          code: respData.code,
+          status: respData.status,
+          inactiveReason: respData.inactiveReason,
+          docRejectionRemarks: respData.docRejectionRemarks,
+          canReuploadDocs: Boolean(respData.canReuploadDocs),
+          rejectedDocTypes: respData.rejectedDocTypes || [],
+          partnerId: respData.partnerId,
+          email: respData.email,
+        });
+      }
       return rejectWithValue(extractApiErrorMessage(error, "Login failed"));
     }
   }
@@ -1344,7 +1366,94 @@ export const updateBank = createAsyncThunk(
   }
 );
 
+// Request Partner Document Re-upload
+export const requestPartnerDocReupload = createAsyncThunk(
+  "admin/requestPartnerDocReupload",
+  async ({ partnerId, remarks, rejectedDocTypes }, { rejectWithValue, dispatch }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/partners/${partnerId}/request-doc-reupload`,
+        { remarks, rejectedDocTypes },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+      dispatch(getUnassignedPartners());
+      dispatch(fetchPartners());
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(extractApiErrorMessage(error, "Failed to request document re-upload"));
+    }
+  }
+);
 
+// Suspend Partner
+export const suspendPartner = createAsyncThunk(
+  "admin/suspendPartner",
+  async ({ partnerId, reason }, { rejectWithValue, dispatch }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/partners/${partnerId}/suspend`,
+        { reason },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+      dispatch(fetchPartners());
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(extractApiErrorMessage(error, "Failed to suspend partner"));
+    }
+  }
+);
 
+// Activate Partner User
+export const activatePartnerUser = createAsyncThunk(
+  "admin/activatePartnerUser",
+  async (partnerId, { rejectWithValue, dispatch }) => {
+    try {
+      const { adminToken } = getAuthData();
+      const response = await axios.post(
+        `${backendurl}/admin/partners/${partnerId}/activate`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+      dispatch(fetchPartners());
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(extractApiErrorMessage(error, "Failed to activate partner"));
+    }
+  }
+);
 
-       
+// Re-upload Partner KYC (used on Partner Login modal)
+export const reuploadPartnerKyc = createAsyncThunk(
+  "auth/reuploadPartnerKyc",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `${backendurl}/auth/partner/reupload-kyc`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(extractApiErrorMessage(error, "Failed to re-upload documents"));
+    }
+  }
+);
+
