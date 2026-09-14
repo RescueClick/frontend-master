@@ -44,6 +44,8 @@ import {
   loanDocumentFieldHint,
 } from "../../../../utils/loanDocumentUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
+import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
+import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
 
 const formatDocTypeName = (docType) => {
   const map = {
@@ -175,6 +177,9 @@ export default function BusinessLoan({ embed = false } = {}) {
     annualTurnover: "",
     partnerReferralCode: "",
     bankStatementPassword: "",
+    hasRunningLoan: "NO",
+    monthlyEmiPaying: "",
+    loanPurpose: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);
@@ -400,6 +405,13 @@ export default function BusinessLoan({ embed = false } = {}) {
       if (data.maritalStatus === "married") {
         const spouseRes = zodRequiredTextMin3("Spouse name must be at least 3 characters.").safeParse(data.SpouseName);
         if (!spouseRes.success) errors.SpouseName = spouseRes.error.issues[0].message;
+      }
+
+      if (!data.loanPurpose) {
+        errors.loanPurpose = "Loan purpose is required.";
+      }
+      if (data.hasRunningLoan === "YES" && (!data.monthlyEmiPaying || Number(data.monthlyEmiPaying) <= 0)) {
+        errors.monthlyEmiPaying = "Monthly EMI is required when running loan is Yes.";
       }
     }
 
@@ -1550,6 +1562,14 @@ const handleSubmit = async () => {
                     {renderError("SpouseName")}
                   </div>
                 )}
+
+                {/* Financial Details (Running Loan, Monthly EMI, Loan Purpose) */}
+                <LoanApplicantFinancialFields
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  renderError={renderError}
+                  fieldErrors={validationErrors}
+                />
               </div>
             </section>
 
@@ -2736,6 +2756,22 @@ const handleSubmit = async () => {
                         } finally {
                           setIsCheckingExistence(false);
                         }
+                      }
+
+                      // Automatically capture Step 1 as a Lead in the system
+                      if (currentStep === 0) {
+                        captureLeadOnStep1Next({
+                          loanType: "BUSINESS",
+                          formData: { ...formData, contactNo: formData.phone || formData.contactNo },
+                          isPartnerLoggedIn,
+                          partnerToken,
+                          partnerReferralCode: currentPartnerCode,
+                          applicationId,
+                        }).then((res) => {
+                          if (res?.applicationId && !applicationId) {
+                            setApplicationId(res.applicationId);
+                          }
+                        }).catch((err) => console.warn("Step 1 lead capture non-fatal:", err));
                       }
 
                       const nextStep = currentStep + 1;

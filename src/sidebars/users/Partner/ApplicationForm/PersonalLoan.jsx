@@ -43,6 +43,8 @@ import {
   loanDocumentFieldHint,
 } from "../../../../utils/loanDocumentUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
+import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
+import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
 
 const formatDocTypeName = (docType) => {
   const map = {
@@ -168,6 +170,9 @@ export default function PersonalLoan({ embed = false } = {}) {
     confirmPassword: "",
     bankStatementPassword: "",
     partnerReferralCode: "",
+    hasRunningLoan: "NO",
+    monthlyEmiPaying: "",
+    loanPurpose: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);
@@ -536,6 +541,12 @@ export default function PersonalLoan({ embed = false } = {}) {
       errors.loanAmount = "Loan amount must be greater than zero.";
     }
 
+    if (!formData.loanPurpose) {
+      errors.loanPurpose = "Loan purpose is required.";
+    }
+    if (formData.hasRunningLoan === "YES" && (!formData.monthlyEmiPaying || Number(formData.monthlyEmiPaying) <= 0)) {
+      errors.monthlyEmiPaying = "Monthly EMI is required when running loan is Yes.";
+    }
 
     // Mandatory document validation
     if (!formData.aadharFront) errors.aadharFront = "Aadhar front is required.";
@@ -561,6 +572,8 @@ export default function PersonalLoan({ embed = false } = {}) {
       "contactNo",
       "email",
       "dob",
+      "hasRunningLoan",
+      "loanPurpose",
     ],
     // 1: Address
     [
@@ -662,6 +675,22 @@ export default function PersonalLoan({ embed = false } = {}) {
       } finally {
         setIsCheckingExistence(false);
       }
+    }
+
+    // Automatically capture Step 1 as a Lead in the system
+    if (currentStep === 0) {
+      captureLeadOnStep1Next({
+        loanType: "PERSONAL",
+        formData,
+        isPartnerLoggedIn,
+        partnerToken,
+        partnerReferralCode: currentPartnerCode,
+        applicationId,
+      }).then((res) => {
+        if (res?.applicationId && !applicationId) {
+          setApplicationId(res.applicationId);
+        }
+      }).catch((err) => console.warn("Step 1 lead capture non-fatal:", err));
     }
 
     setFieldErrors({});
@@ -1511,6 +1540,14 @@ export default function PersonalLoan({ embed = false } = {}) {
                     />
                     {renderError("motherName")}
                   </div>
+
+                  {/* Financial Details (Running Loan, Monthly EMI, Loan Purpose) */}
+                  <LoanApplicantFinancialFields
+                    formData={formData}
+                    handleInputChange={handleInputChange}
+                    renderError={renderError}
+                    fieldErrors={fieldErrors}
+                  />
                 </div>
               </section>
 

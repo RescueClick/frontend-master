@@ -44,6 +44,8 @@ import {
   loanDocumentFieldHint,
 } from "../../../../utils/loanDocumentUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
+import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
+import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
 
 export default function HomeLoanSalaried({ embed = false } = {}) {
   const [documentModel, setdocumentModel] = useState(null);
@@ -158,6 +160,9 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     confirmPassword: "",
     bankStatementPassword: "",
     partnerReferralCode: "",
+    hasRunningLoan: "NO",
+    monthlyEmiPaying: "",
+    loanPurpose: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);
@@ -520,6 +525,13 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
     // if (!formData.pan) errors.pan = "PAN number is required.";
     if (!formData.gender) errors.gender = "Gender is required.";
     if (!formData.maritalStatus) errors.maritalStatus = "Marital status is required.";
+
+    if (!formData.loanPurpose) {
+      errors.loanPurpose = "Loan purpose is required.";
+    }
+    if (formData.hasRunningLoan === "YES" && (!formData.monthlyEmiPaying || Number(formData.monthlyEmiPaying) <= 0)) {
+      errors.monthlyEmiPaying = "Monthly EMI is required when running loan is Yes.";
+    }
 
     if (!formData.password) errors.password = "Password is required.";
     if (!formData.confirmPassword) errors.confirmPassword = "Confirm Password is required.";
@@ -1440,6 +1452,14 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                     />
                     {renderError("motherName")}
                   </div>
+
+                  {/* Financial Details (Running Loan, Monthly EMI, Loan Purpose) */}
+                  <LoanApplicantFinancialFields
+                    formData={formData}
+                    handleInputChange={handleInputChange}
+                    renderError={renderError}
+                    fieldErrors={fieldErrors}
+                  />
                 </div>
               </section>
 
@@ -2849,6 +2869,22 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
                         } finally {
                           setIsCheckingExistence(false);
                         }
+                      }
+
+                      // Automatically capture Step 1 as a Lead in the system
+                      if (currentStep === 0) {
+                        captureLeadOnStep1Next({
+                          loanType: "HOME_LOAN_SALARIED",
+                          formData,
+                          isPartnerLoggedIn,
+                          partnerToken,
+                          partnerReferralCode: currentPartnerCode,
+                          applicationId,
+                        }).then((res) => {
+                          if (res?.applicationId && !applicationId) {
+                            setApplicationId(res.applicationId);
+                          }
+                        }).catch((err) => console.warn("Step 1 lead capture non-fatal:", err));
                       }
 
                       const nextStep = currentStep + 1;

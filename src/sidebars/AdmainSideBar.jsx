@@ -129,6 +129,7 @@ const AdminSideBar = () => {
     // Partners & Customers (Move Partners is inside Partner page header)
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
     { name: "Customer", icon: Users, path: "/admin/customer" },
+    { name: "Leads & Pipeline", icon: Sparkles, path: "/admin/leads", highlight: true },
 
     // Finance & Operations (Consolidated hubs)
     { name: "Payout & Incentives", icon: IndianRupee, path: "/admin/payout-incentives", highlight: true },

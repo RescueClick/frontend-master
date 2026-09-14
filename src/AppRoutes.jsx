@@ -49,6 +49,7 @@ import AdminRM from "./sidebars/users/Admin/RM";
 import AdminRSM from "./sidebars/users/Admin/RSM";
 import AdiminASM from "./sidebars/users/Admin/ASM";
 import AdiminCustomer from "./sidebars/users/Admin/Customer";
+import AdminLeads from "./sidebars/users/Admin/AdminLeads";
 import AdminPendingPayout from "./sidebars/users/Admin/AdminPendingPayout";
 import AdminDonePayout from "./sidebars/users/Admin/AdminDonePayout";
 import AdminPayouts from "./sidebars/users/Admin/AdminPayouts";
@@ -346,6 +347,7 @@ const AppRoutes = () => {
         <Route path="rewards-levels" element={<RewardsAndLevelsHub />} />
         <Route path="referral-banners" element={<Banner initialTab="referral" />} />
         <Route path="customer" element={<AdiminCustomer />} />
+        <Route path="leads" element={<AdminLeads />} />
         <Route path="target" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="partner-targets" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="banks" element={<AdiminBanks />} />

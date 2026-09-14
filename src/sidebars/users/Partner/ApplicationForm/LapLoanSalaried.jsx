@@ -44,6 +44,8 @@ import {
   loanDocumentFieldHint,
 } from "../../../../utils/loanDocumentUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
+import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
+import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
 
 export default function LapLoanSalaried({ embed = false } = {}) {
   const [documentModel, setdocumentModel] = useState(null);
@@ -152,8 +154,12 @@ export default function LapLoanSalaried({ embed = false } = {}) {
     confirmPassword: "",
     bankStatementPassword: "",
     partnerReferralCode: "",
+    hasRunningLoan: "NO",
+    monthlyEmiPaying: "",
+    loanPurpose: "",
   });
 
+  const [applicationId, setApplicationId] = useState(null);
   const [sameAddress, setSameAddress] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -242,6 +248,8 @@ export default function LapLoanSalaried({ embed = false } = {}) {
           "email",
           "dob",
           "pan",
+          "hasRunningLoan",
+          "loanPurpose",
         ];
       }
       if (stepIndex === 1) {
@@ -415,6 +423,13 @@ export default function LapLoanSalaried({ embed = false } = {}) {
     if (!data.gender) errors.gender = "Gender is required.";
     if (!data.maritalStatus) errors.maritalStatus = "Marital status is required.";
 
+    if (!data.loanPurpose) {
+      errors.loanPurpose = "Loan purpose is required.";
+    }
+    if (data.hasRunningLoan === "YES" && (!data.monthlyEmiPaying || Number(data.monthlyEmiPaying) <= 0)) {
+      errors.monthlyEmiPaying = "Monthly EMI is required when running loan is Yes.";
+    }
+
     if (!data.password) errors.password = "Password is required.";
     if (!data.confirmPassword) errors.confirmPassword = "Confirm Password is required.";
     if (data.password && data.confirmPassword && data.password !== data.confirmPassword) {
@@ -526,6 +541,23 @@ export default function LapLoanSalaried({ embed = false } = {}) {
       toast.error("Please fill in all required fields before proceeding.");
       return;
     }
+
+    // Automatically capture Step 1 as a Lead in the system
+    if (currentStep === 0) {
+      captureLeadOnStep1Next({
+        loanType: "LAP_SALARIED",
+        formData,
+        isPartnerLoggedIn,
+        partnerToken,
+        partnerReferralCode: currentPartnerCode,
+        applicationId,
+      }).then((res) => {
+        if (res?.applicationId && !applicationId) {
+          setApplicationId(res.applicationId);
+        }
+      }).catch((err) => console.warn("Step 1 lead capture non-fatal:", err));
+    }
+
     const next = currentStep + 1;
     setCurrentStep(next);
     if (next > maxStep) setMaxStep(next);
@@ -932,6 +964,14 @@ export default function LapLoanSalaried({ embed = false } = {}) {
                   />
                   {renderError("motherName")}
                 </div>
+
+                {/* Financial Details (Running Loan, Monthly EMI, Loan Purpose) */}
+                <LoanApplicantFinancialFields
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  renderError={renderError}
+                  fieldErrors={fieldErrors}
+                />
               </div>
             </section>
           )}
