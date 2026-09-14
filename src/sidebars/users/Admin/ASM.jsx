@@ -40,6 +40,7 @@ const colors = {
 export default function ASM() {
   const dispatch = useDispatch();
   const [regionQuery, setRegionQuery] = useState("");
+  const [loanTypeFilter, setLoanTypeFilter] = useState("ALL");
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [userToDeactivate, setUserToDeactivate] = useState(null);
   const [searchReplacement, setSearchReplacement] = useState("");
@@ -182,15 +183,22 @@ export default function ASM() {
   const sortedAsm = sortNewestFirst(Array.isArray(asm) ? asm : [], { dateKeys: ["createdAt"] });
 
   const displayAsm = useMemo(() => {
+    let list = sortedAsm;
+    if (loanTypeFilter && loanTypeFilter !== "ALL") {
+      list = list.filter((c) => {
+        const t = (c.asmType || c.rsmType || "").toUpperCase();
+        return t === loanTypeFilter;
+      });
+    }
     const q = regionQuery.trim().toLowerCase();
-    if (!q) return sortedAsm;
-    return sortedAsm.filter((c) => {
+    if (!q) return list;
+    return list.filter((c) => {
       const name = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
       const id = (c.employeeId || "").toLowerCase();
       const code = (c.asmCode || "").toLowerCase();
       return name.includes(q) || id.includes(q) || code.includes(q);
     });
-  }, [sortedAsm, regionQuery]);
+  }, [sortedAsm, regionQuery, loanTypeFilter]);
 
   const asmDeactivateCandidates = useMemo(() => {
     if (!userToDeactivate || !asm) return [];
@@ -706,6 +714,17 @@ const handleLoginAs = (userId) => {
               placeholder="Search by name, ID or code"
               className="w-48 sm:w-64 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
+            <select
+              value={loanTypeFilter}
+              onChange={(e) => setLoanTypeFilter(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              aria-label="Filter ASMs by loan type"
+            >
+              <option value="ALL">All Loan Specialties</option>
+              <option value="PERSONAL">Personal Loan ASM</option>
+              <option value="BUSINESS">Business Loan ASM</option>
+              <option value="HOME_LAP">Home & LAP Loan ASM</option>
+            </select>
             <button
               type="button"
               className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

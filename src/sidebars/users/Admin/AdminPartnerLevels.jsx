@@ -31,9 +31,7 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
-import MilestoneBannerEditor, {
-  DEFAULT_BANNER_CONFIG,
-} from "./MilestoneBannerEditor";
+import { DEFAULT_BANNER_CONFIG } from "./MilestoneBannerEditor";
 
 const ICON_MAP = {
   Shield: Shield,
@@ -599,17 +597,6 @@ export default function AdminPartnerLevels() {
           <Zap size={18} className="text-emerald-600 shrink-0 opacity-80" />
         </div>
       </div>
-
-      {/* Milestone Bonus Highlight Banner Card Editor & Live Mobile Simulator */}
-      <MilestoneBannerEditor
-        hero={hero}
-        setHero={setHero}
-        levels={levels}
-        isSaving={isSaving}
-        onSaveSuccess={(savedHero) => {
-          setHero(savedHero);
-        }}
-      />
 
       {/* Tier / Level Cards Section (Power CRUD Grid) */}
       <div className="space-y-4">

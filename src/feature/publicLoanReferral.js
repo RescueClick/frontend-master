@@ -1,7 +1,7 @@
 import axios from "axios";
 import { backendurl } from "./urldata";
 import { PUBLIC_LOAN_REFERRAL_FALLBACK_PARTNER_CODE } from "../config/publicReferral.js";
-import { COMPANY_NAME, COMPANY_NAME_LEGAL } from "../config/branding.js";
+import { COMPANY_NAME, COMPANY_NAME_LEGAL, PUBLIC_WEB_ORIGIN } from "../config/branding.js";
 
 /** Key for storing partner referral code in sessionStorage */
 export const PARTNER_REF_SESSION_KEY = "dhansource_partner_referral_ref";
@@ -154,6 +154,22 @@ export async function fetchPublicPartnerInfo(partnerCode) {
 }
 
 /**
+ * Returns the public-facing origin to use in shareable URLs.
+ * On localhost / 127.0.0.1 it falls back to window.location.origin so
+ * that local dev still works; everywhere else it uses PUBLIC_WEB_ORIGIN
+ * (e.g. https://dhansourcecapital.com).
+ */
+function getShareableOrigin() {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return window.location.origin; // keep localhost for dev
+    }
+  }
+  return PUBLIC_WEB_ORIGIN; // production domain
+}
+
+/**
  * Builds the canonical public digital storefront URL for a partner advisor.
  * This links to the advisor profile displaying partner credentials, trust badges,
  * and all loan products so the customer can pick any loan to apply for.
@@ -161,10 +177,7 @@ export async function fetchPublicPartnerInfo(partnerCode) {
  */
 export function buildPartnerStoreUrl(partnerCode) {
   const code = String(partnerCode || "").trim();
-  let baseOrigin = "";
-  if (typeof window !== "undefined" && window.location?.origin) {
-    baseOrigin = window.location.origin;
-  }
+  const baseOrigin = getShareableOrigin();
   return code ? `${baseOrigin}/advisor/${encodeURIComponent(code)}` : `${baseOrigin}/advisor`;
 }
 
@@ -175,10 +188,7 @@ export function buildPartnerStoreUrl(partnerCode) {
  */
 export function buildPartnerLoanShareUrl(route, partnerCode) {
   const code = String(partnerCode || "").trim();
-  let baseOrigin = "";
-  if (typeof window !== "undefined" && window.location?.origin) {
-    baseOrigin = window.location.origin;
-  }
+  const baseOrigin = getShareableOrigin();
 
   // Normalize route path to public form route
   let cleanRoute = route;

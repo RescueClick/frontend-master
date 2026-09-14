@@ -42,11 +42,15 @@ export default function DhanSourceLoader({
       />
       <img
         src={brandLogo}
-        alt=""
+        alt="DhanSource"
         aria-hidden
         className={imgClass}
         style={{ width: `min(92vw, ${maxImgPx}px)`, height: "auto" }}
       />
+      <div className="flex items-center gap-0.5 text-lg font-extrabold tracking-tight select-none">
+        <span className="text-teal-700">Dhan</span>
+        <span className="text-amber-500">Source</span>
+      </div>
       {fullScreen ? (
         <span className="text-xs font-medium tracking-wide text-slate-500 sm:text-sm" aria-hidden>
           {label}

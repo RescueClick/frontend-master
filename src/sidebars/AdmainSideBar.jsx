@@ -107,6 +107,8 @@ const AdminSideBar = () => {
       case "Partner":
         return counts.partner;
       case "Payout":
+      case "Payout Management":
+      case "Payout & Incentives":
         return counts.payout;
       case "Delete Requests":
         return counts.delete_request;
@@ -115,53 +117,34 @@ const AdminSideBar = () => {
     }
   };
 
-  // Sidebar navigation items with icons and routes
+  // Sorted and organized sidebar navigation items
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: "/admin/dashboard" },
+
+    // Hierarchy Staff
     { name: "RSM", icon: Users, path: "/admin/rsm" },
     { name: "ASM", icon: Users, path: "/admin/asm" },
     { name: "RM", icon: Users, path: "/admin/rm" },
+
+    // Partners & Customers (Move Partners is inside Partner page header)
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
-    { name: "Move Partners", icon: Users, path: "/admin/move-partners", highlight: true },
     { name: "Customer", icon: Users, path: "/admin/customer" },
-    {
-      name: "Public loan referral",
-      icon: Link2,
-      path: "/admin/public-loan-referral",
-      highlight: true,
-    },
-    {
-      name: "Referral rewards",
-      icon: Gift,
-      path: "/admin/referral-rewards",
-      highlight: true,
-    },
-    {
-      name: "Referral Banners",
-      icon: Sparkles,
-      path: "/admin/referral-banners",
-      highlight: true,
-    },
-    // Unified Payout Management Hub
-    { name: "Disbursed Loans", icon: FileCheck, path: "/admin/disbursed-loans", highlight: true },
-    { name: "Payout Management", icon: IndianRupee, path: "/admin/payout", highlight: true },
-    { name: "Incentives", icon: Award, path: "/admin/incentives", highlight: true },
-    { name: "Levels & Benefits", icon: Crown, path: "/admin/partner-levels", highlight: true },
-    { name: "CIBIL Audit", icon: Shield, path: "/admin/cibil-audit", highlight: true },
-    { name: "Banner", icon: Download, path: "/admin/banner" },
-    { name: "Admin → Partner", icon: UserCheck, path: "/admin/rm-partner" },
+
+    // Finance & Operations (Consolidated hubs)
+    { name: "Payout & Incentives", icon: IndianRupee, path: "/admin/payout-incentives", highlight: true },
+    { name: "Rewards & Levels", icon: Gift, path: "/admin/rewards-levels", highlight: true },
+
+    // Referrals & Banners
+    { name: "Public loan referral", icon: Link2, path: "/admin/public-loan-referral", highlight: true },
+    { name: "Banners", icon: Sparkles, path: "/admin/banner", highlight: true },
+
+    // Banking & Compliance
     { name: "Add Bank", icon: Building2, path: "/admin/banks", highlight: true },
     { name: "Find Bank RM", icon: Search, path: "/admin/find-bank-rm" },
-    {
-      name: "Delete Requests",
-      icon: Trash2,
-      path: "/admin/delete-requests",
-    },
-    {
-      name: "Settings",
-      icon: Settings,
-      path: "/admin/settings",
-    },
+    { name: "CIBIL Audit", icon: Shield, path: "/admin/cibil-audit", highlight: true },
+
+    // Settings
+    { name: "Settings", icon: Settings, path: "/admin/settings" },
   ];
 
 
@@ -217,7 +200,24 @@ const AdminSideBar = () => {
           }`}
         >
           {sidebarItems.map((item, index) => {
-            const active = location.pathname === item.path;
+            const active =
+              location.pathname === item.path ||
+              ((item.path === "/admin/payout-incentives" || item.path === "/admin/payout") && (
+                location.pathname === "/admin/payout" ||
+                location.pathname === "/admin/incentives" ||
+                location.pathname === "/admin/payout-incentives" ||
+                location.pathname.startsWith("/admin/pending-payout") ||
+                location.pathname.startsWith("/admin/done-payout")
+              )) ||
+              ((item.path === "/admin/rewards-levels" || item.path === "/admin/referral-rewards") && (
+                location.pathname === "/admin/referral-rewards" ||
+                location.pathname === "/admin/partner-levels" ||
+                location.pathname === "/admin/rewards-levels"
+              )) ||
+              ((item.path === "/admin/banner" || item.path === "/admin/referral-banners") && (
+                location.pathname === "/admin/banner" ||
+                location.pathname === "/admin/referral-banners"
+              ));
             const isHighlight = item.highlight;
             const count = getBadgeCount(item.name);
 

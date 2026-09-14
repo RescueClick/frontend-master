@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
@@ -26,7 +27,10 @@ import {
   X,
   UploadCloud,
   ChevronRight,
+  ChevronLeft,
   ExternalLink,
+  Smartphone,
+  MapPin,
 } from "lucide-react";
 import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
@@ -57,12 +61,13 @@ const getIconComponent = (iconName) => {
   return ICONS_MAP[iconName] || Gift;
 };
 
-export default function AdminReferralBanners() {
+export default function AdminReferralBanners({ embedded = false }) {
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [viewMode, setViewMode] = useState("cards"); // 'cards' | 'table'
+  const [viewMode, setViewMode] = useState("cards"); // 'cards' | 'table' | 'slider'
+  const [sliderIndex, setSliderIndex] = useState(0);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -313,18 +318,20 @@ export default function AdminReferralBanners() {
   const IconComp = getIconComponent(formState.iconName);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className={embedded ? "w-full" : "mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"}>
       {/* Top Header & Breadcrumbs */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <Link
-            to="/admin/referral-rewards"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" />
-            Back to Referral Rewards
-          </Link>
-          <div className="mt-2 flex items-center gap-3">
+          {!embedded && (
+            <Link
+              to="/admin/referral-rewards"
+              className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              Back to Referral Rewards
+            </Link>
+          )}
+          <div className={`${embedded ? "" : "mt-2"} flex items-center gap-3`}>
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700 ring-1 ring-teal-200/70 shadow-sm">
               <Gift className="h-6 w-6" />
             </div>
@@ -404,6 +411,55 @@ export default function AdminReferralBanners() {
         </div>
       </div>
 
+      {/* HOW THIS WORKS IN MOBILE APP EXPLANATION BANNER */}
+      <div className="mb-6 rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50/90 via-emerald-50/50 to-white p-4 sm:p-5 shadow-xs">
+        <div className="flex items-start gap-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white shadow-xs">
+            <Sparkles size={20} />
+          </div>
+          <div className="flex-1 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Where Are These Cards Located in the App?
+                </h3>
+                <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                  These cards are located in the <strong>Partner Mobile App</strong> on the <strong>Referral Rewards</strong> screen. You do <strong>NOT</strong> need to select just one card — <strong>all cards marked "ACTIVE" (#1, #2, #3, #4) appear together as a horizontal swipeable slider</strong> at the top of that screen.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 self-start sm:self-auto rounded-lg bg-teal-100/90 px-3 py-1.5 text-xs font-bold text-teal-800 border border-teal-200 shadow-2xs shrink-0">
+                <Smartphone size={14} className="text-teal-700" />
+                <span>Screen: Partner App ➔ Referral Rewards</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <div className="rounded-lg border border-teal-200/80 bg-white/95 p-2.5 text-xs text-slate-700 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-bold text-teal-800 mb-0.5">
+                  <MapPin size={13} className="text-teal-600" />
+                  <span>Exact Location:</span>
+                </div>
+                <p className="text-[11px] text-slate-600">Partner App ➔ Menu ➔ <strong>Referral Rewards</strong> ➔ Top Slider (Slide #1 to #4).</p>
+              </div>
+              <div className="rounded-lg border border-teal-200/80 bg-white/95 p-2.5 text-xs text-slate-700 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-bold text-teal-800 mb-0.5">
+                  <Eye size={13} className="text-teal-600" />
+                  <span>Want only 1 card?</span>
+                </div>
+                <p className="text-[11px] text-slate-600">Click <strong>"Hide"</strong> on the other 3. Only the remaining Active card will show.</p>
+              </div>
+              <div className="rounded-lg border border-teal-200/80 bg-white/95 p-2.5 text-xs text-slate-700 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-bold text-teal-800 mb-0.5">
+                  <Edit3 size={13} className="text-teal-600" />
+                  <span>Change Text or Reward:</span>
+                </div>
+                <p className="text-[11px] text-slate-600">Click the <strong>Pencil (Edit)</strong> to change amounts (e.g. ₹100), titles, or colors.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Filter and View Mode Toolbar */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
         <div className="flex flex-1 flex-wrap items-center gap-3 min-w-[260px]">
@@ -431,6 +487,18 @@ export default function AdminReferralBanners() {
 
         {/* View Mode Switcher */}
         <div className="flex items-center rounded-xl bg-slate-100 p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("slider")}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              viewMode === "slider"
+                ? "bg-white text-teal-800 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Smartphone size={13} className="text-teal-600" />
+            Live Mobile Swipe
+          </button>
           <button
             type="button"
             onClick={() => setViewMode("cards")}
@@ -488,6 +556,191 @@ export default function AdminReferralBanners() {
             </button>
           </div>
         </div>
+      ) : viewMode === "slider" ? (
+        /* Interactive Mobile Slider Simulator */
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-slate-100/70 p-6 sm:p-10 shadow-xs">
+          <div className="mb-5 text-center max-w-md">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-bold text-teal-800 border border-teal-200 mb-2">
+              <Smartphone size={13} className="text-teal-700" /> Live Mobile Swipe Simulator
+            </span>
+            <h3 className="text-base font-bold text-slate-900">Partner App Referral Screen Preview</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Click the arrows or dots below to test how these cards slide on a partner's phone screen:
+            </p>
+          </div>
+
+          {/* Smartphone Frame */}
+          <div className="w-full max-w-sm rounded-[36px] bg-slate-900 p-3.5 shadow-2xl ring-1 ring-slate-800 relative">
+            {/* Phone Notch */}
+            <div className="mx-auto mb-2.5 h-4 w-28 rounded-full bg-slate-800 flex items-center justify-center gap-1.5">
+              <div className="h-2 w-2 rounded-full bg-slate-900" />
+              <div className="h-1.5 w-10 rounded-full bg-slate-900" />
+            </div>
+
+            {/* Phone Screen Mock */}
+            <div className="overflow-hidden rounded-[26px] bg-slate-50 border border-slate-200 min-h-[420px] flex flex-col justify-between shadow-inner">
+              {/* App Screen Header */}
+              <div className="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ArrowLeft size={16} className="text-slate-700" />
+                  <span className="text-xs font-bold text-slate-800">Referral Rewards</span>
+                </div>
+                <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                  Slide {Math.min(sliderIndex, filteredBanners.length - 1) + 1} of {filteredBanners.length}
+                </span>
+              </div>
+
+              {/* Slider Area */}
+              <div className="p-4 relative">
+                <div className="text-[11px] font-bold text-slate-500 mb-2 flex items-center justify-between">
+                  <span>WHY REFER PARTNERS?</span>
+                  <span className="text-teal-600 font-semibold cursor-pointer">All Perks &gt;</span>
+                </div>
+
+                {/* Animated Card */}
+                {(() => {
+                  const safeIndex = Math.min(sliderIndex, Math.max(0, filteredBanners.length - 1));
+                  const banner = filteredBanners[safeIndex] || filteredBanners[0];
+                  if (!banner) return null;
+                  const gradient = GRADIENT_PRESETS.find((p) => p.id === banner.gradientPreset) || GRADIENT_PRESETS[0];
+                  const CardIcon = getIconComponent(banner.iconName);
+
+                  return (
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={banner._id || safeIndex}
+                        initial={{ opacity: 0, x: 30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -30 }}
+                        transition={{ duration: 0.22 }}
+                        className={`relative flex min-h-[190px] flex-col justify-between overflow-hidden rounded-2xl p-4 text-white shadow-md bg-gradient-to-br ${gradient.bg}`}
+                      >
+                        {banner.imageUrl && (
+                          <div
+                            className="absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-35"
+                            style={{ backgroundImage: `url(${banner.imageUrl})` }}
+                          />
+                        )}
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/10" />
+
+                        {/* Top badge */}
+                        <div className="relative z-10 flex items-start justify-between gap-2">
+                          {banner.badgeText && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase backdrop-blur-md">
+                              <CardIcon className="h-3 w-3" />
+                              {banner.badgeText}
+                            </span>
+                          )}
+                          <span className="rounded-md bg-black/40 px-2 py-0.5 text-[10px] font-semibold">
+                            #{banner.displayOrder ?? safeIndex + 1}
+                          </span>
+                        </div>
+
+                        {/* Middle info */}
+                        <div className="relative z-10 mt-2">
+                          {banner.rewardAmount && (
+                            <div className="text-lg font-extrabold tracking-tight drop-shadow-xs">
+                              {banner.rewardAmount}
+                            </div>
+                          )}
+                          <h4 className="text-sm font-bold leading-snug drop-shadow-xs line-clamp-2">
+                            {banner.title}
+                          </h4>
+                          {banner.subtitle && (
+                            <p className="mt-1 text-[11px] text-white/90 line-clamp-2 leading-relaxed">
+                              {banner.subtitle}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Bottom CTA */}
+                        <div className="relative z-10 mt-3 flex items-center justify-between border-t border-white/20 pt-2 text-[11px]">
+                          <span className="text-white/80 font-medium capitalize">
+                            {gradient.label.split(" ")[0]} theme
+                          </span>
+                          <span className="flex items-center gap-1 font-bold text-white">
+                            {banner.ctaText || "Invite"} <ChevronRight size={12} />
+                          </span>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+                  );
+                })()}
+
+                {/* Slider Controls */}
+                <div className="mt-4 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setSliderIndex((prev) => (prev > 0 ? prev - 1 : filteredBanners.length - 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-700 shadow-xs hover:bg-slate-100 transition active:scale-95"
+                    title="Previous Slide"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  {/* Dots */}
+                  <div className="flex items-center gap-1.5">
+                    {filteredBanners.map((_, dotIdx) => (
+                      <button
+                        key={dotIdx}
+                        type="button"
+                        onClick={() => setSliderIndex(dotIdx)}
+                        className={`h-2 rounded-full transition-all ${
+                          dotIdx === Math.min(sliderIndex, filteredBanners.length - 1)
+                            ? "w-6 bg-teal-600"
+                            : "w-2 bg-slate-300 hover:bg-slate-400"
+                        }`}
+                        title={`Go to Slide ${dotIdx + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSliderIndex((prev) => (prev < filteredBanners.length - 1 ? prev + 1 : 0))}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-700 shadow-xs hover:bg-slate-100 transition active:scale-95"
+                    title="Next Slide"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Below-Slider Mobile Mock Body */}
+              <div className="p-4 bg-white border-t border-slate-100 flex-1 flex flex-col justify-between">
+                <div className="rounded-xl border border-dashed border-teal-200 bg-teal-50/50 p-3 text-center">
+                  <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block">Invite Partners & Earn</span>
+                  <span className="text-xs text-slate-600 mt-0.5 block">Share your referral code to earn cash rewards on every loan disbursed.</span>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const safeIndex = Math.min(sliderIndex, Math.max(0, filteredBanners.length - 1));
+                      const banner = filteredBanners[safeIndex];
+                      if (banner) toggleBannerStatus(banner);
+                    }}
+                    className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                  >
+                    Toggle Active/Hide
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const safeIndex = Math.min(sliderIndex, Math.max(0, filteredBanners.length - 1));
+                      const banner = filteredBanners[safeIndex];
+                      if (banner) openEditModal(banner);
+                    }}
+                    className="text-xs font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1"
+                  >
+                    <Edit3 size={12} /> Edit This Card
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : viewMode === "cards" ? (
         /* Cards Preview Grid */
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -505,6 +758,17 @@ export default function AdminReferralBanners() {
                     : "border-slate-200 bg-slate-50/80 opacity-75"
                 }`}
               >
+                {/* App Screen Location Tag Header */}
+                <div className="bg-teal-50/90 border-b border-teal-100 px-4 py-2 flex items-center justify-between text-[11px] font-bold text-teal-800">
+                  <span className="flex items-center gap-1.5">
+                    <Smartphone size={13} className="text-teal-600" />
+                    <span>Partner App ➔ Referral Rewards</span>
+                  </span>
+                  <span className="bg-teal-200/60 text-teal-900 px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+                    Slide #{banner.displayOrder ?? 0}
+                  </span>
+                </div>
+
                 {/* Visual Banner Preview Card (Mobile replica) */}
                 <div
                   className={`relative flex min-h-[170px] flex-col justify-between overflow-hidden p-5 text-white bg-gradient-to-br ${gradient.bg}`}
@@ -562,40 +826,43 @@ export default function AdminReferralBanners() {
                     ) : null}
                   </div>
 
-                  {/* Bottom Action Hint */}
-                  <div className="relative z-10 mt-3 flex items-center justify-between border-t border-white/15 pt-2 text-[11px] font-semibold text-white/90">
-                    <span className="flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-amber-300" />
-                      {banner.ctaText || "Refer & Earn"}
+                  {/* Bottom Row */}
+                  <div className="relative z-10 mt-4 flex items-center justify-between pt-2 border-t border-white/20 text-xs">
+                    <span className="text-white/80 font-medium capitalize">
+                      {gradient.label} Theme
                     </span>
-                    <span className="text-[10px] opacity-75">{gradient.label.split(" ")[0]} theme</span>
+                    <div className="flex items-center gap-1 font-semibold text-white">
+                      <span>{banner.ctaText || "Invite"}</span>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </div>
                   </div>
                 </div>
 
-                {/* Card Meta & Detailed Info */}
-                <div className="flex flex-1 flex-col justify-between p-4">
+                {/* Card Management Footer */}
+                <div className="flex flex-1 flex-col justify-between p-4 bg-white">
                   <div>
                     {banner.description ? (
                       <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
                         {banner.description}
                       </p>
                     ) : (
-                      <p className="text-xs italic text-slate-400">No additional description</p>
+                      <p className="text-xs italic text-slate-400">No extended description.</p>
                     )}
 
                     {banner.terms ? (
-                      <div className="mt-2.5 rounded-lg bg-slate-50 p-2 text-[11px] text-slate-500">
-                        <span className="font-semibold text-slate-600">Terms:</span> {banner.terms}
+                      <div className="mt-3 rounded-lg bg-slate-50 p-2 text-[11px] text-slate-500 border border-slate-100">
+                        <span className="font-semibold text-slate-700">Terms: </span>
+                        <span className="line-clamp-2">{banner.terms}</span>
                       </div>
                     ) : null}
                   </div>
 
                   {/* Admin Controls */}
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                  <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
                     <button
                       type="button"
                       onClick={() => toggleBannerStatus(banner)}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
                         banner.isActive
                           ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
                           : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
@@ -603,11 +870,13 @@ export default function AdminReferralBanners() {
                     >
                       {banner.isActive ? (
                         <>
-                          <EyeOff className="h-3 w-3" /> Hide
+                          <EyeOff className="h-3.5 w-3.5" />
+                          Hide
                         </>
                       ) : (
                         <>
-                          <Eye className="h-3 w-3" /> Show
+                          <Eye className="h-3.5 w-3.5" />
+                          Show
                         </>
                       )}
                     </button>
@@ -616,7 +885,7 @@ export default function AdminReferralBanners() {
                       <button
                         type="button"
                         onClick={() => openEditModal(banner)}
-                        className="rounded-lg p-1.5 text-slate-500 transition hover:bg-teal-50 hover:text-teal-700"
+                        className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                         title="Edit Banner"
                       >
                         <Edit3 className="h-4 w-4" />
@@ -649,6 +918,7 @@ export default function AdminReferralBanners() {
                   <th className="px-4 py-3.5">Order</th>
                   <th className="px-4 py-3.5">Banner Preview</th>
                   <th className="px-4 py-3.5">Title & Subtitle</th>
+                  <th className="px-4 py-3.5">App Screen Location</th>
                   <th className="px-4 py-3.5">Reward Highlight</th>
                   <th className="px-4 py-3.5">Badge & Theme</th>
                   <th className="px-4 py-3.5">Status</th>
@@ -687,6 +957,17 @@ export default function AdminReferralBanners() {
                         ) : null}
                       </td>
                       <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-800 border border-teal-200/80">
+                            <Smartphone className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                            Partner App ➔ Referral Rewards
+                          </span>
+                          <span className="text-[11px] font-semibold text-slate-500 pl-1">
+                            Top Carousel · Slide #{banner.displayOrder ?? 0}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
                         {banner.rewardAmount ? (
                           <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">
                             {banner.rewardAmount}
@@ -722,7 +1003,7 @@ export default function AdminReferralBanners() {
                               banner.isActive ? "bg-emerald-600" : "bg-slate-400"
                             }`}
                           />
-                          {banner.isActive ? "Active" : "Inactive"}
+                          {banner.isActive ? "Active" : "Hidden"}
                         </button>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -730,8 +1011,8 @@ export default function AdminReferralBanners() {
                           <button
                             type="button"
                             onClick={() => openEditModal(banner)}
-                            className="rounded-lg p-1.5 text-slate-500 hover:bg-teal-50 hover:text-teal-700"
-                            title="Edit"
+                            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                            title="Edit Banner"
                           >
                             <Edit3 className="h-4 w-4" />
                           </button>
@@ -741,8 +1022,8 @@ export default function AdminReferralBanners() {
                               setBannerToDelete(banner);
                               setDeleteModalOpen(true);
                             }}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                            title="Delete"
+                            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                            title="Delete Banner"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>

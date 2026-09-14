@@ -280,10 +280,9 @@ const Dashboard = () => {
 
           {/* Right Side - Banner Carousel */}
           {banners.length > 0 && (
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 flex flex-col">
               <div
-                className="relative w-full overflow-hidden rounded-lg shadow-md bg-white"
-                style={{ height: "200px", minHeight: "300px" }}
+                className="relative w-full overflow-hidden rounded-xl shadow-sm border border-gray-100 bg-slate-900/5 flex-1 min-h-[220px] sm:min-h-[260px] lg:min-h-[300px]"
                 onMouseEnter={() => setIsAutoPlaying(false)}
                 onMouseLeave={() => setIsAutoPlaying(true)}
               >
@@ -296,13 +295,22 @@ const Dashboard = () => {
                 >
                   {banners.map((banner, index) => (
                     <div
-                      key={banner._id}
-                      className="w-full h-full flex-shrink-0 relative"
+                      key={banner._id || index}
+                      className="w-full h-full flex-shrink-0 relative overflow-hidden flex items-center justify-center bg-slate-900/5"
                     >
+                      {/* Ambient blur background: smoothly fills any width difference with matching banner colors */}
+                      <img
+                        src={banner.imageUrl}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110 pointer-events-none select-none"
+                      />
+
+                      {/* Full crisp banner - 100% visible, zero cropping */}
                       <img
                         src={banner.imageUrl}
                         alt={banner.title || `Banner ${index + 1}`}
-                        className="w-full h-full object-cover rounded-lg"
+                        className="relative w-full h-full object-contain z-10 select-none drop-shadow-sm"
                         onError={(e) => {
                           console.error(`Failed to load image: ${banner.imageUrl}`);
                           e.target.style.display = "none";
@@ -311,8 +319,8 @@ const Dashboard = () => {
 
                       {/* Title Overlay */}
                       {banner.title && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 sm:p-4 rounded-b-lg">
-                          <h4 className="text-white text-sm sm:text-lg font-semibold">
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-3 sm:p-4 rounded-b-xl z-20">
+                          <h4 className="text-white text-sm sm:text-base font-semibold">
                             {banner.title}
                           </h4>
                         </div>
@@ -326,33 +334,36 @@ const Dashboard = () => {
                   <>
                     <button
                       onClick={goToPrevious}
-                      className="absolute left-2 sm:left-6 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white rounded-full shadow-md z-10 p-1 sm:p-2"
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 rounded-full shadow-md z-20 p-2 transition-all hover:scale-105"
+                      aria-label="Previous banner"
                     >
-                      <ChevronLeft size={20} className="text-gray-700" />
+                      <ChevronLeft size={20} />
                     </button>
 
                     <button
                       onClick={goToNext}
-                      className="absolute right-2 sm:right-6 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white rounded-full shadow-md z-10 p-1 sm:p-2"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 rounded-full shadow-md z-20 p-2 transition-all hover:scale-105"
+                      aria-label="Next banner"
                     >
-                      <ChevronRight size={20} className="text-gray-700" />
+                      <ChevronRight size={20} />
                     </button>
                   </>
                 )}
               </div>
 
-              {/* Dots Indicator */}
+              {/* Dots Indicator - cleanly below banner card */}
               {banners.length > 1 && (
-                <div className="flex justify-center gap-2 mt-3">
+                <div className="flex justify-center items-center gap-2 mt-3">
                   {banners.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => goToSlide(index)}
-                      className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      className={`h-2 rounded-full transition-all duration-300 ${
                         currentIndex === index
-                          ? "bg-blue-600 w-6"
-                          : "bg-gray-300 hover:bg-gray-400"
+                          ? "bg-teal-600 w-6"
+                          : "bg-gray-300 hover:bg-gray-400 w-2"
                       }`}
+                      aria-label={`Go to slide ${index + 1}`}
                     />
                   ))}
                 </div>

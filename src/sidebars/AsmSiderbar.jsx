@@ -125,7 +125,6 @@ const AsmSiderbar = () => {
     { name: "Dashboard", icon: LayoutGrid, path: `${basePath}/dashboard` },
     { name: subordinateLabel, icon: Users, path: subordinatePath },
     { name: "Partners", icon: UserCheck, path: `${basePath}/partners` },
-    { name: "Move Partners", icon: Users, path: `${basePath}/move-partners`, highlight: true },
     { name: "Applications", icon: FileText, path: `${basePath}/applications` },
     { name: "Payouts", icon: IndianRupee, path: `${basePath}/payouts`, highlight: true },
     { name: "Incentives", icon: Award, path: `${basePath}/incentives`, highlight: true },

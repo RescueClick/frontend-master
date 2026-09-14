@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import axios from "axios";
 import { getAuthData } from "../../../utils/localStorage";
 import toast from "react-hot-toast";
@@ -36,7 +36,8 @@ import {
   RefreshCw,
   Maximize,
   Clock,
-  Search
+  Search,
+  X
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
@@ -198,6 +199,8 @@ const RsmApplicationView = () => {
   const [copiedBankField, setCopiedBankField] = useState(null);
 
   // Find Bank RM (directory) state
+  const [rmSearchQuery, setRmSearchQuery] = useState("");
+  const [rmAllRows, setRmAllRows] = useState([]);
   const [rmFilters, setRmFilters] = useState({
     bank: "",
     product: "",
@@ -212,11 +215,14 @@ const RsmApplicationView = () => {
     states: [],
     cities: [],
   });
-  const [rmResults, setRmResults] = useState([]);
   const [rmOptionsLoading, setRmOptionsLoading] = useState(false);
   const [rmSearching, setRmSearching] = useState(false);
-  const [rmHasSearched, setRmHasSearched] = useState(false);
   const [copiedRmCode, setCopiedRmCode] = useState(null);
+
+  const getAppAuthToken = useCallback(() => {
+    const auth = getAuthData() || {};
+    return auth.asmToken || auth.rsmToken || auth.adminToken || auth.token || "";
+  }, []);
 
   const toggleBankPassword = (bankId) => {
     setShowBankPassword((prev) => ({
@@ -413,13 +419,13 @@ const RsmApplicationView = () => {
 
   const fetchRequiredDocRules = async (appData) => {
     try {
-      const { rsmToken } = getAuthData();
+      const token = getAppAuthToken();
       const response = await axios.get(`${backendurl}/partner/loan-doc-rules`, {
         params: {
           loanType: appData?.loanType,
           gender: appData?.customer?.gender || "",
         },
-        headers: { Authorization: `Bearer ${rsmToken}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (Array.isArray(response?.data?.rules) && response.data.rules.length) {
         return response.data.rules;
@@ -463,13 +469,13 @@ const RsmApplicationView = () => {
     if (!searchPincode || !applicationData?.loanType) return;
     setFetchingBanks(true);
     try {
-      const { rsmToken } = getAuthData();
+      const token = getAppAuthToken();
       const response = await axios.get(`${backendurl}/rsm/banks`, {
         params: {
           pincode: searchPincode,
           loanType: applicationData.loanType,
         },
-        headers: { Authorization: `Bearer ${rsmToken}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       setEligibleBanks(response.data || []);
       setBanksFetched(true);
@@ -481,10 +487,27 @@ const RsmApplicationView = () => {
     }
   };
 
-  const fetchRmFilterOptions = async (nextFilters = rmFilters) => {
+  const fetchAllBankRms = useCallback(async () => {
+    try {
+      setRmSearching(true);
+      const token = getAppAuthToken();
+      const res = await axios.get(`${backendurl}/rsm/bank-rms`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = Array.isArray(res.data?.bankRms) ? res.data.bankRms : [];
+      setRmAllRows(data);
+    } catch (err) {
+      console.error("Failed to load bank RMs:", err);
+      setRmAllRows([]);
+    } finally {
+      setRmSearching(false);
+    }
+  }, [getAppAuthToken]);
+
+  const fetchRmFilterOptions = useCallback(async (nextFilters = rmFilters) => {
     try {
       setRmOptionsLoading(true);
-      const { rsmToken } = getAuthData();
+      const token = getAppAuthToken();
       const params = {};
       if (nextFilters.bank) params.bank = nextFilters.bank;
       if (nextFilters.product) params.product = nextFilters.product;
@@ -492,7 +515,7 @@ const RsmApplicationView = () => {
       if (nextFilters.state) params.state = nextFilters.state;
 
       const res = await axios.get(`${backendurl}/rsm/bank-rms/filter-options`, {
-        headers: { Authorization: `Bearer ${rsmToken}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         params,
       });
 
@@ -505,77 +528,87 @@ const RsmApplicationView = () => {
       });
     } catch (err) {
       console.error("Error fetching Bank RM filters:", err);
-      toast.error(err?.response?.data?.message || "Failed to load Find Bank RM filters");
     } finally {
       setRmOptionsLoading(false);
     }
-  };
+  }, [getAppAuthToken, rmFilters]);
 
   const handleRmFilterChange = async (field, value) => {
     let next = { ...rmFilters, [field]: value };
     if (field === "bank") {
-      next = { bank: value, product: "", marketType: "", state: "", city: "" };
-    } else if (field === "product") {
-      next = {
-        bank: rmFilters.bank,
-        product: value,
-        marketType: "",
-        state: "",
-        city: "",
-      };
-    } else if (field === "marketType") {
-      next = {
-        bank: rmFilters.bank,
-        product: rmFilters.product,
-        marketType: value,
-        state: "",
-        city: "",
-      };
+      next = { ...rmFilters, bank: value, product: "", marketType: "" };
     } else if (field === "state") {
-      next = { ...rmFilters, state: value, city: "" };
+      const isPan = value === "PAN India" || value === "Open India";
+      next = { ...rmFilters, state: value, city: isPan ? "All Cities" : "" };
     }
 
     setRmFilters(next);
-    setRmHasSearched(false);
-    setRmResults([]);
     await fetchRmFilterOptions(next);
   };
 
-  const handleFindBankRmSearch = async () => {
-    if (
-      !rmFilters.bank ||
-      !rmFilters.product ||
-      !rmFilters.marketType ||
-      !rmFilters.state ||
-      !rmFilters.city
-    ) {
-      toast.error("Please select Bank, Product, Market Type, State and City");
-      return;
+  const handleResetRmFilters = () => {
+    const empty = { bank: "", product: "", marketType: "", state: "", city: "" };
+    setRmFilters(empty);
+    setRmSearchQuery("");
+    fetchRmFilterOptions(empty);
+  };
+
+  const rmFilteredResults = useMemo(() => {
+    let list = (rmAllRows || []).filter((r) => r?.isActive !== false);
+
+    if (rmFilters.bank) {
+      const b = rmFilters.bank.trim().toLowerCase();
+      list = list.filter((r) => String(r.bankNbfcName || "").trim().toLowerCase() === b);
+    }
+    if (rmFilters.product) {
+      const p = rmFilters.product.trim().toLowerCase();
+      list = list.filter((r) => String(r.product || "").trim().toLowerCase() === p);
+    }
+    if (rmFilters.marketType) {
+      const m = rmFilters.marketType.trim().toLowerCase();
+      list = list.filter((r) => String(r.marketType || "").trim().toLowerCase() === m);
+    }
+    if (rmFilters.state) {
+      const s = rmFilters.state.trim().toLowerCase();
+      const isPan = s === "pan india" || s === "open india";
+      if (isPan) {
+        list = list.filter((r) => r.isPanIndia || /pan\s*india|open\s*india/i.test(r.state || ""));
+      } else {
+        list = list.filter((r) => String(r.state || "").trim().toLowerCase() === s);
+      }
+    }
+    if (rmFilters.city) {
+      const c = rmFilters.city.trim().toLowerCase();
+      if (c !== "all cities") {
+        list = list.filter((r) => String(r.city || "").trim().toLowerCase() === c);
+      }
     }
 
-    try {
-      setRmSearching(true);
-      setRmHasSearched(true);
-      const { rsmToken } = getAuthData();
-      const res = await axios.get(`${backendurl}/rsm/bank-rms`, {
-        headers: { Authorization: `Bearer ${rsmToken}` },
-        params: {
-          bank: rmFilters.bank,
-          product: rmFilters.product,
-          marketType: rmFilters.marketType,
-          state: rmFilters.state,
-          city: rmFilters.city,
-        },
+    if (rmSearchQuery.trim()) {
+      const q = rmSearchQuery.trim().toLowerCase();
+      list = list.filter((r) => {
+        const hay = [
+          r.bankNbfcName,
+          r.product,
+          r.loginCode,
+          r.marketType,
+          r.subType,
+          r.city,
+          r.state,
+          r.company,
+          r.rmName,
+          r.asmName,
+          r.rsmName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
       });
-      setRmResults(Array.isArray(res.data?.bankRms) ? res.data.bankRms : []);
-    } catch (err) {
-      console.error("Error searching Bank RMs:", err);
-      toast.error(err?.response?.data?.message || "Failed to search Bank RMs");
-      setRmResults([]);
-    } finally {
-      setRmSearching(false);
     }
-  };
+
+    return list;
+  }, [rmAllRows, rmFilters, rmSearchQuery]);
 
   const handleCopyRmLoginCode = async (code, id) => {
     if (!code) {
@@ -614,17 +647,15 @@ const RsmApplicationView = () => {
   }, [searchPincode, applicationData?.loanType, banksFetched]);
 
   useEffect(() => {
-    if (applicationId) {
-      fetchRmFilterOptions({
-        bank: "",
-        product: "",
-        marketType: "",
-        state: "",
-        city: "",
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applicationId]);
+    fetchRmFilterOptions({
+      bank: "",
+      product: "",
+      marketType: "",
+      state: "",
+      city: "",
+    });
+    fetchAllBankRms();
+  }, [fetchRmFilterOptions, fetchAllBankRms]);
 
   useEffect(() => {
     if (applicationId) {
@@ -647,13 +678,11 @@ const RsmApplicationView = () => {
     setZoomLevel(1);
     setRotation(0);
     try {
-      const { rsmToken } = getAuthData();
+      const token = getAppAuthToken();
       const response = await axios.get(
         `${backendurl}/rsm/applications/${applicationData._id}/docs/${doc.docType}/download`,
         {
-          headers: {
-            Authorization: `Bearer ${rsmToken}`,
-          },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
           responseType: "blob",
         }
       );
@@ -1965,17 +1994,67 @@ const RsmApplicationView = () => {
 
                   {/* 4. Find Bank RM — full-width bottom card */}
                   <div className="md:col-span-2 xl:col-span-3 bg-white rounded-xl border border-rose-200 shadow-sm overflow-hidden">
-                    <div className="bg-gradient-to-r from-rose-500 to-rose-600 px-4 py-3">
-                      <h3 className="text-sm font-bold text-white flex items-center">
-                        <Search className="w-4 h-4 mr-1.5 text-rose-100" />
-                        Find Bank RM
-                      </h3>
-                      <p className="text-rose-100 text-[11px] mt-0.5 opacity-90">
-                        Search bank RM login codes by bank, product, market type, state and city.
-                      </p>
+                    <div className="bg-gradient-to-r from-rose-500 to-rose-600 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <h3 className="text-sm font-bold text-white flex items-center">
+                          <Search className="w-4 h-4 mr-1.5 text-rose-100" />
+                          Find Bank RM
+                        </h3>
+                        <p className="text-rose-100 text-[11px] mt-0.5 opacity-90">
+                          Search bank RM login codes by bank name, product, RM, market type, or location.
+                        </p>
+                      </div>
+                      <span className="text-xs font-semibold bg-white/20 text-white px-2.5 py-1 rounded-full backdrop-blur-xs">
+                        {rmFilteredResults.length} Available
+                      </span>
                     </div>
 
                     <div className="p-3.5 space-y-3">
+                      {/* Instant Search Bar */}
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <div className="relative flex-1 min-w-[240px]">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Quick search by Bank, RM name, Login code, City or State..."
+                            value={rmSearchQuery}
+                            onChange={(e) => setRmSearchQuery(e.target.value)}
+                            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-xs"
+                          />
+                          {rmSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => setRmSearchQuery("")}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleResetRmFilters}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                          Reset Filters
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            fetchAllBankRms();
+                            fetchRmFilterOptions(rmFilters);
+                          }}
+                          disabled={rmSearching || rmOptionsLoading}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${rmSearching || rmOptionsLoading ? "animate-spin" : ""}`} />
+                          Refresh
+                        </button>
+                      </div>
+
+                      {/* Dropdown Filters */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5">
                         <label className="space-y-1 text-sm">
                           <span className="font-medium text-slate-600 text-xs">Bank</span>
@@ -1984,7 +2063,7 @@ const RsmApplicationView = () => {
                             onChange={(e) => handleRmFilterChange("bank", e.target.value)}
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500"
                           >
-                            <option value="">Please Select Bank</option>
+                            <option value="">All Banks</option>
                             {rmOptions.banks.map((bank) => (
                               <option key={bank} value={bank}>
                                 {bank}
@@ -1998,10 +2077,9 @@ const RsmApplicationView = () => {
                           <select
                             value={rmFilters.product}
                             onChange={(e) => handleRmFilterChange("product", e.target.value)}
-                            disabled={!rmFilters.bank}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500 disabled:bg-slate-50"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500"
                           >
-                            <option value="">Please Select Product</option>
+                            <option value="">All Products</option>
                             {rmOptions.products.map((product) => (
                               <option key={product} value={product}>
                                 {product}
@@ -2015,10 +2093,9 @@ const RsmApplicationView = () => {
                           <select
                             value={rmFilters.marketType}
                             onChange={(e) => handleRmFilterChange("marketType", e.target.value)}
-                            disabled={!rmFilters.product}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500 disabled:bg-slate-50"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500"
                           >
-                            <option value="">Please Select Market Type</option>
+                            <option value="">All Market Types</option>
                             {rmOptions.marketTypes.map((marketType) => (
                               <option key={marketType} value={marketType}>
                                 {marketType}
@@ -2032,10 +2109,9 @@ const RsmApplicationView = () => {
                           <select
                             value={rmFilters.state}
                             onChange={(e) => handleRmFilterChange("state", e.target.value)}
-                            disabled={!rmFilters.marketType}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500 disabled:bg-slate-50"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500"
                           >
-                            <option value="">Please Select State</option>
+                            <option value="">All States</option>
                             {rmOptions.states.map((state) => (
                               <option key={state} value={state}>
                                 {state}
@@ -2049,10 +2125,9 @@ const RsmApplicationView = () => {
                           <select
                             value={rmFilters.city}
                             onChange={(e) => handleRmFilterChange("city", e.target.value)}
-                            disabled={!rmFilters.state}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500 disabled:bg-slate-50"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-rose-500 focus:border-rose-500"
                           >
-                            <option value="">Please Select City</option>
+                            <option value="">All Cities</option>
                             {rmOptions.cities.map((city) => (
                               <option key={city} value={city}>
                                 {city}
@@ -2062,43 +2137,12 @@ const RsmApplicationView = () => {
                         </label>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleFindBankRmSearch}
-                          disabled={rmSearching || rmOptionsLoading}
-                          className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
-                        >
-                          {rmSearching ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Search className="w-4 h-4" />
-                          )}
-                          {rmSearching ? "Searching..." : "Submit"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            fetchRmFilterOptions(rmFilters)
-                          }
-                          disabled={rmOptionsLoading}
-                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                        >
-                          <RefreshCw className={`w-4 h-4 ${rmOptionsLoading ? "animate-spin" : ""}`} />
-                          Refresh Filters
-                        </button>
-                      </div>
-
                       <div className="overflow-hidden rounded-xl border border-slate-200">
                         <BankRmResultsTable
-                          rows={rmResults}
+                          rows={rmFilteredResults}
                           loading={rmSearching}
                           compact
-                          emptyMessage={
-                            !rmHasSearched
-                              ? "Select filters and click Submit to view Bank RM details"
-                              : "No matching Bank RM records found"
-                          }
+                          emptyMessage="No matching Bank RM records found"
                           copiedLoginCodeId={copiedRmCode}
                           onCopyLoginCode={handleCopyRmLoginCode}
                         />

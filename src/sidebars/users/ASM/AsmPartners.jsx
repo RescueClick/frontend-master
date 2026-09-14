@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { Search, Download, FileText, Award, CreditCard, Edit3, X } from "lucide-react";
+import { Search, Download, FileText, Award, CreditCard, Edit3, X, Users } from "lucide-react";
 import {
   activatePartner,
   fetchAsmPartners,
@@ -582,6 +582,15 @@ loginAsUser(userId, navigate);
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              onClick={() => navigate(location.pathname.startsWith("/asm") ? "/asm/move-partners" : "/rsm/move-partners")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-teal-600 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-700 shadow-sm hover:bg-teal-100 transition"
+              title="Bulk reassign partners to another RM"
+            >
+              <Users size={16} />
+              Move Partners
+            </button>
             <button
               type="button"
               onClick={handleExport}

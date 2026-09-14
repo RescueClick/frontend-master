@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Search, Trash2, FileText, Award, CreditCard, Edit3, X, KeyRound, UserCheck, ChevronRight, AlertTriangle, FileWarning, RotateCcw, CheckCircle2, ExternalLink } from "lucide-react";
+import { Download, Search, Trash2, FileText, Award, CreditCard, Edit3, X, KeyRound, UserCheck, ChevronRight, AlertTriangle, FileWarning, RotateCcw, CheckCircle2, ExternalLink, ArrowRightLeft } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   activatePartner,
@@ -853,6 +853,15 @@ loginAsUser(userId, navigate);
               >
                 <Download size={16} className="mr-2" />
                 Export
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 text-sm bg-brand-primary text-white rounded-lg hover:opacity-90 transition-colors flex items-center font-semibold cursor-pointer shadow-xs"
+                onClick={() => navigate("/admin/move-partners")}
+                title="Transfer or Reassign Partners between RMs"
+              >
+                <ArrowRightLeft size={16} className="mr-2" />
+                Move Partners
               </button>
             </>
           }

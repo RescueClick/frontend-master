@@ -28,6 +28,7 @@ export default function AsmRSM() {
   const dispatch = useDispatch();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [loanTypeFilter, setLoanTypeFilter] = useState("ALL");
   const [rsmToDeactivate, setRsmToDeactivate] = useState(null);
   const [rsmToActivate, setRsmToActivate] = useState(null);
   const [replacementRsmId, setReplacementRsmId] = useState("");
@@ -100,13 +101,21 @@ export default function AsmRSM() {
   const filteredRsms = useMemo(() => {
     if (!rsms || rsms.length === 0) return [];
 
-    const term = searchQuery.trim().toLowerCase();
-    if (!term) return rsms;
+    let list = rsms;
+    if (loanTypeFilter && loanTypeFilter !== "ALL") {
+      list = list.filter((r) => {
+        const norm = (r.rsmType || r.asmType || "").toUpperCase();
+        return norm === loanTypeFilter;
+      });
+    }
 
-    return rsms.filter((r) => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return list;
+
+    return list.filter((r) => {
       const fullName = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
       const employeeId = (r.employeeId || "").toLowerCase();
-      const rsmType = (r.rsmType || "").toLowerCase();
+      const rsmType = (r.rsmType || r.asmType || "").toLowerCase();
 
       return (
         fullName.includes(term) ||
@@ -114,7 +123,7 @@ export default function AsmRSM() {
         rsmType.includes(term)
       );
     });
-  }, [rsms, searchQuery]);
+  }, [rsms, searchQuery, loanTypeFilter]);
 
   const handleExport = useCallback(() => {
     const rows = filteredRsms.map((r) => ({
@@ -644,6 +653,17 @@ export default function AsmRSM() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <select
+              value={loanTypeFilter}
+              onChange={(e) => setLoanTypeFilter(e.target.value)}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              aria-label="Filter ASMs by loan specialty"
+            >
+              <option value="ALL">All Loan Specialties</option>
+              <option value="PERSONAL">Personal Loan ASM</option>
+              <option value="BUSINESS">Business Loan ASM</option>
+              <option value="HOME_LAP">Home & LAP Loan ASM</option>
+            </select>
             <button
               type="button"
               onClick={handleExport}

@@ -71,6 +71,8 @@ import AdminReferralRewards from "./sidebars/users/Admin/AdminReferralRewards";
 import AdminReferralBanners from "./sidebars/users/Admin/AdminReferralBanners";
 import AdminDisbursedLoans from "./sidebars/users/Admin/AdminDisbursedLoans";
 import AdminPartnerLevels from "./sidebars/users/Admin/AdminPartnerLevels";
+import RewardsAndLevelsHub from "./sidebars/users/Admin/RewardsAndLevelsHub";
+import PayoutAndIncentivesHub from "./sidebars/users/Admin/PayoutAndIncentivesHub";
 
 // Import ASM user pages
 import AsmDashboard from "./sidebars/users/ASM/Dashboard";
@@ -340,8 +342,9 @@ const AppRoutes = () => {
         <Route path="move-partners" element={<AdminMovePartners />} />
         <Route path="public-loan-referral" element={<AdminPublicLoanReferral />} />
         <Route path="referral-reward-amounts" element={<AdminReferralRewardAmounts />} />
-        <Route path="referral-rewards" element={<AdminReferralRewards />} />
-        <Route path="referral-banners" element={<AdminReferralBanners />} />
+        <Route path="referral-rewards" element={<RewardsAndLevelsHub initialTab="rewards" />} />
+        <Route path="rewards-levels" element={<RewardsAndLevelsHub />} />
+        <Route path="referral-banners" element={<Banner initialTab="referral" />} />
         <Route path="customer" element={<AdiminCustomer />} />
         <Route path="target" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="partner-targets" element={<Navigate to="/admin/incentives" replace />} />
@@ -360,11 +363,12 @@ const AppRoutes = () => {
         <Route path="add-rsm-page" element={<AddRSMPage />} /> 
         <Route path="add-partner-page" element={<AddPartnerPage />} /> 
         <Route path="banner" element={<Banner />} />
-        <Route path="payout" element={<AdminPayouts />} />
+        <Route path="payout" element={<PayoutAndIncentivesHub initialTab="payout" />} />
+        <Route path="payout-incentives" element={<PayoutAndIncentivesHub />} />
         <Route path="pending-payout" element={<AdminPendingPayout />} />
         <Route path="done-payout" element={<AdminDonePayout />} />
-        <Route path="incentives" element={<AdminIncentives />} />
-        <Route path="partner-levels" element={<AdminPartnerLevels />} />
+        <Route path="incentives" element={<PayoutAndIncentivesHub initialTab="incentives" />} />
+        <Route path="partner-levels" element={<RewardsAndLevelsHub initialTab="levels" />} />
         <Route path="incentives/pending" element={<Navigate to="/admin/incentives" replace state={{ defaultTab: "eligible" }} />} />
         <Route path="incentives/eligible" element={<Navigate to="/admin/incentives" replace state={{ defaultTab: "eligible" }} />} />
         <Route path="incentives/done" element={<Navigate to="/admin/incentives" replace state={{ defaultTab: "paid" }} />} />
@@ -413,6 +417,7 @@ const AppRoutes = () => {
         <Route path="chat" element={<ChatDashboard currentRole="ASM" />} />
         <Route path="rms" element={<RsmRMs />} />
         <Route path="partners" element={<RsmPartners />} />
+        <Route path="move-partners" element={<AsmMovePartners />} />
         <Route path="applications" element={<RsmApplications />} />
         <Route path="applications/view" element={<RsmApplicationView />} />
         <Route path="analytics" element={<RsmAnalytics />} />
