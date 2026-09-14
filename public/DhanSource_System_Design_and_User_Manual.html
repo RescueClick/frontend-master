@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DhanSource Capital — Enterprise System Architecture, Technical Specification & Complete Multi-Role Operations Manual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ==========================================================================
+       ENTERPRISE WHITE CORPORATE THEME (CLEAN, SHARP, EXECUTIVE-READY)
+       ========================================================================== */
+    :root {
+      --bg-canvas: #ffffff;
+      --bg-surface: #f8fafc;
+      --bg-surface-elevated: #f1f5f9;
+      --bg-card: #ffffff;
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --border-accent: rgba(13, 148, 136, 0.35);
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --accent-teal: #0f766e;
+      --accent-teal-soft: #f0fdfa;
+      --accent-emerald: #047857;
+      --accent-emerald-soft: #ecfdf5;
+      --accent-indigo: #4338ca;
+      --accent-indigo-soft: #eef2ff;
+      --accent-amber: #b45309;
+      --accent-amber-soft: #fffbeb;
+      --accent-rose: #be123c;
+      --accent-rose-soft: #fff1f2;
+      --accent-blue: #1d4ed8;
+      --accent-blue-soft: #eff6ff;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* Fixed Top Navigation Bar */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.85rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      font-weight: 800;
+      font-size: 1.2rem;
+      letter-spacing: -0.025em;
+      color: #0f172a;
+    }
+    .brand-badge {
+      font-size: 0.725rem;
+      padding: 0.2rem 0.65rem;
+      background: var(--accent-teal-soft);
+      border: 1px solid #99f6e4;
+      color: var(--accent-teal);
+      border-radius: 9999px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .btn-pdf {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+      color: #ffffff;
+      border: none;
+      padding: 0.65rem 1.35rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(13, 148, 136, 0.25);
+      transition: all 0.2s ease;
+    }
+    .btn-pdf:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35);
+    }
+
+    /* Overall Layout */
+    .manual-wrapper {
+      display: flex;
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 2.5rem;
+      gap: 3rem;
+    }
+
+    /* Sticky Sidebar Table of Contents */
+    .sidebar-toc {
+      width: 320px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 5.5rem;
+      max-height: calc(100vh - 7rem);
+      overflow-y: auto;
+      padding-right: 1.25rem;
+      border-right: 1px solid var(--border-subtle);
+    }
+    .sidebar-toc::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar-toc::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: 4px;
+    }
+    .sidebar-toc h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      font-weight: 800;
+    }
+    .toc-section-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--accent-teal);
+      margin: 1.25rem 0 0.5rem 0;
+      letter-spacing: 0.05em;
+    }
+    .toc-link {
+      display: block;
+      padding: 0.4rem 0.65rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.825rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.2rem;
+      transition: all 0.15s ease;
+      line-height: 1.4;
+    }
+    .toc-link:hover {
+      background: var(--bg-surface-elevated);
+      color: var(--text-primary);
+    }
+    .toc-link.active {
+      background: var(--accent-teal-soft);
+      color: var(--accent-teal);
+      font-weight: 700;
+    }
+
+    /* Main Content Area */
+    .doc-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* Cover / Hero Block */
+    .cover-section {
+      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 4rem 3.5rem;
+      margin-bottom: 4rem;
+      position: relative;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    }
+    .doc-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      font-size: 0.825rem;
+      color: var(--text-muted);
+      margin-bottom: 1.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+    .cover-title {
+      font-size: 3rem;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      margin-bottom: 1.25rem;
+      color: #0f172a;
+    }
+    .cover-subtitle {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      max-width: 900px;
+      margin-bottom: 2.25rem;
+      line-height: 1.6;
+    }
+    .badge-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .tech-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    /* Section Structure */
+    .section-block {
+      margin-bottom: 5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .section-block:first-of-type {
+      border-top: none;
+      padding-top: 0;
+    }
+    .section-num {
+      display: inline-block;
+      font-size: 0.725rem;
+      font-weight: 800;
+      color: var(--accent-teal);
+      background: var(--accent-teal-soft);
+      padding: 0.25rem 0.65rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid #99f6e4;
+    }
+    .section-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      letter-spacing: -0.03em;
+      color: #0f172a;
+    }
+    .section-desc {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 2.25rem;
+      max-width: 950px;
+      line-height: 1.65;
+    }
+    h3.sub-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      margin: 2.75rem 0 1.25rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+    h4.sub-sub-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.85rem 0;
+      color: #0f172a;
+    }
+    p {
+      margin-bottom: 1.35rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin-bottom: 1.6rem;
+      padding-left: 1.75rem;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 0.65rem;
+      line-height: 1.65;
+    }
+
+    /* Cards & Containers */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin: 1.75rem 0 2.25rem 0;
+    }
+    .info-card {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.75rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      transition: all 0.2s ease;
+    }
+    .info-card:hover {
+      border-color: var(--border-strong);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+    }
+    .info-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .info-card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .info-card p {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+    }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+      margin: 1.75rem 0 2.5rem 0;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #f8fafc;
+      color: #0f172a;
+      font-weight: 700;
+      padding: 1rem 1.25rem;
+      border-bottom: 2px solid var(--border-strong);
+      text-transform: uppercase;
+      font-size: 0.775rem;
+      letter-spacing: 0.05em;
+    }
+    td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      vertical-align: top;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tr:hover td {
+      background: #f8fafc;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.775rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+    .badge-teal { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+    .badge-emerald { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .badge-amber { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .badge-rose { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+    .badge-indigo { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+    .badge-blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+    /* Callouts */
+    .callout {
+      border-radius: var(--radius-md);
+      padding: 1.5rem 1.75rem;
+      margin: 1.75rem 0;
+      border-left: 5px solid;
+      background: #f8fafc;
+      border-top: 1px solid var(--border-subtle);
+      border-right: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .callout-info { border-left-color: #0d9488; background: #f0fdfa; }
+    .callout-warning { border-left-color: #f59e0b; background: #fffbeb; }
+    .callout-success { border-left-color: #10b981; background: #ecfdf5; }
+    .callout-danger { border-left-color: #e11d48; background: #fff1f2; }
+    .callout-title {
+      font-weight: 800;
+      font-size: 1rem;
+      color: #0f172a;
+      margin-bottom: 0.45rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .callout p {
+      font-size: 0.925rem;
+      margin-bottom: 0;
+      color: var(--text-secondary);
+    }
+
+    /* Flow Steps */
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin: 1.75rem 0 2.5rem 0;
+    }
+    .flow-step {
+      display: flex;
+      gap: 1.5rem;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+    .step-circle {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: #f0fdfa;
+      border: 2px solid var(--accent-teal);
+      color: var(--accent-teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+    }
+    .step-body h4 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      color: #0f172a;
+    }
+    .step-body p {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+      margin-bottom: 0;
+    }
+
+    /* Diagram Pre / Code Boxes */
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background: #f1f5f9;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      color: #0284c7;
+      border: 1px solid #e2e8f0;
+    }
+    pre {
+      background: #f8fafc;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin: 1.75rem 0;
+      color: #0f172a;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    /* Checklists */
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+      margin: 1.25rem 0;
+    }
+    .checklist li {
+      position: relative;
+      padding-left: 1.75rem;
+      margin-bottom: 0.65rem;
+    }
+    .checklist li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #059669;
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+
+    /* ==========================================================================
+       PRINT STYLESHEET (CLEAN A4 PAGINATION, ZERO CUT-OFFS)
+       ========================================================================== */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 16mm 14mm 16mm 14mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-size: 10.5pt;
+        line-height: 1.55;
+      }
+      .top-bar, .sidebar-toc, .btn-pdf {
+        display: none !important;
+      }
+      .manual-wrapper {
+        padding: 0 !important;
+        max-width: 100% !important;
+        display: block !important;
+      }
+      .doc-content {
+        width: 100% !important;
+      }
+      .cover-section {
+        background: #ffffff !important;
+        border: 2px solid #0f172a !important;
+        padding: 3rem 2.5rem !important;
+        margin-bottom: 2.5rem !important;
+        page-break-after: always;
+        break-after: page;
+      }
+      .cover-title {
+        color: #0f172a !important;
+      }
+      .cover-subtitle, p, li, td {
+        color: #1e293b !important;
+      }
+      h1, h2, h3, h4 {
+        color: #0f172a !important;
+      }
+      .section-block {
+        page-break-before: always;
+        break-before: page;
+        border-top: none !important;
+        padding-top: 0 !important;
+      }
+      .info-card, .flow-step, .callout, .table-container, pre, tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .card-grid {
+        display: block !important;
+      }
+      .info-card {
+        margin-bottom: 1.25rem !important;
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+      .callout {
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+      table {
+        border: 1px solid #cbd5e1 !important;
+      }
+      th {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+        border-bottom: 2px solid #64748b !important;
+      }
+      td {
+        border-bottom: 1px solid #cbd5e1 !important;
+      }
+      .badge {
+        border: 1px solid #64748b !important;
+        color: #0f172a !important;
+      }
+      pre, code {
+        background: #f8fafc !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Executive Navigation Bar -->
+  <header class="top-bar">
+    <div class="brand-title">
+      <span>DhanSource Capital</span>
+      <span class="brand-badge">Enterprise Edition v3.0</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 1.25rem;">
+      <span style="font-size: 0.825rem; color: var(--text-muted); font-weight: 600;">Industrial System Manual (40-Page Reference)</span>
+      <button class="btn-pdf" onclick="window.print()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Download / Print PDF Manual
+      </button>
+    </div>
+  </header>
+
+  <div class="manual-wrapper">
+
+    <!-- Detailed Table of Contents Sidebar -->
+    <nav class="sidebar-toc">
+      <h3>Manual Index</h3>
+
+      <div class="toc-section-title">Part I: System Engineering</div>
+      <a href="#overview" class="toc-link">1. Executive Architecture Overview</a>
+      <a href="#tech-stack" class="toc-link">2. Deep Technology Stack & S3 Pipeline</a>
+      <a href="#data-models" class="toc-link">3. Entity Models & Database Schema</a>
+      <a href="#security-rbac" class="toc-link">4. RBAC, Security & Authentication</a>
+
+      <div class="toc-section-title">Part II: Hierarchy & Products</div>
+      <a href="#loan-matrix" class="toc-link">5. Loan Product & Underwriting Matrix</a>
+      <a href="#hierarchy-routing" class="toc-link">6. Hierarchy & Smart Routing Engine</a>
+      <a href="#pan-india-network" class="toc-link">7. Bank RM Network & PAN India Engine</a>
+      <a href="#state-machine" class="toc-link">8. Lifecycle State Machine & Rejections</a>
+
+      <div class="toc-section-title">Part III: Operations Runbooks</div>
+      <a href="#guide-superadmin" class="toc-link">9. Super Admin Operations Manual</a>
+      <a href="#guide-operations" class="toc-link">10. Operations & Underwriting Manual</a>
+      <a href="#guide-rsm" class="toc-link">11. RSM (Regional Manager) Manual</a>
+      <a href="#guide-asm" class="toc-link">12. ASM (Area Manager) Manual</a>
+      <a href="#guide-rm" class="toc-link">13. RM (Universal Field Manager) Manual</a>
+      <a href="#guide-partner-web" class="toc-link">14. Partner Web Portal Operations</a>
+      <a href="#guide-partner-app" class="toc-link">15. Partner Mobile App (Expo) Manual</a>
+      <a href="#guide-customer" class="toc-link">16. Retail Customer Portal Manual</a>
+
+      <div class="toc-section-title">Part IV: Financials & Runbooks</div>
+      <a href="#financial-engine" class="toc-link">17. Payouts, Slabs, Targets & Incentives</a>
+      <a href="#branch-management" class="toc-link">18. Multi-Branch City Scenarios</a>
+      <a href="#troubleshooting" class="toc-link">19. Diagnostics, Error Codes & Runbook</a>
+      <a href="#appendix" class="toc-link">20. API Index, Glossary & Checklist</a>
+    </nav>
+
+    <!-- Main Content Stream -->
+    <main class="doc-content">
+
+      <!-- COVER SECTION -->
+      <section class="cover-section" id="cover">
+        <div class="doc-meta">
+          <span>Enterprise Confidential</span>
+          <span>•</span>
+          <span>DhanSource Capital Technologies Private Limited</span>
+          <span>•</span>
+          <span>Document Version 3.0</span>
+          <span>•</span>
+          <span>Reviewed September 2026</span>
+        </div>
+        <h1 class="cover-title">DhanSource Capital Platform Manual</h1>
+        <p class="cover-subtitle">
+          Complete Industrial Technical Architecture Specification, Smart File Routing Mechanics, PAN India Banking Integration Network, and Complete Multi-Role Operational Standard Operating Procedures (SOP).
+        </p>
+        <div class="badge-grid">
+          <span class="tech-pill">⚡ Node.js / Express 5 API</span>
+          <span class="tech-pill">🍃 MongoDB Atlas Replication</span>
+          <span class="tech-pill">⚛️ React 18 / Vite Enterprise</span>
+          <span class="tech-pill">📱 React Native / Expo Native Networking</span>
+          <span class="tech-pill">☁️ AWS S3 AES-256 SSE Storage</span>
+          <span class="tech-pill">🛡️ Strict 7-Tier RBAC Security</span>
+          <span class="tech-pill">🌍 PAN India Digital Banking Desk</span>
+        </div>
+      </section>
+
+      <!-- SECTION 01: EXECUTIVE ARCHITECTURE OVERVIEW -->
+      <section class="section-block" id="overview">
+        <span class="section-num">Chapter 01</span>
+        <h2 class="section-title">Executive Architecture Overview</h2>
+        <p class="section-desc">
+          DhanSource Capital operates an industrial-grade Loan Origination (LOS), Customer Relationship Management (CRM), and Channel Partner Distribution System engineered specifically for Indian retail lending.
+        </p>
+
+        <p>
+          In traditional lending aggregators, partners struggle with fragmented communication, misplaced physical files, mismatched product managers, and delayed commission payouts. DhanSource Capital resolves this by decoupling the <strong>Front-End Partner Service Layer</strong> (single universal point of contact) from the <strong>Back-End Credit Underwriting Hierarchy</strong> (strictly specialized credit verticals).
+        </p>
+
+        <h3 class="sub-title">High-Level System Topology</h3>
+        <pre>
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   DHANSOURCE CLIENT LAYER                                            │
+├───────────────────────────────────┬───────────────────────────────────┬──────────────────────────────┤
+│  📱 Mobile App (Expo / React Native) │  💻 Web Management Portals        │  🌐 Public Web & Referrals   │
+│  - Field DSA Partners & Connectors  │  - Super Admin & Credit Ops       │  - Retail Borrowers          │
+│  - Native Camera Document Scans   │  - RSM, ASM, Universal RM         │  - Direct Loan Applications  │
+└─────────────────┬─────────────────┴─────────────────┬─────────────────┴──────────────┬───────────────┘
+                  │                                   │                                │
+                  ▼                                   ▼                                ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                               DHANSOURCE GATEWAY & LOAD BALANCER                                     │
+│                     Reverse Proxy (Nginx) • TLS 1.3 • CORS Enforcement • Rate Limiting               │
+└─────────────────────────────────────────────────┬────────────────────────────────────────────────────┘
+                                                  │
+                                                  ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 CORE BACKEND API ENGINE (Node.js)                                    │
+├────────────────────────────────┬────────────────────────────────┬────────────────────────────────────┤
+│  🔐 Auth & RBAC Middleware      │  📄 Smart File Routing Engine  │  🏦 Bank RM & PAN India Directory  │
+│  - Argon2 & JWT Security       │  - Product-to-Manager Dispatch │  - Multi-Branch & Central Desks    │
+├────────────────────────────────┼────────────────────────────────┼────────────────────────────────────┤
+│  📂 Atomic Document Service    │  💰 Payout & Commission Engine │  🔔 WebSocket Real-Time Broadcast │
+│  - S3 Presigned Upload Stream  │  - Slab Automation & Audits    │  - Socket.IO Multi-Room Alerts     │
+└──────────────────┬─────────────┴────────────────┬───────────────┴─────────────────┬──────────────────┘
+                   │                              │                                 │
+                   ▼                              ▼                                 ▼
+┌──────────────────────────────┐ ┌──────────────────────────────┐ ┌────────────────────────────────────┐
+│   🍃 MongoDB Atlas Cluster   │ │    ☁️ AWS S3 Object Storage   │ │    🏦 Banking Partner Portals      │
+│   - Users & Hierarchy Slots  │ │    - Encrypted Document Vault│ │    - LOS Bank Logins via API/LAN   │
+│   - Applications & Audit Log │ │    - Strict UUID Key Paths   │ │    - Bank RM Directory Integration │
+└──────────────────────────────┘ └──────────────────────────────┘ └────────────────────────────────────┘
+        </pre>
+
+        <div class="card-grid">
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">Front-End Universal Partner Service</span>
+              <span class="badge badge-teal">Field Agility</span>
+            </div>
+            <p>DSA Channel Partners interface with exactly <strong>ONE assigned Relationship Manager (RM)</strong> for all financial products (Personal, Business, Home, LAP). Partners never have to coordinate across multiple branch representatives.</p>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">Back-End Specialized Underwriting</span>
+              <span class="badge badge-indigo">Credit Quality</span>
+            </div>
+            <p>Once documents are certified by the RM, the system's smart routing engine dispatches the application strictly to specialized Area Sales Managers (ASM) and Regional Sales Managers (RSM) dedicated to that loan asset class.</p>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">PAN India Centralized Desks</span>
+              <span class="badge badge-emerald">Nationwide Scale</span>
+            </div>
+            <p>Local branch RMs (e.g. Pune Wakad, Mumbai Andheri) co-exist with Central Digital NBFC Desks (PAN India), allowing instant digital fulfillment across all 28 states and union territories.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 02: TECHNOLOGY STACK & S3 PIPELINE -->
+      <section class="section-block" id="tech-stack">
+        <span class="section-num">Chapter 02</span>
+        <h2 class="section-title">Deep Technology Stack & S3 Document Pipeline</h2>
+        <p class="section-desc">
+          Architectural details of the multi-platform framework, networking reliability layer, and zero-loss S3 document streaming pipeline.
+        </p>
+
+        <h3 class="sub-title">Technology Blueprint</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Underlying Tech</th>
+                <th>Architectural Purpose & Implementation Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Mobile Native App</strong></td>
+                <td>React Native (Expo SDK 52)</td>
+                <td>Provides native Android & iOS camera scanning, offline token caching, and background document queuing.</td>
+              </tr>
+              <tr>
+                <td><strong>Web Dashboard</strong></td>
+                <td>React 18 + Vite SPA</td>
+                <td>High-speed management portal utilizing Tailwind CSS tokens, dynamic modal dialogs, and real-time data table caching.</td>
+              </tr>
+              <tr>
+                <td><strong>Backend Services</strong></td>
+                <td>Node.js (v20 LTS), Express 5</td>
+                <td>Event-driven REST server with custom request context, structured JSON logging, and clustered background workers.</td>
+              </tr>
+              <tr>
+                <td><strong>Database Engine</strong></td>
+                <td>MongoDB Atlas (v7.0)</td>
+                <td>NoSQL document store utilizing compound indexes, subdocument change detection (<code>markModified</code>), and transaction support.</td>
+              </tr>
+              <tr>
+                <td><strong>Cloud File Store</strong></td>
+                <td>AWS S3 (@aws-sdk/client-s3)</td>
+                <td>Private bucket storage with Server-Side Encryption (SSE-S3 AES-256), lifecycle cleanup for deleted drafts, and presigned streaming.</td>
+              </tr>
+              <tr>
+                <td><strong>Real-Time Broadcast</strong></td>
+                <td>Socket.IO (WebSocket)</td>
+                <td>Instant status reflection across partner mobile devices and admin dashboards upon credit or document status changes.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub-title">Zero-Loss Atomic Document Upload Protocol</h3>
+        <p>
+          In retail lending, borrower income documents (Bank Statements, ITRs, Property Title Deeds) often exceed 15–25 MB. Submitting entire applications with 8 attachments in a single HTTP request causes frequent mobile timeouts and corrupted multipart boundaries.
+        </p>
+        <p>
+          DhanSource implements a resilient <strong>4-Stage Atomic Document Pipeline</strong>:
+        </p>
+
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="step-circle">1</div>
+            <div class="step-body">
+              <h4>Stage 1: Application Draft Initialization</h4>
+              <p>The client submits borrower profile data (Name, PAN, Mobile, Loan Amount). The server creates a MongoDB document in <code>DRAFT</code> status and reserves an official tracking number (e.g. <code>DS2026-08119</code>). No file binaries are transmitted in this request.</p>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-circle">2</div>
+            <div class="step-body">
+              <h4>Stage 2: Client-Side Normalization & MIME Sanitization</h4>
+              <p>On mobile (Android/iOS) or web, the file object is inspected. Binary headers are normalized to guarantee valid MIME types (<code>application/pdf</code>, <code>image/jpeg</code>, <code>image/png</code>). Dangerous characters in file names are stripped and suffixed with high-resolution timestamps.</p>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-circle">3</div>
+            <div class="step-body">
+              <h4>Stage 3: Individual Atomic S3 Upload Streams</h4>
+              <p>Each document (e.g. <code>PAN_CARD</code>, <code>SALARY_SLIP_1</code>, <code>BANK_STATEMENT</code>) is dispatched via an independent HTTP request using native fetch with automated exponential backoff (2 retries). If document 5 fails, documents 1 through 4 remain permanently verified in S3.</p>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-circle">4</div>
+            <div class="step-body">
+              <h4>Stage 4: State Finalization & RM Dispatch</h4>
+              <p>Once all mandatory documents are confirmed in S3, the client calls <code>/submit</code>. The application atomically transitions to <code>SUBMITTED</code>, records an audit log, and notifies the partner's designated RM via push notification and email.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 03: ENTITY MODELS & DATABASE SCHEMA -->
+      <section class="section-block" id="data-models">
+        <span class="section-num">Chapter 03</span>
+        <h2 class="section-title">Entity Models & Database Schema</h2>
+        <p class="section-desc">
+          Core MongoDB collections, relationships, indexing strategies, and subdocument schemas.
+        </p>
+
+        <h3 class="sub-title">1. User Schema (Multi-Role Master)</h3>
+        <p>
+          The <code>User</code> model represents all participants in the ecosystem: Super Admin, Operations Admin, RSM, ASM, RM, Partner, and Customer.
+        </p>
+        <pre>
+// Schema Definition: src/models/User.js (Key Fields)
+{
+  _id: ObjectId,
+  employeeId: { type: String, unique: true, index: true }, // e.g. TLA0007, TLR0012, DS-P049
+  firstName: { type: String, required: true, trim: true },
+  lastName: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true },
+  phone: { type: String, required: true, unique: true },
+  role: { 
+    type: String, 
+    enum: ["SUPER_ADMIN", "ADMIN", "RSM", "ASM", "RM", "PARTNER", "CUSTOMER"],
+    required: true, 
+    index: true 
+  },
+  
+  // Vertical Sub-Types for ASM & RSM (Strict Specialization)
+  rsmType: { type: String, enum: ["PERSONAL", "BUSINESS", "HOME_LAP", "BUSINESS_HOME"] },
+  asmType: { type: String, enum: ["PERSONAL", "BUSINESS", "HOME_LAP", "BUSINESS_HOME"] },
+
+  // Dedicated Reporting Slots configured on RM Documents
+  personalAsmId: { type: ObjectId, ref: "User" },
+  businessAsmId: { type: ObjectId, ref: "User" },
+  homeLapAsmId:  { type: ObjectId, ref: "User" },
+  personalRsmId: { type: ObjectId, ref: "User" },
+  businessRsmId: { type: ObjectId, ref: "User" },
+  homeLapRsmId:  { type: ObjectId, ref: "User" },
+
+  // Assigned Staff on Partner Documents
+  assignedRmId:  { type: ObjectId, ref: "User", index: true },
+  
+  isActive: { type: Boolean, default: true, index: true },
+  createdAt: Date,
+  updatedAt: Date
+}
+        </pre>
+
+        <h3 class="sub-title">2. Application Schema (Loan Lifecycle Engine)</h3>
+        <pre>
+// Schema Definition: src/models/Application.js
+{
+  _id: ObjectId,
+  appNo: { type: String, unique: true, index: true }, // e.g. DS2026-00412
+  partnerId: { type: ObjectId, ref: "User", index: true },
+  customerId: { type: ObjectId, ref: "User" },
+  
+  loanType: { 
+    type: String, 
+    enum: ["PERSONAL", "BUSINESS", "HOME_LOAN_SALARIED", "HOME_LOAN_SELF_EMPLOYED", "LAP_SALARIED", "LAP_SELF_EMPLOYED", "LAP"],
+    required: true, 
+    index: true 
+  },
+  loanAmount: { type: Number, required: true },
+  status: {
+    type: String,
+    enum: [
+      "DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE",
+      "BANK_LOGIN", "SANCTIONED", "DISBURSED", "REJECTED"
+    ],
+    default: "DRAFT",
+    index: true
+  },
+
+  // Active Management Hierarchy
+  rmId:  { type: ObjectId, ref: "User", index: true },
+  asmId: { type: ObjectId, ref: "User", index: true },
+  rsmId: { type: ObjectId, ref: "User", index: true },
+
+  // Bank Login Integration Fields
+  bankLoginDetails: {
+    bankNbfcName: String,
+    loginCode: String,
+    bankApplicationNo: String, // Bank LAN / LOS ID
+    branch: String,
+    loginDate: Date
+  },
+
+  // Document Vault Subdocuments
+  docs: [{
+    docType: String, // e.g. "PAN_CARD", "ITR_1", "SALARY_SLIP"
+    url: String,     // AWS S3 Secure Key URL
+    status: { type: String, enum: ["PENDING", "VERIFIED", "REJECTED"], default: "PENDING" },
+    rejectionReason: String,
+    verifiedAt: Date,
+    verifiedBy: { type: ObjectId, ref: "User" }
+  }],
+
+  disbursementDetails: {
+    disbursedAmount: Number,
+    disbursedDate: Date,
+    commissionAmount: Number,
+    isPayoutGenerated: { type: Boolean, default: false }
+  },
+
+  createdAt: Date,
+  updatedAt: Date
+}
+        </pre>
+
+        <h3 class="sub-title">3. BankRm Schema (Multi-Branch & PAN India Directory)</h3>
+        <pre>
+// Schema Definition: src/models/BankRm.js
+{
+  _id: ObjectId,
+  bankNbfcName: { type: String, required: true, trim: true, index: true },
+  loginCode: { type: String, required: true, trim: true },
+  product: { type: String, required: true, trim: true, index: true }, // e.g. PL, BL, HL, LAP
+  marketType: { type: String, required: true, trim: true },          // e.g. PRIME, OPEN, BT
+  city: { type: String, required: true, trim: true, index: true },
+  state: { type: String, required: true, trim: true, index: true },
+  company: { type: String, required: true, trim: true },
+  isPanIndia: { type: Boolean, default: false, index: true },         // Nationwide Desk Flag
+
+  // Nested Direct Contacts (Protected via markModified)
+  rm: {
+    name: String,
+    phone: String,
+    email: String,
+    product: String
+  },
+  asm: {
+    name: String,
+    phone: String,
+    email: String,
+    product: String
+  },
+  rsm: {
+    name: String,
+    phone: String,
+    email: String,
+    product: String
+  },
+
+  isActive: { type: Boolean, default: true, index: true },
+  createdBy: { type: ObjectId, ref: "User" },
+  updatedBy: { type: ObjectId, ref: "User" }
+}
+        </pre>
+      </section>
+
+      <!-- SECTION 04: SECURITY & RBAC -->
+      <section class="section-block" id="security-rbac">
+        <span class="section-num">Chapter 04</span>
+        <h2 class="section-title">Role-Based Access Control (RBAC) & Security</h2>
+        <p class="section-desc">
+          Comprehensive permission matrix, cryptographic standards, and authenticated session governance.
+        </p>
+
+        <h3 class="sub-title">Cryptographic & Session Standards</h3>
+        <div class="card-grid">
+          <div class="info-card">
+            <div class="info-card-title">🔑 Password Hashing (Argon2id)</div>
+            <p>Passwords are salted and hashed using Argon2id with memory cost 65536 KB, iteration count 3, and parallelism 4, providing unmatched resistance to GPU cracking.</p>
+          </div>
+          <div class="info-card">
+            <div class="info-card-title">🛡️ Stateless JWT Tokens</div>
+            <p>Cryptographically signed JSON Web Tokens (HMAC-SHA256) with strict 7-day expiration. Tokens carry <code>sub</code> (User ID), <code>role</code>, and <code>email</code>.</p>
+          </div>
+          <div class="info-card">
+            <div class="info-card-title">🔒 Multi-Tenant S3 Isolation</div>
+            <p>Documents uploaded to AWS S3 are segregated into secure paths: <code>applications/{appId}/{docType}_{timestamp}.ext</code>. Direct public listing is blocked.</p>
+          </div>
+        </div>
+
+        <h3 class="sub-title">Complete Multi-Role Permission Matrix</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>System Role</th>
+                <th>Application Visibility</th>
+                <th>Document Verification</th>
+                <th>Bank Logins</th>
+                <th>Payout Approvals</th>
+                <th>Staff Management</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>SUPER_ADMIN</strong></td>
+                <td>Global (All applications across India)</td>
+                <td>Full Override</td>
+                <td>Full Access</td>
+                <td>Final Release & Lock</td>
+                <td>Full CRUD (All Roles)</td>
+              </tr>
+              <tr>
+                <td><strong>ADMIN (Operations)</strong></td>
+                <td>Global Operational Pipeline</td>
+                <td>Full Audit & Verification</td>
+                <td>Full Access</td>
+                <td>Ledger Verification</td>
+                <td>Partner & RM assignment</td>
+              </tr>
+              <tr>
+                <td><strong>RSM (Regional Sales)</strong></td>
+                <td>Scoped to Regional Specialized Lines</td>
+                <td>Audit & View Only</td>
+                <td>Code Allocation</td>
+                <td>Target Monitoring</td>
+                <td>Subordinate ASMs & RMs</td>
+              </tr>
+              <tr>
+                <td><strong>ASM (Area Sales)</strong></td>
+                <td>Scoped to Area Specialized Lines</td>
+                <td>Audit & View Only</td>
+                <td>Active Bank Login (LOS)</td>
+                <td>Volume Tracking</td>
+                <td>Reporting RMs</td>
+              </tr>
+              <tr>
+                <td><strong>RM (Relationship Mgr)</strong></td>
+                <td>Assigned Partners & Direct Customers</td>
+                <td>Primary Scrutiny (Verify/Reject)</td>
+                <td>View Directory</td>
+                <td>View Commission Slabs</td>
+                <td>Partner KYC Approval</td>
+              </tr>
+              <tr>
+                <td><strong>PARTNER (DSA)</strong></td>
+                <td>Self-Generated Applications Only</td>
+                <td>Upload & Re-upload Only</td>
+                <td>View Bank Status</td>
+                <td>View & Withdraw Payouts</td>
+                <td>None</td>
+              </tr>
+              <tr>
+                <td><strong>CUSTOMER</strong></td>
+                <td>Self-Application Only</td>
+                <td>Upload Own KYC/Income</td>
+                <td>View Status</td>
+                <td>None</td>
+                <td>None</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 05: LOAN PRODUCT MATRIX -->
+      <section class="section-block" id="loan-matrix">
+        <span class="section-num">Chapter 05</span>
+        <h2 class="section-title">Loan Product & Underwriting Matrix</h2>
+        <p class="section-desc">
+          Eligibility criteria, CIBIL underwriting thresholds, mandatory documentation rules, and document compliance runbooks.
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Product Vertical</th>
+                <th>Min CIBIL</th>
+                <th>Income / Turnover Threshold</th>
+                <th>Mandatory Documentation Checklist</th>
+                <th>Target Lenders</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Personal Loan (Salaried)</strong></td>
+                <td>680+</td>
+                <td>Net Monthly: ₹25,000+</td>
+                <td>
+                  <ul class="checklist">
+                    <li>PAN Card & Aadhaar Card</li>
+                    <li>Latest 3 Months Salary Slips</li>
+                    <li>6 Months Bank Statement (Salary Account)</li>
+                    <li>Official Company ID / Appointment Letter</li>
+                  </ul>
+                </td>
+                <td>HDFC, ICICI, Axis, Kotak, Bajaj, Tata Capital</td>
+              </tr>
+              <tr>
+                <td><strong>Business Loan (MSME)</strong></td>
+                <td>650+</td>
+                <td>Annual Turnover: ₹40 Lakhs+</td>
+                <td>
+                  <ul class="checklist">
+                    <li>PAN & Aadhaar (Applicant + Co-App)</li>
+                    <li>12 Months Current Bank Account Statement</li>
+                    <li>2–3 Years ITR with Computation, Balance Sheet, P&L</li>
+                    <li>GST Registration & 12 Months GSTR-3B</li>
+                    <li>Udyam Aadhar / Shop Act License</li>
+                  </ul>
+                </td>
+                <td>Hero Fincorp, Aditya Birla, Faircent, Poonawalla</td>
+              </tr>
+              <tr>
+                <td><strong>Home Loan (HL)</strong></td>
+                <td>700+</td>
+                <td>Salaried (₹30k+) or Business</td>
+                <td>
+                  <ul class="checklist">
+                    <li>Applicant & Co-Applicant KYC</li>
+                    <li>Income Proofs (Form 16 or 3 Yrs ITR)</li>
+                    <li>Allotment Letter / Agreement to Sale</li>
+                    <li>Chain of Title Documents (Past 30 Years)</li>
+                    <li>Approved Building Plan & OC/CC</li>
+                  </ul>
+                </td>
+                <td>SBI, Bank of Baroda, PNB Housing, LIC Housing</td>
+              </tr>
+              <tr>
+                <td><strong>Loan Against Property (LAP)</strong></td>
+                <td>650+</td>
+                <td>Property Value: ₹25 Lakhs+</td>
+                <td>
+                  <ul class="checklist">
+                    <li>Full KYC & 3 Years Business/Salaried Income</li>
+                    <li>Complete Property Registered Sale Deed</li>
+                    <li>Approved Layout Plan & Sanction Map</li>
+                    <li>Latest Property Tax Receipt & Electricity Bill</li>
+                    <li>Sanction Letter of Existing Loan (if BT + Top-up)</li>
+                  </ul>
+                </td>
+                <td>Bajaj Housing, PNB, Kotak, Muthoot, Hero Fincorp</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 06: HIERARCHY & SMART ROUTING -->
+      <section class="section-block" id="hierarchy-routing">
+        <span class="section-num">Chapter 06</span>
+        <h2 class="section-title">Hierarchy & Smart File Routing Engine</h2>
+        <p class="section-desc">
+          Mathematical routing rules connecting Partners to Universal RMs, and dynamically dispatching approved files to Specialized ASMs and RSMs.
+        </p>
+
+        <h3 class="sub-title">1. The Universal RM Operating Principle</h3>
+        <p>
+          A central innovation of the DhanSource Capital platform is that <strong>an RM is NEVER constrained by loan type</strong>.
+        </p>
+        <ul>
+          <li>An RM is assigned geographically or by portfolio to specific Channel Partners.</li>
+          <li>Whether a partner submits a ₹50,000 Personal Loan or a ₹10 Crore Industrial LAP file, the file flows straight to their primary RM.</li>
+          <li>The RM acts as the field auditor, ensuring all pages are legible, statements are unencrypted, and signatures match before passing files upwards.</li>
+        </ul>
+
+        <h3 class="sub-title">2. Smart Dynamic Routing Sequence (DOC_COMPLETE)</h3>
+        <p>
+          When an RM certifies an application as <code>DOC_COMPLETE</code>, the backend executes the following algorithmic dispatch logic:
+        </p>
+
+        <pre>
+// Engine Dispatch Logic: src/routes/rm.routes.js (assignRsmForDocComplete)
+const loanType = application.loanType;
+let targetAsmId = null;
+
+if (loanType === "PERSONAL") {
+  // Dispatches to dedicated Personal Credit Manager
+  targetAsmId = rm.personalAsmId || rm.personalRsmId;
+} 
+else if (loanType === "BUSINESS") {
+  // Dispatches to dedicated MSME/Business Credit Manager
+  targetAsmId = rm.businessAsmId || rm.businessHomeAsmId || rm.businessRsmId;
+} 
+else if (["HOME_LOAN_SALARIED", "HOME_LOAN_SELF_EMPLOYED", "LAP_SALARIED", "LAP_SELF_EMPLOYED", "LAP"].includes(loanType)) {
+  // Dispatches to dedicated Mortgage / LAP Credit Manager
+  targetAsmId = rm.homeLapAsmId || rm.businessHomeAsmId || rm.homeLapRsmId;
+}
+
+if (!targetAsmId) {
+  throw new Error(`RM [${rm.firstName} ${rm.lastName}] has unassigned ASM slot for loan vertical [${loanType}]. Contact Administrator.`);
+}
+
+// Atomically bind application to specialized vertical
+application.asmId = targetAsmId;
+application.rsmId = asm.rsmId || asm.asmId;
+application.status = "DOC_COMPLETE";
+        </pre>
+
+        <div class="callout callout-success">
+          <div class="callout-title">Guaranteed Cross-Vertical Immunity</div>
+          <p>Because the dispatch logic checks <code>application.loanType</code> at the moment of document certification, a Home Loan or LAP mortgage application will <strong>never</strong> reach a Personal Loan ASM. Every file lands on the desk of an underwriter specialized in that exact asset class.</p>
+        </div>
+      </section>
+
+      <!-- SECTION 07: BANK RM & PAN INDIA NETWORK -->
+      <section class="section-block" id="pan-india-network">
+        <span class="section-num">Chapter 07</span>
+        <h2 class="section-title">Bank RM Network & PAN India Engine</h2>
+        <p class="section-desc">
+          Managing physical branch networks alongside nationwide digital lending desks with automated search fallback.
+        </p>
+
+        <h3 class="sub-title">1. Local Branch Desks vs. PAN India Digital Desks</h3>
+        <p>
+          Financial aggregation requires managing two completely different operational relationships:
+        </p>
+        <div class="card-grid">
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">Local Branch RMs (Physical)</span>
+              <span class="badge badge-teal">City Scope</span>
+            </div>
+            <p><strong>Use Case:</strong> Physical file logins requiring local branch inspection, property verification, and regional valuations.</p>
+            <p><strong>Config:</strong> <code>isPanIndia: false</code>, <code>State: Maharashtra</code>, <code>City: Pune (Wakad)</code>.</p>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">PAN India Central Desks (Digital)</span>
+              <span class="badge badge-emerald">Nationwide Scope</span>
+            </div>
+            <p><strong>Use Case:</strong> Digital lending platforms, fintech NBFCs, and central loan factories accepting applications from any pin code in India.</p>
+            <p><strong>Config:</strong> <code>isPanIndia: true</code>, <code>State: PAN India</code>, <code>City: All Cities</code>.</p>
+          </div>
+        </div>
+
+        <h3 class="sub-title">2. Automated Search Inclusion Algorithm</h3>
+        <p>
+          When an ASM in Pune searches for Personal Loan lenders for a Pune customer:
+        </p>
+        <ul>
+          <li>The query matches local Pune branch RMs.</li>
+          <li><strong>The query automatically surfaces all PAN India RMs</strong>, because nationwide lenders accept files from Pune as well!</li>
+          <li>The results table marks nationwide lenders with the <span class="badge badge-emerald">🌍 PAN India</span> badge and displays <em>"All Cities (Nationwide)"</em> in the location column.</li>
+        </ul>
+
+        <pre>
+// Query Filter Logic: src/routes/rsm.routes.js & src/routes/admin.routes.js
+if (query.state) {
+  const stateTrimmed = String(query.state).trim();
+  if (stateTrimmed.toLowerCase() === "pan india") {
+    filter.$or = [
+      { state: { $regex: /^pan\s*india$/i } },
+      { isPanIndia: true }
+    ];
+  } else {
+    // Return local state lenders PLUS nationwide central desks
+    filter.$or = [
+      { state: stateTrimmed },
+      { isPanIndia: true },
+      { state: { $regex: /^pan\s*india$/i } }
+    ];
+  }
+}
+        </pre>
+      </section>
+
+      <!-- SECTION 08: LIFECYCLE STATE MACHINE -->
+      <section class="section-block" id="state-machine">
+        <span class="section-num">Chapter 08</span>
+        <h2 class="section-title">Lifecycle State Machine & Rejections</h2>
+        <p class="section-desc">
+          Formal state transitions, validation hooks, automated document retention, and 30-day cleanup policies.
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Current Status</th>
+                <th>Permitted Next Status</th>
+                <th>Triggering Role</th>
+                <th>System Actions & Notifications</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>DRAFT</code></td>
+                <td><code>SUBMITTED</code></td>
+                <td>Partner / Customer</td>
+                <td>Validates mandatory document checklist. Assigns application to Partner's primary RM. Alerts RM.</td>
+              </tr>
+              <tr>
+                <td><code>SUBMITTED</code></td>
+                <td><code>DOC_INCOMPLETE</code></td>
+                <td>RM / Operations</td>
+                <td>Sets rejected doc flags with clear human-readable reason. Notifies partner to re-upload failed items.</td>
+              </tr>
+              <tr>
+                <td><code>DOC_INCOMPLETE</code></td>
+                <td><code>SUBMITTED</code></td>
+                <td>Partner / Customer</td>
+                <td>Partner re-uploads corrected file. Document status resets to PENDING. RM notified to re-inspect.</td>
+              </tr>
+              <tr>
+                <td><code>SUBMITTED</code></td>
+                <td><code>DOC_COMPLETE</code></td>
+                <td>RM / Operations</td>
+                <td>All documents confirmed VERIFIED. Evaluates loanType and dynamically assigns specialized ASM & RSM.</td>
+              </tr>
+              <tr>
+                <td><code>DOC_COMPLETE</code></td>
+                <td><code>BANK_LOGIN</code></td>
+                <td>ASM / RSM</td>
+                <td>Records Bank Name, Login Code, Bank LAN Number, and Login Date.</td>
+              </tr>
+              <tr>
+                <td><code>BANK_LOGIN</code></td>
+                <td><code>SANCTIONED</code></td>
+                <td>ASM / RSM</td>
+                <td>Bank sanction letter uploaded; Sanctioned Amount, ROI, and Tenure locked in system.</td>
+              </tr>
+              <tr>
+                <td><code>SANCTIONED</code></td>
+                <td><code>DISBURSED</code></td>
+                <td>ASM / Operations</td>
+                <td>Disbursal amount confirmed; commission ledger entry generated for Partner payout calculation.</td>
+              </tr>
+              <tr>
+                <td><code>* (Any State)</code></td>
+                <td><code>REJECTED</code></td>
+                <td>Admin / ASM / Bank</td>
+                <td>File marked dead. Triggers 30-day automated S3 document cleanup cron to protect borrower privacy.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 09: SUPER ADMIN OPERATIONS MANUAL -->
+      <section class="section-block" id="guide-superadmin">
+        <span class="section-num">Chapter 09</span>
+        <h2 class="section-title">User Manual: Super Admin Operations</h2>
+        <p class="section-desc">
+          Executive manual for managing global staff hierarchies, banking directories, payout ledgers, and system policies.
+        </p>
+
+        <h3 class="sub-title">1. Creating and Configuring Staff Hierarchies</h3>
+        <ol>
+          <li>Open the <strong>Admin Dashboard</strong> and navigate to <strong>Manage Staff</strong>.</li>
+          <li>Click <strong>+ Add Employee</strong>. Select role: <code>RSM</code>, <code>ASM</code>, or <code>RM</code>.</li>
+          <li>If creating an <strong>RSM</strong> or <strong>ASM</strong>:
+            <ul>
+              <li>Specify their specialized vertical: <code>PERSONAL</code>, <code>BUSINESS</code>, or <code>HOME_LAP</code>.</li>
+            </ul>
+          </li>
+          <li>If creating an <strong>RM</strong>:
+            <ul>
+              <li>Link their 3 mandatory reporting slots: <strong>Personal ASM</strong>, <strong>Business ASM</strong>, and <strong>Home/LAP ASM</strong>.</li>
+            </ul>
+          </li>
+          <li>Click <strong>Save</strong>. The system will auto-generate their Employee Code (e.g. <code>TLA0007</code>, <code>TLR0012</code>) and dispatch temporary credentials via email.</li>
+        </ol>
+
+        <h3 class="sub-title">2. Managing the Bank RM Directory (Local & PAN India)</h3>
+        <ol>
+          <li>Navigate to <strong>Find Bank RM</strong>.</li>
+          <li>Click <strong>+ Add Bank RM</strong>.</li>
+          <li><strong>For a Local Branch:</strong> Select the State (e.g. <code>Maharashtra</code>), type the City/Branch (e.g. <code>Pune - Wakad</code>), Bank Name, Login Code, and Product.</li>
+          <li><strong>For a Nationwide Lender:</strong> Toggle ON <strong>PAN India Coverage (Nationwide)</strong>. The system will lock State to <code>PAN India</code> and City to <code>All Cities</code>.</li>
+          <li>Fill in the Bank RM, ASM, and RSM contact names, 10-digit mobile numbers, and emails.</li>
+          <li>Click <strong>Create</strong>. The entry immediately becomes searchable across all ASM and RSM consoles.</li>
+        </ol>
+
+        <h3 class="sub-title">3. Monthly Payout Finalization & Reconciliation</h3>
+        <ol>
+          <li>Navigate to <strong>Payouts & Commissions</strong> at the end of each billing cycle.</li>
+          <li>Filter by <strong>Disbursed Loans</strong> for the previous calendar month.</li>
+          <li>Review system-calculated commissions against partner volume slabs.</li>
+          <li>Click <strong>Lock Ledger</strong>. This freezes all payout entries and generates the Bank NEFT/RTGS batch transfer sheet for corporate banking upload.</li>
+        </ol>
+      </section>
+
+      <!-- SECTION 10: OPERATIONS & UNDERWRITING MANUAL -->
+      <section class="section-block" id="guide-operations">
+        <span class="section-num">Chapter 10</span>
+        <h2 class="section-title">User Manual: Operations & Credit Underwriting</h2>
+        <p class="section-desc">
+          Standard operating procedures for central credit operations, document audit, and compliance scrutiny.
+        </p>
+
+        <h3 class="sub-title">1. Document Audit Checklist</h3>
+        <ul class="checklist">
+          <li><strong>PAN Card:</strong> Verify name against Aadhaar and NSDL database. Confirm date of birth and clear photograph.</li>
+          <li><strong>Aadhaar Card:</strong> Ensure both front and back are visible with complete 12-digit UID and address.</li>
+          <li><strong>Salary Slips:</strong> Check employer name, PF deductions, professional tax, and net pay. Ensure all 3 slips are consecutive.</li>
+          <li><strong>Bank Statements:</strong> Verify salary credit narration matches employer name. Inspect for inward cheque bounces or EMI return charges.</li>
+          <li><strong>Business Financials:</strong> Verify CA seal, UDIN number, depreciation schedules, and matching turnover between GSTR-3B and P&L statements.</li>
+        </ul>
+
+        <h3 class="sub-title">2. Document Rejection Protocol</h3>
+        <p>
+          Never reject an entire application if only one document is defective. Open the defective document viewer, click <span class="badge badge-rose">Reject</span>, and choose or type a clear rejection reason:
+        </p>
+        <ul>
+          <li><em>"Bank statement is password protected. Please upload an unlocked PDF."</em></li>
+          <li><em>"Salary slip for August is cut off at the bottom. Upload full page."</em></li>
+          <li><em>"ITR Ack is missing Computation of Income page."</em></li>
+        </ul>
+      </section>
+
+      <!-- SECTION 11: RSM OPERATIONS MANUAL -->
+      <section class="section-block" id="guide-rsm">
+        <span class="section-num">Chapter 11</span>
+        <h2 class="section-title">User Manual: Regional Sales Manager (RSM)</h2>
+        <p class="section-desc">
+          Operational guide for Regional Sales Managers managing regional disbursement targets, ASMs, and bank escalations.
+        </p>
+
+        <h3 class="sub-title">Daily Operations Cadence</h3>
+        <ol>
+          <li><strong>Target Tracking:</strong> Review regional month-to-date (MTD) disbursements against allocated volume targets in the RSM Analytics console.</li>
+          <li><strong>Subordinate Monitoring:</strong> Inspect pipeline stages across reporting ASMs and RMs to unblock files stuck in <code>BANK_LOGIN</code> for more than 48 hours.</li>
+          <li><strong>Bank Escalation:</strong> For high-ticket files (e.g. ₹50L+ LAP or Business Loans), coordinate with senior Bank Zonal Managers using the Bank RM Directory.</li>
+          <li><strong>Login Code Allocations:</strong> Ensure reporting ASMs have active login codes for all major banks in their area.</li>
+        </ol>
+      </section>
+
+      <!-- SECTION 12: ASM OPERATIONS MANUAL -->
+      <section class="section-block" id="guide-asm">
+        <span class="section-num">Chapter 12</span>
+        <h2 class="section-title">User Manual: Area Sales Manager (ASM)</h2>
+        <p class="section-desc">
+          Operational guide for Area Sales Managers executing bank logins, coordinating credit approval, and managing disbursal confirmations.
+        </p>
+
+        <h3 class="sub-title">Bank Login Workflow (LOS Execution)</h3>
+        <ol>
+          <li>Open the <strong>Applications</strong> list and filter for status <code>DOC_COMPLETE</code>.</li>
+          <li>Open an application. Review all verified documents in the document viewer.</li>
+          <li>Click <strong>Log into Bank</strong>.</li>
+          <li>Search the <strong>Bank RM Directory</strong> to select the appropriate Bank and branch:
+            <ul>
+              <li>For local cases, choose the nearest local branch RM.</li>
+              <li>For digital/fintech lenders, select the <span class="badge badge-emerald">🌍 PAN India</span> central desk.</li>
+            </ul>
+          </li>
+          <li>Copy the Bank Login Code. Submit the borrower file into the bank's internal portal (LOS/CRM).</li>
+          <li>Return to DhanSource and enter the bank's generated <strong>Bank LAN / Application Number</strong> and click <strong>Confirm Login</strong>. The status advances to <code>BANK_LOGIN</code>.</li>
+        </ol>
+      </section>
+
+      <!-- SECTION 13: RM OPERATIONS MANUAL -->
+      <section class="section-block" id="guide-rm">
+        <span class="section-num">Chapter 13</span>
+        <h2 class="section-title">User Manual: Relationship Manager (RM)</h2>
+        <p class="section-desc">
+          Field operational guide for universal relationship managers onboarding DSA partners, scrubbing applications, and verifying compliance.
+        </p>
+
+        <h3 class="sub-title">1. Onboarding New Channel Partners</h3>
+        <ol>
+          <li>From the RM console, navigate to <strong>My Partners</strong> and click <strong>+ Onboard Partner</strong>.</li>
+          <li>Enter Partner Name, Mobile, Email, PAN, Firm Name, and Bank Account details for payout credits.</li>
+          <li>Upload Partner KYC (PAN, Aadhaar, Cancelled Cheque).</li>
+          <li>Click <strong>Submit</strong>. The partner will receive their login credentials via SMS and email.</li>
+        </ol>
+
+        <h3 class="sub-title">2. Processing Submitted Applications</h3>
+        <ol>
+          <li>Filter incoming files by status <code>SUBMITTED</code>.</li>
+          <li>Remember: <strong>You handle all 4 loan products</strong> for your partners. Review Personal, Business, Home, and LAP files without hesitation.</li>
+          <li>Open the file viewer and examine every mandatory document. Verify clarity, dates, and names.</li>
+          <li>When every document is approved, click <strong>Mark DOC_COMPLETE</strong>.</li>
+          <li>The system will automatically route the file to your assigned Personal ASM, Business ASM, or Home/LAP ASM without any manual intervention.</li>
+        </ol>
+      </section>
+
+      <!-- SECTION 14: PARTNER WEB PORTAL -->
+      <section class="section-block" id="guide-partner-web">
+        <span class="section-num">Chapter 14</span>
+        <h2 class="section-title">User Manual: Partner Web Portal</h2>
+        <p class="section-desc">
+          Operating manual for DSA channel partners using the browser dashboard for bulk desktop applications.
+        </p>
+
+        <h3 class="sub-title">Step-by-Step Loan Submission</h3>
+        <ol>
+          <li>Log into the Partner Web Portal using your registered mobile number and password.</li>
+          <li>Click <strong>+ New Application</strong>. Select the loan product:
+            <ul>
+              <li><strong>Personal Loan</strong></li>
+              <li><strong>Business Loan</strong></li>
+              <li><strong>Home Loan</strong></li>
+              <li><strong>Loan Against Property (LAP)</strong></li>
+            </ul>
+          </li>
+          <li>Enter Borrower Personal Info: Full Name, Mobile, Email, PAN, Aadhaar, DOB, Current Address, and Employment details.</li>
+          <li>Enter Loan Parameters: Desired Amount, Tenure in Months, Purpose of Loan.</li>
+          <li>Upload Mandatory Documents via the desktop file drag-and-drop zone. PDFs must be clear and under 25 MB each.</li>
+          <li>Click <strong>Submit Application</strong>. You will receive an instant confirmation with your tracking Application ID.</li>
+        </ol>
+      </section>
+
+      <!-- SECTION 15: PARTNER MOBILE APP (EXPO) -->
+      <section class="section-block" id="guide-partner-app">
+        <span class="section-num">Chapter 15</span>
+        <h2 class="section-title">User Manual: Partner Mobile App (Android / iOS)</h2>
+        <p class="section-desc">
+          Field operating guide for mobile DSA connectors using the native Expo / React Native application.
+        </p>
+
+        <h3 class="sub-title">Mobile Application Best Practices</h3>
+        <ul>
+          <li><strong>Document Scanning:</strong> Use the in-app camera scanner under good lighting. Ensure all four corners of physical documents (PAN, Aadhaar) are inside the viewfinder frame.</li>
+          <li><strong>Direct PDF Import:</strong> When uploading bank statements or ITRs, use the <em>"Upload from Files / Drive"</em> option rather than taking photos of computer screens.</li>
+          <li><strong>Push Notifications:</strong> Keep notifications enabled on your device to receive real-time alerts if your RM requests a document re-upload.</li>
+          <li><strong>Commission Wallet:</strong> Tap the <em>Payouts</em> tab on your home screen to view your active commission balance and request bank withdrawals.</li>
+        </ul>
+      </section>
+
+      <!-- SECTION 16: RETAIL CUSTOMER APPLICATION ARCHITECTURE & USER MANUAL -->
+      <section class="section-block" id="guide-customer">
+        <span class="section-num">Chapter 16</span>
+        <h2 class="section-title">Retail Customer App & Direct Application Engine</h2>
+        <p class="section-desc">
+          Architecture, schema validation, zero-error safeguards, and end-to-end user manuals for retail borrowers applying across all 4 loan categories (Personal, Business, Home, LAP).
+        </p>
+
+        <h3 class="sub-title">1. Customer Engine Architecture & Zero-Error Safeguards</h3>
+        <p>
+          The Customer application service (<code>/api/customer/create-applications</code>) is engineered to process all 4 loan categories without runtime errors, payload drops, or orphaned files. It enforces four automated safeguards:
+        </p>
+
+        <div class="card-grid">
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">Dynamic Conditional Schema Mapping</span>
+              <span class="badge badge-teal">Field Isolation</span>
+            </div>
+            <p>Depending on the selected <code>loanType</code>, the backend dynamically isolates and binds specialized metadata without throwing schema validation errors:</p>
+            <ul class="checklist">
+              <li><strong>Salaried Loans (PL / HL / LAP):</strong> Binds <code>employmentInfo</code> (Company, Designation, Monthly Salary, Experience).</li>
+              <li><strong>Self-Employed Loans (BL / HL / LAP):</strong> Binds <code>businessInfo</code> (Shop/Firm Name, GST, Annual Turnover).</li>
+              <li><strong>Mortgage Loans (HL / LAP):</strong> Binds <code>propertyInfo</code> (Property Type, Market Value, Physical Address).</li>
+            </ul>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">Employee ID Race Condition Guard</span>
+              <span class="badge badge-emerald">Duplicate Protection</span>
+            </div>
+            <p>High-volume customer registrations can trigger MongoDB unique key collisions (<code>E11000 duplicate key: employeeId</code>). The system employs an automatic <strong>5-attempt exponential backoff retry loop</strong> that regenerates unique IDs in memory, ensuring 100% registration success even under heavy concurrent traffic.</p>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">Zero-Orphan Partner Routing</span>
+              <span class="badge badge-indigo">Hierarchy Binding</span>
+            </div>
+            <p>When a borrower applies via a Partner's referral link, they are automatically tied to that Partner and the Partner's RM. If a borrower arrives directly via organic search, the <code>resolveDefaultCompanyPartner()</code> resolver binds them to the corporate desk, guaranteeing an RM is always assigned to verify documents.</p>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">60-Day Reapplication Guard</span>
+              <span class="badge badge-amber">Underwriting Policy</span>
+            </div>
+            <p>Prevents duplicate submissions if a customer already has an active application under credit assessment, protecting the borrower's CIBIL score from repeated hard enquiries across different banks.</p>
+          </div>
+        </div>
+
+        <h3 class="sub-title">2. Customer Application Data Flow (POST /api/customer/create-applications)</h3>
+        <pre>
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                           CUSTOMER LOAN SUBMISSION DATA FLOW                                    │
+├─────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 1. Borrower submits Form & Docs via Mobile Web / Android App                                    │
+│    ├── customer: { firstName, lastName, email, phone, dob, panNumber, address }                 │
+│    ├── product:  { loanAmount, tenureMonths, companyName / gstNumber / propertyValue }          │
+│    └── docs:     [ PAN, Aadhaar, Bank Statement, Salary Slips / ITRs / Property Deeds ]         │
+│                                                                                                 │
+│ 2. Backend Security & Duplicate Check                                                           │
+│    ├── Verifies customer exists -> If yes, checks findCustomerApplyBlocker(customerId)          │
+│    └── If new -> creates User (role: CUSTOMER) with retry-protected unique employeeId           │
+│                                                                                                 │
+│ 3. Atomic S3 Document Streaming & Oversize Validation                                           │
+│    ├── Validates each file against size limit (<= 25 MB) and MIME types (PDF, PNG, JPG)         │
+│    └── Streams directly to AWS S3 bucket: applications/{appId}/{docType}_{timestamp}.ext        │
+│                                                                                                 │
+│ 4. Conditional Entity Injection                                                                 │
+│    ├── If PL / Salaried -> maps employmentInfo                                                  │
+│    ├── If BL / Business -> maps businessInfo (GST & Turnover)                                   │
+│    └── If HL / LAP      -> maps propertyInfo (Address & Valuation)                             │
+│                                                                                                 │
+│ 5. Atomic State Transition & Notification                                                       │
+│    ├── Status set to SUBMITTED                                                                  │
+│    ├── Binds assigned RM & routes to RM's active pipeline                                       │
+│    └── Real-time WebSocket event & confirmation SMS dispatched to Borrower                      │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+        </pre>
+
+        <h3 class="sub-title">3. Borrower Step-by-Step Operations Manual for All 4 Loan Types</h3>
+
+        <h4 class="sub-sub-title">A. Personal Loan (Salaried Applicants)</h4>
+        <ol>
+          <li>Open the Customer Application portal or partner referral link. Select <strong>Personal Loan</strong>.</li>
+          <li>Enter your personal particulars: Full Name (as per PAN), Mobile Number, Email, PAN Number, Date of Birth, and Current Residential Address.</li>
+          <li>Enter Employment Information: Company Name, Official Designation, Net Monthly In-hand Salary, and Total Work Experience in years.</li>
+          <li>Upload Mandatory Documents:
+            <ul class="checklist">
+              <li>PAN Card photo/PDF</li>
+              <li>Aadhaar Card (front & back)</li>
+              <li>Latest 3 Months Salary Slips (consecutive)</li>
+              <li>Latest 6 Months Salary Bank Account Statement (PDF downloaded from NetBanking)</li>
+            </ul>
+          </li>
+          <li>Review summary and click <strong>Submit Loan Application</strong>. An instant tracking ID (e.g. <code>DS2026-08119</code>) will be displayed.</li>
+        </ol>
+
+        <h4 class="sub-sub-title">B. Business Loan (MSME, Traders, Self-Employed)</h4>
+        <ol>
+          <li>Select <strong>Business Loan</strong> on the loan application screen.</li>
+          <li>Enter Applicant Particulars and Business Details: Registered Firm Name, Constitution (Proprietorship / Partnership / Pvt Ltd), GST Number, Annual Turnover in Lakhs, and Business Address.</li>
+          <li>Upload Mandatory Financial Documents:
+            <ul class="checklist">
+              <li>Applicant PAN & Aadhaar</li>
+              <li>Firm Registration Certificate (GST Certificate / Udyam Aadhar / Shop Act)</li>
+              <li>12 Months Current Bank Account Statement (PDF)</li>
+              <li>Latest 2–3 Years ITR with Computation of Income, Balance Sheet, and P&L statements</li>
+            </ul>
+          </li>
+          <li>Submit application. Your assigned RM will review the turnover metrics and initiate bank file login.</li>
+        </ol>
+
+        <h4 class="sub-sub-title">C. Home Loan (Purchase / Construction / Balance Transfer)</h4>
+        <ol>
+          <li>Select <strong>Home Loan</strong>. Indicate applicant employment profile: <code>Salaried</code> or <code>Self-Employed</code>.</li>
+          <li>Fill in Property Information: Property Type (Flat, Independent Villa, Plot + Construction), Estimated Market Value, and Property Location Address.</li>
+          <li>Upload Income & Property Documents:
+            <ul class="checklist">
+              <li>Applicant & Co-Applicant KYC (PAN & Aadhaar)</li>
+              <li>Income Proofs (Salary Slips for Salaried; 3 Yrs ITR for Business)</li>
+              <li>Allotment Letter / Draft Agreement to Sale</li>
+              <li>Property Title Deeds and Approved Construction Sanction Plan</li>
+            </ul>
+          </li>
+          <li>Submit application. The file routes immediately to the specialized Home/LAP credit desk.</li>
+        </ol>
+
+        <h4 class="sub-sub-title">D. Loan Against Property (LAP / Mortgage Top-Up)</h4>
+        <ol>
+          <li>Select <strong>Loan Against Property (LAP)</strong>.</li>
+          <li>Enter Required Loan Amount, Tenure, and Property Details: Commercial, Residential, or Industrial Property Type, Approximate Market Value, and Existing Outstanding Loan Balance (if Balance Transfer).</li>
+          <li>Upload Collateral Documents:
+            <ul class="checklist">
+              <li>Applicant & Co-Applicant KYC</li>
+              <li>Full Income Proofs (ITR / Salary Slips / 12 Months Bank Statement)</li>
+              <li>Complete Chain of Title Deeds (minimum past 13–30 years)</li>
+              <li>Approved Layout Plan, Property Tax Receipt, and Electricity Bill</li>
+              <li>Sanction Letter & Foreclosure Statement of existing lender (for BT cases)</li>
+            </ul>
+          </li>
+          <li>Submit application. The file routes directly to the Home/LAP underwriting vertical for legal and technical valuation.</li>
+        </ol>
+
+        <h3 class="sub-title">4. Real-Time Tracking & Missing Document Self-Correction</h3>
+        <p>
+          Borrowers can track their application in real time without needing to call call centers:
+        </p>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="step-circle">1</div>
+            <div class="step-body">
+              <h4>SMS / WhatsApp Link Login</h4>
+              <p>Borrower receives an automated SMS with a secure direct link: <code>https://dhansourcecapital.com/track/{appId}</code>.</p>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-circle">2</div>
+            <div class="step-body">
+              <h4>Visual Pipeline Progress</h4>
+              <p>Status bar reflects progress: <code>Application Submitted</code> ➔ <code>Document Verification</code> ➔ <code>Bank Review</code> ➔ <code>Sanction Approved</code> ➔ <code>Disbursed</code>.</p>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-circle">3</div>
+            <div class="step-body">
+              <h4>Instant Document Correction</h4>
+              <p>If the RM flags an unreadable document (e.g. blurry PAN), the borrower sees an amber alert: <em>"Please re-upload PAN Card: original image was blurry"</em> with a 1-tap camera button. Uploading immediately re-engages the RM without restarting the application.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 17: FINANCIALS & PAYOUTS -->
+      <section class="section-block" id="financial-engine">
+        <span class="section-num">Chapter 17</span>
+        <h2 class="section-title">Financial Engine: Payouts, Slabs & Incentives</h2>
+        <p class="section-desc">
+          Calculation formulas, volume slab progressions, target matrices, and ledger reconciliation protocols.
+        </p>
+
+        <h3 class="sub-title">1. Partner Commission Slab Matrix</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Loan Asset Class</th>
+                <th>Standard Slab (&lt; ₹50 Lakhs)</th>
+                <th>Silver Slab (₹50L – ₹1 Cr)</th>
+                <th>Gold Slab (&gt; ₹1 Crore / mo)</th>
+                <th>Release Protocol</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Personal Loan</strong></td>
+                <td>1.25% of Disbursed Amt</td>
+                <td>1.50% of Disbursed Amt</td>
+                <td>1.75% – 2.00% of Disbursed Amt</td>
+                <td>100% on Disbursal Confirmation</td>
+              </tr>
+              <tr>
+                <td><strong>Business Loan</strong></td>
+                <td>1.50% of Disbursed Amt</td>
+                <td>1.75% of Disbursed Amt</td>
+                <td>2.00% – 2.25% of Disbursed Amt</td>
+                <td>100% on Disbursal Confirmation</td>
+              </tr>
+              <tr>
+                <td><strong>Home Loan</strong></td>
+                <td>0.35% of Disbursed Amt</td>
+                <td>0.45% of Disbursed Amt</td>
+                <td>0.55% – 0.65% of Disbursed Amt</td>
+                <td>Pro-rata on tranche release</td>
+              </tr>
+              <tr>
+                <td><strong>Loan Against Property</strong></td>
+                <td>0.60% of Disbursed Amt</td>
+                <td>0.75% of Disbursed Amt</td>
+                <td>0.85% – 1.00% of Disbursed Amt</td>
+                <td>100% on full disbursal</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub-title">2. Mathematical Calculation Model</h3>
+        <pre>
+// Commission Computation Formula
+BaseCommission = DisbursedAmount * SlabPercentage;
+TDS_Deduction  = BaseCommission * 0.05; // 5% Section 194H TDS
+NetPayable     = BaseCommission - TDS_Deduction;
+
+// Example: ₹40,00,000 Business Loan @ 1.75%
+BaseCommission = 40,00,000 * 0.0175 = ₹70,000
+TDS (5%)       = 70,000 * 0.05       = ₹3,500
+Net Partner Bank Transfer            = ₹66,500
+        </pre>
+      </section>
+
+      <!-- SECTION 18: MULTI-BRANCH CITY SCENARIOS -->
+      <section class="section-block" id="branch-management">
+        <span class="section-num">Chapter 18</span>
+        <h2 class="section-title">Multi-Branch City Scenarios & Best Practices</h2>
+        <p class="section-desc">
+          Managing large metropolitan clusters with multiple branch login codes for the same bank.
+        </p>
+
+        <h3 class="sub-title">Metropolitan Branch Directory Structure</h3>
+        <p>
+          In major cities like <strong>Pune</strong> or <strong>Mumbai</strong>, a single bank like HDFC or ICICI operates separate credit hubs for different zones. The DhanSource Bank RM directory natively supports multiple branch entries:
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Bank NBFC</th>
+                <th>State</th>
+                <th>City / Branch Field</th>
+                <th>Product</th>
+                <th>Login Code</th>
+                <th>Branch Relationship Manager</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>HDFC Bank</td>
+                <td>Maharashtra</td>
+                <td>Pune - Wakad</td>
+                <td>PL</td>
+                <td>HDFC-PUN-WKD-01</td>
+                <td>Ramesh Patil (+91 9823000001)</td>
+              </tr>
+              <tr>
+                <td>HDFC Bank</td>
+                <td>Maharashtra</td>
+                <td>Pune - Shivaji Nagar</td>
+                <td>PL</td>
+                <td>HDFC-PUN-SVN-02</td>
+                <td>Vikram Deshmukh (+91 9823000002)</td>
+              </tr>
+              <tr>
+                <td>HDFC Bank</td>
+                <td>Maharashtra</td>
+                <td>Pune - Hadapsar</td>
+                <td>BL</td>
+                <td>HDFC-PUN-HDP-BL</td>
+                <td>Sunil Kulkarni (+91 9823000003)</td>
+              </tr>
+              <tr>
+                <td>Tata Capital</td>
+                <td>PAN India</td>
+                <td>All Cities</td>
+                <td>PL / BL</td>
+                <td>TATA-DIGITAL-CENTRAL</td>
+                <td>National Central Desk (+91 8000000000)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Branch Filtering Recommendation</div>
+          <p>When searching for lenders in Pune, an ASM will see all 3 local HDFC branches along with the Tata Capital PAN India Central Desk. The ASM can select the exact branch closest to the borrower's residence to expedite physical verification.</p>
+        </div>
+      </section>
+
+      <!-- SECTION 19: TROUBLESHOOTING & RUNBOOK -->
+      <section class="section-block" id="troubleshooting">
+        <span class="section-num">Chapter 19</span>
+        <h2 class="section-title">Diagnostics, Error Codes & Runbook</h2>
+        <p class="section-desc">
+          Operational error catalog, root cause diagnostics, and emergency support protocols.
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Observed Symptom / Error Code</th>
+                <th>Root Cause Diagnosis</th>
+                <th>Standard Operating Resolution (Runbook)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>"RM is not assigned to an ASM for loan vertical..."</code></td>
+                <td>The RM profile has an empty slot for <code>personalAsmId</code>, <code>businessAsmId</code>, or <code>homeLapAsmId</code>.</td>
+                <td>Super Admin opens <strong>Manage Staff</strong> ➔ Edits the RM ➔ Assigns the missing specialized ASM slot ➔ Saves profile. Re-transition application.</td>
+              </tr>
+              <tr>
+                <td><code>"Invalid file for document" / 413 Payload Too Large</code></td>
+                <td>File exceeds 25 MB limit or has an unrecognized file extension (e.g. .heic from iPhone).</td>
+                <td>Instruct partner to export the image to standard PDF or JPEG under 20 MB using standard mobile image compression.</td>
+              </tr>
+              <tr>
+                <td><code>"Duplicate application detected in 60-day window"</code></td>
+                <td>Another partner already submitted this borrower's PAN and phone for the same loan vertical.</td>
+                <td>Check <strong>Application Archives</strong>. If previous file was rejected or closed, Admin can approve duplicate waiver.</td>
+              </tr>
+              <tr>
+                <td>Bank RM edits do not appear to save nested contact details</td>
+                <td>Mongoose subdocument tracking flag missing.</td>
+                <td>Resolved in Backend v3.0 via explicit <code>markModified("rm")</code>, <code>markModified("asm")</code>, <code>markModified("rsm")</code>. All fields persist immediately.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 20: APPENDIX & GLOSSARY -->
+      <section class="section-block" id="appendix">
+        <span class="section-num">Chapter 20</span>
+        <h2 class="section-title">Appendix, API Index & Certification Checklist</h2>
+        <p class="section-desc">
+          Glossary of industry terms, key REST endpoint catalog, and pre-flight production checklist.
+        </p>
+
+        <h3 class="sub-title">1. Industry Terminology Glossary</h3>
+        <ul>
+          <li><strong>DSA (Direct Selling Agent):</strong> An authorized third-party sales representative or firm that originates loan applications for banks and NBFCs.</li>
+          <li><strong>LOS (Loan Origination System):</strong> The core internal credit assessment software used by banks to process loan files from application to disbursal.</li>
+          <li><strong>LAN (Loan Account Number):</strong> The official unique identification number assigned to a borrower's file once logged into a bank's LOS.</li>
+          <li><strong>BT (Balance Transfer):</strong> Refinancing an existing high-interest loan from one bank to a new bank with lower interest rates or top-up capital.</li>
+          <li><strong>CIBIL / Experian / CRIF:</strong> Credit information bureaus in India providing credit history scores ranging from 300 to 900.</li>
+        </ul>
+
+        <h3 class="sub-title">2. Core API Endpoint Reference</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>HTTP Method & Route</th>
+                <th>Access Level</th>
+                <th>Functionality</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>POST /api/partner/applications/draft</code></td>
+                <td>Partner / Customer</td>
+                <td>Initializes an atomic loan draft record. Returns application ID and App Number.</td>
+              </tr>
+              <tr>
+                <td><code>POST /api/partner/applications/:id/documents</code></td>
+                <td>Partner / Customer</td>
+                <td>Uploads a single sanitized document directly to AWS S3.</td>
+              </tr>
+              <tr>
+                <td><code>POST /api/partner/applications/:id/submit</code></td>
+                <td>Partner / Customer</td>
+                <td>Finalizes submission, locks draft, and triggers smart RM assignment.</td>
+              </tr>
+              <tr>
+                <td><code>POST /api/rm/applications/:id/verify-doc</code></td>
+                <td>RM / Operations</td>
+                <td>Verifies or rejects individual document with human-readable audit reason.</td>
+              </tr>
+              <tr>
+                <td><code>POST /api/rm/applications/:id/transition</code></td>
+                <td>RM / Operations</td>
+                <td>Transitions file to <code>DOC_COMPLETE</code> and triggers dynamic upward ASM/RSM routing.</td>
+              </tr>
+              <tr>
+                <td><code>GET /api/rsm/bank-rms</code></td>
+                <td>RSM / ASM / Admin</td>
+                <td>Searches Bank RM directory with automated PAN India nationwide desk inclusion.</td>
+              </tr>
+              <tr>
+                <td><code>POST /api/admin/bank-rms</code></td>
+                <td>Super Admin</td>
+                <td>Creates new Bank RM with multi-branch or PAN India central desk configuration.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout-success" style="margin-top: 3rem;">
+          <div class="callout-title">Official Document Certification</div>
+          <p>This technical system architecture specification and multi-role operational manual is certified as the official baseline for DhanSource Capital Technologies Private Limited. All platform engineering releases and operational procedures comply with the specifications documented herein.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Smooth scroll active state tracking for sidebar TOC
+    window.addEventListener('scroll', () => {
+      const sections = document.querySelectorAll('section.section-block');
+      const navLinks = document.querySelectorAll('.toc-link');
+      let current = '';
+
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 140;
+        if (pageYOffset >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${current}`) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
