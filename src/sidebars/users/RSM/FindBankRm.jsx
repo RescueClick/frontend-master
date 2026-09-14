@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { Building2, RefreshCw, Search } from "lucide-react";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
+import { INDIAN_STATES } from "../../../utils/indianStates";
 import BankRmResultsTable from "../../../components/shared/BankRmResultsTable";
 
 const EMPTY_FILTERS = {
@@ -248,7 +249,7 @@ const FindBankRm = () => {
                 disabled={!filters.marketType}
               >
                 <option value="">Please Select State</option>
-                {options.states.map((state) => (
+                {(options.states && options.states.length > 1 ? options.states : INDIAN_STATES).map((state) => (
                   <option key={state} value={state}>
                     {state === "PAN India" ? "🌍 PAN India (Nationwide)" : state}
                   </option>
@@ -265,7 +266,7 @@ const FindBankRm = () => {
                 disabled={!filters.state}
               >
                 <option value="">Please Select City</option>
-                {options.cities.map((city) => (
+                {(options.cities && options.cities.length > 0 ? options.cities : ["All Cities"]).map((city) => (
                   <option key={city} value={city}>
                     {city}
                   </option>
