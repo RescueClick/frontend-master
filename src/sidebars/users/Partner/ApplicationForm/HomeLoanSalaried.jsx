@@ -809,14 +809,12 @@ export default function HomeLoanSalaried({ embed = false } = {}) {
         ? `${backendurl}/partner/create-applications`
         : `${backendurl}/partner/public/create-application`;
 
+      // Do NOT set Content-Type — browser must add multipart boundary
       const headers = isPartnerLoggedIn
         ? {
           Authorization: `Bearer ${partnerToken}`,
-          "Content-Type": "multipart/form-data",
         }
-        : {
-          "Content-Type": "multipart/form-data",
-        };
+        : {};
 
       // Create AbortController for request cancellation
       abortControllerRef.current = new AbortController();

@@ -302,12 +302,12 @@ export const fetchRmAnalytics = createAsyncThunk(
 // Record RM Follow-up (RSM role)
 export const recordRmFollowUp = createAsyncThunk(
   "rsm/recordRmFollowUp",
-  async ({ rmId, status, remarks }, { rejectWithValue }) => {
+  async ({ rmId, status, remarks, askLeadProgress = true }, { rejectWithValue }) => {
     try {
       const { rsmToken } = getAuthData();
       const response = await axios.post(
         `${backendurl}/rsm/rm/${rmId}/follow-up`,
-        { status, remarks },
+        { status, remarks, askLeadProgress },
         {
           headers: {
             Authorization: `Bearer ${rsmToken}`,

@@ -847,6 +847,8 @@ const RsmApplicationView = () => {
       // Validate transitions
       const currentStatus = applicationData.status;
       const allowedTransitions = {
+        LEAD: ["SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "REJECTED", "LOGIN", "UNDER_REVIEW"],
+        DRAFT: ["SUBMITTED", "LEAD", "REJECTED"],
         SUBMITTED: ["DOC_COMPLETE", "LOGIN", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],
         DOC_INCOMPLETE: ["DOC_COMPLETE", "LOGIN", "UNDER_REVIEW", "REJECTED"],
         DOC_COMPLETE: ["LOGIN", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],

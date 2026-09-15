@@ -686,10 +686,9 @@ export default function LapLoanSalaried({ embed = false } = {}) {
 
       const headers = isPartnerLoggedIn
         ? {
-            "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${partnerToken}`,
           }
-        : { "Content-Type": "multipart/form-data" };
+        : {};
 
       const response = await axios.post(endpoint, formDataToSend, { headers });
 

@@ -1128,7 +1128,7 @@ export const uploadBanners = createAsyncThunk(
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "multipart/form-data",
+            // Do NOT set Content-Type — browser must add multipart boundary
           },
         }
       );
@@ -1445,9 +1445,9 @@ export const reuploadPartnerKyc = createAsyncThunk(
         `${backendurl}/auth/partner/reupload-kyc`,
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          // Do NOT set Content-Type — browser must add multipart boundary
+          headers: {},
+          timeout: 120000,
         }
       );
       return response.data;

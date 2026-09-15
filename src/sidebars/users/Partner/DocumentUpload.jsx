@@ -179,7 +179,6 @@ const DocumentUpload = () => {
         {
           headers: {
             Authorization: `Bearer ${partnerToken}`,
-            "Content-Type": "multipart/form-data",
           },
         }
       );

@@ -652,7 +652,9 @@ const CustomerApplication = () => {
 
   const canRmUploadDocs = Boolean(
     applicationData &&
-      ["LEAD", "DRAFT", "SUBMITTED", "DOC_INCOMPLETE"].includes(applicationData.status)
+      ["LEAD", "DRAFT", "SUBMITTED", "DOC_INCOMPLETE"].includes(
+        String(applicationData.status || "").toUpperCase()
+      )
   );
 
   const openDocUploadPicker = (docType) => {
@@ -694,7 +696,6 @@ const CustomerApplication = () => {
       const response = await axios.post(uploadUrl, formData, {
         headers: {
           Authorization: `Bearer ${rmToken}`,
-          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -953,7 +954,7 @@ const CustomerApplication = () => {
   useEffect(() => {
     if (!applicationData?.status) return;
     const s = applicationData.status;
-    if (["LEAD", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE"].includes(s)) {
+    if (["LEAD", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "REJECTED"].includes(s)) {
       setStatus(s);
     } else if (s === "LOGIN") {
       setStatus("DOC_COMPLETE");
@@ -2586,13 +2587,34 @@ const CustomerApplication = () => {
                         >
                           DOC_COMPLETE {!areAllDocumentsVerified() ? "(All docs must be verified)" : ""}
                         </option>
-                        {/* ✅ RM can only set statuses up to DOC_COMPLETE. Beyond that, RSM handles it */}
+                        {["LEAD", "DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE"].includes(
+                          applicationData?.status
+                        ) && (
+                          <option value="REJECTED">REJECTED (Not a deal)</option>
+                        )}
+                        {/* ✅ RM can only set statuses up to DOC_COMPLETE (plus reject). Beyond that, RSM handles it */}
                         {applicationData?.rsmId && !["LEAD", "DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status) && (
                           <option value="" disabled>
                             ⚠️ Application transferred to RSM - Status changes handled by RSM
                           </option>
                         )}
                       </select>
+
+                      {status === "REJECTED" && (
+                        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-start">
+                            <AlertCircle className="w-5 h-5 text-red-600 mr-2 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-red-800">
+                                Rejecting this application
+                              </p>
+                              <p className="text-xs text-red-700 mt-1">
+                                Use this when the lead is not a deal. A remark/reason is required.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Show warning if trying to select DOC_COMPLETE without all docs verified */}
                       {status === "DOC_COMPLETE" && !areAllDocumentsVerified() && (

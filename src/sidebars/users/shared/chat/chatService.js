@@ -158,7 +158,7 @@ export const chatService = {
     const res = await axios.post(`${backendurl}/chat/upload`, formData, {
       headers: {
         Authorization: token ? `Bearer ${token}` : "",
-        "Content-Type": "multipart/form-data",
+        // Do NOT set Content-Type — browser must add multipart boundary
       },
     });
     return res.data;

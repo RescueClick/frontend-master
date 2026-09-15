@@ -18,6 +18,7 @@ import {
   ChevronRight,
   SlidersHorizontal,
   RotateCcw,
+  Target,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
@@ -152,7 +153,12 @@ const RsmFollowUps = () => {
         recordRmFollowUp({
           rmId: selectedRm.rm.id,
           status,
-          remarks,
+          remarks:
+            remarks ||
+            ((selectedRm.openLeadsCount || 0) > 0
+              ? `Please progress ${selectedRm.openLeadsCount} open Step-1 lead(s): follow up with partners to complete loan forms.`
+              : ""),
+          askLeadProgress: true,
         })
       ).unwrap();
       toast.success("Follow-up recorded");
@@ -192,6 +198,7 @@ const RsmFollowUps = () => {
 
   const cards = [
     { label: "RMs", value: summary?.total ?? rows.length, icon: Users, tone: "bg-slate-50 border-slate-200" },
+    { label: "Open leads", value: summary?.openLeadsTotal ?? rows.reduce((s, r) => s + (r.openLeadsCount || 0), 0), icon: Target, tone: "bg-orange-50 border-orange-200" },
     { label: "Partners filled", value: summary?.partnersFilled ?? 0, icon: FileCheck2, tone: "bg-emerald-50 border-emerald-200", onClick: () => setPerformance(performance === "filled" ? "" : "filled"), active: performance === "filled" || performance === "working" },
     { label: "Partners not filled", value: summary?.partnersNotFilled ?? 0, icon: FileX2, tone: "bg-amber-50 border-amber-200", onClick: () => setPerformance(performance === "not_filled" ? "" : "not_filled"), active: performance === "not_filled" || performance === "non_working" },
     { label: "Working RMs", value: summary?.working ?? 0, icon: TrendingUp, tone: "bg-teal-50 border-teal-200", onClick: () => setPerformance(performance === "working" ? "" : "working"), active: performance === "working" },
@@ -538,6 +545,7 @@ const RsmFollowUps = () => {
                   <th className="px-3 py-3.5 text-left">Contact</th>
                   <th className="px-3 py-3.5 text-left">Partners filled / not</th>
                   <th className="px-3 py-3.5 text-left">Total loans</th>
+                  <th className="px-3 py-3.5 text-left">Open leads</th>
                   <th className="px-3 py-3.5 text-left">Performance</th>
                   <th className="px-3 py-3.5 text-left">Call status</th>
                   <th className="px-3 py-3.5 text-left">Last call</th>
@@ -596,6 +604,11 @@ const RsmFollowUps = () => {
                           <span className="text-xs text-slate-500 ml-1">of {row.partnerCount || 0}</span>
                         </td>
                         <td className="px-3 py-3 text-sm font-semibold text-slate-900 whitespace-nowrap">{row.applicationCount || 0}</td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap">
+                          <span className={`font-semibold ${(row.openLeadsCount || 0) > 0 ? "text-orange-700" : "text-slate-500"}`}>
+                            {row.openLeadsCount || 0}
+                          </span>
+                        </td>
                         <td className="px-3 py-3 text-sm font-semibold capitalize whitespace-nowrap">
                           {row.performance === "working" ? (
                             <span className="inline-flex items-center gap-1.5 text-teal-700 font-semibold text-xs">

@@ -840,9 +840,8 @@ const handleSubmit = async () => {
     const headers = isPartnerLoggedIn
       ? {
           Authorization: `Bearer ${partnerToken}`,
-          "Content-Type": "multipart/form-data",
         }
-      : { "Content-Type": "multipart/form-data" };
+      : {};
 
     // Create AbortController for request cancellation
     abortControllerRef.current = new AbortController();

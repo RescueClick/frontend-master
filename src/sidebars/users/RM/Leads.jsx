@@ -75,7 +75,9 @@ const Leads = () => {
   const [followUpStatus, setFollowUpStatus] = useState("CONNECTED");
   const [followUpRemarks, setFollowUpRemarks] = useState("");
   const [nextFollowUpDate, setNextFollowUpDate] = useState("");
+  const [notifyPartnerOnSave, setNotifyPartnerOnSave] = useState(true);
   const [submittingFollowUp, setSubmittingFollowUp] = useState(false);
+  const [nudgingPartnerId, setNudgingPartnerId] = useState(null);
 
   // Map actual app statuses to UI tabs
   const STATUS_MAPPING = {
@@ -94,6 +96,19 @@ const Leads = () => {
   };
 
   const statuses = Object.keys(STATUS_MAPPING);
+
+  const loanTypeFormPath = (loanType) => {
+    const map = {
+      PERSONAL: "/partner/personal-loan",
+      BUSINESS: "/partner/business-loan",
+      HOME_LOAN_SALARIED: "/partner/home-loan-salaried",
+      HOME_LOAN_SELF_EMPLOYED: "/partner/home-loan-self-employed",
+      LAP_SALARIED: "/partner/lap-loan-salaried",
+      LAP_SELF_EMPLOYED: "/partner/lap-loan-self-employed",
+      LAP: "/partner/lap-loan-salaried",
+    };
+    return map[String(loanType || "").toUpperCase()] || "/partner/get-loan";
+  };
 
   // Fetch leads from API
   const fetchLeads = async () => {
@@ -125,6 +140,7 @@ const Leads = () => {
         partnerCode: app.partner?.code || "",
         partnerEmail: app.partner?.email || "",
         partnerPhone: app.partner?.phone || "",
+        partnerId: app.partner?.partnerId || null,
       }));
 
       setLeads(mappedLeads);
@@ -148,6 +164,7 @@ const Leads = () => {
     setSelectedLead(lead);
     setFollowUpStatus(lead.leadFollowUp?.status || "CONNECTED");
     setFollowUpRemarks(lead.leadFollowUp?.remarks || "");
+    setNotifyPartnerOnSave(lead.leadSource === "PARTNER" && Boolean(lead.partnerPhone || lead.partnerId));
     if (lead.leadFollowUp?.nextFollowUpDate) {
       const d = new Date(lead.leadFollowUp.nextFollowUpDate);
       setNextFollowUpDate(d.toISOString().slice(0, 16));
@@ -161,6 +178,7 @@ const Leads = () => {
     setFollowUpStatus("CONNECTED");
     setFollowUpRemarks("");
     setNextFollowUpDate("");
+    setNotifyPartnerOnSave(true);
   };
 
   const handleSaveFollowUp = async (e) => {
@@ -170,19 +188,20 @@ const Leads = () => {
     setSubmittingFollowUp(true);
     try {
       const { rmToken } = getAuthData();
-      await axios.post(
+      const { data } = await axios.post(
         `${backendurl}/leads/${selectedLead.id}/follow-up`,
         {
           status: followUpStatus,
           remarks: followUpRemarks,
           nextFollowUpDate: nextFollowUpDate || null,
+          notifyPartner: Boolean(notifyPartnerOnSave && selectedLead.leadSource === "PARTNER"),
         },
         {
           headers: { Authorization: `Bearer ${rmToken}` },
         }
       );
 
-      toast.success("Follow-up updated successfully!");
+      toast.success(data?.message || "Follow-up updated successfully!");
       closeFollowUpModal();
       fetchLeads();
     } catch (err) {
@@ -191,6 +210,39 @@ const Leads = () => {
     } finally {
       setSubmittingFollowUp(false);
     }
+  };
+
+  const handleAskPartnerCompleteForm = async (lead) => {
+    if (!lead?.id) return;
+    setNudgingPartnerId(lead.id);
+    try {
+      const { rmToken } = getAuthData();
+      const { data } = await axios.post(
+        `${backendurl}/leads/${lead.id}/nudge-partner`,
+        {
+          remarks: `Please complete the ${loanTypeToTableShort(lead.loanType)} form for ${lead.name} (App ${lead.appNo}).`,
+        },
+        { headers: { Authorization: `Bearer ${rmToken}` } }
+      );
+      toast.success(data?.message || "Partner notified to complete the form");
+      fetchLeads();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to notify partner");
+    } finally {
+      setNudgingPartnerId(null);
+    }
+  };
+
+  const buildPartnerWhatsAppUrl = (lead) => {
+    const phone = String(lead.partnerPhone || "").replace(/\D/g, "");
+    if (!phone) return null;
+    const waNumber = phone.length === 10 ? `91${phone}` : phone;
+    const formHint = `${window.location.origin}${loanTypeFormPath(lead.loanType)}?applicationId=${lead.id}`;
+    const msg =
+      `Hello ${lead.partnerName || "Partner"}, this is your DhanSource RM. ` +
+      `Please complete the ${loanTypeToTableShort(lead.loanType)} application for customer ${lead.name} ` +
+      `(App ${lead.appNo}). Resume here: ${formHint}`;
+    return `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
   };
 
   const filteredLeads = leads.filter((lead) =>
@@ -283,6 +335,8 @@ const Leads = () => {
             const waNumber = cleanPhoneDigits.length === 10 ? `91${cleanPhoneDigits}` : cleanPhoneDigits;
             const waMessage = `Hello ${lead.name}, this is your DhanSource Relationship Manager regarding your ${loanTypeToTableShort(lead.loanType)} inquiry. How can I assist you with your application?`;
             const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
+            const isPartnerLead = lead.status === "LEAD" && lead.leadSource === "PARTNER";
+            const partnerWaUrl = isPartnerLead ? buildPartnerWhatsAppUrl(lead) : null;
 
             return (
               <div
@@ -378,6 +432,15 @@ const Leads = () => {
                     </p>
                   </div>
 
+                  {isPartnerLead && (
+                    <div className="mb-3 p-2.5 rounded-lg border border-teal-200 bg-teal-50 text-[11px] text-teal-900">
+                      <p className="font-semibold">Partner lead — RM action</p>
+                      <p className="mt-0.5 text-teal-800">
+                        Ask the partner to complete the remaining loan form steps for this customer.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Last Follow-up info */}
                   {lead.leadFollowUp && (
                     <div className="bg-amber-50/70 border border-amber-200/70 rounded-lg p-2 mb-3 text-[11px] text-amber-900">
@@ -399,37 +462,63 @@ const Leads = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-                  <div className="flex gap-1.5">
-                    {lead.phone && (
-                      <a
-                        href={`tel:${lead.phone}`}
-                        className="p-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors"
-                        title="Call Customer"
+                <div className="pt-3 border-t border-gray-100 space-y-2">
+                  {isPartnerLead && (
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleAskPartnerCompleteForm(lead)}
+                        disabled={nudgingPartnerId === lead.id}
+                        className="flex-1 min-w-[140px] cursor-pointer px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-medium text-xs rounded-lg transition-colors disabled:opacity-50"
                       >
-                        <PhoneCall className="w-4 h-4" />
-                      </a>
-                    )}
-                    {lead.phone && (
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
-                        title="Chat on WhatsApp"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                      </a>
-                    )}
-                  </div>
+                        {nudgingPartnerId === lead.id ? "Sending..." : "Ask partner to complete form"}
+                      </button>
+                      {partnerWaUrl && (
+                        <a
+                          href={partnerWaUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-800 border border-green-200 rounded-lg text-xs font-semibold hover:bg-green-100"
+                          title="WhatsApp partner"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          Partner WA
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex gap-1.5">
+                      {lead.phone && (
+                        <a
+                          href={`tel:${lead.phone}`}
+                          className="p-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors"
+                          title="Call Customer"
+                        >
+                          <PhoneCall className="w-4 h-4" />
+                        </a>
+                      )}
+                      {lead.phone && (
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
+                          title="Chat on WhatsApp (Customer)"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
 
-                  <button
-                    onClick={() => openFollowUpModal(lead)}
-                    className="cursor-pointer px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors flex items-center gap-1 shadow-sm"
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    Follow Up
-                  </button>
+                    <button
+                      onClick={() => openFollowUpModal(lead)}
+                      className="cursor-pointer px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      Follow Up
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -498,6 +587,23 @@ const Leads = () => {
                   className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
+
+              {selectedLead.leadSource === "PARTNER" && selectedLead.status === "LEAD" && (
+                <label className="flex items-start gap-2 text-xs text-gray-700 bg-teal-50 border border-teal-200 rounded-xl p-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={notifyPartnerOnSave}
+                    onChange={(e) => setNotifyPartnerOnSave(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-semibold text-teal-900">Notify partner to complete form</span>
+                    <span className="block text-teal-800 mt-0.5">
+                      Sends an in-app alert (and is recommended when status is Documents Pending / Interested).
+                    </span>
+                  </span>
+                </label>
+              )}
 
               <div className="pt-2 flex justify-end gap-2">
                 <button

@@ -18,6 +18,7 @@ import {
   ChevronRight,
   SlidersHorizontal,
   RotateCcw,
+  Target,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
@@ -112,6 +113,8 @@ const AsmFollowUps = () => {
         partnersFilled: item.partnersFilled || 0,
         partnersNotFilled: item.partnersNotFilled || 0,
         applicationCount: item.applicationCount || 0,
+        openLeadsCount: item.openLeadsCount || 0,
+        agingOver48hCount: item.agingOver48hCount || 0,
         performance: item.performance || "non_working",
         callStatus: item.status || item.followUp?.status || "N/A",
         lastCall: item.lastCall || item.followUp?.lastCallFormatted || "",
@@ -170,7 +173,16 @@ const AsmFollowUps = () => {
     try {
       if (selected.targetType === "rm") {
         await dispatch(
-          recordAsmRmFollowUp({ rmId: selected.id, status, remarks })
+          recordAsmRmFollowUp({
+            rmId: selected.id,
+            status,
+            remarks:
+              remarks ||
+              (selected.openLeadsCount > 0
+                ? `Please progress ${selected.openLeadsCount} open Step-1 lead(s): follow up with partners to complete loan forms.`
+                : ""),
+            askLeadProgress: true,
+          })
         ).unwrap();
       } else {
         await dispatch(
@@ -267,6 +279,7 @@ const AsmFollowUps = () => {
           <div className="flex overflow-x-auto gap-2 pb-1 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-3 mb-3 sm:mb-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[
               { label: "RMs", value: summary?.total ?? rows.length, icon: Users, tone: "bg-slate-50 text-slate-800 border-slate-200" },
+              { label: "Open leads", value: summary?.openLeadsTotal ?? rows.reduce((s, r) => s + (r.openLeadsCount || 0), 0), icon: Target, tone: "bg-orange-50 text-orange-900 border-orange-200" },
               { label: "Partners filled", value: summary?.partnersFilled ?? 0, icon: FileCheck2, tone: "bg-emerald-50 text-emerald-800 border-emerald-200", key: "filled" },
               { label: "Not filled", value: summary?.partnersNotFilled ?? 0, icon: FileX2, tone: "bg-amber-50 text-amber-900 border-amber-200", key: "not_filled" },
               { label: "Working RMs", value: summary?.working ?? 0, icon: TrendingUp, tone: "bg-teal-50 text-teal-900 border-teal-200", key: "working" },
@@ -548,6 +561,7 @@ const AsmFollowUps = () => {
                   <th className="px-3 py-3.5 text-left">Contact</th>
                   {tab === "rm" && <th className="px-3 py-3.5 text-left">Partners filled / not</th>}
                   {tab === "rm" && <th className="px-3 py-3.5 text-left">Total loans</th>}
+                  {tab === "rm" && <th className="px-3 py-3.5 text-left">Open leads</th>}
                   {tab === "rm" && <th className="px-3 py-3.5 text-left">Performance</th>}
                   <th className="px-3 py-3.5 text-left">Call status</th>
                   <th className="px-3 py-3.5 text-left">Last call</th>
@@ -555,9 +569,9 @@ const AsmFollowUps = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {loading ? <TableLoader colSpan={tab === "rm" ? 9 : 6} label="Loading…" /> : null}
+                {loading ? <TableLoader colSpan={tab === "rm" ? 10 : 6} label="Loading…" /> : null}
                 {!loading && sorted.length === 0 ? (
-                  <tr><td colSpan={tab === "rm" ? 9 : 6} className="px-4 py-12 text-center text-slate-500 text-sm">No records match filters.</td></tr>
+                  <tr><td colSpan={tab === "rm" ? 10 : 6} className="px-4 py-12 text-center text-slate-500 text-sm">No records match filters.</td></tr>
                 ) : null}
                 {!loading && paginatedRows.map((row, idx) => {
                   const style = getFollowUpStatusStyle(row.callStatus);
@@ -604,6 +618,18 @@ const AsmFollowUps = () => {
                         </td>
                       )}
                       {tab === "rm" && <td className="px-3 py-3 text-sm font-semibold whitespace-nowrap">{row.applicationCount}</td>}
+                      {tab === "rm" && (
+                        <td className="px-3 py-3 text-sm whitespace-nowrap">
+                          <span className={`font-semibold ${(row.openLeadsCount || 0) > 0 ? "text-orange-700" : "text-slate-500"}`}>
+                            {row.openLeadsCount || 0}
+                          </span>
+                          {(row.agingOver48hCount || 0) > 0 && (
+                            <span className="ml-1 text-[10px] text-rose-600 font-semibold">
+                              ({row.agingOver48hCount} &gt;48h)
+                            </span>
+                          )}
+                        </td>
+                      )}
                       {tab === "rm" && (
                         <td className="px-3 py-3 text-sm font-semibold capitalize whitespace-nowrap">
                           {row.performance === "working" ? (
@@ -745,6 +771,19 @@ const AsmFollowUps = () => {
               </button>
             </div>
             <div className="p-5 space-y-4 overflow-y-auto">
+              {selected.targetType === "rm" && (selected.openLeadsCount || 0) > 0 && (
+                <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
+                  <p className="font-semibold">
+                    {selected.openLeadsCount} open Step-1 lead(s)
+                    {(selected.agingOver48hCount || 0) > 0
+                      ? ` · ${selected.agingOver48hCount} aging over 48h`
+                      : ""}
+                  </p>
+                  <p className="mt-0.5">
+                    Saving this follow-up will notify the RM to ask partners to complete loan forms.
+                  </p>
+                </div>
+              )}
               {/* Person Info with Direct Call & WhatsApp Buttons in Modal */}
               <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl gap-2 flex-wrap">
                 <div className="min-w-0 flex-1">

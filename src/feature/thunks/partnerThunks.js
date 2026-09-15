@@ -66,7 +66,7 @@ export const uploadPartnerAvatar = createAsyncThunk(
       const res = await axios.patch(`${backendurl}/partner/profile/avatar`, formData, {
         headers: {
           Authorization: `Bearer ${partnerToken}`,
-          "Content-Type": "multipart/form-data",
+          // Do NOT set Content-Type — browser must add multipart boundary
         },
       });
       return res.data?.partner || res.data;
@@ -125,9 +125,9 @@ export const signupPartner = createAsyncThunk(
 
     try {
       const res = await axios.post(`${backendurl}/partner/signup-partner`, formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        // Do NOT set Content-Type — browser must add multipart boundary
+        headers: {},
+        timeout: 120000,
       });
 
       return res.data; // response from backend
