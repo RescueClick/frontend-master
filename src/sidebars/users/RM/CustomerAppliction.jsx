@@ -652,7 +652,7 @@ const CustomerApplication = () => {
 
   const canRmUploadDocs = Boolean(
     applicationData &&
-      ["DRAFT", "SUBMITTED", "DOC_INCOMPLETE"].includes(applicationData.status)
+      ["LEAD", "DRAFT", "SUBMITTED", "DOC_INCOMPLETE"].includes(applicationData.status)
   );
 
   const openDocUploadPicker = (docType) => {
@@ -953,7 +953,7 @@ const CustomerApplication = () => {
   useEffect(() => {
     if (!applicationData?.status) return;
     const s = applicationData.status;
-    if (["SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE"].includes(s)) {
+    if (["LEAD", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE"].includes(s)) {
       setStatus(s);
     } else if (s === "LOGIN") {
       setStatus("DOC_COMPLETE");
@@ -2573,9 +2573,12 @@ const CustomerApplication = () => {
                         className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-300"
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
-                        disabled={applicationData?.rsmId && !["DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status)}
+                        disabled={applicationData?.rsmId && !["LEAD", "DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status)}
                       >
                         <option value="">Select Status</option>
+                        {applicationData?.status === "LEAD" && (
+                          <option value="LEAD">LEAD</option>
+                        )}
                         <option value="SUBMITTED">SUBMITTED</option>
                         <option value="DOC_INCOMPLETE">DOC_INCOMPLETE</option>
                         <option 
@@ -2584,7 +2587,7 @@ const CustomerApplication = () => {
                           DOC_COMPLETE {!areAllDocumentsVerified() ? "(All docs must be verified)" : ""}
                         </option>
                         {/* ✅ RM can only set statuses up to DOC_COMPLETE. Beyond that, RSM handles it */}
-                        {applicationData?.rsmId && !["DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status) && (
+                        {applicationData?.rsmId && !["LEAD", "DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status) && (
                           <option value="" disabled>
                             ⚠️ Application transferred to RSM - Status changes handled by RSM
                           </option>
@@ -2642,7 +2645,7 @@ const CustomerApplication = () => {
                       )}
                       
                       {/* Show info when application has been transferred to RSM */}
-                      {applicationData?.rsmId && !["DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status) && (
+                      {applicationData?.rsmId && !["LEAD", "DRAFT", "SUBMITTED", "DOC_INCOMPLETE", "DOC_COMPLETE", "DOC_SUBMITTED"].includes(applicationData?.status) && (
                         <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <div className="flex items-start">
                             <AlertCircle className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
