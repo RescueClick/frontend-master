@@ -1424,7 +1424,8 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                     />
                     <DocumentUploadCard
                       name="itr"
-                      label="Income Tax Return (ITR)"
+                      label="ITR (Last 3 Years)"
+                      hint="Upload all 3 years ITR in this one file (combined PDF preferred)"
                       file={formData.itr}
                       onChange={handleFileChange}
                       onRemove={handleFileRemove}

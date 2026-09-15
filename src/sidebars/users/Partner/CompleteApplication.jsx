@@ -270,7 +270,7 @@ const CompleteApplication = () => {
       FORM_16_26AS: "Form 16 / 26AS",
       SHOP_ACT: "Shop Act / Gumasta",
       UDHYAM_AADHAR: "Udyam Aadhaar",
-      ITR: "ITR",
+      ITR: "ITR (Last 3 Years — one file)",
       SHOP_PHOTO: "Shop Photo",
       ALLOTMENT_LETTER: "Allotment Letter",
       NEW_PROPERTY_PAYMENT_RECEIPTS: "New Property Payment Receipts",

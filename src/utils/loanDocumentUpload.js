@@ -35,7 +35,7 @@ const DOC_LABEL = {
   AGREEMENT_COPY: "Agreement copy",
   SHOP_ACT: "Shop Act / trade license",
   UDHYAM_AADHAR: "Udyam / UAM",
-  ITR: "ITR",
+  ITR: "ITR (Last 3 Years — one file)",
   GST_DOCUMENT: "GST certificate",
   SHOP_PHOTO: "Shop / business photo",
   BUSINESS_OTHER_DOCS: "Other business document",

@@ -70,7 +70,7 @@ const formatDocTypeName = (docType) => {
     BANK_STATEMENT_2: "Bank Statement 2",
     SHOP_ACT: "Shop Act / Gumasta License",
     UDHYAM_AADHAR: "Udyam Aadhaar",
-    ITR: "ITR (Income Tax Returns)",
+    ITR: "ITR (Last 3 Years — one file)",
     SHOP_PHOTO: "Shop / Office Photo",
     GST_DOCUMENT: "GST Certificate",
     CO_APPLICANT_AADHAR_FRONT: "Co-Applicant Aadhaar (Front)",

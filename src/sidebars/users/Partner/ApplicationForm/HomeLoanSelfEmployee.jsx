@@ -743,7 +743,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       errors.shopAct = "Shop and Establishment Act/ Gumasta License is required.";
 
     if (!formData.itr)
-      errors.itr = "ITR is required.";
+      errors.itr = "ITR (last 3 years) is required.";
 
     if (!formData.udhyamAadhar)
       errors.udhyamAadhar = "Udhyam Aadhar is required."
@@ -2465,8 +2465,11 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     className="block text-sm font-medium mb-2"
                     style={{ color: "#111827" }}
                   >
-                    ITR (Income Tax Return) *
+                    ITR (Last 3 Years) *
                   </label>
+                  <p className="text-xs text-slate-500 mb-2">
+                    Upload all 3 years ITR in this one file (combined PDF preferred)
+                  </p>
                   <input
                     type="file"
                     name="itr"

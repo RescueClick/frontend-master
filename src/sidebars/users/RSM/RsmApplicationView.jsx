@@ -391,7 +391,7 @@ const RsmApplicationView = () => {
     BANK_STATEMENT: "Bank Statement",
     SHOP_ACT: "Shop Act / Gumasta",
     UDHYAM_AADHAR: "Udyam Aadhaar",
-    ITR: "ITR",
+    ITR: "ITR (Last 3 Years — one file)",
     GST_DOCUMENT: "GST Document",
     GST_CERTIFICATE: "GST Certificate",
     SHOP_PHOTO: "Shop Photo",

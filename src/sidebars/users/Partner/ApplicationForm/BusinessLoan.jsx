@@ -71,7 +71,7 @@ const formatDocTypeName = (docType) => {
     BANK_STATEMENT_2: "Bank Statement 2",
     SHOP_ACT: "Shop Act / Gumasta License",
     UDHYAM_AADHAR: "Udyam Aadhaar",
-    ITR: "ITR (Income Tax Returns)",
+    ITR: "ITR (Last 3 Years — one file)",
     SHOP_PHOTO: "Shop / Office Photo",
     GST_DOCUMENT: "GST Certificate",
     CO_APPLICANT_AADHAR_FRONT: "Co-Applicant Aadhaar (Front)",
@@ -500,7 +500,7 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
 
       if (!data.shopAct) errors.shopAct = "Shop Act is required.";
       if (!data.udhyamAadhar) errors.udhyamAadhar = "Udhyam Aadhar is required.";
-      if (!data.itr) errors.itr = "ITR is required.";
+      if (!data.itr) errors.itr = "ITR (last 3 years) is required.";
       if (!data.shopPhoto) errors.shopPhoto = "Shop Photo is required.";
       if (!data.bankStatementFile1) errors.bankStatementFile1 = "Bank Statement File 1 is required.";
     }
@@ -710,7 +710,7 @@ function validateForm(formData) {
 
   if (!formData.udhyamAadhar) errors.udhyamAadhar = "Udhyam Aadhar is required.";
 
-  if (!formData.itr) errors.itr = "ITR is required.";
+  if (!formData.itr) errors.itr = "ITR (last 3 years) is required.";
 
   if (!formData.shopPhoto) errors.shopPhoto = "Shop Photo is required.";
 
@@ -2377,8 +2377,11 @@ const handleSubmit = async () => {
                     className="block text-sm font-medium mb-2"
                     style={{ color: "#111827" }}
                   >
-                    ITR (Income Tax Return) *
+                    ITR (Last 3 Years) *
                   </label>
+                  <p className="text-xs text-slate-500 mb-2">
+                    Upload all 3 years ITR in this one file (combined PDF preferred)
+                  </p>
                   <input
                     type="file"
                     name="itr"
