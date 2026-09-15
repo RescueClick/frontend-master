@@ -126,6 +126,7 @@ const AsmSiderbar = () => {
     { name: subordinateLabel, icon: Users, path: subordinatePath },
     { name: "Partners", icon: UserCheck, path: `${basePath}/partners` },
     { name: "Applications", icon: FileText, path: `${basePath}/applications` },
+    { name: "Leads & Pipeline", icon: LineChart, path: `${basePath}/leads` },
     { name: "Payouts", icon: IndianRupee, path: `${basePath}/payouts`, highlight: true },
     { name: "Incentives", icon: Award, path: `${basePath}/incentives`, highlight: true },
     { name: "Follow Up", icon: CalendarCheck, path: `${basePath}/follow-ups` },

@@ -113,6 +113,7 @@ import RmDashboard from "./sidebars/users/RM/Dashboard";
 import RmCustomers from "./sidebars/users/RM/Customers";
 import RmPartners from "./sidebars/users/RM/Partners";
 import RmLeads from "./sidebars/users/RM/Leads";
+import HierarchyLeads from "./sidebars/users/shared/HierarchyLeads";
 import RmReports from "./sidebars/users/RM/Reports";
 import CustomerAppliction from "./sidebars/users/RM/CustomerAppliction"
 import ActivePartner from "./sidebars/users/RM/ActivePartner";
@@ -401,6 +402,7 @@ const AppRoutes = () => {
         <Route path="eligible-incentive" element={<Navigate to="/rsm/incentives" replace state={{ defaultTab: "eligible" }} />} />
         <Route path="done-incentive" element={<Navigate to="/rsm/incentives" replace state={{ defaultTab: "paid" }} />} />
         <Route path="withdrawals" element={<Navigate to="/rsm/payouts" replace />} />
+        <Route path="leads" element={<HierarchyLeads />} />
         <Route path="follow-ups" element={<AsmFollowUps />} />
         <Route path="find-bank-rm" element={<AdminFindBankRm />} />
         <Route path="partner-targets" element={<Navigate to="/rsm/incentives" replace />} />
@@ -423,6 +425,7 @@ const AppRoutes = () => {
         <Route path="applications" element={<RsmApplications />} />
         <Route path="applications/view" element={<RsmApplicationView />} />
         <Route path="analytics" element={<RsmAnalytics />} />
+        <Route path="leads" element={<HierarchyLeads />} />
         <Route path="follow-ups" element={<RsmFollowUps />} />
         <Route path="banks" element={<Banks />} />
         <Route path="find-bank-rm" element={<AsmFindBankRm />} />

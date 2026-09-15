@@ -117,6 +117,7 @@ const RsmSidebar = () => {
     { name: subordinateLabel, icon: Users, path: subordinatePath },
     { name: "Partners", icon: UserCheck, path: `${basePath}/partners` },
     { name: "Applications", icon: FileText, path: `${basePath}/applications` },
+    { name: "Leads & Pipeline", icon: LineChart, path: `${basePath}/leads` },
     { name: "Follow Up", icon: CalendarCheck, path: `${basePath}/follow-ups` },
     { name: "Banks", icon: Building2, path: `${basePath}/banks`, highlight: true },
     { name: "Find Bank RM", icon: Search, path: `${basePath}/find-bank-rm` },
