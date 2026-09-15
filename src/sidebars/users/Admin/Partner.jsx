@@ -370,7 +370,8 @@ export default function PartnerTable() {
     let act = 0;
     let susp = 0;
     (data || []).forEach((p) => {
-      if (p.status === "ACTIVE") act++;
+      const isActive = !p.deletedAt && !p.isSoftDeleted && p.status === "ACTIVE";
+      if (isActive) act++;
       else susp++;
     });
     return { activeCount: act, suspendedCount: susp };
@@ -393,14 +394,17 @@ export default function PartnerTable() {
       // Unverified / unassigned partners only belong in Admin Partner queue
       const status = String(partner.status || "").toUpperCase();
       if (status === "PENDING") return false;
-      if (!partner.rmId && !partner.rmName) return false;
+      // Soft-deleted partners belong in Suspended tab even without RM display fields
+      const isSoftDeleted = Boolean(partner.deletedAt || partner.isSoftDeleted);
+      if (!isSoftDeleted && !partner.rmId && !partner.rmName) return false;
 
       const partnerRegion = norm(partner.region);
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;
 
-      if (activeTab === "ACTIVE" && partner.status !== "ACTIVE") return false;
-      if (activeTab === "SUSPENDED" && partner.status === "ACTIVE") return false;
+      const isActive = !isSoftDeleted && partner.status === "ACTIVE";
+      if (activeTab === "ACTIVE" && !isActive) return false;
+      if (activeTab === "SUSPENDED" && isActive) return false;
 
       if (!term) return true;
 
@@ -435,7 +439,10 @@ export default function PartnerTable() {
   const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
   const deactivatedPartners = useMemo(
-    () => (data || []).filter((p) => p.status !== "ACTIVE"),
+    () =>
+      (data || []).filter(
+        (p) => p.deletedAt || p.isSoftDeleted || p.status !== "ACTIVE"
+      ),
     [data]
   );
 
