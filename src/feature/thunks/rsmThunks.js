@@ -9,6 +9,11 @@ import {
 
 const unwrapApiData = (payload) => payload?.data ?? payload;
 
+const getEffectiveManagerToken = () => {
+  const auth = getAuthData() || {};
+  return auth.asmToken || auth.rsmToken || auth.adminToken || auth.token || "";
+};
+
 // Fetch RSM Profile
 export const fetchRsmProfile = createAsyncThunk(
   "rsm/fetchProfile",
@@ -113,7 +118,7 @@ export const fetchRsmApplications = createAsyncThunk(
   "rsm/fetchApplications",
   async ({ status }, { rejectWithValue }) => {
     try {
-      const { rsmToken } = getAuthData();
+      const rsmToken = getEffectiveManagerToken();
       const url = status
         ? `${backendurl}/rsm/applications?status=${status}`
         : `${backendurl}/rsm/applications`;
@@ -136,7 +141,7 @@ export const fetchRsmApplication = createAsyncThunk(
   "rsm/fetchApplication",
   async (applicationId, { rejectWithValue }) => {
     try {
-      const { rsmToken } = getAuthData();
+      const rsmToken = getEffectiveManagerToken();
       const response = await axios.get(
         `${backendurl}/rsm/applications/${applicationId}`,
         {
@@ -159,7 +164,7 @@ export const transitionRsmApplication = createAsyncThunk(
   "rsm/transitionApplication",
   async ({ applicationId, to, note, approvedLoanAmount }, { rejectWithValue, dispatch }) => {
     try {
-      const { rsmToken } = getAuthData();
+      const rsmToken = getEffectiveManagerToken();
       const response = await axios.post(
         `${backendurl}/rsm/applications/${applicationId}/transition`,
         { to, note, approvedLoanAmount },

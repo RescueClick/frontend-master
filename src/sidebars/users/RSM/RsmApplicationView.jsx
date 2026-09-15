@@ -827,7 +827,7 @@ const RsmApplicationView = () => {
         return;
       }
 
-      // ✅ RSM can only handle processing statuses (including LOGIN)
+      // ✅ RSM/ASM allowed statuses
       const RSM_ALLOWED_STATUSES = [
         "LOGIN",
         "UNDER_REVIEW",
@@ -835,9 +835,11 @@ const RsmApplicationView = () => {
         "AGREEMENT",
         "REJECTED",
         "DISBURSED",
+        "DOC_COMPLETE",
+        "DOC_INCOMPLETE",
       ];
       if (!RSM_ALLOWED_STATUSES.includes(status)) {
-        toast.error(`RSM can only transition to processing statuses: ${RSM_ALLOWED_STATUSES.join(", ")}`);
+        toast.error(`Allowed statuses: ${RSM_ALLOWED_STATUSES.join(", ")}`);
         setSubmitLoading(false);
         return;
       }
@@ -845,11 +847,15 @@ const RsmApplicationView = () => {
       // Validate transitions
       const currentStatus = applicationData.status;
       const allowedTransitions = {
-        DOC_COMPLETE: ["LOGIN"],
-        LOGIN: ["UNDER_REVIEW"],
-        UNDER_REVIEW: ["APPROVED", "REJECTED"],
-        APPROVED: ["AGREEMENT", "DISBURSED", "REJECTED"],
-        AGREEMENT: ["DISBURSED", "REJECTED"],
+        SUBMITTED: ["DOC_COMPLETE", "LOGIN", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],
+        DOC_INCOMPLETE: ["DOC_COMPLETE", "LOGIN", "UNDER_REVIEW", "REJECTED"],
+        DOC_COMPLETE: ["LOGIN", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],
+        LOGIN: ["UNDER_REVIEW", "APPROVED", "DOC_COMPLETE", "DOC_INCOMPLETE", "REJECTED"],
+        UNDER_REVIEW: ["APPROVED", "LOGIN", "AGREEMENT", "DISBURSED", "DOC_INCOMPLETE", "REJECTED"],
+        APPROVED: ["AGREEMENT", "DISBURSED", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],
+        AGREEMENT: ["DISBURSED", "APPROVED", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],
+        REJECTED: ["UNDER_REVIEW", "LOGIN", "DOC_COMPLETE", "DOC_INCOMPLETE", "APPROVED"],
+        DISBURSED: ["UNDER_REVIEW", "REJECTED"],
       };
 
       if (!allowedTransitions[currentStatus]?.includes(status)) {
@@ -1030,13 +1036,17 @@ const RsmApplicationView = () => {
 
   // ✅ Get allowed statuses based on current status
   const getAllowedStatuses = () => {
-    const currentStatus = applicationData.status;
+    const currentStatus = applicationData?.status;
     const allowedTransitions = {
-      DOC_COMPLETE: ["LOGIN"],
-      LOGIN: ["UNDER_REVIEW"],
-      UNDER_REVIEW: ["APPROVED", "REJECTED"],
-      APPROVED: ["AGREEMENT", "DISBURSED", "REJECTED"],
-      AGREEMENT: ["DISBURSED", "REJECTED"],
+      SUBMITTED: ["DOC_COMPLETE", "LOGIN", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],
+      DOC_INCOMPLETE: ["DOC_COMPLETE", "LOGIN", "UNDER_REVIEW", "REJECTED"],
+      DOC_COMPLETE: ["LOGIN", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],
+      LOGIN: ["UNDER_REVIEW", "APPROVED", "DOC_COMPLETE", "DOC_INCOMPLETE", "REJECTED"],
+      UNDER_REVIEW: ["APPROVED", "LOGIN", "AGREEMENT", "DISBURSED", "DOC_INCOMPLETE", "REJECTED"],
+      APPROVED: ["AGREEMENT", "DISBURSED", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],
+      AGREEMENT: ["DISBURSED", "APPROVED", "UNDER_REVIEW", "DOC_INCOMPLETE", "REJECTED"],
+      REJECTED: ["UNDER_REVIEW", "LOGIN", "DOC_COMPLETE", "DOC_INCOMPLETE", "APPROVED"],
+      DISBURSED: ["UNDER_REVIEW", "REJECTED"],
     };
     return allowedTransitions[currentStatus] || [];
   };
