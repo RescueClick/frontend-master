@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { Search, Filter, Users, Phone, Download } from "lucide-react";
+import { Search, Filter, Users, Phone, Download, Eye } from "lucide-react";
 import { fetchAsmApplications } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
@@ -16,6 +17,7 @@ const Application = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
 
+  const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const { data, loading, success, error } = useSelector(
@@ -41,6 +43,7 @@ const Application = () => {
         return {
           name: c.username || c.customerName,
           id: c.userId || c.appNo || c._id,
+          applicationId: c.actionId || c._id,
           phone: c.phone || c.customer?.phone || "-",
           applicationDateRaw: c.applicationDate || c.createdAt,
           applicationDate: c.applicationDate
@@ -155,8 +158,32 @@ const Application = () => {
         key: "status",
         render: (s) => <LoanStatusBadge status={s} />,
       },
+      {
+        title: "Action",
+        key: "action",
+        width: 80,
+        render: (_, row) => (
+          <button
+            type="button"
+            className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-40"
+            disabled={!row.applicationId}
+            onClick={() => {
+              if (!row.applicationId) {
+                toast.error("Application id not available");
+                return;
+              }
+              navigate("/rsm/applications/view", {
+                state: { applicationId: row.applicationId },
+              });
+            }}
+            title={row.status === "REJECTED" ? "View / Reopen" : "View Details"}
+          >
+            <Eye size={16} className="text-gray-600" />
+          </button>
+        ),
+      },
     ],
-    []
+    [navigate]
   );
 
   return (

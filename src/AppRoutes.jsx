@@ -392,6 +392,7 @@ const AppRoutes = () => {
         <Route path="rsms" element={<AsmRSM />} />
         <Route path="rms" element={<AsmRM />} /> 
         <Route path="applications" element={<Applications />} />
+        <Route path="applications/view" element={<RsmApplicationView />} />
         <Route path="partners" element={<AsmPartners />} />
         <Route path="move-partners" element={<AsmMovePartners />} />
         <Route path="payouts" element={<AsmPayouts />} />

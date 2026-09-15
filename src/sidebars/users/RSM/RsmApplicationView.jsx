@@ -450,7 +450,8 @@ const RsmApplicationView = () => {
         setApplicationData(result.payload);
         const rules = await fetchRequiredDocRules(result.payload);
         setRequiredDocRules(rules);
-        setStatus(result.payload.status || "");
+        // Don't preselect REJECTED — force an explicit reopen/update target
+        setStatus(result.payload.status === "REJECTED" ? "" : (result.payload.status || ""));
         if (result.payload.customer?.currentAddressPinCode) {
           setSearchPincode(result.payload.customer.currentAddressPinCode);
         }
@@ -896,11 +897,14 @@ const RsmApplicationView = () => {
       }));
 
       if (transitionRsmApplication.fulfilled.match(result)) {
+        const wasReopened = previousAppData?.status === "REJECTED" && status !== "REJECTED";
         if (result.payload && applicationData) {
           setApplicationData({
             ...applicationData,
             status: result.payload.status || status,
             approvedLoanAmount: result.payload.approvedLoanAmount || applicationData.approvedLoanAmount,
+            remarks: wasReopened ? remark : applicationData.remarks,
+            deletedAt: wasReopened ? null : applicationData.deletedAt,
           });
         }
 
@@ -912,11 +916,17 @@ const RsmApplicationView = () => {
 
         setRemark("");
         setApprovalAmount("");
+        setStatus("");
 
-        toast.success(`Application status updated to ${status} successfully!`, {
-          duration: 3000,
-          position: "top-right",
-        });
+        toast.success(
+          wasReopened
+            ? `File reopened successfully — status set to ${status}`
+            : `Application status updated to ${status} successfully!`,
+          {
+            duration: 3000,
+            position: "top-right",
+          }
+        );
       } else {
         if (previousAppData) {
           setApplicationData(previousAppData);
@@ -934,6 +944,13 @@ const RsmApplicationView = () => {
       });
     } finally {
       setSubmitLoading(false);
+    }
+  };
+
+  const prepareReopen = (targetStatus = "UNDER_REVIEW") => {
+    setStatus(targetStatus);
+    if (!remark.trim()) {
+      setRemark(`File reopened to ${targetStatus} after rejection`);
     }
   };
 
@@ -1659,11 +1676,43 @@ const RsmApplicationView = () => {
                     {/* 2. Update Application Status */}
                     <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex flex-col h-[420px] overflow-hidden">
                       <h3 className="text-sm font-semibold text-gray-900 flex items-center shrink-0 mb-2.5">
-                        <Send className="w-4 h-4 mr-1.5 text-brand-primary" />
-                        Update Status
+                        {applicationData.status === "REJECTED" ? (
+                          <>
+                            <RotateCcw className="w-4 h-4 mr-1.5 text-amber-600" />
+                            Reopen File
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-1.5 text-brand-primary" />
+                            Update Status
+                          </>
+                        )}
                       </h3>
 
                       <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5">
+                      {applicationData.status === "REJECTED" && (
+                        <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                          <p className="text-[11px] text-amber-900 font-medium leading-snug">
+                            This file was rejected. Choose a status below to reopen it and continue processing.
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {["UNDER_REVIEW", "LOGIN", "DOC_COMPLETE", "DOC_INCOMPLETE"].map((target) => (
+                              <button
+                                key={target}
+                                type="button"
+                                onClick={() => prepareReopen(target)}
+                                className={`px-2 py-1 rounded-md text-[10px] font-semibold border transition-colors ${
+                                  status === target
+                                    ? "bg-amber-600 text-white border-amber-600"
+                                    : "bg-white text-amber-800 border-amber-300 hover:bg-amber-100"
+                                }`}
+                              >
+                                {target === "UNDER_REVIEW" ? "Reopen → Under Review" : target.replace(/_/g, " ")}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                           Select New Status
@@ -1695,7 +1744,9 @@ const RsmApplicationView = () => {
                           <div className="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
                             <AlertCircle className="w-4 h-4 text-blue-600 mr-1.5 shrink-0 mt-0.5" />
                             <p className="text-[11px] text-blue-800 font-medium">
-                              {status === "REJECTED"
+                              {applicationData.status === "REJECTED"
+                                ? "Add a reopen remark, then submit to restore this file."
+                                : status === "REJECTED"
                                 ? "Please enter a rejection reason. This cannot be done after Disbursed."
                                 : status === "DISBURSED"
                                 ? "Please enter the approved loan amount below."
@@ -1761,12 +1812,21 @@ const RsmApplicationView = () => {
                       <button
                         onClick={handleSubmit}
                         disabled={submitLoading || !status || !remark.trim() || (status === "APPROVED" && !approvalAmount)}
-                        className="mt-2.5 w-full flex items-center justify-center bg-gray-900 text-white py-2.5 px-4 rounded-lg shadow-sm hover:bg-gray-800 transition-all font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        className={`mt-2.5 w-full flex items-center justify-center text-white py-2.5 px-4 rounded-lg shadow-sm transition-all font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0 ${
+                          applicationData.status === "REJECTED"
+                            ? "bg-amber-600 hover:bg-amber-700"
+                            : "bg-gray-900 hover:bg-gray-800"
+                        }`}
                       >
                         {submitLoading ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             <span>Updating...</span>
+                          </>
+                        ) : applicationData.status === "REJECTED" ? (
+                          <>
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                            <span>Reopen File</span>
                           </>
                         ) : (
                           <span>Submit Update</span>
