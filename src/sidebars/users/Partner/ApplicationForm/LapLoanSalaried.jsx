@@ -20,6 +20,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
@@ -46,12 +47,18 @@ import {
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
 import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
+import {
+  useRmLoanFormResume,
+  rmCompleteLoanFormUrl,
+} from "../../../../utils/rmLoanForm";
 
-export default function LapLoanSalaried({ embed = false } = {}) {
+export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = {}) {
   const [documentModel, setdocumentModel] = useState(null);
+  const navigate = useNavigate();
 
-  const { partnerToken, partnerUser } = getAuthData();
-  const isPartnerLoggedIn = Boolean(partnerToken);
+  const { partnerToken, partnerUser, rmToken } = getAuthData();
+  const isRmMode = actorRole === "rm" || (actorRole === "auto" && Boolean(rmToken) && !partnerToken);
+  const isPartnerLoggedIn = Boolean(partnerToken) && !isRmMode;
   const profileState = useSelector((state) => state?.partner?.profile?.data);
 
   const currentPartnerCode =
@@ -172,6 +179,16 @@ export default function LapLoanSalaried({ embed = false } = {}) {
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStep, setMaxStep] = useState(0);
   const objectUrlsRef = useRef([]);
+  const abortControllerRef = useRef(null);
+
+  const { resumeMeta, loadingResume, resumeError } = useRmLoanFormResume({
+    enabled: isRmMode,
+    setFormData,
+    setApplicationId,
+  });
+  useEffect(() => {
+    if (resumeError) setError(resumeError);
+  }, [resumeError]);
 
   const steps = [
     { label: "Personal", id: "personal" },
@@ -543,7 +560,7 @@ export default function LapLoanSalaried({ embed = false } = {}) {
     }
 
     // Automatically capture Step 1 as a Lead in the system
-    if (currentStep === 0) {
+    if (currentStep === 0 && !isRmMode) {
       captureLeadOnStep1Next({
         loanType: "LAP_SALARIED",
         formData,
@@ -616,6 +633,9 @@ export default function LapLoanSalaried({ embed = false } = {}) {
           loanAmount: formData.loanAmount || 0,
           password: formData.password,
           bankStatementPassword: formData.bankStatementPassword,
+          hasRunningLoan: formData.hasRunningLoan || "NO",
+          monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
+          loanPurpose: formData.loanPurpose || "",
         },
         product: {
           companyName: formData.companyName,
@@ -680,6 +700,32 @@ export default function LapLoanSalaried({ embed = false } = {}) {
         }
       });
 
+      if (isRmMode) {
+        if (!applicationId) {
+          setError("Missing application id. Open this form from Leads → Complete form yourself.");
+          setLoading(false);
+          return;
+        }
+        abortControllerRef.current = new AbortController();
+        const response = await axios.post(
+          rmCompleteLoanFormUrl(applicationId),
+          formDataToSend,
+          {
+            headers: { Authorization: `Bearer ${rmToken}` },
+            timeout: 120000,
+            maxContentLength: 100 * 1024 * 1024,
+            maxBodyLength: 100 * 1024 * 1024,
+            signal: abortControllerRef.current.signal,
+          }
+        );
+        const data = response.data;
+        setSavedApplication(data);
+        setSuccessMessage(data.message || "Application form completed successfully.");
+        toast.success(data.message || "Loan form completed");
+        setTimeout(() => navigate("/rm/leads"), 1200);
+        return;
+      }
+
       const endpoint = isPartnerLoggedIn
         ? `${backendurl}/partner/create-applications`
         : `${backendurl}/partner/public/create-application`;
@@ -709,6 +755,22 @@ export default function LapLoanSalaried({ embed = false } = {}) {
 
   return (
     <div className={`w-full max-w-5xl mx-auto ${embed ? "p-0" : "p-4 sm:p-6"}`}>
+      {isRmMode && (
+        <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-teal-900">
+          <p className="font-semibold">
+            Completing loan form as RM
+            {resumeMeta?.appNo ? ` · App ${resumeMeta.appNo}` : ""}
+            {resumeMeta?.status ? ` · ${resumeMeta.status}` : ""}
+          </p>
+          <p className="text-sm mt-1">
+            Prefill any half-filled customer/partner details, finish remaining fields and documents, then submit.
+          </p>
+          {loadingResume && (
+            <p className="text-sm mt-1 text-teal-700">Loading existing application…</p>
+          )}
+        </div>
+      )}
+
       {/* Customer Trust Banner & Partner Certificate Info */}
       {!isPartnerLoggedIn && (
         <PublicLoanPartnerTrustBanner

@@ -21,6 +21,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
 import {
@@ -46,6 +47,10 @@ import {
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
 import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
+import {
+  useRmLoanFormResume,
+  rmCompleteLoanFormUrl,
+} from "../../../../utils/rmLoanForm";
 
 const formatDocTypeName = (docType) => {
   const map = {
@@ -78,9 +83,11 @@ const formatDocTypeName = (docType) => {
   return map[docType] || String(docType || "").replace(/_/g, " ");
 };
 
-export default function BusinessLoan({ embed = false } = {}) {
-  const { partnerToken, partnerUser } = getAuthData();
-  const isPartnerLoggedIn = Boolean(partnerToken);
+export default function BusinessLoan({ embed = false, actorRole = "auto" } = {}) {
+  const navigate = useNavigate();
+  const { partnerToken, partnerUser, rmToken } = getAuthData();
+  const isRmMode = actorRole === "rm" || (actorRole === "auto" && Boolean(rmToken) && !partnerToken);
+  const isPartnerLoggedIn = Boolean(partnerToken) && !isRmMode;
   const profileState = useSelector((state) => state?.partner?.profile?.data);
 
   const currentPartnerCode =
@@ -192,6 +199,15 @@ export default function BusinessLoan({ embed = false } = {}) {
   const [savedApplication, setSavedApplication] = useState(null);
   const [isCheckingExistence, setIsCheckingExistence] = useState(false);
   const abortControllerRef = useRef(null);
+
+  const { resumeMeta, loadingResume, resumeError } = useRmLoanFormResume({
+    enabled: isRmMode,
+    setFormData,
+    setApplicationId,
+  });
+  useEffect(() => {
+    if (resumeError) setError(resumeError);
+  }, [resumeError]);
 
   const loanDraftStorageKey = embed
     ? "dhansource.businessLoanDraft.embed.v1"
@@ -777,6 +793,9 @@ const handleSubmit = async () => {
         loanAmount: formData.loanAmount || 0,
         password: formData.password,
         bankStatementPassword: formData.bankStatementPassword,
+        hasRunningLoan: formData.hasRunningLoan || "NO",
+        monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
+        loanPurpose: formData.loanPurpose || "",
       },
       product: {
         businessName: formData.businessName,
@@ -833,6 +852,32 @@ const handleSubmit = async () => {
     }
 
     // 4) Send to backend
+    if (isRmMode) {
+      if (!applicationId) {
+        setError("Missing application id. Open this form from Leads → Complete form yourself.");
+        setLoading(false);
+        return;
+      }
+      abortControllerRef.current = new AbortController();
+      const response = await axios.post(
+        rmCompleteLoanFormUrl(applicationId),
+        formDataToSend,
+        {
+          headers: { Authorization: `Bearer ${rmToken}` },
+          timeout: 120000,
+          maxContentLength: 100 * 1024 * 1024,
+          maxBodyLength: 100 * 1024 * 1024,
+          signal: abortControllerRef.current.signal,
+        }
+      );
+      const data = response.data;
+      setSavedApplication(data);
+      setSuccessMessage(data.message || "Application form completed successfully.");
+      toast.success(data.message || "Loan form completed");
+      setTimeout(() => navigate("/rm/leads"), 1200);
+      return;
+    }
+
     const endpoint = isPartnerLoggedIn
       ? `${backendurl}/partner/create-applications`
       : `${backendurl}/partner/public/create-application`;
@@ -1118,6 +1163,22 @@ const handleSubmit = async () => {
         }
       `}</style>
       <div className="max-w-4xl mx-auto">
+        {isRmMode && (
+          <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-teal-900">
+            <p className="font-semibold">
+              Completing loan form as RM
+              {resumeMeta?.appNo ? ` · App ${resumeMeta.appNo}` : ""}
+              {resumeMeta?.status ? ` · ${resumeMeta.status}` : ""}
+            </p>
+            <p className="text-sm mt-1">
+              Prefill any half-filled customer/partner details, finish remaining fields and documents, then submit.
+            </p>
+            {loadingResume && (
+              <p className="text-sm mt-1 text-teal-700">Loading existing application…</p>
+            )}
+          </div>
+        )}
+
         {successMessage && (
           <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
             <div className="flex items-start justify-between gap-3">
@@ -2734,7 +2795,7 @@ const handleSubmit = async () => {
                       }
 
                       // New: Check if customer exists after Step 1 (Personal Info)
-                      if (currentStep === 0 && isPartnerLoggedIn) {
+                      if (currentStep === 0 && isPartnerLoggedIn && !isRmMode) {
                         setIsCheckingExistence(true);
                         try {
                           const { data } = await axios.get(`${backendurl}/partner/check-customer`, {
@@ -2758,7 +2819,7 @@ const handleSubmit = async () => {
                       }
 
                       // Automatically capture Step 1 as a Lead in the system
-                      if (currentStep === 0) {
+                      if (currentStep === 0 && !isRmMode) {
                         captureLeadOnStep1Next({
                           loanType: "BUSINESS",
                           formData: { ...formData, contactNo: formData.phone || formData.contactNo },

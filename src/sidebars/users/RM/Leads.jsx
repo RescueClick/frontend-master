@@ -14,13 +14,16 @@ import {
   Building,
   CheckCircle,
   AlertCircle,
+  FileEdit,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import { rmLoanFormPath } from "../../../utils/rmLoanForm";
 
 const COLORS = {
   primary: "var(--color-brand-primary)",
@@ -65,6 +68,7 @@ const FOLLOW_UP_OPTIONS = [
 ];
 
 const Leads = () => {
+  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [activeStatus, setActiveStatus] = useState("New Leads");
   const [loading, setLoading] = useState(false);
@@ -97,17 +101,26 @@ const Leads = () => {
 
   const statuses = Object.keys(STATUS_MAPPING);
 
-  const loanTypeFormPath = (loanType) => {
+  const partnerLoanTypeFormPath = (loanType) => {
     const map = {
       PERSONAL: "/partner/personal-loan",
-      BUSINESS: "/partner/business-loan",
+      BUSINESS: "/partner/bussiness-loan",
       HOME_LOAN_SALARIED: "/partner/home-loan-salaried",
-      HOME_LOAN_SELF_EMPLOYED: "/partner/home-loan-self-employed",
+      HOME_LOAN_SELF_EMPLOYED: "/partner/home-loan-self-employee",
       LAP_SALARIED: "/partner/lap-loan-salaried",
-      LAP_SELF_EMPLOYED: "/partner/lap-loan-self-employed",
+      LAP_SELF_EMPLOYED: "/partner/lap-loan-self-employee",
       LAP: "/partner/lap-loan-salaried",
     };
     return map[String(loanType || "").toUpperCase()] || "/partner/get-loan";
+  };
+
+  const canRmCompleteForm = (lead) =>
+    ["LEAD", "DRAFT", "DOC_INCOMPLETE"].includes(String(lead?.status || "").toUpperCase());
+
+  const handleCompleteFormYourself = (lead) => {
+    if (!lead?.id) return;
+    const path = rmLoanFormPath(lead.loanType);
+    navigate(`${path}?applicationId=${lead.id}`);
   };
 
   // Fetch leads from API
@@ -237,7 +250,7 @@ const Leads = () => {
     const phone = String(lead.partnerPhone || "").replace(/\D/g, "");
     if (!phone) return null;
     const waNumber = phone.length === 10 ? `91${phone}` : phone;
-    const formHint = `${window.location.origin}${loanTypeFormPath(lead.loanType)}?applicationId=${lead.id}`;
+    const formHint = `${window.location.origin}${partnerLoanTypeFormPath(lead.loanType)}?applicationId=${lead.id}`;
     const msg =
       `Hello ${lead.partnerName || "Partner"}, this is your DhanSource RM. ` +
       `Please complete the ${loanTypeToTableShort(lead.loanType)} application for customer ${lead.name} ` +
@@ -463,6 +476,16 @@ const Leads = () => {
 
                 {/* Action Buttons */}
                 <div className="pt-3 border-t border-gray-100 space-y-2">
+                  {canRmCompleteForm(lead) && (
+                    <button
+                      type="button"
+                      onClick={() => handleCompleteFormYourself(lead)}
+                      className="w-full cursor-pointer px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-lg transition-colors inline-flex items-center justify-center gap-1.5"
+                    >
+                      <FileEdit className="w-3.5 h-3.5" />
+                      Complete form yourself
+                    </button>
+                  )}
                   {isPartnerLead && (
                     <div className="flex flex-wrap gap-1.5">
                       <button

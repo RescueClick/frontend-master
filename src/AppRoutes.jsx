@@ -461,6 +461,14 @@ const AppRoutes = () => {
         <Route path="Active-partners" element={<ActivePartner/>} />
         <Route path="Revenue-generated" element={<RevenueGenerated/>} />
         <Route path="Follow-up" element={<FollowUp/>}/>
+        <Route path="personal-loan" element={<PersonalLoan actorRole="rm" />} />
+        <Route path="bussiness-loan" element={<BusinessLoan actorRole="rm" />} />
+        <Route path="home-loan" element={<HomeLoan />} />
+        <Route path="home-loan-salaried" element={<HomeLoanSalaried actorRole="rm" />} />
+        <Route path="home-loan-self-employee" element={<HomeLoanSelfEmployee actorRole="rm" />} />
+        <Route path="lap-loan" element={<LapLoan />} />
+        <Route path="lap-loan-salaried" element={<LapLoanSalaried actorRole="rm" />} />
+        <Route path="lap-loan-self-employee" element={<LapLoanSelfEmployee actorRole="rm" />} />
      
 
 

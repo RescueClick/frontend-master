@@ -3,6 +3,10 @@ import axios from "axios";
 import { getAuthData } from "../../../utils/localStorage";
 import toast from "react-hot-toast";
 
+import { useLocation, useNavigate } from "react-router-dom";
+import { backendurl } from "../../../feature/urldata";
+import { getLoanStatusLabel } from "../../../utils/loanStatus";
+import { rmLoanFormPath } from "../../../utils/rmLoanForm";
 import {
   User,
   FileText,
@@ -33,10 +37,8 @@ import {
   RefreshCw,
   Maximize,
   Upload,
+  FileEdit,
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
-import { backendurl } from "../../../feature/urldata";
-import { getLoanStatusLabel } from "../../../utils/loanStatus";
 
 // ================== FIELD DEFINITIONS (Outside component) ==================
 const customerFields = [
@@ -190,9 +192,23 @@ const CustomerApplication = () => {
   const [previewRejectRemark, setPreviewRejectRemark] = useState("");
 
   const location = useLocation();
+  const navigate = useNavigate();
   const { customerId, applicationId } = location.state || {};
 
-  
+  const canCompleteFormAsRm = ["LEAD", "DRAFT", "DOC_INCOMPLETE"].includes(
+    String(applicationData?.status || "").toUpperCase()
+  );
+
+  const handleCompleteFormYourself = () => {
+    const id = applicationData?._id || applicationId;
+    if (!id) {
+      toast.error("Application id missing");
+      return;
+    }
+    navigate(
+      `${rmLoanFormPath(applicationData?.loanType)}?applicationId=${id}`
+    );
+  };
 
   // Fetch application data from API
   const fetchApplicationData = async () => {
@@ -1988,7 +2004,17 @@ const CustomerApplication = () => {
                   </p>
                 </div>
 
-                <div className="text-white text-right flex items-center gap-2">
+                <div className="text-white text-right flex items-center gap-2 flex-wrap justify-end">
+                  {canCompleteFormAsRm && (
+                    <button
+                      type="button"
+                      onClick={handleCompleteFormYourself}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-brand-primary text-xs font-bold hover:bg-teal-50 transition"
+                    >
+                      <FileEdit className="w-3.5 h-3.5" />
+                      Complete form yourself
+                    </button>
+                  )}
                   <span className="text-xs font-medium opacity-90">Applied:</span>
                   <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-md border border-white/30">
                     <Clock className="w-3.5 h-3.5 mr-1.5" />
