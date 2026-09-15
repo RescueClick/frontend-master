@@ -390,6 +390,11 @@ export default function PartnerTable() {
       stateFilter === "All" ? "" : norm(stateFilter);
 
     return data.filter((partner) => {
+      // Unverified / unassigned partners only belong in Admin Partner queue
+      const status = String(partner.status || "").toUpperCase();
+      if (status === "PENDING") return false;
+      if (!partner.rmId && !partner.rmName) return false;
+
       const partnerRegion = norm(partner.region);
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;

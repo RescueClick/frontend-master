@@ -104,7 +104,7 @@ const AdminSideBar = () => {
     switch (name) {
       case "Chat":
         return counts.chat;
-      case "Partner":
+      case "Admin Partner":
         return counts.partner;
       case "Payout":
       case "Payout Management":
@@ -126,7 +126,9 @@ const AdminSideBar = () => {
     { name: "ASM", icon: Users, path: "/admin/asm" },
     { name: "RM", icon: Users, path: "/admin/rm" },
 
-    // Partners & Customers (Move Partners is inside Partner page header)
+    // New partners under admin (verify + assign RM) — separate quick-access entry
+    { name: "Admin Partner", icon: FileCheck, path: "/admin/rm-partner", highlight: true },
+    // All verified partners directory (Move Partners is inside Partner page header)
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
     { name: "Customer", icon: Users, path: "/admin/customer" },
     { name: "Leads & Pipeline", icon: Sparkles, path: "/admin/leads", highlight: true },
