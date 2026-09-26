@@ -343,7 +343,21 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
 
     const stepFields = (() => {
       if (stepIndex === 0) {
-        return ["firstName", "middleName", "lastName", "motherName", "gender", "maritalStatus", "password", "confirmPassword", "contactNo", "email", "dob", "pan"];
+        return [
+          "firstName",
+          "middleName",
+          "lastName",
+          "motherName",
+          "gender",
+          "maritalStatus",
+          "contactNo",
+          "email",
+          "dob",
+          "pan",
+          "hasRunningLoan",
+          "loanPurpose",
+          "monthlyEmiPaying",
+        ];
       }
       if (stepIndex === 1) {
         return ["currentAddress", "stabilityOfResidency", "currentLandmark", "currentHouseStatus", "currentAddressPinCode", "permanentAddress", "permanentStability", "permanentLandmark", "permanentHouseStatus", "permanentAddressPinCode"];
@@ -370,6 +384,10 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
       }
       if (stepIndex === 4) {
         return ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"];
+      }
+      // Review step — password lives here (not on Personal)
+      if (stepIndex === 5) {
+        return ["password", "confirmPassword"];
       }
       return [];
     })();
@@ -2913,7 +2931,7 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                           const { data } = await axios.get(`${backendurl}/partner/check-customer`, {
                             params: {
                               email: formData.email,
-                              phone: formData.phone,
+                              phone: formData.contactNo,
                             },
                             headers: { Authorization: `Bearer ${partnerToken}` },
                           });

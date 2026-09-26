@@ -267,8 +267,6 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           "motherName",
           "gender",
           "maritalStatus",
-          "password",
-          "confirmPassword",
           "phone",
           "email",
           "dob",
@@ -277,6 +275,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           "coApplicantMobile",
           "hasRunningLoan",
           "loanPurpose",
+          "monthlyEmiPaying",
         ];
       }
       if (stepIndex === 1) {
@@ -327,6 +326,10 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           "reference2Name",
           "reference2Contact",
         ];
+      }
+      // Review step — password lives here (not on Personal)
+      if (stepIndex === 5) {
+        return ["password", "confirmPassword"];
       }
       return [];
     })();
