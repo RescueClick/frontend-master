@@ -512,6 +512,7 @@ const AddPartnerPage = () => {
                   <input
                     type="password"
                     name="password"
+                    autoComplete="new-password"
                     value={formData.password}
                     onChange={handleInputChange}
                     className={`pl-11 ${inputStyle(errors.password)}`}
