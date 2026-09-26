@@ -83,14 +83,14 @@ const AsmPayouts = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [copiedKey, setCopiedKey] = useState(null);
 
-  // Modal form data
+  // Modal form data — RSM/ASM only sets payout (PENDING); Admin marks DONE/pays
   const [modalForm, setModalForm] = useState({
     applicationId: "",
     partnerId: "",
     approvalAmount: 0,
     payoutPercentage: "",
     payoutAmount: "",
-    payOutStatus: "DONE",
+    payOutStatus: "PENDING",
     note: "",
   });
 
@@ -269,7 +269,8 @@ const AsmPayouts = () => {
       approvalAmount: appr,
       payoutPercentage: initialPct,
       payoutAmount: initialAmt,
-      payOutStatus: "DONE",
+      // RSM proposes only — admin completes payment
+      payOutStatus: "PENDING",
       note: record.payoutNote || "",
     });
 
@@ -334,16 +335,13 @@ const AsmPayouts = () => {
           partnerId: modalForm.partnerId || undefined,
           payoutAmount: modalForm.payoutAmount ? Number(modalForm.payoutAmount) : undefined,
           payoutPercentage: modalForm.payoutPercentage ? Number(modalForm.payoutPercentage) : undefined,
-          payOutStatus: modalForm.payOutStatus,
+          // Always PENDING — admin pays / marks DONE
+          payOutStatus: "PENDING",
           note: modalForm.note || "",
         })
       ).unwrap();
 
-      toast.success(
-        modalForm.payOutStatus === "DONE"
-          ? "Payout processed successfully!"
-          : "Payout record updated successfully!"
-      );
+      toast.success("Payout set successfully — sent to Admin for payment");
       handleCloseModal();
       loadData();
     } catch (err) {
@@ -582,8 +580,8 @@ const AsmPayouts = () => {
               </>
             ) : (
               <>
-                <IndianRupee className="w-3.5 h-3.5" />
-                <span>Pay Payout</span>
+                <Calculator className="w-3.5 h-3.5" />
+                <span>Set Payout</span>
               </>
             )}
           </button>
@@ -672,7 +670,7 @@ const AsmPayouts = () => {
               <div className="flex items-center justify-between text-xs text-slate-500 mt-1.5">
                 <span>{summary.pendingCount} Files Awaiting Payout</span>
                 <span className="font-bold text-amber-600 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                  Pay Now →
+                  Set Payout →
                 </span>
               </div>
             </div>
@@ -934,7 +932,7 @@ const AsmPayouts = () => {
                     <span>
                       {selectedRecord.payOutStatus === "DONE"
                         ? "Payout Details & Receipt"
-                        : "Process Partner Payout"}
+                        : "Set Partner Payout"}
                     </span>
                     <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-white/10 text-emerald-300 font-semibold">
                       {modalBank.appNo}
@@ -1126,8 +1124,9 @@ const AsmPayouts = () => {
                           max="100"
                           value={modalForm.payoutPercentage}
                           onChange={(e) => handlePercentageChange(e.target.value)}
+                          disabled={selectedRecord.payOutStatus === "DONE"}
                           placeholder="e.g. 2.0"
-                          className="w-full pl-3 pr-7 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                          className="w-full pl-3 pr-7 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-slate-50 disabled:text-slate-500"
                         />
                         <Percent className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
                       </div>
@@ -1145,8 +1144,9 @@ const AsmPayouts = () => {
                           min="0"
                           value={modalForm.payoutAmount}
                           onChange={(e) => handleAmountChange(e.target.value)}
+                          disabled={selectedRecord.payOutStatus === "DONE"}
                           placeholder="e.g. 6000"
-                          className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-black text-emerald-800 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                          className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-black text-emerald-800 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-slate-50 disabled:text-slate-500"
                         />
                         <IndianRupee className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                       </div>
@@ -1163,8 +1163,9 @@ const AsmPayouts = () => {
                         <button
                           key={pct}
                           type="button"
+                          disabled={selectedRecord.payOutStatus === "DONE"}
                           onClick={() => handlePresetPercentage(pct)}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                             String(modalForm.payoutPercentage) === String(pct)
                               ? "bg-slate-900 text-white shadow-sm ring-1 ring-slate-900"
                               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
@@ -1176,10 +1177,10 @@ const AsmPayouts = () => {
                     </div>
                   </div>
 
-                  {/* UTR Note Input */}
+                  {/* Note for Admin (payment is done by Admin) */}
                   <div className="space-y-1 mb-3">
                     <label className="text-[11px] font-bold text-slate-700 block">
-                      Bank Reference / UTR Number / Transaction Note
+                      Note for Admin (optional)
                     </label>
                     <input
                       type="text"
@@ -1187,46 +1188,19 @@ const AsmPayouts = () => {
                       onChange={(e) =>
                         setModalForm((prev) => ({ ...prev, note: e.target.value }))
                       }
-                      placeholder="e.g. UTR 4235890212 / NEFT transfer complete"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      disabled={selectedRecord.payOutStatus === "DONE"}
+                      placeholder="e.g. Agreed 2% as per partner rate card"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-slate-50 disabled:text-slate-500"
                     />
                   </div>
 
-                  {/* Status Selection */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 block">
-                      Payout Status
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setModalForm((prev) => ({ ...prev, payOutStatus: "DONE" }))
-                        }
-                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all border flex items-center justify-center gap-1.5 ${
-                          modalForm.payOutStatus === "DONE"
-                            ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Payment Done</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setModalForm((prev) => ({ ...prev, payOutStatus: "PENDING" }))
-                        }
-                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all border flex items-center justify-center gap-1.5 ${
-                          modalForm.payOutStatus === "PENDING"
-                            ? "bg-amber-600 text-white border-amber-600 shadow-sm"
-                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Keep Pending</span>
-                      </button>
+                  {/* Status info — RSM cannot mark paid; Admin pays */}
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-[11px] text-amber-900 leading-relaxed">
+                      <span className="font-bold">Set payout only.</span> This
+                      creates a <span className="font-bold">PENDING</span> request
+                      for Admin. Admin will pay the partner and mark it Done.
                     </div>
                   </div>
                 </div>
@@ -1238,30 +1212,28 @@ const AsmPayouts = () => {
                     onClick={handleCloseModal}
                     className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
                   >
-                    Cancel
+                    {selectedRecord.payOutStatus === "DONE" ? "Close" : "Cancel"}
                   </button>
-                  <button
-                    type="button"
-                    disabled={isSaving}
-                    onClick={handleSubmitPayout}
-                    className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-brand-primary hover:bg-[#0f9b82] shadow-sm transition flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    {isSaving ? (
-                      <>
-                        <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>
-                          {modalForm.payOutStatus === "DONE"
-                            ? "Confirm & Mark as Done"
-                            : "Save Payout Record"}
-                        </span>
-                      </>
-                    )}
-                  </button>
+                  {selectedRecord.payOutStatus !== "DONE" && (
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={handleSubmitPayout}
+                      className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-brand-primary hover:bg-[#0f9b82] shadow-sm transition flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {isSaving ? (
+                        <>
+                          <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Set Payout → Admin</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
