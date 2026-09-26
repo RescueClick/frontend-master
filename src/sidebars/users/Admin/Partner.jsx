@@ -403,6 +403,7 @@ export default function PartnerTable() {
       if (!matchesState) return false;
 
       const isActive = !isSoftDeleted && partner.status === "ACTIVE";
+      // Active tab: never show suspended/inactive. Suspended tab: only those.
       if (activeTab === "ACTIVE" && !isActive) return false;
       if (activeTab === "SUSPENDED" && isActive) return false;
 

@@ -18,6 +18,8 @@ import { getAuthData } from "../../../../utils/localStorage";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { INDIAN_STATES } from "../../../../utils/indianStates";
+import { citiesForState } from "../../../../utils/indianCities";
+import { PARTNER_CHANNEL_TYPES } from "../../../../utils/partnerChannelTypes";
 
 const AddPartnerPage = () => {
   // const navigate = useNavigate(); // This line was removed to fix the error
@@ -35,6 +37,8 @@ const AddPartnerPage = () => {
     aadharNumber :"",
     panNumber :"",
     region: "",
+    city: "",
+    partnerChannelType: "",
     pincode: "",
     employmentType: "",
     address: "",
@@ -56,18 +60,25 @@ const AddPartnerPage = () => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
 
+  const cityOptions = citiesForState(formData.region, formData.city);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      if (name === "region") {
+        return { ...prev, region: value, city: "" };
+      }
+      return { ...prev, [name]: value };
+    });
 
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
         [name]: "",
       }));
+    }
+    if (name === "region" && errors.city) {
+      setErrors((prev) => ({ ...prev, city: "" }));
     }
   };
 
@@ -101,6 +112,9 @@ const AddPartnerPage = () => {
     else if (formData.password.length < 6)
       newErrors.password = "Password must be at least 6 characters";
     if (!formData.region.trim()) newErrors.region = "State is required";
+    if (!formData.city.trim()) newErrors.city = "City is required";
+    if (!formData.partnerChannelType.trim())
+      newErrors.partnerChannelType = "Partner type is required";
     if (!formData.pincode.trim()) newErrors.pincode = "Pincode is required";
     else if (!/^\d{6}$/.test(formData.pincode))
       newErrors.pincode = "Pincode must be 6 digits";
@@ -138,6 +152,8 @@ const AddPartnerPage = () => {
         aadharNumber: formData.aadharNumber,
         panNumber: formData.panNumber,
         region: formData.region || null,
+        city: formData.city || null,
+        partnerChannelType: formData.partnerChannelType || null,
         pincode: formData.pincode || null,
         employmentType: formData.employmentType || null,
         address: formData.address || null,
@@ -214,6 +230,8 @@ const AddPartnerPage = () => {
       aadharNumber :"",
       panNumber :"",
       region: "",
+      city: "",
+      partnerChannelType: "",
       pincode: "",
       employmentType: "",
       address: "",
@@ -384,12 +402,38 @@ const AddPartnerPage = () => {
                   className={inputStyle(errors.employmentType)}
                   style={inputRingColor}
                 >
+                  <option value="">Select</option>
                   <option value="Fulltime">Full Time</option>
                   <option value="Parttime">Part Time</option>
                 </select>
                 {errors.employmentType && (
                   <p className="text-red-500 text-sm mt-1">
                     {errors.employmentType}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className={labelStyle} style={{ color: "#111827" }}>
+                  Partner Type *
+                </label>
+                <select
+                  name="partnerChannelType"
+                  value={formData.partnerChannelType}
+                  onChange={handleInputChange}
+                  className={inputStyle(errors.partnerChannelType)}
+                  style={inputRingColor}
+                >
+                  <option value="">Select partner type</option>
+                  {PARTNER_CHANNEL_TYPES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.partnerChannelType && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.partnerChannelType}
                   </p>
                 )}
               </div>
@@ -519,6 +563,31 @@ const AddPartnerPage = () => {
                 </select>
                 {errors.region && (
                   <p className="text-red-500 text-sm mt-1">{errors.region}</p>
+                )}
+              </div>
+              <div>
+                <label className={labelStyle} style={{ color: "#111827" }}>
+                  City *
+                </label>
+                <select
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  disabled={!formData.region}
+                  className={inputStyle(errors.city)}
+                  style={inputRingColor}
+                >
+                  <option value="">
+                    {formData.region ? "Select city" : "Select state first"}
+                  </option>
+                  {cityOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                {errors.city && (
+                  <p className="text-red-500 text-sm mt-1">{errors.city}</p>
                 )}
               </div>
               <div>

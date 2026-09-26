@@ -32,6 +32,7 @@ import { useRealtimeData } from "../../../utils/useRealtimeData";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 import MetricCard from "../../../components/shared/MetricCard";
+import DashboardPeriodFilter from "../../../components/DashboardPeriodFilter";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
 import { getLoanStatusBadgeClass } from "../../../utils/loanStatus";
@@ -43,6 +44,9 @@ const Dashboard = () => {
   const location = useLocation();
   const basePath = location.pathname.startsWith("/asm") ? "/asm" : "/rsm";
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
 
   const openRmAnalytics = useCallback((rm) => {
     if (!rm?.id) return;
@@ -59,11 +63,21 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const { data, loading, error } = useSelector((state) => state.rsm?.dashboard || { data: null, loading: false, error: null });
 
+  const fetchDashboardAction = useCallback(
+    () => fetchRsmDashboard({ year, month }),
+    [year, month]
+  );
+
   // Real-time dashboard updates with 30 second polling
-  useRealtimeData(fetchRsmDashboard, {
+  useRealtimeData(fetchDashboardAction, {
     interval: 30000, // 30 seconds
     enabled: true,
+    dependencies: [year, month],
   });
+
+  useEffect(() => {
+    dispatch(fetchRsmDashboard({ year, month }));
+  }, [dispatch, year, month]);
 
   const targetVsAchievement = useMemo(() => {
     return (data?.targets || [])?.map((item) => {
@@ -230,6 +244,14 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
+        <div className="mb-6">
+          <DashboardPeriodFilter
+            year={year}
+            month={month}
+            onYearChange={setYear}
+            onMonthChange={setMonth}
+          />
+        </div>
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {metricCards.map((m, idx) => (

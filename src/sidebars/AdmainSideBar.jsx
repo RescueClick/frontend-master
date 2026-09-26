@@ -23,6 +23,7 @@ import {
   Sparkles,
   MessageSquare,
   Search,
+  QrCode,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -139,6 +140,7 @@ const AdminSideBar = () => {
 
     // Referrals & Banners
     { name: "Public loan referral", icon: Link2, path: "/admin/public-loan-referral", highlight: true },
+    { name: "QR Stickers", icon: QrCode, path: "/admin/qr-inventory", highlight: true },
     { name: "Banners", icon: Sparkles, path: "/admin/banner", highlight: true },
 
     // Banking & Compliance

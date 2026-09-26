@@ -169,16 +169,22 @@ export const assignRMBulkTarget = createAsyncThunk(
 
 export const fetchAsmDashboard = createAsyncThunk(
   "asm/fetchDashboard",
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     const { asmToken } = getAuthData();
     if (!asmToken) {
       return rejectWithValue("Authentication token not found");
     }
     try {
+      const { year, month } = filters || {};
+      const params = {};
+      if (year !== undefined && year !== null) params.year = year;
+      if (month !== undefined && month !== null) params.month = month;
+
       const response = await axios.get(`${backendurl}/asm/dashboard`, {
         headers: {
           Authorization: `Bearer ${asmToken}`,
         },
+        params,
       });
 
       return unwrapApiData(response.data);

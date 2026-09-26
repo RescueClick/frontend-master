@@ -37,6 +37,8 @@ import {
   COMPANY_TAGLINE,
 } from "../config/branding";
 import { INDIAN_STATES } from "../utils/indianStates";
+import { citiesForState } from "../utils/indianCities";
+import { PARTNER_CHANNEL_TYPES } from "../utils/partnerChannelTypes";
 
 const PASSWORD_MIN_LEN = 8;
 const MAX_PARTNER_DOC_BYTES = 5 * 1024 * 1024;
@@ -135,13 +137,19 @@ const PartnerRegistrationForm = () => {
     firstName: "", middleName: "", lastName: "",
     phone: "", email: "", dob: "",
     employmentType: "",
+    partnerChannelType: "",
     aadharNumber: "", panNumber: "", partnerReferralCode: "",
-    region: "", address: "", pincode: "",
+    region: "", city: "", address: "", pincode: "",
     homeType: "", addressStability: "", landmark: "",
     bankName: "", accountNumber: "", ifscCode: "",
     adharCard: null, panCard: null, selfie: null,
     password: "", confirmPassword: "",
   });
+
+  const cityOptions = useMemo(
+    () => citiesForState(formData.region, formData.city),
+    [formData.region, formData.city]
+  );
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -211,19 +219,16 @@ const PartnerRegistrationForm = () => {
       nextValue = value.slice(0, 120);
     } else if (name === "region") {
       nextValue = value;
+      setFormData((prev) => ({ ...prev, region: nextValue, city: "" }));
+      clearFieldError("region");
+      clearFieldError("city");
+      return;
+    } else if (name === "city" || name === "partnerChannelType") {
+      nextValue = value;
     } else if (name === "addressStability") {
       nextValue = value.replace(/\D/g, "").slice(0, 3);
     } else if (name === "dob") {
-      // Clean non-digits
-      const d = value.replace(/\D/g, "");
-      let formatted = d;
-      if (d.length > 4) {
-        formatted = d.slice(0, 4) + "-" + d.slice(4);
-      }
-      if (d.length > 6) {
-        formatted = formatted.slice(0, 7) + "-" + d.slice(6, 8);
-      }
-      nextValue = formatted.slice(0, 10);
+      nextValue = value;
     } else {
       nextValue = value;
     }
@@ -262,6 +267,7 @@ const PartnerRegistrationForm = () => {
         if (birth > cutoff) err.dob = "Must be at least 18 years old";
       }
       if (!formData.employmentType) err.employmentType = "Select employment type";
+      if (!formData.partnerChannelType) err.partnerChannelType = "Select partner type (rickshaw, net café, etc.)";
     }
     if (step === 2) {
       if (!formData.aadharNumber) err.aadharNumber = "Aadhaar number is required";
@@ -275,6 +281,7 @@ const PartnerRegistrationForm = () => {
     }
     if (step === 3) {
       if (!formData.region.trim()) err.region = "State is required";
+      if (!formData.city.trim()) err.city = "City is required";
       if (!formData.address.trim()) err.address = "Address is required";
       else if (formData.address.trim().length < 10) err.address = "Enter a fuller address (min 10 chars)";
       if (!formData.pincode) err.pincode = "PIN code is required";
@@ -347,6 +354,8 @@ const PartnerRegistrationForm = () => {
       lastName: formData.lastName || null, phone: phoneTen, email: formData.email,
       dob: formData.dob || null, aadharNumber: formData.aadharNumber,
       panNumber: formData.panNumber, region: formData.region || null,
+      city: formData.city || null,
+      partnerChannelType: formData.partnerChannelType || null,
       partnerReferralCode: formData.partnerReferralCode?.trim() || null,
       referralCode: formData.partnerReferralCode?.trim() || null,
       pincode: formData.pincode || null, employmentType: formData.employmentType || null,
@@ -389,8 +398,8 @@ const PartnerRegistrationForm = () => {
   const resetFields = () => {
     setFormData({
       firstName: "", middleName: "", lastName: "", phone: "", email: "",
-      dob: "", employmentType: "", aadharNumber: "", panNumber: "",
-      partnerReferralCode: "", region: "", address: "", pincode: "",
+      dob: "", employmentType: "", partnerChannelType: "", aadharNumber: "", panNumber: "",
+      partnerReferralCode: "", region: "", city: "", address: "", pincode: "",
       homeType: "", addressStability: "", landmark: "", bankName: "",
       accountNumber: "", ifscCode: "", adharCard: null, panCard: null,
       selfie: null, password: "", confirmPassword: "",
@@ -678,8 +687,15 @@ const PartnerRegistrationForm = () => {
                       <Label required>Date of Birth</Label>
                       <div className="relative">
                         <Calendar className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-                        <input type="text" name="dob" placeholder="YYYY-MM-DD" maxLength={10} value={formData.dob} onChange={handleChange}
-                           className={`${fieldClass("dob", fieldErrors)} pl-10`} />
+                        <input
+                          type="date"
+                          name="dob"
+                          value={formData.dob}
+                          onChange={handleChange}
+                          max={maxDob}
+                          min="1900-01-01"
+                          className={`${fieldClass("dob", fieldErrors)} pl-10`}
+                        />
                       </div>
                       <FieldError msg={fieldErrors.dob} />
                     </div>
@@ -696,6 +712,27 @@ const PartnerRegistrationForm = () => {
                       </div>
                       <FieldError msg={fieldErrors.employmentType} />
                     </div>
+                  </div>
+
+                  <div>
+                    <Label required>Partner Type</Label>
+                    <p className="mb-1.5 text-xs text-stone-500">
+                      How you mainly bring customers (rickshaw partners get a lower payout rate).
+                    </p>
+                    <select
+                      name="partnerChannelType"
+                      value={formData.partnerChannelType}
+                      onChange={handleChange}
+                      className={`${fieldClass("partnerChannelType", fieldErrors)} appearance-none`}
+                    >
+                      <option value="">Select partner type</option>
+                      {PARTNER_CHANNEL_TYPES.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                    <FieldError msg={fieldErrors.partnerChannelType} />
                   </div>
                 </div>
               )}
@@ -760,31 +797,53 @@ const PartnerRegistrationForm = () => {
                     <h2 className="text-lg font-bold text-stone-900">Address & Bank Details</h2>
                   </div>
 
-                  <div>
-                    <Label required>State</Label>
-                    <div className="relative">
-                      <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <Label required>State</Label>
+                      <div className="relative">
+                        <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                        <select
+                          name="region"
+                          value={formData.region}
+                          onChange={handleChange}
+                          className={`${fieldClass("region", fieldErrors)} appearance-none pl-10`}
+                        >
+                          <option value="">Select state</option>
+                          {INDIAN_STATES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <FieldError msg={fieldErrors.region} />
+                    </div>
+                    <div>
+                      <Label required>City</Label>
                       <select
-                        name="region"
-                        value={formData.region}
+                        name="city"
+                        value={formData.city}
                         onChange={handleChange}
-                        className={`${fieldClass("region", fieldErrors)} appearance-none pl-10`}
+                        disabled={!formData.region}
+                        className={`${fieldClass("city", fieldErrors)} appearance-none disabled:bg-stone-100 disabled:text-stone-400`}
                       >
-                        <option value="">Select state</option>
-                        {INDIAN_STATES.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
+                        <option value="">
+                          {formData.region ? "Select city" : "Select state first"}
+                        </option>
+                        {cityOptions.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
                           </option>
                         ))}
                       </select>
+                      <FieldError msg={fieldErrors.city} />
                     </div>
-                    <FieldError msg={fieldErrors.region} />
                   </div>
 
                   <div>
                     <Label required>Complete Address</Label>
                     <textarea name="address" value={formData.address} onChange={handleChange}
-                      placeholder="House/Flat No., Street, Area, City"
+                      placeholder="House/Flat No., Street, Area"
                       rows={3}
                       className={`${fieldClass("address", fieldErrors)} resize-none`} />
                     <FieldError msg={fieldErrors.address} />

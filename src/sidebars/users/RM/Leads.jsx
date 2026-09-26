@@ -15,6 +15,7 @@ import {
   CheckCircle,
   AlertCircle,
   FileEdit,
+  Search,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -71,6 +72,8 @@ const Leads = () => {
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [activeStatus, setActiveStatus] = useState("New Leads");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loanTypeFilter, setLoanTypeFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -91,6 +94,9 @@ const Leads = () => {
       "DOC_INCOMPLETE",
       "DOC_COMPLETE",
       "DOC_SUBMITTED",
+      "LOGIN",
+      "KYC_PENDING",
+      "KYC_COMPLETE",
       "UNDER_REVIEW",
       "APPROVED",
       "AGREEMENT",
@@ -258,9 +264,24 @@ const Leads = () => {
     return `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
   };
 
-  const filteredLeads = leads.filter((lead) =>
-    STATUS_MAPPING[activeStatus]?.includes(lead.status)
-  );
+  const filteredLeads = leads.filter((lead) => {
+    if (!STATUS_MAPPING[activeStatus]?.includes(lead.status)) return false;
+    if (loanTypeFilter && lead.loanType !== loanTypeFilter) return false;
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.trim().toLowerCase();
+    return (
+      lead.name?.toLowerCase().includes(term) ||
+      lead.phone?.includes(term) ||
+      lead.appNo?.toLowerCase().includes(term) ||
+      lead.partnerName?.toLowerCase().includes(term) ||
+      lead.partnerCode?.toLowerCase().includes(term) ||
+      lead.email?.toLowerCase().includes(term)
+    );
+  });
+
+  const loanTypeOptions = Array.from(
+    new Set(leads.map((l) => l.loanType).filter(Boolean))
+  ).sort();
 
   const sortedFilteredLeads = sortNewestFirst(filteredLeads, {
     dateKeys: ["createdAt"],
@@ -305,7 +326,7 @@ const Leads = () => {
       </div>
 
       {/* Status Tabs */}
-      <div className="flex flex-wrap gap-2.5 mb-8">
+      <div className="flex flex-wrap gap-2.5 mb-6">
         {statuses.map((status) => (
           <button
             key={status}
@@ -328,6 +349,31 @@ const Leads = () => {
             </span>
           </button>
         ))}
+      </div>
+
+      <div className="mb-8 flex flex-col sm:flex-row gap-3 max-w-2xl">
+        <div className="relative flex-1">
+          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search customer, phone, partner, app no..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm text-gray-800"
+          />
+        </div>
+        <select
+          value={loanTypeFilter}
+          onChange={(e) => setLoanTypeFilter(e.target.value)}
+          className="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+        >
+          <option value="">All loan types</option>
+          {loanTypeOptions.map((lt) => (
+            <option key={lt} value={lt}>
+              {loanTypeToTableShort(lt) || lt}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Leads List */}

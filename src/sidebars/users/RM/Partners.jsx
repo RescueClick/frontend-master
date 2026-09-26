@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
 import { rmActivatePartner, rmDeactivatePartner, fetchPartners } from "../../../feature/thunks/rmThunks";
-import { matchesSearchTerm, matchesStatusFilter } from "../../../utils/tableFilter";
+import { matchesSearchTerm } from "../../../utils/tableFilter";
 import { useRealtimeData, useRefetch } from "../../../utils/useRealtimeData";
 
 import * as XLSX from "xlsx";
@@ -27,7 +27,6 @@ const Partners = () => {
 
   const [selectedTab, setSelectedTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("All");
   const [activityFilter, setActivityFilter] = useState("all"); // all | with_loans | more_info | no_loans
 
@@ -116,6 +115,10 @@ const Partners = () => {
     if (!data) return [];
 
     return data.filter((partner) => {
+      // RM active list never includes suspended / inactive partners
+      const status = String(partner.status || "").toUpperCase();
+      if (status !== "ACTIVE") return false;
+
       const matchesSearch = matchesSearchTerm(searchTerm, [
         partner.name,
         partner.type,
@@ -124,7 +127,6 @@ const Partners = () => {
         partner.phone,
         partner.email,
       ]);
-      const matchesFilter = matchesStatusFilter(partner.status, selectedFilter);
       const selectedState = stateFilter === "All" ? "" : stateFilter.trim().toLowerCase();
       const partnerRegion = String(partner.region || "").trim().toLowerCase();
       const matchesState = !selectedState || partnerRegion === selectedState;
@@ -134,9 +136,9 @@ const Partners = () => {
         (activityFilter === "with_loans" && forms > 0) ||
         (activityFilter === "more_info" && partner.moreInfoRequired) ||
         (activityFilter === "no_loans" && forms === 0);
-      return matchesSearch && matchesFilter && matchesState && matchesActivity;
+      return matchesSearch && matchesState && matchesActivity;
     });
-  }, [data, searchTerm, selectedFilter, stateFilter, activityFilter]);
+  }, [data, searchTerm, stateFilter, activityFilter]);
 
   // Partners with strongest loan book first so RM can judge performance
   const sortedFilteredPartners = useMemo(() => {
@@ -159,7 +161,10 @@ const Partners = () => {
   }, [filteredPartners]);
 
   const partnerSummary = useMemo(() => {
-    const rows = data || [];
+    // Summaries from active partners only (never suspended)
+    const rows = (data || []).filter(
+      (p) => String(p.status || "").toUpperCase() === "ACTIVE"
+    );
     const formsTotal = rows.reduce(
       (s, p) => s + Number(p.formsFilled ?? p.applicationCount ?? 0),
       0
@@ -695,15 +700,6 @@ const Partners = () => {
                       {opt === "All" ? "All states" : opt}
                     </option>
                   ))}
-                </select>
-                <select
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={selectedFilter}
-                  onChange={(e) => setSelectedFilter(e.target.value)}
-                >
-                  <option value="all">All status</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="SUSPENDED">Suspended</option>
                 </select>
               </div>
             </div>

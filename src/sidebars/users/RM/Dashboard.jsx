@@ -33,6 +33,7 @@ import { useRealtimeData } from "../../../utils/useRealtimeData";
 import {backendurl} from "../../../feature/urldata"
 import { designSystem, formatCurrency, formatNumber, formatPercentage, typography } from "../../../utils/designSystem";
 import MetricCard from "../../../components/shared/MetricCard";
+import DashboardPeriodFilter from "../../../components/DashboardPeriodFilter";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
@@ -44,6 +45,9 @@ import { downloadXlsx } from "../../../utils/downloadXlsx";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
 
   const openPartnerAnalytics = useCallback((p) => {
     if (!p?.id) return;
@@ -60,11 +64,21 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const { data, loading, error } = useSelector((state) => state.rm.dashboard);
 
+  const fetchDashboardAction = useCallback(
+    () => fetchDashboard({ year, month }),
+    [year, month]
+  );
+
   // Real-time dashboard updates with 30 second polling
-  useRealtimeData(fetchDashboard, {
+  useRealtimeData(fetchDashboardAction, {
     interval: 30000, // 30 seconds
     enabled: true,
+    dependencies: [year, month],
   });
+
+  useEffect(() => {
+    dispatch(fetchDashboard({ year, month }));
+  }, [dispatch, year, month]);
 
   const metricCards = useMemo(
     () => [
@@ -477,6 +491,14 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
+        <div className="mb-6">
+          <DashboardPeriodFilter
+            year={year}
+            month={month}
+            onYearChange={setYear}
+            onMonthChange={setMonth}
+          />
+        </div>
         {/* Key Metrics Cards */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

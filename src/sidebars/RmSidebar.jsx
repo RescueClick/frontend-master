@@ -18,6 +18,8 @@ import {
   X,
   TrendingUp,
   MessageSquare,
+  QrCode,
+  UserPlus,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -111,6 +113,8 @@ export default function RmSidebar() {
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: "/rm/dashboard" },
     { name: "My Partners", icon: UserCheck, path: "/rm/partners" },
+    { name: "Add Partner", icon: UserPlus, path: "/rm/add-partner", highlight: true },
+    { name: "Assign QR", icon: QrCode, path: "/rm/qr-assign", highlight: true },
     { name: "Manage Loans", icon: Users, path: "/rm/customers" },
     { name: "Follow Up", icon: CalendarCheck, path: "/rm/Follow-up" },
     { name: "Leads & Pipeline", icon: LineChart, path: "/rm/leads" },

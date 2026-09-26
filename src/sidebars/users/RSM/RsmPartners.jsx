@@ -31,6 +31,7 @@ export default function RsmPartners() {
       stateFilter === "All" ? "" : stateFilter.trim().toLowerCase();
 
     return (data || []).filter((partner) => {
+      if (String(partner.status || "").toUpperCase() !== "ACTIVE") return false;
       const partnerRegion = String(partner.region || "").trim().toLowerCase();
       if (selectedState && partnerRegion !== selectedState) return false;
       if (!term) return true;

@@ -1091,6 +1091,7 @@ const adminSlice = createSlice({
       })
 
       // Reassign Customers and Deactivate Partner
+      // Mark as SUSPENDED so they leave Active tab and appear only on Suspended tab
       .addCase(adminDeactivatePartner.pending, (state, action) => {
         state.partner.loading = true;
         state.partner.error = null;
@@ -1099,7 +1100,7 @@ const adminSlice = createSlice({
         if (Array.isArray(state.partners.data) && oldPartnerId) {
           state.partners.data = state.partners.data.map((p) =>
             String(p._id) === String(oldPartnerId)
-              ? { ...p, status: "INACTIVE", _optimistic: true }
+              ? { ...p, status: "SUSPENDED", _optimistic: true }
               : p
           );
         }
@@ -1114,7 +1115,7 @@ const adminSlice = createSlice({
           if (Array.isArray(state.partners.data) && oldPartnerId) {
             state.partners.data = state.partners.data.map((p) =>
               String(p._id) === String(oldPartnerId)
-                ? { ...p, status: "INACTIVE", _optimistic: false }
+                ? { ...p, status: "SUSPENDED", _optimistic: false }
                 : p._optimistic
                   ? { ...p, _optimistic: false }
                   : p

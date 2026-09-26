@@ -23,6 +23,42 @@ const COLORS = {
   background: "#F8FAFC",
 };
 
+const STATUS_MAPPING = {
+  "New Leads": ["LEAD"],
+  New: ["DRAFT", "SUBMITTED"],
+  InProcess: [
+    "DOC_INCOMPLETE",
+    "DOC_COMPLETE",
+    "DOC_SUBMITTED",
+    "LOGIN",
+    "KYC_PENDING",
+    "KYC_COMPLETE",
+    "UNDER_REVIEW",
+    "APPROVED",
+    "AGREEMENT",
+  ],
+  Disbursed: ["DISBURSED"],
+  Rejected: ["REJECTED"],
+};
+
+const STATUS_TAB_STYLE = {
+  "New Leads": {
+    gradient: "from-amber-500 to-orange-500",
+  },
+  New: {
+    gradient: "from-teal-600 to-emerald-500",
+  },
+  InProcess: {
+    gradient: "from-[#111827] to-[#4B5563]",
+  },
+  Disbursed: {
+    gradient: "from-[#27AE60] to-[#6EE7B7]",
+  },
+  Rejected: {
+    gradient: "from-[#DC2626] to-[#F87171]",
+  },
+};
+
 function getManagerToken() {
   const auth = getAuthData();
   return (
@@ -64,11 +100,15 @@ export default function HierarchyLeads() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [rmFilter, setRmFilter] = useState("");
+  const [loanTypeFilter, setLoanTypeFilter] = useState("");
+  const [activeStatus, setActiveStatus] = useState("New Leads");
   const [agingOnly, setAgingOnly] = useState(false);
 
   const [nudgeLead, setNudgeLead] = useState(null);
   const [nudgeRemarks, setNudgeRemarks] = useState("");
   const [nudgingId, setNudgingId] = useState(null);
+
+  const statuses = Object.keys(STATUS_MAPPING);
 
   const fetchLeads = async () => {
     setLoading(true);
@@ -133,10 +173,29 @@ export default function HierarchyLeads() {
     );
   }, [leads]);
 
+  const loanTypeOptions = useMemo(() => {
+    const set = new Set();
+    leads.forEach((lead) => {
+      if (lead.loanType) set.add(lead.loanType);
+    });
+    return Array.from(set).sort();
+  }, [leads]);
+
+  const statusCounts = useMemo(() => {
+    return statuses.reduce((acc, status) => {
+      acc[status] = leads.filter((lead) =>
+        STATUS_MAPPING[status]?.includes(lead.status)
+      ).length;
+      return acc;
+    }, {});
+  }, [leads, statuses]);
+
   const filteredLeads = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return leads.filter((lead) => {
+      if (!STATUS_MAPPING[activeStatus]?.includes(lead.status)) return false;
       if (rmFilter && String(lead.rm?.id || "") !== rmFilter) return false;
+      if (loanTypeFilter && lead.loanType !== loanTypeFilter) return false;
       if (agingOnly && !(hoursAgo(lead.createdAt) > 48)) return false;
       if (!term) return true;
       const hay = [
@@ -154,7 +213,7 @@ export default function HierarchyLeads() {
         .toLowerCase();
       return hay.includes(term);
     });
-  }, [leads, searchTerm, rmFilter, agingOnly]);
+  }, [leads, searchTerm, rmFilter, loanTypeFilter, agingOnly, activeStatus]);
 
   const sortedLeads = sortNewestFirst(filteredLeads, {
     dateKeys: ["createdAt", "updatedAt"],
@@ -212,8 +271,8 @@ export default function HierarchyLeads() {
             Leads & Pipeline
           </h1>
           <p className="text-gray-500 mt-1 text-sm md:text-base">
-            Open step-1 leads under your RMs — follow up so partners complete
-            the form
+            Filter and monitor leads under your RMs — nudge RMs so partners
+            complete open forms
           </p>
         </div>
         <button
@@ -253,6 +312,32 @@ export default function HierarchyLeads() {
         </div>
       </div>
 
+      <div className="mb-6 flex flex-wrap gap-2">
+        {statuses.map((status) => (
+          <button
+            key={status}
+            type="button"
+            onClick={() => setActiveStatus(status)}
+            className={`cursor-pointer px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+              activeStatus === status
+                ? `bg-gradient-to-r ${STATUS_TAB_STYLE[status].gradient} text-white shadow-md`
+                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            {status}
+            <span
+              className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                activeStatus === status
+                  ? "bg-white/20 text-white"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {statusCounts[status] || 0}
+            </span>
+          </button>
+        ))}
+      </div>
+
       <div className="mb-6 flex flex-col lg:flex-row gap-3 lg:items-center">
         <div className="relative flex-1 max-w-md">
           <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -274,6 +359,18 @@ export default function HierarchyLeads() {
             <option key={rm.id} value={rm.id}>
               {rm.name}
               {rm.employeeId ? ` (${rm.employeeId})` : ""} — {rm.count}
+            </option>
+          ))}
+        </select>
+        <select
+          value={loanTypeFilter}
+          onChange={(e) => setLoanTypeFilter(e.target.value)}
+          className="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+        >
+          <option value="">All loan types</option>
+          {loanTypeOptions.map((lt) => (
+            <option key={lt} value={lt}>
+              {loanTypeToTableShort(lt) || lt}
             </option>
           ))}
         </select>
@@ -301,11 +398,10 @@ export default function HierarchyLeads() {
         <div className="p-12 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
           <Users className="w-12 h-12 mx-auto text-gray-300 mb-3" />
           <p className="text-gray-500 font-semibold text-lg">
-            No open leads to follow up
+            No {activeStatus} found
           </p>
           <p className="text-gray-400 text-sm mt-1">
-            Step-1 LEADs under your RMs will appear here until the form is
-            completed.
+            Adjust filters or wait for new pipeline activity under your RMs.
           </p>
         </div>
       ) : (
@@ -336,7 +432,7 @@ export default function HierarchyLeads() {
                         : "bg-amber-50 text-amber-800 border-amber-200"
                     }`}
                   >
-                    LEAD · {ageLabel(lead.createdAt)}
+                    {lead.status || "LEAD"} · {ageLabel(lead.createdAt)}
                   </span>
                 </div>
 
@@ -384,15 +480,19 @@ export default function HierarchyLeads() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => openNudgeModal(lead)}
-                  disabled={!lead.rm?.id}
-                  className="mt-auto w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold shadow transition-all"
-                >
-                  <Bell className="w-4 h-4" />
-                  Ask RM to follow up
-                </button>
+                {lead.status === "LEAD" ? (
+                {lead.status === "LEAD" ? (
+                  <button
+                    type="button"
+                    onClick={() => openNudgeModal(lead)}
+                    disabled={!lead.rm?.id}
+                    className="mt-auto w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold shadow transition-all"
+                  >
+                    <Bell className="w-4 h-4" />
+                    Ask RM to follow up
+                  </button>
+                ) : null}
+                ) : null}
               </div>
             );
           })}

@@ -441,36 +441,19 @@ const asmSlice = createSlice({
               : rsm
         );
       })
-      .addCase(asmDeactivatePartner.pending, (state, action) => {
-        const { oldPartnerId } = action.meta.arg || {};
-        if (!Array.isArray(state.partners.data) || !oldPartnerId) return;
-        state.partners.data = state.partners.data.map((p) =>
-          String(p._id) === String(oldPartnerId)
-            ? { ...p, status: "INACTIVE", _optimistic: true }
-            : p
-        );
+      .addCase(asmDeactivatePartner.pending, () => {
+        // Wait for success before removing — avoid losing the row if deactivate fails
       })
       .addCase(asmDeactivatePartner.fulfilled, (state, action) => {
         const { oldPartnerId } = action.meta.arg || {};
-        if (!Array.isArray(state.partners.data)) return;
-        state.partners.data = state.partners.data.map((p) =>
-          String(p._id) === String(oldPartnerId)
-            ? { ...p, status: "INACTIVE", _optimistic: false }
-            : p._optimistic
-              ? { ...p, _optimistic: false }
-              : p
+        if (!Array.isArray(state.partners.data) || !oldPartnerId) return;
+        // Suspended partners belong on Admin Suspended tab only — remove from ASM list
+        state.partners.data = state.partners.data.filter(
+          (p) => String(p._id || p.id) !== String(oldPartnerId)
         );
       })
-      .addCase(asmDeactivatePartner.rejected, (state, action) => {
-        const { oldPartnerId } = action.meta.arg || {};
-        if (!Array.isArray(state.partners.data)) return;
-        state.partners.data = state.partners.data.map((p) =>
-          String(p._id) === String(oldPartnerId)
-            ? { ...p, status: "ACTIVE", _optimistic: false }
-            : p._optimistic
-              ? { ...p, _optimistic: false }
-              : p
-        );
+      .addCase(asmDeactivatePartner.rejected, () => {
+        // Keep list unchanged; caller may refetch
       })
       .addCase(activatePartner.pending, (state, action) => {
         const partnerId = action.meta.arg;

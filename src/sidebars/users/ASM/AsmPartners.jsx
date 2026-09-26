@@ -56,7 +56,6 @@ export default function AsmPartner() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
   const [Partners, setPartners] = useState([]);
   console.log("Partners", Partners)
 
@@ -72,33 +71,19 @@ export default function AsmPartner() {
   // Filtered list
   const stateOptions = INDIAN_STATE_FILTER_OPTIONS;
 
-  const { activeCount, inactiveCount, pendingCount } = useMemo(() => {
-    let act = 0;
-    let inact = 0;
-    let pend = 0;
-    (Partners || []).forEach((p) => {
-      const st = String(p.activation || p.status || "").toUpperCase();
-      if (st === "ACTIVE") act++;
-      else if (st === "PENDING") pend++;
-      else inact++;
-    });
-    return { activeCount: act, inactiveCount: inact, pendingCount: pend };
-  }, [Partners]);
-
   const filteredCustomers = useMemo(() => {
     if (!Partners || Partners.length === 0) return [];
     const term = searchQuery?.trim().toLowerCase();
     const selectedState = stateFilter === "All" ? "" : stateFilter.trim().toLowerCase();
 
     return Partners.filter((c) => {
+      // ASM active list never includes suspended / inactive partners
+      const st = String(c.activation || c.status || "").toUpperCase();
+      if (st !== "ACTIVE") return false;
+
       const partnerRegion = String(c.region || "").trim().toLowerCase();
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;
-
-      const st = String(c.activation || c.status || "").toUpperCase();
-      if (statusFilter === "ACTIVE" && st !== "ACTIVE") return false;
-      if (statusFilter === "INACTIVE" && (st === "ACTIVE" || st === "PENDING")) return false;
-      if (statusFilter === "PENDING" && st !== "PENDING") return false;
 
       if (!term) return true;
 
@@ -277,8 +262,10 @@ export default function AsmPartner() {
 
   useEffect(() => {
     if (success && data) {
-      // Transform API response -> table format
-      const mapped = data.map((p, i) => ({
+      // Transform API response -> table format (active partners only)
+      const mapped = data
+        .filter((p) => String(p.status || "").toUpperCase() === "ACTIVE")
+        .map((p, i) => ({
         id: p._id, // prefer employeeId
         name: `${p.firstName || ""} ${p.lastName || ""}`.trim(),
         phone: p.phone || "-",
@@ -543,7 +530,7 @@ loginAsUser(userId, navigate);
     <>
       <DashboardTablePage
         title="Partners"
-        subtitle={`Total ${sortedFilteredCustomers.length} partners (${activeCount} Active, ${inactiveCount + pendingCount} Inactive/Pending)`}
+        subtitle={`Total ${sortedFilteredCustomers.length} active partners`}
         headerRight={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="relative">
@@ -559,17 +546,6 @@ loginAsUser(userId, navigate);
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <select
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              aria-label="Filter by status"
-            >
-              <option value="All">All Statuses ({Partners?.length || 0})</option>
-              <option value="ACTIVE">Active ({activeCount})</option>
-              <option value="INACTIVE">Inactive / Suspended ({inactiveCount})</option>
-              <option value="PENDING">Pending ({pendingCount})</option>
-            </select>
             <select
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
               value={stateFilter}

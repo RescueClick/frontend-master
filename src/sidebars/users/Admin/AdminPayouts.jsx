@@ -41,6 +41,8 @@ import {
 
 import { matchesSearchTerm } from "../../../utils/tableFilter";
 import { loanTypeToTableShort, payoutLoanTypePillClass } from "../../../utils/loanTypeShort";
+import { resolvePayoutPercentage } from "../../../utils/payoutChannelPolicy";
+import { partnerChannelLabel } from "../../../utils/partnerChannelTypes";
 import { matchesMonthYear } from "../../../utils/dateFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
@@ -361,12 +363,15 @@ const AdminPayouts = () => {
       initialGross = String(existingPayoutAmt);
       initialPct = String(Number(((existingPayoutAmt / appr) * 100).toFixed(2)));
     } else if (record.payOutStatus !== "DONE") {
-      const defaultRate =
-        payoutPolicy[record.loanType] != null
-          ? Number(payoutPolicy[record.loanType])
-          : payoutPolicy.DEFAULT != null
-          ? Number(payoutPolicy.DEFAULT)
-          : 2.0;
+      const channel =
+        record.partnerChannelType ||
+        record.partner?.partnerChannelType ||
+        null;
+      const defaultRate = resolvePayoutPercentage(
+        payoutPolicy,
+        record.loanType,
+        channel
+      );
       initialPct = String(defaultRate);
       initialGross = String((appr * defaultRate) / 100);
     }
@@ -628,6 +633,17 @@ const AdminPayouts = () => {
                   {(r.partner?.panNumber || r.partnerPan) && (
                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 font-mono font-bold border border-sky-200" title="Partner PAN for Section 194T TDS">
                       PAN: {r.partner?.panNumber || r.partnerPan}
+                    </span>
+                  )}
+                  {(r.partnerChannelType || r.partner?.partnerChannelType) === "RICKSHAW" && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 font-bold border border-amber-200" title="Lower payout rate for rickshaw partners">
+                      Rickshaw (½×)
+                    </span>
+                  )}
+                  {(r.partnerChannelType || r.partner?.partnerChannelType) &&
+                    (r.partnerChannelType || r.partner?.partnerChannelType) !== "RICKSHAW" && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-50 text-slate-600 font-medium border border-slate-200">
+                      {partnerChannelLabel(r.partnerChannelType || r.partner?.partnerChannelType)}
                     </span>
                   )}
                 </div>

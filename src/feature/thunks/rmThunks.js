@@ -124,11 +124,17 @@ export const updateRmProfile = createAsyncThunk(
 // Fetch Dashboard
 export const fetchDashboard = createAsyncThunk(
   "rm/fetchDashboard",
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     try {
       const { rmToken } = getAuthData();
+      const { year, month } = filters || {};
+      const params = {};
+      if (year !== undefined && year !== null) params.year = year;
+      if (month !== undefined && month !== null) params.month = month;
+
       const response = await axios.get(`${backendurl}/rm/dashboard`, {
         headers: { Authorization: `Bearer ${rmToken}` },
+        params,
       });
       return unwrapApiData(response.data); // { totalPartners, activePartners, totalRevenue, avgRating }
     } catch (err) {

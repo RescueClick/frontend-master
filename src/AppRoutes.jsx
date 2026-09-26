@@ -25,6 +25,7 @@ import { RequestResetForm } from "./Page/RequestResetForm.jsx";
 import { ConfirmResetForm } from "./Page/ConfirmResetForm.jsx";
 import ConfirmEmailChange from "./Page/ConfirmEmailChange.jsx";
 import PartnerStorefront from "./Page/PartnerStorefront.jsx";
+import QrStickerRedirect from "./Page/QrStickerRedirect.jsx";
 
 // Import main pages
 
@@ -67,6 +68,7 @@ import AdminDoneIncentive from "./sidebars/users/Admin/AdminDoneIncentive";
 import AdminPendingIncentive from "./sidebars/users/Admin/AdminPendingIncentive";
 import AdminSettings from "./sidebars/users/Admin/AdminSettings";
 import AdminPublicLoanReferral from "./sidebars/users/Admin/AdminPublicLoanReferral";
+import AdminQrInventory from "./sidebars/users/Admin/AdminQrInventory";
 import AdminReferralRewardAmounts from "./sidebars/users/Admin/AdminReferralRewardAmounts";
 import AdminReferralRewards from "./sidebars/users/Admin/AdminReferralRewards";
 import AdminReferralBanners from "./sidebars/users/Admin/AdminReferralBanners";
@@ -112,6 +114,7 @@ import AsmFindBankRm from "./sidebars/users/RSM/FindBankRm";
 import RmDashboard from "./sidebars/users/RM/Dashboard";
 import RmCustomers from "./sidebars/users/RM/Customers";
 import RmPartners from "./sidebars/users/RM/Partners";
+import RmQrAssign from "./sidebars/users/RM/RmQrAssign";
 import RmLeads from "./sidebars/users/RM/Leads";
 import HierarchyLeads from "./sidebars/users/shared/HierarchyLeads";
 import RmReports from "./sidebars/users/RM/Reports";
@@ -238,6 +241,7 @@ const AppRoutes = () => {
       {/* ⭐ DEDICATED PARTNER DIGITAL STORE / ADVISOR PROFILE (All Partner Data & All Products) */}
       <Route path="/advisor/:partnerCode" element={<PartnerStorefront />} />
       <Route path="/advisor" element={<PartnerStorefront />} />
+      <Route path="/q/:serial" element={<QrStickerRedirect />} />
       <Route path="/store/:partnerCode" element={<PartnerStorefront />} />
       <Route path="/store" element={<PartnerStorefront />} />
       <Route path="/p/:partnerCode" element={<PartnerStorefront />} />
@@ -343,6 +347,7 @@ const AppRoutes = () => {
         <Route path="Partner" element={<AdminPartner />} />
         <Route path="move-partners" element={<AdminMovePartners />} />
         <Route path="public-loan-referral" element={<AdminPublicLoanReferral />} />
+        <Route path="qr-inventory" element={<AdminQrInventory />} />
         <Route path="referral-reward-amounts" element={<AdminReferralRewardAmounts />} />
         <Route path="referral-rewards" element={<RewardsAndLevelsHub initialTab="rewards" />} />
         <Route path="rewards-levels" element={<RewardsAndLevelsHub />} />
@@ -443,6 +448,7 @@ const AppRoutes = () => {
         <Route path="chat" element={<ChatDashboard currentRole="RM" />} />
         <Route path="customers" element={<RmCustomers />} />
         <Route path="partners" element={<RmPartners />} />
+        <Route path="qr-assign" element={<RmQrAssign />} />
         <Route path="leads" element={<RmLeads />} />
         <Route path="reports" element={<RmReports />} />
         <Route path="CustomerAppliction" element={<CustomerAppliction />} />

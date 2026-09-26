@@ -159,43 +159,26 @@ const rmSlice = createSlice({
         state.partner.success = false;
         state.partner.data = null;
       })
-      .addCase(rmDeactivatePartner.pending, (state, action) => {
-        const { oldPartnerId } = action.meta.arg || {};
-        if (!Array.isArray(state.partner.data) || !oldPartnerId) return;
-        state.partner.data = state.partner.data.map((p) =>
-          String(p._id) === String(oldPartnerId)
-            ? { ...p, status: "INACTIVE", _optimistic: true }
-            : p
-        );
+      .addCase(rmDeactivatePartner.pending, () => {
+        // Wait for success before removing — avoid losing the row if deactivate fails
       })
       .addCase(rmDeactivatePartner.fulfilled, (state, action) => {
         const { oldPartnerId } = action.meta.arg || {};
-        if (!Array.isArray(state.partner.data)) return;
-        state.partner.data = state.partner.data.map((p) =>
-          String(p._id) === String(oldPartnerId)
-            ? { ...p, status: "INACTIVE", _optimistic: false }
-            : p._optimistic
-              ? { ...p, _optimistic: false }
-              : p
+        if (!Array.isArray(state.partner.data) || !oldPartnerId) return;
+        // Suspended partners belong on Admin Suspended tab only — remove from RM list
+        state.partner.data = state.partner.data.filter(
+          (p) => String(p._id || p.id) !== String(oldPartnerId)
         );
       })
-      .addCase(rmDeactivatePartner.rejected, (state, action) => {
-        const { oldPartnerId } = action.meta.arg || {};
-        if (!Array.isArray(state.partner.data)) return;
-        state.partner.data = state.partner.data.map((p) =>
-          String(p._id) === String(oldPartnerId)
-            ? { ...p, status: "ACTIVE", _optimistic: false }
-            : p._optimistic
-              ? { ...p, _optimistic: false }
-              : p
-        );
+      .addCase(rmDeactivatePartner.rejected, () => {
+        // Keep list unchanged; caller may refetch
       })
       .addCase(rmActivatePartner.pending, (state, action) => {
         const arg = action.meta.arg || {};
         const partnerId = arg.partnerId || arg;
         if (!Array.isArray(state.partner.data) || !partnerId) return;
         state.partner.data = state.partner.data.map((p) =>
-          String(p._id) === String(partnerId)
+          String(p._id || p.id) === String(partnerId)
             ? { ...p, status: "ACTIVE", _optimistic: true }
             : p
         );
@@ -205,7 +188,7 @@ const rmSlice = createSlice({
         const partnerId = arg.partnerId || arg;
         if (!Array.isArray(state.partner.data)) return;
         state.partner.data = state.partner.data.map((p) =>
-          String(p._id) === String(partnerId)
+          String(p._id || p.id) === String(partnerId)
             ? { ...p, status: "ACTIVE", _optimistic: false }
             : p._optimistic
               ? { ...p, _optimistic: false }
@@ -215,13 +198,9 @@ const rmSlice = createSlice({
       .addCase(rmActivatePartner.rejected, (state, action) => {
         const arg = action.meta.arg || {};
         const partnerId = arg.partnerId || arg;
-        if (!Array.isArray(state.partner.data)) return;
-        state.partner.data = state.partner.data.map((p) =>
-          String(p._id) === String(partnerId)
-            ? { ...p, status: "INACTIVE", _optimistic: false }
-            : p._optimistic
-              ? { ...p, _optimistic: false }
-              : p
+        if (!Array.isArray(state.partner.data) || !partnerId) return;
+        state.partner.data = state.partner.data.filter(
+          (p) => String(p._id || p.id) !== String(partnerId)
         );
       });
 

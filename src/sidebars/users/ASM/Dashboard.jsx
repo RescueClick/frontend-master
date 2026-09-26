@@ -16,9 +16,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import MetricCard from "../../../components/shared/MetricCard";
+import DashboardPeriodFilter from "../../../components/DashboardPeriodFilter";
 import { designSystem, formatCurrency, formatNumber, formatPercentage, typography } from "../../../utils/designSystem";
 
 const Dashboard = () => {
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,11 +57,21 @@ const Dashboard = () => {
     (state) => state.asm.dashboard
   );
 
+  const fetchDashboardAction = useCallback(
+    () => fetchAsmDashboard({ year, month }),
+    [year, month]
+  );
+
   // Real-time dashboard updates with 30 second polling
-  useRealtimeData(fetchAsmDashboard, {
+  useRealtimeData(fetchDashboardAction, {
     interval: 30000, // 30 seconds
     enabled: true,
+    dependencies: [year, month],
   });
+
+  useEffect(() => {
+    dispatch(fetchAsmDashboard({ year, month }));
+  }, [dispatch, year, month]);
 
   // Memoized metrics - adapts to RSM (monitoring ASMs) or ASM (monitoring RMs)
   const metrics = useMemo(() => [
@@ -164,6 +178,15 @@ const Dashboard = () => {
               ? "Regional Sales Manager - Monitor ASM Performance, Manage Payouts & Incentives"
               : "Area Sales Manager - Monitor RM Performance, Manage Applications"}
           </p>
+        </div>
+
+        <div className="mb-6">
+          <DashboardPeriodFilter
+            year={year}
+            month={month}
+            onYearChange={setYear}
+            onMonthChange={setMonth}
+          />
         </div>
 
         {/* Top Row - Metric Cards (Linear Design) */}
