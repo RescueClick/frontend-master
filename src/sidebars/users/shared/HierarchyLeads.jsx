@@ -481,7 +481,6 @@ export default function HierarchyLeads() {
                 </div>
 
                 {lead.status === "LEAD" ? (
-                {lead.status === "LEAD" ? (
                   <button
                     type="button"
                     onClick={() => openNudgeModal(lead)}
@@ -491,7 +490,6 @@ export default function HierarchyLeads() {
                     <Bell className="w-4 h-4" />
                     Ask RM to follow up
                   </button>
-                ) : null}
                 ) : null}
               </div>
             );
