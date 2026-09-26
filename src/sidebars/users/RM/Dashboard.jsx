@@ -87,14 +87,14 @@ const Dashboard = () => {
         value: data?.totals?.totalPartners ?? 0,
         icon: Users,
         onClick: () => navigate("/rm/partners"),
-        subtitle: "Partners under you",
+        subtitle: "Active partners under you",
       },
       {
         title: "Forms filled",
         value: data?.totals?.formsFilledTotal ?? 0,
         icon: FileText,
         onClick: () => navigate("/rm/partners"),
-        subtitle: "Total loan forms",
+        subtitle: "All-time loan forms",
       },
       {
         title: "More info needed",
@@ -115,10 +115,13 @@ const Dashboard = () => {
         value: formatCurrency(data?.totals?.totalRevenue ?? 0),
         icon: IndianRupee,
         onClick: () => navigate("/rm/Revenue-generated"),
-        subtitle: "Disbursed amount",
+        subtitle:
+          year === "all" && month === "all"
+            ? "All-time disbursed"
+            : `Disbursed in selected period`,
       },
     ],
-    [data?.totals, navigate]
+    [data?.totals, navigate, year, month]
   );
 
   const targetVsAchievement = useMemo(() => {

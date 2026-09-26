@@ -505,10 +505,11 @@ const asmSlice = createSlice({
       })
       .addCase(fetchAsmDashboard.rejected, (state, action) => {
         state.dashboard = {
+          ...state.dashboard,
           loading: false,
           error: action.payload,
           success: false,
-          data: null,
+          // keep previous data so UI doesn't flash zeros
         };
       })
 

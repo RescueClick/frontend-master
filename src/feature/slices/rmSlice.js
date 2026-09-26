@@ -257,7 +257,7 @@ const rmSlice = createSlice({
         state.dashboard.loading = false;
         state.dashboard.error = action.payload;
         state.dashboard.success = false;
-        state.dashboard.data = null;
+        // Keep last good snapshot so a failed refetch doesn't flash all zeros
       });
 
     // ✅ RM Customers

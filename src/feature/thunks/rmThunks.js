@@ -8,7 +8,13 @@ import {
   runDeactivationRequest,
 } from "./activationDeactivationUx";
 
-const unwrapApiData = (payload) => payload?.data ?? payload;
+const unwrapApiData = (payload) => {
+  // Prefer full dashboard payload when it already has totals/targets
+  if (payload && typeof payload === "object" && (payload.totals || payload.targets || payload.currentMonthTarget)) {
+    return payload;
+  }
+  return payload?.data ?? payload;
+};
 
 
  

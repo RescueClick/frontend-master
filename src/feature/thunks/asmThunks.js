@@ -8,7 +8,12 @@ import {
   runDeactivationRequest,
 } from "./activationDeactivationUx";
 
-const unwrapApiData = (payload) => payload?.data ?? payload;
+const unwrapApiData = (payload) => {
+  if (payload && typeof payload === "object" && (payload.totals || payload.targets || payload.currentMonthTarget)) {
+    return payload;
+  }
+  return payload?.data ?? payload;
+};
 
 export const fetchAsmProfile = createAsyncThunk(
   "asm/fetchProfile",
