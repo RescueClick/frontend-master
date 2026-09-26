@@ -1,4 +1,5 @@
 export const LOAN_STATUS_DISPLAY = {
+  LEAD: "LEAD",
   DRAFT: "SUBMITTED",
   SUBMITTED: "SUBMITTED",
   DOC_INCOMPLETE: "DOC_INCOMPLETE",
@@ -16,6 +17,7 @@ export const LOAN_STATUS_DISPLAY = {
 };
 
 export const LOAN_STATUS_LABELS = {
+  LEAD: "Lead",
   SUBMITTED: "Submitted",
   DOC_INCOMPLETE: "Document Incomplete",
   DOC_COMPLETE: "Document Complete",
@@ -32,6 +34,7 @@ export const LOAN_STATUS_LABELS = {
 
 /** Shared dropdown values for customer / application list filters (includes LOGIN). */
 export const LOAN_STATUS_FILTER_OPTIONS = [
+  "LEAD",
   "SUBMITTED",
   "DOC_INCOMPLETE",
   "DOC_COMPLETE",
@@ -69,6 +72,8 @@ export function getLoanStatusBadgeClass(status) {
       return "bg-indigo-100 text-indigo-800";
     case "DOC_INCOMPLETE":
       return "bg-rose-100 text-rose-700";
+    case "LEAD":
+      return "bg-sky-100 text-sky-800";
     case "SUBMITTED":
       return "bg-blue-100 text-blue-800";
     case "AGREEMENT":
