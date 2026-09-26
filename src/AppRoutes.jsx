@@ -353,7 +353,7 @@ const AppRoutes = () => {
         <Route path="rewards-levels" element={<RewardsAndLevelsHub />} />
         <Route path="referral-banners" element={<Banner initialTab="referral" />} />
         <Route path="customer" element={<AdiminCustomer />} />
-        <Route path="leads" element={<AdminLeads />} />
+        <Route path="leads" element={<Navigate to="/admin/customer?tab=leads" replace />} />
         <Route path="target" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="partner-targets" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="banks" element={<AdiminBanks />} />

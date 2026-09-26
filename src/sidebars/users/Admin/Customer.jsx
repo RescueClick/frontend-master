@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Eye, Download, Trash2, Search, X, KeyRound } from "lucide-react";
+import { Eye, Download, Trash2, Search, X, KeyRound, Users, Sparkles } from "lucide-react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { getAllCustomers } from "../../../feature/thunks/adminThunks";
 import { getAuthData,saveAuthData } from "../../../utils/localStorage";
 import axios from "axios"
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { backendurl } from "../../../feature/urldata";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import AppAntTable from "../../../components/shared/AppAntTable";
@@ -13,6 +13,7 @@ import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import AdminChangePasswordModal from "../../../components/shared/AdminChangePasswordModal";
 import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import AdminLeads from "./AdminLeads";
 
  
 
@@ -36,6 +37,14 @@ export default function CustomerTable() {
   const [passwordUser, setPasswordUser] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get("tab") === "leads" ? "leads" : "customers"
+
+  const setActiveTab = (tab) => {
+    if (tab === "leads") setSearchParams({ tab: "leads" })
+    else setSearchParams({})
+  }
+
 
 
 
@@ -341,8 +350,39 @@ export default function CustomerTable() {
   );
 
   return (
+    <>
+      <div className="px-4 pt-4 md:px-6">
+        <div className="mb-2 inline-flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab("customers")}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+              activeTab === "customers"
+                ? "bg-teal-700 text-white shadow"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            Customers
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("leads")}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+              activeTab === "leads"
+                ? "bg-amber-500 text-white shadow"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            Leads & Pipeline
+          </button>
+        </div>
+      </div>
 
-
+      {activeTab === "leads" ? (
+        <AdminLeads />
+      ) : (
     <>
 
 
@@ -617,6 +657,9 @@ export default function CustomerTable() {
         locale={{ emptyText: searchQuery.trim() ? "No customers match your search" : "No records" }}
       />
     </DashboardTablePage>
+
+    </>
+      )}
 
     <AdminChangePasswordModal
       isOpen={Boolean(passwordUser)}
