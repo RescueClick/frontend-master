@@ -9,7 +9,7 @@ import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import toast from "react-hot-toast";
-import { getLoanStatusLabel } from "../../../utils/loanStatus";
+import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
@@ -217,16 +217,11 @@ const Application = () => {
                 className="min-w-[160px] rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-8 text-sm md:py-3"
               >
                 <option value="All">All Status</option>
-                <option value="SUBMITTED">Submitted</option>
-                <option value="DOC_INCOMPLETE">Document Incomplete</option>
-                <option value="DOC_COMPLETE">Document Complete</option>
-                <option value="DOC_SUBMITTED">Document Submitted</option>
-                <option value="LOGIN">Login</option>
-                <option value="UNDER_REVIEW">Under Review</option>
-                <option value="APPROVED">Approved</option>
-                <option value="AGREEMENT">Agreement</option>
-                <option value="REJECTED">Rejected</option>
-                <option value="DISBURSED">Disbursed</option>
+                {LOAN_STATUS_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {getLoanStatusLabel(opt)}
+                  </option>
+                ))}
               </select>
             </div>
             <button
