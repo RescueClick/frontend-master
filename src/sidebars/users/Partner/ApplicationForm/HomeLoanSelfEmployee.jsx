@@ -47,7 +47,7 @@ import {
 } from "../../../../utils/loanDocumentUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
-import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
+import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
 import {
   useRmLoanFormResume,
   rmCompleteLoanFormUrl,
@@ -2950,23 +2950,25 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                         }
                       }
 
-                      // Automatically capture Step 1 as a Lead in the system
-                      if (currentStep === 0 && !isRmMode) {
-                        captureLeadOnStep1Next({
+                      // Sync filled wizard fields to LEAD so RM sees progress
+                      const leavingStep = currentStep;
+                      const nextStep = currentStep + 1;
+                      if (!isRmMode) {
+                        persistLeadWizardProgress({
+                          applicationId,
+                          setApplicationId,
+                          leavingStepIndex: leavingStep,
+                          nextStepIndex: nextStep,
+                          steps,
                           loanType: "HOME_LOAN_SELF_EMPLOYED",
                           formData: { ...formData, contactNo: formData.phone || formData.contactNo },
                           isPartnerLoggedIn,
                           partnerToken,
                           partnerReferralCode: currentPartnerCode,
-                          applicationId,
-                        }).then((res) => {
-                          if (res?.applicationId && !applicationId) {
-                            setApplicationId(res.applicationId);
-                          }
-                        }).catch((err) => console.warn("Step 1 lead capture non-fatal:", err));
+                          isRmMode,
+                        }).catch((err) => console.warn("Lead progress sync non-fatal:", err));
                       }
 
-                      const nextStep = currentStep + 1;
                       setCurrentStep(nextStep);
                       setMaxStep((m) => Math.max(m, nextStep));
                       setFieldErrors({});

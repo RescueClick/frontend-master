@@ -147,6 +147,7 @@ const Leads = () => {
         phone: app.contact,
         status: app.status,
         createdAt: app.createdAt,
+        updatedAt: app.updatedAt,
         loanType: app.loanType,
         requestedAmount: app.requestedAmount,
         approvedAmount: app.approvedAmount,
@@ -155,6 +156,14 @@ const Leads = () => {
         loanPurpose: app.loanPurpose || "",
         leadSource: app.leadSource || "PARTNER",
         leadFollowUp: app.leadFollowUp || { status: "NEW", remarks: "" },
+        formProgress: app.formProgress || null,
+        addressSummary: app.addressSummary || "",
+        pinCode: app.pinCode || "",
+        employerOrBusiness: app.employerOrBusiness || "",
+        designation: app.designation || "",
+        monthlyIncome: app.monthlyIncome || "",
+        propertyAddress: app.propertyAddress || "",
+        docsCount: app.docsCount || 0,
         partnerName: app.partner?.name || "",
         partnerCode: app.partner?.code || "",
         partnerEmail: app.partner?.email || "",
@@ -396,6 +405,14 @@ const Leads = () => {
             const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
             const isPartnerLead = lead.status === "LEAD" && lead.leadSource === "PARTNER";
             const partnerWaUrl = isPartnerLead ? buildPartnerWhatsAppUrl(lead) : null;
+            const progressLabel =
+              lead.status === "LEAD"
+                ? lead.formProgress?.reachedDocuments
+                  ? "Docs step"
+                  : lead.formProgress?.stepLabel
+                    ? lead.formProgress.stepLabel
+                    : "Personal"
+                : null;
 
             return (
               <div
@@ -417,7 +434,9 @@ const Leads = () => {
                         statusStyle[activeStatus]?.badge || "bg-gray-100 text-gray-700"
                       }`}
                     >
-                      {lead.status === "LEAD" ? "⚡ Step 1 Lead" : lead.status}
+                      {lead.status === "LEAD"
+                        ? `⚡ Lead · ${progressLabel}`
+                        : lead.status}
                     </span>
                   </div>
 
@@ -436,8 +455,18 @@ const Leads = () => {
                       </span>
                     </div>
 
-                    {/* NEW Step 1 Fields */}
+                    {/* Filled progress fields from partner form */}
                     <div className="pt-2 mt-2 border-t border-gray-200/60 space-y-1">
+                      {lead.formProgress?.stepLabel ? (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Form progress:</span>
+                          <span className="font-semibold text-teal-700">
+                            {lead.formProgress.reachedDocuments
+                              ? "Reached Documents"
+                              : lead.formProgress.stepLabel}
+                          </span>
+                        </div>
+                      ) : null}
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500 flex items-center gap-1">
                           <CreditCard className="w-3.5 h-3.5 text-gray-400" />
@@ -465,6 +494,36 @@ const Leads = () => {
                           </span>
                         </div>
                       )}
+                      {lead.addressSummary ? (
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="text-gray-500 shrink-0">Address:</span>
+                          <span className="font-medium text-gray-800 text-right line-clamp-2" title={lead.addressSummary}>
+                            {lead.addressSummary}
+                            {lead.pinCode ? ` · ${lead.pinCode}` : ""}
+                          </span>
+                        </div>
+                      ) : null}
+                      {lead.employerOrBusiness ? (
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-gray-500 shrink-0">Work:</span>
+                          <span className="font-medium text-gray-800 truncate max-w-[160px]" title={lead.employerOrBusiness}>
+                            {lead.employerOrBusiness}
+                            {lead.designation ? ` · ${lead.designation}` : ""}
+                          </span>
+                        </div>
+                      ) : null}
+                      {lead.monthlyIncome ? (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Income:</span>
+                          <span className="font-medium text-gray-800">{lead.monthlyIncome}</span>
+                        </div>
+                      ) : null}
+                      {lead.docsCount > 0 ? (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Docs uploaded:</span>
+                          <span className="font-semibold text-emerald-700">{lead.docsCount}</span>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 

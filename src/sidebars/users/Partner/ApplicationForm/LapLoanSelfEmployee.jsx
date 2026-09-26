@@ -47,7 +47,7 @@ import {
 } from "../../../../utils/loanDocumentUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
-import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
+import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
 import {
   useRmLoanFormResume,
   rmCompleteLoanFormUrl,
@@ -532,23 +532,25 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       toast.error("Please fill in all required fields before proceeding.");
       return;
     }
-    // Automatically capture Step 1 as a Lead in the system
-    if (currentStep === 0 && !isRmMode) {
-      captureLeadOnStep1Next({
+    // Sync filled wizard fields to LEAD so RM sees progress
+    const leavingStep = currentStep;
+    const next = currentStep + 1;
+    if (!isRmMode) {
+      persistLeadWizardProgress({
+        applicationId,
+        setApplicationId,
+        leavingStepIndex: leavingStep,
+        nextStepIndex: next,
+        steps,
         loanType: "LAP_SELF_EMPLOYED",
         formData,
         isPartnerLoggedIn,
         partnerToken,
         partnerReferralCode: currentPartnerCode,
-        applicationId,
-      }).then((res) => {
-        if (res?.applicationId && !applicationId) {
-          setApplicationId(res.applicationId);
-        }
-      }).catch((err) => console.warn("Step 1 lead capture non-fatal:", err));
+        isRmMode,
+      }).catch((err) => console.warn("Lead progress sync non-fatal:", err));
     }
 
-    const next = currentStep + 1;
     setCurrentStep(next);
     if (next > maxStep) setMaxStep(next);
   };
