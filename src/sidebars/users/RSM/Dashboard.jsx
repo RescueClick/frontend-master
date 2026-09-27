@@ -31,7 +31,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
-import MetricCard from "../../../components/shared/MetricCard";
+import { PeriodStatCard, PipelineFunnel, usePeriodLabel } from "../../../components/shared/RoleDashboardStats";
 import DashboardPeriodFilter from "../../../components/DashboardPeriodFilter";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import EntityStatusBadge from "../../../components/shared/EntityStatusBadge";
@@ -144,42 +144,58 @@ const Dashboard = () => {
     ? (data?.totals?.totalASMs ?? data?.totals?.totalRSMs ?? data?.totals?.totalRMs ?? 0)
     : (data?.totals?.totalRMs || 0);
 
-  const metricCards = useMemo(
-    () => [
+  const periodLabel = usePeriodLabel(year, month);
+  const fileStats = data?.fileStats;
+  const isFiltered = Boolean(fileStats?.isFiltered);
+
+  const metricCards = useMemo(() => {
+    const t = data?.totals || {};
+    return [
       {
-        title: subordinateTitle,
-        value: subordinateCount,
+        label: subordinateTitle,
+        value: isFiltered ? fileStats?.subordinates?.newInPeriod : subordinateCount,
+        subtitle: isFiltered
+          ? `Added in ${periodLabel} • ${formatNumber(subordinateCount)} total`
+          : isRsm ? "ASMs under your management" : "RMs under your management",
         icon: Users,
+        color: "blue",
         onClick: () => navigate(subordinatePath),
-        subtitle: isRsm ? "ASMs under your management" : "RMs under your management",
-        colorIndex: 0,
       },
       {
-        title: "Active Partners",
-        value: data?.totals?.activePartners || 0,
+        label: "Partners",
+        allTimeLabel: "Active Partners",
+        value: isFiltered ? fileStats?.partners?.newInPeriod : t.activePartners,
+        subtitle: isFiltered
+          ? `Added in ${periodLabel} • ${formatNumber(fileStats?.partners?.withActivityInPeriod || 0)} with activity • ${formatNumber(t.totalPartners || 0)} total`
+          : `${formatNumber(t.activePartners || 0)} Active • ${formatNumber(t.totalPartners || 0)} Total`,
         icon: Building2,
+        color: "emerald",
         onClick: () => navigate(`${basePath}/partners`),
-        subtitle: `${data?.totals?.activePartners || 0} Active • ${data?.totals?.totalPartners || 0} Total`,
-        colorIndex: 1,
       },
       {
-        title: "Total Customers",
-        value: data?.totals?.totalCustomers || 0,
+        label: "Customers",
+        allTimeLabel: "Total Customers",
+        value: isFiltered ? fileStats?.period?.customers : (fileStats?.allTime?.customers ?? t.totalCustomers),
+        subtitle: isFiltered
+          ? `All-Time: ${formatNumber(fileStats?.allTime?.customers ?? t.totalCustomers ?? 0)} customers`
+          : "With loan files",
         icon: UserCheck,
+        color: "purple",
         onClick: () => navigate(`${basePath}/applications`),
-        subtitle: "Customer base",
-        colorIndex: 2,
       },
       {
-        title: "Total Disbursed",
-        value: formatCurrency(data?.totals?.totalRevenue),
+        label: "Disbursed",
+        allTimeLabel: "Total Disbursed",
+        value: t.totalRevenue,
+        currency: true,
+        subtitle: isFiltered
+          ? `All-Time: ${formatCurrency(t.allTimeRevenue || 0)} • ${formatNumber(t.periodDisbursedFiles || 0)} loans`
+          : `${formatNumber(fileStats?.allTime?.disbursed ?? t.disbursedApplications ?? 0)} total loans disbursed`,
         icon: IndianRupee,
-        subtitle: "Disbursed amount",
-        colorIndex: 3,
+        color: "orange",
       },
-    ],
-    [data?.totals, navigate, basePath, isRsm, subordinateTitle, subordinatePath, subordinateCount]
-  );
+    ];
+  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate, basePath, isRsm, subordinateTitle, subordinatePath, subordinateCount]);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#F8FAFC" }}>
@@ -253,20 +269,24 @@ const Dashboard = () => {
           />
         </div>
         {/* Key Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {metricCards.map((m, idx) => (
-            <MetricCard
-              key={m.title}
-              title={m.title}
-              value={m.value}
-              icon={m.icon}
-              subtitle={m.subtitle}
-              onClick={m.onClick}
-              colorIndex={m.colorIndex ?? idx}
-              isLoading={loading}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {metricCards.map((m) => (
+            <PeriodStatCard
+              key={m.label}
+              {...m}
+              isFiltered={isFiltered}
+              periodLabel={periodLabel}
+              loading={loading && !data}
             />
           ))}
         </div>
+
+        <PipelineFunnel
+          fileStats={fileStats}
+          periodLabel={periodLabel}
+          loading={loading}
+          onViewAll={() => navigate(`${basePath}/applications`)}
+        />
 
         {/* Current Month Target - RSM focuses on Disbursement (Business Metric) */}
         <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 mb-5">

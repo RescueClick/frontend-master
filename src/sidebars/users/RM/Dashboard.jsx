@@ -32,7 +32,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import {backendurl} from "../../../feature/urldata"
 import { designSystem, formatCurrency, formatNumber, formatPercentage, typography } from "../../../utils/designSystem";
-import MetricCard from "../../../components/shared/MetricCard";
+import { PeriodStatCard, PipelineFunnel, usePeriodLabel } from "../../../components/shared/RoleDashboardStats";
 import DashboardPeriodFilter from "../../../components/DashboardPeriodFilter";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import AppAntTable from "../../../components/shared/AppAntTable";
@@ -80,49 +80,57 @@ const Dashboard = () => {
     dispatch(fetchDashboard({ year, month }));
   }, [dispatch, year, month]);
 
-  const metricCards = useMemo(
-    () => [
+  const periodLabel = usePeriodLabel(year, month);
+  const fileStats = data?.fileStats;
+  const isFiltered = Boolean(fileStats?.isFiltered);
+
+  const metricCards = useMemo(() => {
+    const t = data?.totals || {};
+    return [
       {
-        title: "Total Partners",
-        value: data?.totals?.totalPartners ?? 0,
+        label: "Partners",
+        allTimeLabel: "Active Partners",
+        value: isFiltered ? fileStats?.partners?.newInPeriod : t.totalPartners,
+        subtitle: isFiltered
+          ? `Added in ${periodLabel} • ${formatNumber(fileStats?.partners?.withActivityInPeriod || 0)} with activity • ${formatNumber(t.totalPartners || 0)} active`
+          : `${formatNumber(t.activePartners || 0)} Active • ${formatNumber(t.inactivePartners || 0)} Suspended`,
         icon: Users,
+        color: "emerald",
         onClick: () => navigate("/rm/partners"),
-        subtitle: "Active partners under you",
       },
       {
-        title: "Forms filled",
-        value: data?.totals?.formsFilledTotal ?? 0,
-        icon: FileText,
-        onClick: () => navigate("/rm/partners"),
-        subtitle: "All-time loan forms",
-      },
-      {
-        title: "More info needed",
-        value: data?.totals?.partnersNeedingMoreInfo ?? 0,
-        icon: AlertTriangle,
-        onClick: () => navigate("/rm/Follow-up"),
-        subtitle: "Partners with pending docs",
-      },
-      {
-        title: "Active Pipeline",
-        value: data?.totals?.inProcessApplications ?? 0,
-        icon: TrendingUp,
+        label: "Customers",
+        allTimeLabel: "Total Customers",
+        value: isFiltered ? fileStats?.period?.customers : (fileStats?.allTime?.customers ?? t.totalCustomers),
+        subtitle: isFiltered
+          ? `All-Time: ${formatNumber(fileStats?.allTime?.customers ?? t.totalCustomers ?? 0)} customers`
+          : "With loan files",
+        icon: UserCheck,
+        color: "purple",
         onClick: () => navigate("/rm/Rm-Application"),
-        subtitle: "In-process applications",
       },
       {
-        title: "Total Disbursed",
-        value: formatCurrency(data?.totals?.totalRevenue ?? 0),
+        label: "Disbursed",
+        allTimeLabel: "Total Disbursed",
+        value: t.totalRevenue,
+        currency: true,
+        subtitle: isFiltered
+          ? `All-Time: ${formatCurrency(t.allTimeRevenue || 0)} • ${formatNumber(t.periodDisbursedFiles || 0)} loans`
+          : `${formatNumber(fileStats?.allTime?.disbursed ?? t.disbursedApplications ?? 0)} total loans disbursed`,
         icon: IndianRupee,
+        color: "orange",
         onClick: () => navigate("/rm/Revenue-generated"),
-        subtitle:
-          year === "all" && month === "all"
-            ? "All-time disbursed"
-            : `Disbursed in selected period`,
       },
-    ],
-    [data?.totals, navigate, year, month]
-  );
+      {
+        label: "More Info Needed",
+        value: t.partnersNeedingMoreInfo,
+        subtitle: "Partners with pending docs (current)",
+        icon: AlertTriangle,
+        color: "rose",
+        onClick: () => navigate("/rm/Follow-up"),
+      },
+    ];
+  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate]);
 
   const targetVsAchievement = useMemo(() => {
     return (data?.targets || [])?.map((item) => {
@@ -504,20 +512,24 @@ const Dashboard = () => {
         </div>
         {/* Key Metrics Cards */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {metricCards.map((m, idx) => (
-            <MetricCard
-              key={m.title}
-              title={m.title}
-              value={m.value}
-              icon={m.icon}
-              subtitle={m.subtitle}
-              onClick={m.onClick}
-              colorIndex={idx}
-              isLoading={loading}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {metricCards.map((m) => (
+            <PeriodStatCard
+              key={m.label}
+              {...m}
+              isFiltered={m.label === "More Info Needed" ? false : isFiltered}
+              periodLabel={periodLabel}
+              loading={loading && !data}
             />
           ))}
         </div>
+
+        <PipelineFunnel
+          fileStats={fileStats}
+          periodLabel={periodLabel}
+          loading={loading}
+          onViewAll={() => navigate("/rm/Rm-Application")}
+        />
 
         {data?.partnerPayoutSummary?.length > 0 ? (
           <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 mb-8">

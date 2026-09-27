@@ -15,7 +15,7 @@ import { fetchAsmDashboard } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
-import MetricCard from "../../../components/shared/MetricCard";
+import { PeriodStatCard, PipelineFunnel, usePeriodLabel } from "../../../components/shared/RoleDashboardStats";
 import DashboardPeriodFilter from "../../../components/DashboardPeriodFilter";
 import { designSystem, formatCurrency, formatNumber, formatPercentage, typography } from "../../../utils/designSystem";
 
@@ -73,41 +73,61 @@ const Dashboard = () => {
     dispatch(fetchAsmDashboard({ year, month }));
   }, [dispatch, year, month]);
 
-  // Memoized metrics - adapts to RSM (monitoring ASMs) or ASM (monitoring RMs)
-  const metrics = useMemo(() => [
-    {
-      title: subordinateLabel,
-      value: isRsm
-        ? formatNumber(data?.totals?.totalASMs ?? data?.totals?.totalRSMs ?? 0)
-        : formatNumber(data?.totals?.totalRMs || 0),
-      icon: Users,
-      path: subordinatePath,
-      subtitle: isRsm
-        ? `${formatNumber(data?.totals?.activeASMs ?? data?.totals?.activeRSMs ?? data?.totals?.totalRSMs ?? 0)} Active • ${formatNumber(data?.totals?.allSubordinatesCount ?? data?.totals?.totalASMs ?? data?.totals?.totalRSMs ?? 0)} Total`
-        : `${formatNumber(data?.totals?.totalRMs || 0)} RMs under your management`
-    },
-    {
-      title: "Active Partners",
-      value: formatNumber(data?.totals?.activePartners || 0),
-      icon: Building2,
-      path: `${basePath}/partners`,
-      subtitle: `${formatNumber(data?.totals?.activePartners || 0)} Active • ${formatNumber(data?.totals?.totalPartners || 0)} Total`
-    },
-    {
-      title: "Total Customers",
-      value: formatNumber(data?.totals?.totalCustomers || 0),
-      icon: UserCheck,
-      path: `${basePath}/applications`,
-      subtitle: "Total customer base"
-    },
-    {
-      title: "Total Disbursed",
-      value: formatCurrency(data?.totals?.totalRevenue || 0),
-      icon: IndianRupee,
-      path: `${basePath}/applications`,
-      subtitle: "Disbursed amount"
-    },
-  ], [data?.totals, isRsm, subordinateLabel, subordinatePath, basePath]);
+  const periodLabel = usePeriodLabel(year, month);
+  const fileStats = data?.fileStats;
+  const isFiltered = Boolean(fileStats?.isFiltered);
+
+  const metrics = useMemo(() => {
+    const t = data?.totals || {};
+    const subTotal = isRsm ? (t.totalASMs ?? t.totalRSMs ?? 0) : (t.totalRMs || 0);
+    const subAll = t.allSubordinatesCount ?? subTotal;
+    return [
+      {
+        label: subordinateLabel,
+        value: isFiltered ? fileStats?.subordinates?.newInPeriod : subTotal,
+        subtitle: isFiltered
+          ? `Added in ${periodLabel} • ${formatNumber(subTotal)} total`
+          : `${formatNumber(subTotal)} Active • ${formatNumber(subAll)} Total`,
+        icon: Users,
+        color: "blue",
+        path: subordinatePath,
+      },
+      {
+        label: "Partners",
+        allTimeLabel: "Active Partners",
+        value: isFiltered ? fileStats?.partners?.newInPeriod : t.activePartners,
+        subtitle: isFiltered
+          ? `Added in ${periodLabel} • ${formatNumber(fileStats?.partners?.withActivityInPeriod || 0)} with activity • ${formatNumber(t.totalPartners || 0)} total`
+          : `${formatNumber(t.activePartners || 0)} Active • ${formatNumber(t.totalPartners || 0)} Total`,
+        icon: Building2,
+        color: "emerald",
+        path: `${basePath}/partners`,
+      },
+      {
+        label: "Customers",
+        allTimeLabel: "Total Customers",
+        value: isFiltered ? fileStats?.period?.customers : (fileStats?.allTime?.customers ?? t.totalCustomers),
+        subtitle: isFiltered
+          ? `All-Time: ${formatNumber(fileStats?.allTime?.customers ?? t.totalCustomers ?? 0)} customers`
+          : "With loan files",
+        icon: UserCheck,
+        color: "purple",
+        path: `${basePath}/applications`,
+      },
+      {
+        label: "Disbursed",
+        allTimeLabel: "Total Disbursed",
+        value: t.totalRevenue,
+        currency: true,
+        subtitle: isFiltered
+          ? `All-Time: ${formatCurrency(t.allTimeRevenue || 0)} • ${formatNumber(t.periodDisbursedFiles || 0)} loans`
+          : `${formatNumber(t.disbursedApplications || 0)} total loans disbursed`,
+        icon: IndianRupee,
+        color: "orange",
+        path: `${basePath}/applications`,
+      },
+    ];
+  }, [data?.totals, fileStats, isFiltered, isRsm, periodLabel, subordinateLabel, subordinatePath, basePath]);
 
   const targetVsAchievement = useMemo(() => {
     return (data?.targets || []).map((item) => {
@@ -190,20 +210,25 @@ const Dashboard = () => {
         </div>
 
         {/* Top Row - Metric Cards (Linear Design) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {metrics.map((metric, index) => (
-            <MetricCard
-              key={index}
-              title={metric.title}
-              value={metric.value}
-              icon={metric.icon}
-              colorIndex={index}
-              subtitle={metric.subtitle}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {metrics.map((metric) => (
+            <PeriodStatCard
+              key={metric.label}
+              {...metric}
+              isFiltered={isFiltered}
+              periodLabel={periodLabel}
+              loading={loading && !data}
               onClick={metric.path ? () => navigate(metric.path) : undefined}
-              isLoading={loading}
             />
           ))}
         </div>
+
+        <PipelineFunnel
+          fileStats={fileStats}
+          periodLabel={periodLabel}
+          loading={loading}
+          onViewAll={() => navigate(`${basePath}/applications`)}
+        />
 
         {/* Current Month Target Card - ASM focuses on Disbursement (Business Metric) */}
         <div className={`${designSystem.card.base} ${designSystem.card.padding} mb-6`}>
