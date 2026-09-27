@@ -477,14 +477,23 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
-              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Customers</p>
-              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalCustomers || 0)}</p>
-              <p className={typography.tiny()}>
-                {isFiltered && data?.newCustomersInPeriod ? (
-                  <span className="font-semibold text-purple-700">{formatNumber(data.newCustomersInPeriod)} new in {periodLabel}</span>
-                ) : (
-                  "With loan applications"
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <p className={`${typography.captionSmall()} uppercase tracking-wider`}>
+                  {isFiltered ? `Customers (${periodLabel})` : "Total Customers"}
+                </p>
+                {isFiltered && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                    Monthly
+                  </span>
                 )}
+              </div>
+              <p className={`${typography.h2()} mb-1`}>
+                {formatNumber((isFiltered ? data?.periodCustomers : data?.totalCustomers) || 0)}
+              </p>
+              <p className={typography.tiny()}>
+                {isFiltered
+                  ? `All-Time: ${formatNumber(data?.totalCustomers || 0)} customers`
+                  : "With loan applications"}
               </p>
             </div>
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
@@ -517,30 +526,35 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Achieved Company Disbursement */}
+        {/* Total Loan Files */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
           onClick={() => navigateWithPeriod("/admin/disbursed-loans")}
         >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-bl-full opacity-50"></div>
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-100 to-indigo-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
-              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>
-                {isFiltered ? `Achieved in ${periodLabel}` : "Achieved Disbursement"}
-              </p>
-              <p className={`${typography.h2()} mb-1 truncate`}>
-                {formatCurrency(data?.totalRevenue || 0)}
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <p className={`${typography.captionSmall()} uppercase tracking-wider`}>
+                  {isFiltered ? `Loan Files (${periodLabel})` : "Total Loan Files"}
+                </p>
+                {isFiltered && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    Monthly
+                  </span>
+                )}
+              </div>
+              <p className={`${typography.h2()} mb-1`}>
+                {formatNumber(data?.totalFiles || 0)}
               </p>
               <p className={typography.tiny()}>
                 {isFiltered
-                  ? `Volume disbursed for ${periodLabel}`
-                  : data?.monthlyRevenue != null
-                  ? `${formatCurrency(data.monthlyRevenue)} this month`
-                  : "Company-wide disbursement"}
+                  ? `All-Time: ${formatNumber(data?.allTimeFiles || 0)} files`
+                  : "All loan files submitted"}
               </p>
             </div>
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
-              <TrendingUp className="w-5 h-5 text-white" />
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+              <FileText className="w-5 h-5 text-white" />
             </div>
           </div>
         </div>
