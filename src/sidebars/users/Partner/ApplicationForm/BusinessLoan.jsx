@@ -44,6 +44,7 @@ import {
   validateLoanDocumentUpload,
   loanDocumentFieldHint,
 } from "../../../../utils/loanDocumentUpload";
+import { uploadLeadDocumentEarly } from "../../../../utils/earlyLeadDocUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
 import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
@@ -590,6 +591,7 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
       }
       return next;
     });
+    uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: name, file });
   };
 
   const handleFileRemove = (fieldName) => {

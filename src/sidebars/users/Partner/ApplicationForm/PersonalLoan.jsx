@@ -43,6 +43,7 @@ import {
   validateLoanDocumentUpload,
   loanDocumentFieldHint,
 } from "../../../../utils/loanDocumentUpload";
+import { uploadLeadDocumentEarly } from "../../../../utils/earlyLeadDocUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
 import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
@@ -417,6 +418,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       ...prev,
       [name]: file,
     }));
+    uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: name, file });
   };
 
   const handleFileChangeAddressProofs = (e) => {
@@ -432,6 +434,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       ...prev,
       addressProof: file,
     }));
+    uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: "addressProof", file });
   };
 
   const handleFileRemove = (fieldName) => {
