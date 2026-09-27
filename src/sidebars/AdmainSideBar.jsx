@@ -24,6 +24,7 @@ import {
   MessageSquare,
   Search,
   QrCode,
+  Target,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -126,6 +127,7 @@ const AdminSideBar = () => {
     { name: "RSM", icon: Users, path: "/admin/rsm" },
     { name: "ASM", icon: Users, path: "/admin/asm" },
     { name: "RM", icon: Users, path: "/admin/rm" },
+    { name: "Targets", icon: Target, path: "/admin/target", highlight: true },
 
     // New partners under admin (verify + assign RM) — separate quick-access entry
     { name: "Admin Partner", icon: FileCheck, path: "/admin/rm-partner", highlight: true },

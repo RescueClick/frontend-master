@@ -20,6 +20,7 @@ import {
   MessageSquare,
   QrCode,
   UserPlus,
+  Target,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -112,6 +113,7 @@ export default function RmSidebar() {
   // Sidebar navigation items with icons and routes
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: "/rm/dashboard" },
+    { name: "My Targets", icon: Target, path: "/rm/targets" },
     { name: "My Partners", icon: UserCheck, path: "/rm/partners" },
     { name: "Add Partner", icon: UserPlus, path: "/rm/add-partner", highlight: true },
     { name: "Assign QR", icon: QrCode, path: "/rm/qr-assign", highlight: true },

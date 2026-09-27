@@ -22,6 +22,7 @@ import {
   TrendingUp,
   MessageSquare,
   Search,
+  Target,
 } from "lucide-react";
 
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -124,6 +125,7 @@ const AsmSiderbar = () => {
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: `${basePath}/dashboard` },
     { name: subordinateLabel, icon: Users, path: subordinatePath },
+    { name: "Targets", icon: Target, path: `${basePath}/targets`, highlight: true },
     { name: "Partners", icon: UserCheck, path: `${basePath}/partners` },
     { name: "Applications", icon: FileText, path: `${basePath}/applications` },
     { name: "Leads & Pipeline", icon: LineChart, path: `${basePath}/leads` },

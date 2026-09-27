@@ -55,6 +55,7 @@ import AdminPendingPayout from "./sidebars/users/Admin/AdminPendingPayout";
 import AdminDonePayout from "./sidebars/users/Admin/AdminDonePayout";
 import AdminPayouts from "./sidebars/users/Admin/AdminPayouts";
 import SetTarget from "./sidebars/users/Admin/SetTarget.jsx"
+import SalesTargets from "./components/shared/salesTargets/SalesTargets";
 import PartnerTargets from "./sidebars/users/Admin/PartnerTargets";
 import AdiminBanks from "./sidebars/users/Admin/Banks";
 import AdminFindBankRm from "./sidebars/users/Admin/FindBankRm";
@@ -354,7 +355,8 @@ const AppRoutes = () => {
         <Route path="referral-banners" element={<Banner initialTab="referral" />} />
         <Route path="customer" element={<AdiminCustomer />} />
         <Route path="leads" element={<Navigate to="/admin/customer?tab=leads" replace />} />
-        <Route path="target" element={<Navigate to="/admin/incentives" replace />} />
+        <Route path="target" element={<SalesTargets mode="ADMIN" />} />
+        <Route path="targets" element={<SalesTargets mode="ADMIN" />} />
         <Route path="partner-targets" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="banks" element={<AdiminBanks />} />
         <Route path="find-bank-rm" element={<AdminFindBankRm />} />
@@ -412,6 +414,7 @@ const AppRoutes = () => {
         <Route path="follow-ups" element={<AsmFollowUps />} />
         <Route path="find-bank-rm" element={<AdminFindBankRm />} />
         <Route path="partner-targets" element={<Navigate to="/rsm/incentives" replace />} />
+        <Route path="targets" element={<SalesTargets mode="RSM" />} />
         <Route path="settings" element={<PasswordSettings  />} />
         <Route path="EditProfile" element={<EditProfile />} />
         <Route path="analytics" element={<ASManalytics />} />
@@ -435,6 +438,7 @@ const AppRoutes = () => {
         <Route path="follow-ups" element={<RsmFollowUps />} />
         <Route path="banks" element={<Banks />} />
         <Route path="find-bank-rm" element={<AsmFindBankRm />} />
+        <Route path="targets" element={<SalesTargets mode="ASM" />} />
         <Route path="settings" element={<PasswordSettings />} />
         <Route path="EditProfile" element={<EditProfile />} />
       </Route>
@@ -460,6 +464,7 @@ const AppRoutes = () => {
         <Route path="RManalytics" element={<RManalytics/>}/>
         <Route path="Rm-Application" element={<RmApplication/>}/>
         <Route path="partner-targets" element={<Navigate to="/rm/dashboard" replace />} />
+        <Route path="targets" element={<SalesTargets mode="RM" />} />
         <Route path="settings" element={<PasswordSettings />} />
         <Route path="EditProfile" element={<EditProfile />} />
         {/* Payout routes moved to ASM and Admin */}
