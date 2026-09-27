@@ -226,6 +226,8 @@ const RsmApplicationView = () => {
   const [sendBankId, setSendBankId] = useState("");
   const [sendBankEmail, setSendBankEmail] = useState("");
   const [sendBankCcMe, setSendBankCcMe] = useState(true);
+  const [sendBankCcList, setSendBankCcList] = useState([]);
+  const [sendBankCcInput, setSendBankCcInput] = useState("");
   const [sendBankNote, setSendBankNote] = useState("");
   const [sendingToBank, setSendingToBank] = useState(false);
 
@@ -244,6 +246,8 @@ const RsmApplicationView = () => {
     setSendBankOpen(true);
     setSendBankNote("");
     setSendBankCcMe(true);
+    setSendBankCcList([]);
+    setSendBankCcInput("");
     let list = sendBankList;
     if (!list.length) {
       setSendBankListLoading(true);
@@ -273,17 +277,52 @@ const RsmApplicationView = () => {
     }
   };
 
+  const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  // Returns the updated list, or null if any typed address is invalid.
+  const addCcEmails = (raw) => {
+    const parts = String(raw || "")
+      .split(/[,;\s]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    if (!parts.length) return sendBankCcList;
+    const invalid = parts.filter((e) => !isValidEmail(e));
+    if (invalid.length) {
+      toast.error(`Invalid CC email: ${invalid.join(", ")}`);
+      return null;
+    }
+    const next = [...new Set([...sendBankCcList, ...parts])];
+    if (next.length > 10) {
+      toast.error("You can add up to 10 CC emails");
+      return null;
+    }
+    setSendBankCcList(next);
+    setSendBankCcInput("");
+    return next;
+  };
+
+  const handleCcKeyDown = (e) => {
+    if (["Enter", ",", ";", " ", "Tab"].includes(e.key) && sendBankCcInput.trim()) {
+      e.preventDefault();
+      addCcEmails(sendBankCcInput);
+    } else if (e.key === "Backspace" && !sendBankCcInput && sendBankCcList.length) {
+      setSendBankCcList(sendBankCcList.slice(0, -1));
+    }
+  };
+
   const handleSendToBank = async () => {
     const email = sendBankEmail.trim();
     if (!sendBankId) return toast.error("Please select a bank");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("Please enter a valid RM email");
+    if (!isValidEmail(email)) return toast.error("Please enter a valid RM email");
+    const ccList = addCcEmails(sendBankCcInput);
+    if (!ccList) return;
 
     setSendingToBank(true);
     try {
       const token = getAppAuthToken();
       const res = await axios.post(
         `${backendurl}/rsm/applications/${applicationData._id}/send-to-bank`,
-        { bankId: sendBankId, email, ccMe: sendBankCcMe, note: sendBankNote },
+        { bankId: sendBankId, email, cc: ccList, ccMe: sendBankCcMe, note: sendBankNote },
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       const record = res.data?.bankSend;
@@ -2424,6 +2463,52 @@ const RsmApplicationView = () => {
                   </p>
                 )}
               </label>
+
+              <div>
+                <span className="mb-1.5 block text-xs font-semibold text-gray-700">
+                  CC <span className="font-normal text-gray-400">(optional, up to 10)</span>
+                </span>
+                <div
+                  className="flex min-h-[42px] w-full flex-wrap items-center gap-1.5 rounded-lg border border-gray-300 px-2 py-1.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20"
+                  onClick={(e) => e.currentTarget.querySelector("input")?.focus()}
+                >
+                  {sendBankCcList.map((cc) => (
+                    <span
+                      key={cc}
+                      className="inline-flex max-w-full items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-medium text-emerald-800"
+                    >
+                      <span className="truncate">{cc}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSendBankCcList(sendBankCcList.filter((x) => x !== cc))}
+                        disabled={sendingToBank}
+                        className="rounded text-emerald-600 hover:text-emerald-900"
+                        aria-label={`Remove ${cc}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    value={sendBankCcInput}
+                    onChange={(e) => setSendBankCcInput(e.target.value)}
+                    onKeyDown={handleCcKeyDown}
+                    onBlur={() => sendBankCcInput.trim() && addCcEmails(sendBankCcInput)}
+                    onPaste={(e) => {
+                      const text = e.clipboardData.getData("text");
+                      if (/[,;\s]/.test(text.trim())) {
+                        e.preventDefault();
+                        addCcEmails(text);
+                      }
+                    }}
+                    disabled={sendingToBank}
+                    placeholder={sendBankCcList.length ? "Add another" : "name@bank.com, manager@company.com"}
+                    className="min-w-[8rem] flex-1 border-0 bg-transparent px-1 py-1 text-sm outline-none focus:ring-0"
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-gray-400">Press Enter or comma after each email.</p>
+              </div>
 
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold text-gray-700">Note (optional)</span>
