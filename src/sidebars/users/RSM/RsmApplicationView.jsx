@@ -2503,11 +2503,31 @@ const RsmApplicationView = () => {
                       }
                     }}
                     disabled={sendingToBank}
-                    placeholder={sendBankCcList.length ? "Add another" : "name@bank.com, manager@company.com"}
+                    placeholder={sendBankCcList.length ? "Add another email" : "Type email and click +"}
                     className="min-w-[8rem] flex-1 border-0 bg-transparent px-1 py-1 text-sm outline-none focus:ring-0"
                   />
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      if (!sendBankCcInput.trim()) {
+                        toast.error("Type an email first");
+                        return;
+                      }
+                      addCcEmails(sendBankCcInput);
+                    }}
+                    disabled={sendingToBank || sendBankCcList.length >= 10}
+                    className="ml-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-40"
+                    title="Add CC email"
+                    aria-label="Add CC email"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400">Press Enter or comma after each email.</p>
+                <p className="mt-1 text-[11px] text-gray-400">
+                  Click + (or press Enter) to add each email.{" "}
+                  {sendBankCcList.length > 0 && <span className="font-medium text-gray-500">{sendBankCcList.length}/10 added</span>}
+                </p>
               </div>
 
               <label className="block">
