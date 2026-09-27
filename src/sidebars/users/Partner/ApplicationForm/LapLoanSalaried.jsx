@@ -557,7 +557,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
     ) : null;
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     const errs = validateLapSalariedStep(currentStep);
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
@@ -569,7 +569,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
     const leavingStep = currentStep;
     const next = currentStep + 1;
     if (!isRmMode) {
-      persistLeadWizardProgress({
+      const leadProgress = persistLeadWizardProgress({
         applicationId,
         setApplicationId,
         leavingStepIndex: leavingStep,
@@ -582,6 +582,14 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
         partnerReferralCode: currentPartnerCode,
         isRmMode,
       }).catch((err) => console.warn("Lead progress sync non-fatal:", err));
+      if (leavingStep === 0) {
+        const result = await leadProgress;
+        if (result?.blocked) {
+          setError(result.message);
+          toast.error(result.message);
+          return;
+        }
+      }
     }
 
     setCurrentStep(next);

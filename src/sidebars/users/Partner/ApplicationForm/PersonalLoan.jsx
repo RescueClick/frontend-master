@@ -702,7 +702,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     const nextIdx = Math.min(currentStep + 1, steps.length - 1);
 
     if (!isRmMode) {
-      persistLeadWizardProgress({
+      const leadProgress = persistLeadWizardProgress({
         applicationId,
         setApplicationId,
         leavingStepIndex: leavingStep,
@@ -715,6 +715,16 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         partnerReferralCode: currentPartnerCode,
         isRmMode,
       }).catch((err) => console.warn("Lead progress sync non-fatal:", err));
+      if (leavingStep === 0) {
+        setIsCheckingExistence(true);
+        const result = await leadProgress;
+        setIsCheckingExistence(false);
+        if (result?.blocked) {
+          setError(result.message);
+          toast.error(result.message);
+          return;
+        }
+      }
     }
 
     setFieldErrors({});

@@ -113,6 +113,7 @@ export async function persistLeadWizardProgress({
         partnerReferralCode,
         applicationId: appId,
       });
+      if (res?.blocked) return res;
       if (res?.applicationId) {
         appId = res.applicationId;
         if (typeof setApplicationId === "function") setApplicationId(appId);
@@ -126,6 +127,7 @@ export async function persistLeadWizardProgress({
         partnerReferralCode,
         applicationId: null,
       });
+      if (res?.blocked) return res;
       if (res?.applicationId) {
         appId = res.applicationId;
         if (typeof setApplicationId === "function") setApplicationId(appId);

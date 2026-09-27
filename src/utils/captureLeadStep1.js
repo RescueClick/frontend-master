@@ -17,7 +17,7 @@ export const LOAN_PURPOSE_OPTIONS = [
 
 /**
  * Capture Step 1 fields as a LEAD immediately upon clicking 'Next'.
- * Non-blocking: will never prevent the user from moving forward if network drops.
+ * Non-blocking on network errors; returns { blocked, message } when the customer already has a loan file.
  */
 export async function captureLeadOnStep1Next({
   loanType = "PERSONAL",
@@ -79,7 +79,17 @@ export async function captureLeadOnStep1Next({
       appNo: res.data?.appNo || null,
     };
   } catch (err) {
-    console.warn("captureLeadOnStep1Next warning (non-fatal):", err?.response?.data?.message || err.message);
+    const data = err?.response?.data;
+    // Customer already has a loan file (or is in reject cooldown): the only case that stops the wizard
+    if (err?.response?.status === 400 && data?.reason) {
+      return {
+        success: false,
+        blocked: true,
+        message: data.message,
+        existingAppNo: data.existingAppNo || null,
+      };
+    }
+    console.warn("captureLeadOnStep1Next warning (non-fatal):", data?.message || err.message);
     return { success: false, error: err };
   }
 }
