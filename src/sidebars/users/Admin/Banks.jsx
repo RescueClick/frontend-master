@@ -63,6 +63,8 @@ const Banks = () => {
     loginId: "",
     password: "",
     link: "",
+    rmName: "",
+    rmEmail: "",
     serviceablePincodes: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -118,6 +120,8 @@ const Banks = () => {
       loginId: "",
       password: "",
       link: "",
+      rmName: "",
+      rmEmail: "",
       serviceablePincodes: "",
     });
     setEditingBankId(null);
@@ -153,6 +157,8 @@ const Banks = () => {
       loginId: b.portalLoginId || "",
       password: b.portalPassword || "",
       link: b.portalLink || "",
+      rmName: b.rmName || "",
+      rmEmail: b.rmEmail || "",
       serviceablePincodes: pins.join(", "),
     });
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -185,6 +191,8 @@ const Banks = () => {
       formData.append("portalLoginId", bank.loginId);
       formData.append("portalPassword", bank.password);
       formData.append("portalLink", bank.link);
+      formData.append("rmName", bank.rmName || "");
+      formData.append("rmEmail", bank.rmEmail || "");
       formData.append("serviceablePincodes", bank.serviceablePincodes || "");
 
       if (isEditing) {
@@ -484,6 +492,35 @@ const Banks = () => {
                         inputMode="url"
                         className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                         placeholder="https://portal.bank.com/login"
+                      />
+                    </label>
+
+                    <label className="block sm:col-span-1 lg:col-span-1">
+                      <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+                        Bank RM name
+                      </span>
+                      <input
+                        type="text"
+                        name="rmName"
+                        value={bank.rmName}
+                        onChange={handleChange}
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                        placeholder="e.g. Rahul Sharma"
+                      />
+                    </label>
+
+                    <label className="block sm:col-span-1 lg:col-span-2">
+                      <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+                        Bank RM email
+                        <span className="font-normal text-gray-400">(used for "Send to Bank")</span>
+                      </span>
+                      <input
+                        type="email"
+                        name="rmEmail"
+                        value={bank.rmEmail}
+                        onChange={handleChange}
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                        placeholder="rm@bank.com"
                       />
                     </label>
                     {/* Serviceable Pincodes */}

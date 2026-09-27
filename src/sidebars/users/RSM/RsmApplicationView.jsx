@@ -219,10 +219,96 @@ const RsmApplicationView = () => {
   const [rmSearching, setRmSearching] = useState(false);
   const [copiedRmCode, setCopiedRmCode] = useState(null);
 
+  // Send to Bank (email customer info + docs to bank RM)
+  const [sendBankOpen, setSendBankOpen] = useState(false);
+  const [sendBankList, setSendBankList] = useState([]);
+  const [sendBankListLoading, setSendBankListLoading] = useState(false);
+  const [sendBankId, setSendBankId] = useState("");
+  const [sendBankEmail, setSendBankEmail] = useState("");
+  const [sendBankCcMe, setSendBankCcMe] = useState(true);
+  const [sendBankNote, setSendBankNote] = useState("");
+  const [sendingToBank, setSendingToBank] = useState(false);
+
   const getAppAuthToken = useCallback(() => {
     const auth = getAuthData() || {};
     return auth.asmToken || auth.rsmToken || auth.adminToken || auth.token || "";
   }, []);
+
+  const selectSendBank = (bankId, list = sendBankList) => {
+    setSendBankId(bankId);
+    const b = list.find((x) => x._id === bankId);
+    setSendBankEmail(b?.rmEmail || "");
+  };
+
+  const openSendToBank = async (prefillBank = null) => {
+    setSendBankOpen(true);
+    setSendBankNote("");
+    setSendBankCcMe(true);
+    let list = sendBankList;
+    if (!list.length) {
+      setSendBankListLoading(true);
+      try {
+        const token = getAppAuthToken();
+        const res = await axios.get(`${backendurl}/rsm/banks`, {
+          params: { loanType: applicationData?.loanType },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        list = Array.isArray(res.data) ? res.data : [];
+        setSendBankList(list);
+      } catch (err) {
+        console.error("Failed to load banks:", err);
+        toast.error("Failed to load banks");
+      } finally {
+        setSendBankListLoading(false);
+      }
+    }
+    if (prefillBank?._id) {
+      if (!list.some((b) => b._id === prefillBank._id)) {
+        list = [prefillBank, ...list];
+        setSendBankList(list);
+      }
+      selectSendBank(prefillBank._id, list);
+    } else {
+      selectSendBank("", list);
+    }
+  };
+
+  const handleSendToBank = async () => {
+    const email = sendBankEmail.trim();
+    if (!sendBankId) return toast.error("Please select a bank");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("Please enter a valid RM email");
+
+    setSendingToBank(true);
+    try {
+      const token = getAppAuthToken();
+      const res = await axios.post(
+        `${backendurl}/rsm/applications/${applicationData._id}/send-to-bank`,
+        { bankId: sendBankId, email, ccMe: sendBankCcMe, note: sendBankNote },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      const record = res.data?.bankSend;
+      if (record) {
+        setApplicationData((prev) =>
+          prev ? { ...prev, bankSends: [...(prev.bankSends || []), record] } : prev
+        );
+      }
+      toast.success(res.data?.message || "Sent to bank");
+      if (res.data?.failedDocs?.length) {
+        toast.error(`Could not attach: ${res.data.failedDocs.join(", ")}`, { duration: 6000 });
+      }
+      setSendBankOpen(false);
+    } catch (err) {
+      const record = err.response?.data?.bankSend;
+      if (record) {
+        setApplicationData((prev) =>
+          prev ? { ...prev, bankSends: [...(prev.bankSends || []), record] } : prev
+        );
+      }
+      toast.error(err.response?.data?.message || "Failed to send to bank");
+    } finally {
+      setSendingToBank(false);
+    }
+  };
 
   const toggleBankPassword = (bankId) => {
     setShowBankPassword((prev) => ({
@@ -1675,21 +1761,57 @@ const RsmApplicationView = () => {
 
                     {/* 2. Update Application Status */}
                     <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex flex-col h-[420px] overflow-hidden">
-                      <h3 className="text-sm font-semibold text-gray-900 flex items-center shrink-0 mb-2.5">
-                        {applicationData.status === "REJECTED" ? (
-                          <>
-                            <RotateCcw className="w-4 h-4 mr-1.5 text-amber-600" />
-                            Reopen File
-                          </>
-                        ) : (
-                          <>
-                            <Send className="w-4 h-4 mr-1.5 text-brand-primary" />
-                            Update Status
-                          </>
-                        )}
-                      </h3>
+                      <div className="flex items-center justify-between gap-2 shrink-0 mb-2.5">
+                        <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                          {applicationData.status === "REJECTED" ? (
+                            <>
+                              <RotateCcw className="w-4 h-4 mr-1.5 text-amber-600" />
+                              Reopen File
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4 mr-1.5 text-brand-primary" />
+                              Update Status
+                            </>
+                          )}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => openSendToBank()}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1.5 rounded-lg shadow-sm transition"
+                          title="Email customer info and all documents to the bank RM"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                          Send to Bank
+                        </button>
+                      </div>
 
                       <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5">
+                      {Array.isArray(applicationData.bankSends) && applicationData.bankSends.length > 0 && (
+                        <div className="p-2 bg-emerald-50/60 border border-emerald-100 rounded-lg space-y-1">
+                          <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Sent to Bank</p>
+                          {[...applicationData.bankSends].reverse().map((s, i) => (
+                            <div key={i} className="flex items-start justify-between gap-2 text-[11px]">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-gray-800 truncate">
+                                  {s.bankName} <span className="font-normal text-gray-500">({s.email})</span>
+                                </p>
+                                <p className="text-[10px] text-gray-500">
+                                  {new Date(s.sentAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                                  {s.status === "SENT" && s.delivery === "LINKS" ? " · download links" : ""}
+                                </p>
+                              </div>
+                              <span
+                                className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  s.status === "SENT" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {s.status === "SENT" ? "Sent" : "Failed"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {applicationData.status === "REJECTED" && (
                         <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
                           <p className="text-[11px] text-amber-900 font-medium leading-snug">
@@ -1905,18 +2027,29 @@ const RsmApplicationView = () => {
                                       </div>
                                     </div>
 
-                                    {bank.portalLink && bank.portalLink !== "#" && (
-                                      <a
-                                        href={bank.portalLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 px-2 py-1.5 rounded-lg transition shrink-0"
-                                        title="Open official bank portal"
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => openSendToBank(bank)}
+                                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 px-2 py-1.5 rounded-lg transition"
+                                        title={bank.rmEmail ? `Email docs to ${bank.rmEmail}` : "Email docs to bank RM"}
                                       >
-                                        <span>Portal</span>
-                                        <ExternalLink className="w-3.5 h-3.5" />
-                                      </a>
-                                    )}
+                                        <Mail className="w-3.5 h-3.5" />
+                                        <span>Email RM</span>
+                                      </button>
+                                      {bank.portalLink && bank.portalLink !== "#" && (
+                                        <a
+                                          href={bank.portalLink}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 px-2 py-1.5 rounded-lg transition"
+                                          title="Open official bank portal"
+                                        >
+                                          <span>Portal</span>
+                                          <ExternalLink className="w-3.5 h-3.5" />
+                                        </a>
+                                      )}
+                                    </div>
                                   </div>
 
                                   <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2.5 space-y-1.5 text-xs">
@@ -2227,6 +2360,130 @@ const RsmApplicationView = () => {
           </div>
         </div>
       </div>
+
+      {sendBankOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => !sendingToBank && setSendBankOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                  <Mail className="w-4 h-4 text-emerald-600" />
+                  Send to Bank
+                </h3>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Emails customer details and all documents to the bank RM.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSendBankOpen(false)}
+                disabled={sendingToBank}
+                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 px-5 py-4">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-700">Select Bank *</span>
+                <select
+                  value={sendBankId}
+                  onChange={(e) => selectSendBank(e.target.value)}
+                  disabled={sendBankListLoading || sendingToBank}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                >
+                  <option value="">{sendBankListLoading ? "Loading banks..." : "Choose bank"}</option>
+                  {sendBankList.map((b) => (
+                    <option key={b._id} value={b._id}>
+                      {b.bankName} ({b.loanType})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-700">Bank RM Email *</span>
+                <input
+                  type="email"
+                  value={sendBankEmail}
+                  onChange={(e) => setSendBankEmail(e.target.value)}
+                  disabled={sendingToBank}
+                  placeholder="rm@bank.com"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+                {sendBankId && !sendBankList.find((b) => b._id === sendBankId)?.rmEmail && (
+                  <p className="mt-1 text-[11px] text-amber-700">
+                    No RM email saved for this bank. Enter it here, or ask admin to add it in Bank Master.
+                  </p>
+                )}
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-700">Note (optional)</span>
+                <textarea
+                  value={sendBankNote}
+                  onChange={(e) => setSendBankNote(e.target.value)}
+                  disabled={sendingToBank}
+                  rows={2}
+                  placeholder="Any message for the bank RM"
+                  className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </label>
+
+              <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={sendBankCcMe}
+                  onChange={(e) => setSendBankCcMe(e.target.checked)}
+                  disabled={sendingToBank}
+                  className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                CC me a copy
+              </label>
+
+              <p className="text-[11px] text-gray-500">
+                {(applicationData?.docs || []).filter((d) => d?.url && d.status !== "REJECTED").length} document(s) will be sent.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3.5">
+              <button
+                type="button"
+                onClick={() => setSendBankOpen(false)}
+                disabled={sendingToBank}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendToBank}
+                disabled={sendingToBank || !sendBankId || !sendBankEmail.trim()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {sendingToBank ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Send
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
