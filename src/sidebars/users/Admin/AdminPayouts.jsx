@@ -50,6 +50,7 @@ import AppAntTable from "../../../components/shared/AppAntTable";
 import PayoutStatusBadge from "../../../components/shared/PayoutStatusBadge";
 import PartnerInvoiceModal from "../../../components/shared/PartnerInvoiceModal";
 import InvoiceSettingsModal from "../../../components/shared/InvoiceSettingsModal";
+import CompanyRevenueInput from "../../../components/shared/CompanyRevenueInput";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -143,6 +144,7 @@ const AdminPayouts = () => {
     invoiceNotes: "",
     payOutStatus: "DONE",
     note: "",
+    companyPercentage: "",
   });
 
   // Redux Data
@@ -427,6 +429,7 @@ const AdminPayouts = () => {
         "Tax deducted under Section 194T of the Income Tax Act, 1961.",
       payOutStatus: record.payOutStatus || "DONE",
       note: record.payoutNote || "",
+      companyPercentage: record.companyPercentage != null ? String(record.companyPercentage) : "",
     });
 
     setModalOpen(true);
@@ -514,6 +517,8 @@ const AdminPayouts = () => {
           sendInvoiceEmail: modalForm.sendInvoiceEmail,
           payOutStatus: modalForm.payOutStatus,
           note: modalForm.note || "",
+          companyPercentage:
+            modalForm.companyPercentage !== "" ? Number(modalForm.companyPercentage) : undefined,
         })
       ).unwrap();
 
@@ -1407,6 +1412,13 @@ const AdminPayouts = () => {
                       </span>
                     </div>
                   </div>
+
+                  <CompanyRevenueInput
+                    approvalAmount={modalForm.approvalAmount}
+                    value={modalForm.companyPercentage}
+                    onChange={(v) => setModalForm((prev) => ({ ...prev, companyPercentage: v }))}
+                    partnerGross={modalForm.grossAmount}
+                  />
 
                   {/* SECTION 194T TDS CONFIGURATION */}
                   <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl space-y-2">

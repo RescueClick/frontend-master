@@ -42,6 +42,7 @@ import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import PayoutStatusBadge from "../../../components/shared/PayoutStatusBadge";
 import PartnerInvoiceModal from "../../../components/shared/PartnerInvoiceModal";
+import CompanyRevenueInput from "../../../components/shared/CompanyRevenueInput";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -103,6 +104,7 @@ const AdminPendingPayout = () => {
     invoiceNotes: "Tax deducted under Section 194T of the Income Tax Act, 1961.",
     payOutStatus: "DONE",
     note: "",
+    companyPercentage: "",
   });
 
   const { data: pendingData = [], loading } = useSelector(
@@ -275,6 +277,7 @@ const AdminPendingPayout = () => {
         "Tax deducted under Section 194T of the Income Tax Act, 1961.",
       payOutStatus: "DONE",
       note: record.payoutNote || "",
+      companyPercentage: record.companyPercentage != null ? String(record.companyPercentage) : "",
     });
 
     setModalOpen(true);
@@ -357,6 +360,8 @@ const AdminPendingPayout = () => {
           sendInvoiceEmail: modalForm.sendInvoiceEmail,
           payOutStatus: modalForm.payOutStatus,
           note: modalForm.note || "",
+          companyPercentage:
+            modalForm.companyPercentage !== "" ? Number(modalForm.companyPercentage) : undefined,
         })
       ).unwrap();
 
@@ -1013,6 +1018,13 @@ const AdminPendingPayout = () => {
                       </span>
                     </div>
                   </div>
+
+                  <CompanyRevenueInput
+                    approvalAmount={modalForm.approvalAmount}
+                    value={modalForm.companyPercentage}
+                    onChange={(v) => setModalForm((prev) => ({ ...prev, companyPercentage: v }))}
+                    partnerGross={modalForm.grossAmount}
+                  />
 
                   {/* 2. SECTION 194T TDS CONFIG CARD */}
                   <div className="p-2.5 bg-teal-50/70 rounded-xl border border-teal-200/80 space-y-2">

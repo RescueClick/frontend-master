@@ -152,6 +152,26 @@ const Dashboard = () => {
     navigate(path, { state: { year, month } });
   };
 
+  const BADGE_CLASSES = {
+    blue: "bg-blue-50 text-blue-700 border-blue-200",
+    teal: "bg-teal-50 text-teal-700 border-teal-200",
+    amber: "bg-amber-50 text-amber-700 border-amber-200",
+    emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  };
+
+  const PeriodTitle = ({ label, color }) => (
+    <div className="flex items-center gap-1.5 mb-1.5">
+      <p className={`${typography.captionSmall()} uppercase tracking-wider`}>
+        {isFiltered ? `${label} (${periodLabel})` : label}
+      </p>
+      {isFiltered && (
+        <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${BADGE_CLASSES[color]}`}>
+          Monthly
+        </span>
+      )}
+    </div>
+  );
+
   // Monthly breakdown from backend
   const monthlyBreakdown = data?.monthlyBreakdown || [];
   const maxMonthlyRevenue = useMemo(() => {
@@ -395,9 +415,13 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
-              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Area Sales Managers</p>
-              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalASM || 0)}</p>
-              <p className={typography.tiny()}>Active ASMs</p>
+              <PeriodTitle label="Area Sales Managers" color="blue" />
+              <p className={`${typography.h2()} mb-1`}>
+                {formatNumber((isFiltered ? data?.newASMInPeriod : data?.totalASM) || 0)}
+              </p>
+              <p className={typography.tiny()}>
+                {isFiltered ? `Created in ${periodLabel} • ${formatNumber(data?.totalASM || 0)} total` : "Active ASMs"}
+              </p>
             </div>
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
               <Users className="w-5 h-5 text-white" />
@@ -413,9 +437,13 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-teal-100 to-teal-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
-              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Regional Sales Managers</p>
-              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalRSM || 0)}</p>
-              <p className={typography.tiny()}>Active RSMs</p>
+              <PeriodTitle label="Regional Sales Managers" color="teal" />
+              <p className={`${typography.h2()} mb-1`}>
+                {formatNumber((isFiltered ? data?.newRSMInPeriod : data?.totalRSM) || 0)}
+              </p>
+              <p className={typography.tiny()}>
+                {isFiltered ? `Created in ${periodLabel} • ${formatNumber(data?.totalRSM || 0)} total` : "Active RSMs"}
+              </p>
             </div>
             <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
               <Users className="w-5 h-5 text-white" />
@@ -431,9 +459,13 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-100 to-amber-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
-              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Relationship Managers</p>
-              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.totalRM || 0)}</p>
-              <p className={typography.tiny()}>Active RMs</p>
+              <PeriodTitle label="Relationship Managers" color="amber" />
+              <p className={`${typography.h2()} mb-1`}>
+                {formatNumber((isFiltered ? data?.newRMInPeriod : data?.totalRM) || 0)}
+              </p>
+              <p className={typography.tiny()}>
+                {isFiltered ? `Created in ${periodLabel} • ${formatNumber(data?.totalRM || 0)} total` : "Active RMs"}
+              </p>
             </div>
             <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
               <User className="w-5 h-5 text-white" />
@@ -449,12 +481,16 @@ const Dashboard = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
-              <p className={`${typography.captionSmall()} uppercase tracking-wider mb-2`}>Active Partners</p>
-              <p className={`${typography.h2()} mb-1`}>{formatNumber(data?.activePartners ?? data?.totalPartners ?? 0)}</p>
+              <PeriodTitle label={isFiltered ? "Partners" : "Active Partners"} color="emerald" />
+              <p className={`${typography.h2()} mb-1`}>
+                {formatNumber(
+                  (isFiltered ? data?.newPartnersInPeriod : data?.activePartners ?? data?.totalPartners) || 0
+                )}
+              </p>
               <p className={typography.tiny()}>
                 {isFiltered ? (
                   <>
-                    <span className="font-semibold text-emerald-600">{formatNumber(data?.activePartnersInPeriod || 0)} active in {periodLabel}</span> • {formatNumber(data?.totalPartners || 0)} total
+                    Created in {periodLabel} • <span className="font-semibold text-emerald-600">{formatNumber(data?.activePartnersInPeriod || 0)} with activity</span> • {formatNumber(data?.totalPartners || 0)} total
                   </>
                 ) : (
                   <>
@@ -526,35 +562,40 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Total Loan Files */}
+        {/* DhanSource Total Revenue (bank commission) */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
-          onClick={() => navigateWithPeriod("/admin/disbursed-loans")}
+          onClick={() => navigateWithPeriod("/admin/payout")}
         >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-100 to-indigo-50 rounded-bl-full opacity-50"></div>
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <p className={`${typography.captionSmall()} uppercase tracking-wider`}>
-                  {isFiltered ? `Loan Files (${periodLabel})` : "Total Loan Files"}
+                  {isFiltered ? `Revenue (${periodLabel})` : "Total Revenue"}
                 </p>
                 {isFiltered && (
-                  <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     Monthly
                   </span>
                 )}
               </div>
-              <p className={`${typography.h2()} mb-1`}>
-                {formatNumber(data?.totalFiles || 0)}
+              <p className={`${typography.h2()} mb-1 truncate`}>
+                {formatCurrency(data?.companyRevenue || 0)}
               </p>
               <p className={typography.tiny()}>
-                {isFiltered
-                  ? `All-Time: ${formatNumber(data?.allTimeFiles || 0)} files`
-                  : "All loan files submitted"}
+                Net after partner payout:{" "}
+                <span className="font-semibold text-emerald-700">{formatCurrency(data?.companyNetRevenue || 0)}</span>
+                {isFiltered && ` • All-Time: ${formatCurrency(data?.allTimeCompanyRevenue || 0)}`}
               </p>
+              {data?.loansMissingCompanyPct > 0 && (
+                <p className="text-[10px] text-amber-700 mt-0.5">
+                  {formatNumber(data.loansMissingCompanyPct)} disbursed loan(s) without DhanSource %
+                </p>
+              )}
             </div>
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
-              <FileText className="w-5 h-5 text-white" />
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-3 shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+              <TrendingUp className="w-5 h-5 text-white" />
             </div>
           </div>
         </div>
