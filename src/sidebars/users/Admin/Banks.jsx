@@ -69,6 +69,7 @@ const Banks = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [loanTypeSearch, setLoanTypeSearch] = useState("");
+  const [loanTypeFilter, setLoanTypeFilter] = useState("ALL");
   const [showAddPassword, setShowAddPassword] = useState(false);
 
   const [showPassword, setShowPassword] = useState({});
@@ -86,13 +87,30 @@ const Banks = () => {
     dispatch(fetchAdminBanks());
   }, [dispatch]);
 
+  const activeBanks = useMemo(() => {
+    const list = Array.isArray(banks) ? banks : [];
+    return list.filter((b) => b?.isActive !== false);
+  }, [banks]);
+
+  const loanTypeCounts = useMemo(() => {
+    const counts = {};
+    activeBanks.forEach((b) => {
+      const t = String(b?.loanType || "").toUpperCase();
+      counts[t] = (counts[t] || 0) + 1;
+    });
+    return counts;
+  }, [activeBanks]);
+
   const filteredBanks = useMemo(() => {
     const q = String(loanTypeSearch || "").trim().toUpperCase();
-    const list = Array.isArray(banks) ? banks : [];
-    const active = list.filter((b) => b?.isActive !== false);
-    if (!q) return active;
-    return active.filter((b) => String(b?.loanType || "").toUpperCase().includes(q));
-  }, [banks, loanTypeSearch]);
+    return activeBanks.filter((b) => {
+      const type = String(b?.loanType || "").toUpperCase();
+      if (loanTypeFilter !== "ALL" && type !== loanTypeFilter) return false;
+      if (!q) return true;
+      const name = String(b?.bankName || b?.name || "").toUpperCase();
+      return type.includes(q) || name.includes(q);
+    });
+  }, [activeBanks, loanTypeSearch, loanTypeFilter]);
 
   const copyText = (text) => {
     navigator.clipboard.writeText(text || "");
@@ -628,21 +646,50 @@ const Banks = () => {
             </form>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-b border-gray-100 px-4 py-3">
-                <input
-                  type="text"
-                  value={loanTypeSearch}
-                  onChange={(e) => setLoanTypeSearch(e.target.value)}
-                  placeholder="Search by loan type..."
-                  className="min-w-[12rem] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-200 sm:max-w-md"
-                />
-                <button
-                  type="button"
-                  onClick={() => dispatch(fetchAdminBanks())}
-                  className="shrink-0 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
-                >
-                  Refresh
-                </button>
+              <div className="flex shrink-0 flex-col gap-3 border-b border-gray-100 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  {[{ value: "ALL", label: "All" }, ...loanTypeOptions].map((o) => {
+                    const count = o.value === "ALL" ? activeBanks.length : loanTypeCounts[o.value] || 0;
+                    const selected = loanTypeFilter === o.value;
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        onClick={() => setLoanTypeFilter(o.value)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                          selected
+                            ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                            : "border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50"
+                        }`}
+                      >
+                        {o.label}
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                            selected ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <input
+                    type="text"
+                    value={loanTypeSearch}
+                    onChange={(e) => setLoanTypeSearch(e.target.value)}
+                    placeholder="Search bank name or loan type..."
+                    className="min-w-[12rem] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-200 lg:w-64 lg:flex-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => dispatch(fetchAdminBanks())}
+                    className="shrink-0 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                  >
+                    Refresh
+                  </button>
+                </div>
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
