@@ -10,8 +10,13 @@ import {
   ImagePlus,
   KeyRound,
   Lock,
+  Mail,
+  MapPin,
   Pencil,
+  RefreshCw,
+  Search,
   Trash2,
+  X,
 } from "lucide-react";
 
 import { getAuthData } from "../../../utils/localStorage";
@@ -32,6 +37,32 @@ const loanTypeOptions = [
   { value: "LAP_SALARIED", label: "LAP Loan (Salaried)" },
   { value: "LAP_SELF_EMPLOYED", label: "LAP Loan (Self Employed)" },
 ];
+
+const loanTypeShortLabels = {
+  PERSONAL: "Personal",
+  BUSINESS: "Business",
+  HOME_LOAN_SALARIED: "Home · Salaried",
+  HOME_LOAN_SELF_EMPLOYED: "Home · Self Emp.",
+  LAP_SALARIED: "LAP · Salaried",
+  LAP_SELF_EMPLOYED: "LAP · Self Emp.",
+};
+
+const setupFilterOptions = [
+  { value: "ALL", label: "All banks" },
+  { value: "NO_RM_EMAIL", label: "Missing RM email" },
+  { value: "NO_PINCODES", label: "No pincodes" },
+];
+
+const sortOptions = [
+  { value: "NAME", label: "Name A–Z" },
+  { value: "PINCODES", label: "Most pincodes" },
+  { value: "RECENT", label: "Recently added" },
+];
+
+const pincodeCount = (b) =>
+  Array.isArray(b?.serviceablePincodes)
+    ? b.serviceablePincodes.filter((p) => String(p || "").trim()).length
+    : 0;
 
 const rsmTypeOptions = [
   { value: "PERSONAL", label: "Personal Loan (ASM)" },
@@ -70,6 +101,8 @@ const Banks = () => {
   const [submitting, setSubmitting] = useState(false);
   const [loanTypeSearch, setLoanTypeSearch] = useState("");
   const [loanTypeFilter, setLoanTypeFilter] = useState("ALL");
+  const [setupFilter, setSetupFilter] = useState("ALL");
+  const [sortBy, setSortBy] = useState("NAME");
   const [showAddPassword, setShowAddPassword] = useState(false);
 
   const [showPassword, setShowPassword] = useState({});
@@ -103,14 +136,44 @@ const Banks = () => {
 
   const filteredBanks = useMemo(() => {
     const q = String(loanTypeSearch || "").trim().toUpperCase();
-    return activeBanks.filter((b) => {
+    const list = activeBanks.filter((b) => {
       const type = String(b?.loanType || "").toUpperCase();
       if (loanTypeFilter !== "ALL" && type !== loanTypeFilter) return false;
+      if (setupFilter === "NO_RM_EMAIL" && String(b?.rmEmail || "").trim()) return false;
+      if (setupFilter === "NO_PINCODES" && pincodeCount(b) > 0) return false;
       if (!q) return true;
-      const name = String(b?.bankName || b?.name || "").toUpperCase();
-      return type.includes(q) || name.includes(q);
+      const haystack = [b?.bankName, b?.name, type, b?.rmName, b?.rmEmail]
+        .map((v) => String(v || "").toUpperCase())
+        .join(" ");
+      return haystack.includes(q);
     });
-  }, [activeBanks, loanTypeSearch, loanTypeFilter]);
+    const byName = (a, b) =>
+      String(a?.bankName || a?.name || "").localeCompare(String(b?.bankName || b?.name || ""));
+    if (sortBy === "PINCODES") return list.sort((a, b) => pincodeCount(b) - pincodeCount(a) || byName(a, b));
+    if (sortBy === "RECENT") return list.sort((a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0));
+    return list.sort(byName);
+  }, [activeBanks, loanTypeSearch, loanTypeFilter, setupFilter, sortBy]);
+
+  const setupCounts = useMemo(() => {
+    const scoped =
+      loanTypeFilter === "ALL"
+        ? activeBanks
+        : activeBanks.filter((b) => String(b?.loanType || "").toUpperCase() === loanTypeFilter);
+    return {
+      ALL: scoped.length,
+      NO_RM_EMAIL: scoped.filter((b) => !String(b?.rmEmail || "").trim()).length,
+      NO_PINCODES: scoped.filter((b) => pincodeCount(b) === 0).length,
+    };
+  }, [activeBanks, loanTypeFilter]);
+
+  const hasActiveFilters =
+    loanTypeFilter !== "ALL" || setupFilter !== "ALL" || String(loanTypeSearch).trim() !== "";
+
+  const clearFilters = () => {
+    setLoanTypeFilter("ALL");
+    setSetupFilter("ALL");
+    setLoanTypeSearch("");
+  };
 
   const copyText = (text) => {
     navigator.clipboard.writeText(text || "");
@@ -646,26 +709,114 @@ const Banks = () => {
             </form>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="flex shrink-0 flex-col gap-3 border-b border-gray-100 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <div className="shrink-0 space-y-3 border-b border-gray-100 bg-gray-50/60 px-4 py-3">
+                {/* Row 1: search + quick filter + sort + refresh */}
+                <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={loanTypeSearch}
+                      onChange={(e) => setLoanTypeSearch(e.target.value)}
+                      placeholder="Search by bank, loan type or RM email"
+                      className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-9 text-sm text-gray-900 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                    {loanTypeSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setLoanTypeSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                        aria-label="Clear search"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex shrink-0 rounded-xl border border-gray-200 bg-white p-0.5 shadow-sm">
+                      {setupFilterOptions.map((o) => {
+                        const selected = setupFilter === o.value;
+                        const count = setupCounts[o.value] || 0;
+                        const warn = o.value !== "ALL" && count > 0;
+                        return (
+                          <button
+                            key={o.value}
+                            type="button"
+                            onClick={() => setSetupFilter(o.value)}
+                            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                              selected ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            {o.value === "NO_RM_EMAIL" && <Mail className="h-3.5 w-3.5" />}
+                            {o.value === "NO_PINCODES" && <MapPin className="h-3.5 w-3.5" />}
+                            {o.label}
+                            <span
+                              className={`rounded-full px-1.5 text-[10px] font-bold ${
+                                selected
+                                  ? "bg-white/20 text-white"
+                                  : warn
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="shrink-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                      aria-label="Sort banks"
+                    >
+                      {sortOptions.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          Sort: {o.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => dispatch(fetchAdminBanks())}
+                      disabled={banksLoading}
+                      className="shrink-0 rounded-xl border border-gray-200 bg-white p-2 text-gray-600 shadow-sm transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50"
+                      title="Refresh"
+                      aria-label="Refresh banks"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${banksLoading ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Row 2: loan type tabs (single line, scrolls on small screens) */}
+                <div className="-mx-1 flex items-center gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:thin]">
                   {[{ value: "ALL", label: "All" }, ...loanTypeOptions].map((o) => {
                     const count = o.value === "ALL" ? activeBanks.length : loanTypeCounts[o.value] || 0;
                     const selected = loanTypeFilter === o.value;
+                    const empty = count === 0 && !selected;
                     return (
                       <button
                         key={o.value}
                         type="button"
                         onClick={() => setLoanTypeFilter(o.value)}
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                        title={o.label}
+                        className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                           selected
-                            ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50"
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : empty
+                            ? "text-gray-400 hover:bg-white"
+                            : "text-gray-700 hover:bg-white hover:shadow-sm"
                         }`}
                       >
-                        {o.label}
+                        {o.value === "ALL" ? "All loan types" : loanTypeShortLabels[o.value] || o.label}
                         <span
-                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                            selected ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
+                          className={`rounded-full px-1.5 text-[10px] font-bold ${
+                            selected ? "bg-white/20 text-white" : empty ? "bg-gray-100 text-gray-400" : "bg-emerald-50 text-emerald-700"
                           }`}
                         >
                           {count}
@@ -674,21 +825,22 @@ const Banks = () => {
                     );
                   })}
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <input
-                    type="text"
-                    value={loanTypeSearch}
-                    onChange={(e) => setLoanTypeSearch(e.target.value)}
-                    placeholder="Search bank name or loan type..."
-                    className="min-w-[12rem] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-200 lg:w-64 lg:flex-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => dispatch(fetchAdminBanks())}
-                    className="shrink-0 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
-                  >
-                    Refresh
-                  </button>
+
+                {/* Row 3: result summary */}
+                <div className="flex items-center justify-between text-[11px] text-gray-500">
+                  <span>
+                    Showing <b className="text-gray-800">{filteredBanks.length}</b> of {activeBanks.length} banks
+                  </span>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-900"
+                    >
+                      <X className="h-3 w-3" />
+                      Clear filters
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -700,7 +852,19 @@ const Banks = () => {
               ) : banksError ? (
                 <p className="text-red-600 text-sm">{String(banksError)}</p>
               ) : filteredBanks.length === 0 ? (
-                <p className="text-gray-500 text-sm">No banks available</p>
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 text-center">
+                  <Search className="mb-2 h-6 w-6 text-gray-300" />
+                  <p className="text-sm font-semibold text-gray-700">No banks match these filters</p>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="mt-2 text-xs font-semibold text-emerald-700 hover:text-emerald-900"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
                   {filteredBanks.map((b, index) => {
@@ -757,20 +921,32 @@ const Banks = () => {
                         <div className="h-px bg-gray-100" />
 
                         {(() => {
-                          const pinCount = Array.isArray(b.serviceablePincodes)
-                            ? b.serviceablePincodes.filter((p) => String(p || "").trim()).length
-                            : 0;
+                          const pinCount = pincodeCount(b);
+                          const rmEmail = String(b.rmEmail || "").trim();
                           return (
-                            <div
-                              className={`text-[10px] font-semibold px-2 py-1 rounded-md w-fit ${
-                                pinCount > 0
-                                  ? "bg-teal-50 text-teal-800 border border-teal-100"
-                                  : "bg-amber-50 text-amber-800 border border-amber-100"
-                              }`}
-                            >
-                              {pinCount > 0
-                                ? `${pinCount} pincode${pinCount === 1 ? "" : "s"}`
-                                : "No pincodes — hidden in RSM pincode search"}
+                            <div className="flex flex-wrap gap-1.5">
+                              <div
+                                className={`text-[10px] font-semibold px-2 py-1 rounded-md w-fit ${
+                                  pinCount > 0
+                                    ? "bg-teal-50 text-teal-800 border border-teal-100"
+                                    : "bg-amber-50 text-amber-800 border border-amber-100"
+                                }`}
+                              >
+                                {pinCount > 0
+                                  ? `${pinCount} pincode${pinCount === 1 ? "" : "s"}`
+                                  : "No pincodes — hidden in RSM pincode search"}
+                              </div>
+                              <div
+                                className={`inline-flex max-w-full items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md ${
+                                  rmEmail
+                                    ? "bg-sky-50 text-sky-800 border border-sky-100"
+                                    : "bg-amber-50 text-amber-800 border border-amber-100"
+                                }`}
+                                title={rmEmail ? `Bank RM: ${b.rmName ? `${b.rmName} – ` : ""}${rmEmail}` : "Add RM email to enable Send to Bank"}
+                              >
+                                <Mail className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{rmEmail || "No RM email"}</span>
+                              </div>
                             </div>
                           );
                         })()}
