@@ -19,6 +19,7 @@ import {
   Share2,
 } from "lucide-react";
 import axios from "axios";
+import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
@@ -474,9 +475,8 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       if (!data.permanentAddressStability) errors.permanentAddressStability = "Stability is required.";
     }
 
-    if (!data.loanAmount || data.loanAmount <= 0) {
-      errors.loanAmount = "Valid loan amount is required.";
-    }
+    const loanAmountError = loanAmountRangeError(data.loanAmount);
+    if (loanAmountError) errors.loanAmount = loanAmountError;
 
     if (!data.addressProof) errors.addressProof = "Address proof is required.";
     if (!data.aadharFront) errors.aadharFront = "Aadhar Front is required.";

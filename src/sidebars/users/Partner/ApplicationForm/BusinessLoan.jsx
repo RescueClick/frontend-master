@@ -18,6 +18,7 @@ import {
   Share2,
 } from "lucide-react";
 import axios from "axios";
+import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
@@ -451,8 +452,8 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
     }
 
     if (stepIndex === 2) {
-      const loanRes = positiveNumberSchema.safeParse(data.loanAmount);
-      if (!loanRes.success) errors.loanAmount = "Loan amount must be greater than zero.";
+      const loanAmountError = loanAmountRangeError(data.loanAmount);
+      if (loanAmountError) errors.loanAmount = loanAmountError;
 
       const businessNameRes = zodRequiredTextMin3("Business name must be at least 3 characters.").safeParse(data.businessName);
       if (!businessNameRes.success) errors.businessName = businessNameRes.error.issues[0].message;
@@ -669,10 +670,8 @@ function validateForm(formData) {
 
   // Loan Deatils..........
 
-  if (!formData.loanAmount) errors.loanAmount = "loan Amount is required.";
-  else if (Number(formData.loanAmount) <= 0) {
-    errors.loanAmount = "Loan amount must be greater than zero.";
-  }
+  const loanAmountError = loanAmountRangeError(formData.loanAmount);
+  if (loanAmountError) errors.loanAmount = loanAmountError;
 
   // Personal Documents.......
 

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import axios from "axios";
+import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
@@ -452,6 +453,9 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
     if (data.hasRunningLoan === "YES" && (!data.monthlyEmiPaying || Number(data.monthlyEmiPaying) <= 0)) {
       errors.monthlyEmiPaying = "Monthly EMI is required when running loan is Yes.";
     }
+
+    const loanAmountError = loanAmountRangeError(data.loanAmount);
+    if (loanAmountError) errors.loanAmount = loanAmountError;
 
     if (!data.password) errors.password = "Password is required.";
     if (!data.confirmPassword) errors.confirmPassword = "Confirm Password is required.";

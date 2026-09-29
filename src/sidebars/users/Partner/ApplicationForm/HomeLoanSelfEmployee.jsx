@@ -19,6 +19,7 @@ import {
   Share2,
 } from "lucide-react";
 import axios from "axios";
+import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
@@ -648,9 +649,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     }
 
 
-    if (!formData.loanAmount || formData.loanAmount < 5000 || formData.loanAmount > 10000000) {
-      errors.loanAmount = "Loan amount must be between ₹5,000 and ₹1,00,00,000.";
-    }
+    const loanAmountError = loanAmountRangeError(formData.loanAmount);
+    if (loanAmountError) errors.loanAmount = loanAmountError;
 
 
     // At least one address proof

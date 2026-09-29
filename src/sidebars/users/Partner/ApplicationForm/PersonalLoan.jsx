@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
+import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
 import {
@@ -555,11 +556,8 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     }
 
     // Loan
-    if (formData.loanAmount === "" || formData.loanAmount === null || formData.loanAmount === undefined) {
-      errors.loanAmount = "Loan amount is required.";
-    } else if (Number(formData.loanAmount) <= 0) {
-      errors.loanAmount = "Loan amount must be greater than zero.";
-    }
+    const loanAmountError = loanAmountRangeError(formData.loanAmount);
+    if (loanAmountError) errors.loanAmount = loanAmountError;
 
     if (!formData.loanPurpose) {
       errors.loanPurpose = "Loan purpose is required.";

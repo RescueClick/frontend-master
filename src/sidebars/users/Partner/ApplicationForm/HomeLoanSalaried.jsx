@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import axios from "axios";
+import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
@@ -713,9 +714,8 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
       errors.reference2Contact = "Reference 2 contact cannot be same as Reference 1 contact.";
     }
 
-    if (!formData.loanAmount || formData.loanAmount < 5000 || formData.loanAmount > 5000000) {
-      errors.loanAmount = "Loan amount must be between ₹5,000 and ₹50,00,000.";
-    }
+    const loanAmountError = loanAmountRangeError(formData.loanAmount);
+    if (loanAmountError) errors.loanAmount = loanAmountError;
     
 
     if (!formData.bankStatement1) errors.bankStatement1 = "Bank Statement 1 is required.";
