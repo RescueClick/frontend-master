@@ -495,6 +495,12 @@ export default function CustomerTable() {
                 · ID <span className="font-mono text-slate-800">{model.employeeId}</span>
               </>
             ) : null}
+            {model.partnerName ? (
+              <>
+                {" "}
+                · Partner <span className="font-medium text-slate-800">{model.partnerName}</span>
+              </>
+            ) : null}
           </p>
         </div>
         <button
@@ -546,14 +552,25 @@ export default function CustomerTable() {
                 ["ASM name", model.asmName ?? "—"],
                 ["RM employee ID", model.rmEmployeeId ?? "—"],
                 ["RM name", model.rmName ?? "—"],
-                ["Partner employee ID", model.partnerEmployeeId ?? "—"],
-                ["Partner name", model.partnerName ?? "—"],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg bg-white px-3 py-2.5 border border-slate-100 shadow-sm">
                   <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</dt>
                   <dd className="mt-0.5 text-sm text-slate-900 font-medium break-words">{value}</dd>
                 </div>
               ))}
+              {(model.partnerName || model.partnerEmployeeId) && (
+                <div className="rounded-lg bg-white px-3 py-2.5 border border-slate-100 shadow-sm">
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Partner name</dt>
+                  <dd className="mt-0.5 text-sm text-slate-900 font-medium break-words">
+                    {model.partnerName || "—"}
+                  </dd>
+                  {model.partnerEmployeeId ? (
+                    <dd className="mt-1 text-xs font-mono text-slate-500 break-words">
+                      {model.partnerEmployeeId}
+                    </dd>
+                  ) : null}
+                </div>
+              )}
             </dl>
           </section>
 
