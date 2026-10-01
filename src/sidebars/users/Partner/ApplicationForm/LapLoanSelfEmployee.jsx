@@ -201,12 +201,12 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
   }, [resumeError]);
 
   const steps = [
-    { label: "Personal", id: "personal" },
-    { label: "Address", id: "address" },
-    { label: "Business & Property", id: "business" },
-    { label: "Documents", id: "documents" },
-    { label: "References", id: "references" },
-    { label: "Review & Security", id: "review" },
+    "Personal",
+    "Address",
+    "Business & Property",
+    "Documents",
+    "References",
+    "Review & Security",
   ];
 
   useEffect(() => {

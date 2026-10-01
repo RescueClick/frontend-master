@@ -193,12 +193,12 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
   }, [resumeError]);
 
   const steps = [
-    { label: "Personal", id: "personal" },
-    { label: "Address", id: "address" },
-    { label: "Employment & Property", id: "employment" },
-    { label: "Documents", id: "documents" },
-    { label: "References", id: "references" },
-    { label: "Review & Security", id: "review" },
+    "Personal",
+    "Address",
+    "Employment & Property",
+    "Documents",
+    "References",
+    "Review & Security",
   ];
 
   useEffect(() => {

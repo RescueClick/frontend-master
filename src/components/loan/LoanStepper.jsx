@@ -26,6 +26,7 @@ export default function LoanStepper({
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-sm">
         {steps.map((step, idx) => {
+          const label = typeof step === "string" ? step : step?.label || step?.id || `Step ${idx + 1}`;
           const isActive = idx === currentStep;
           const isDone = idx < currentStep;
           const isClickable = idx <= maxStep && !loading;
@@ -33,7 +34,7 @@ export default function LoanStepper({
 
           return (
             <button
-              key={step}
+              key={typeof step === "string" ? step : step?.id || label}
               type="button"
               onClick={() => isClickable && onStepClick(idx)}
               disabled={!isClickable}
@@ -52,7 +53,7 @@ export default function LoanStepper({
               aria-current={isActive ? "step" : undefined}
             >
               <span className="inline-flex items-center gap-1">
-                <span>{idx + 1}. {step}</span>
+                <span>{idx + 1}. {label}</span>
                 {stepErrorCount > 0 && (
                   <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-100 px-1 text-[10px] font-semibold text-red-700">
                     {stepErrorCount}
