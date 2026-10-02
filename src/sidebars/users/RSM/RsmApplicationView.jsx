@@ -93,6 +93,11 @@ const businessFields = [
   { label: "Years in Business", value: (b) => b?.yearsInBusiness },
 ];
 
+const isSalariedLoanType = (loanType) =>
+  ["PERSONAL", "HOME_LOAN_SALARIED", "LAP_SALARIED"].includes(
+    String(loanType || "").toUpperCase()
+  );
+
 const toIndianWords = (num) => {
   if (isNaN(num) || num <= 0) return "";
   const n = Math.floor(num);
@@ -1530,9 +1535,9 @@ const RsmApplicationView = () => {
                 <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
                   <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wider mb-3 flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-emerald-600"/>
-                    {applicationData.loanType === "PERSONAL" ? "Employment Information" : "Business Information"}
+                    {isSalariedLoanType(applicationData.loanType) ? "Employment Information" : "Business Information"}
                   </h2>
-                  {applicationData.loanType === "PERSONAL"
+                  {isSalariedLoanType(applicationData.loanType)
                     ? renderFields(employmentFields, applicationData.employmentInfo)
                     : renderFields(businessFields, applicationData.businessInfo)}
                 </div>
