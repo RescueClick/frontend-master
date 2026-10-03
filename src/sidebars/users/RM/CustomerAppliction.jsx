@@ -82,8 +82,8 @@ const businessFields = [
   { label: "Landmark", value: (b) => b?.businessLandmark },
   { label: "Business Vintage", value: (b) => b?.businessVintage },
   { label: "GST Number", value: (b) => b?.gstNumber },
-  { label: "Annual Turnover (INR)", value: (b) => b?.annualTurnoverInINR },
-  { label: "Years in Business", value: (b) => b?.yearsInBusiness },
+  { label: "Annual Turnover (INR)", value: (b) => b?.annualTurnoverInINR || b?.annualTurnover },
+  { label: "Years in Business", value: (b) => b?.yearsInBusiness || b?.businessVintage },
 ];
 
 const isSalariedLoanType = (loanType) =>

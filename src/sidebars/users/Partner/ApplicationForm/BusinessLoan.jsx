@@ -803,7 +803,9 @@ const handleSubmit = async () => {
         businessAddress: formData.businessAddress,
         businessLandmark: formData.businessLandmark,
         businessVintage: formData.businessVintage,
+        yearsInBusiness: formData.businessVintage,
         annualTurnover: formData.annualTurnover,
+        annualTurnoverInINR: formData.annualTurnover,
         gstNumber: formData.gstNumber,
       },
       references: [
