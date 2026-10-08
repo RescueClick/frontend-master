@@ -24,7 +24,6 @@ import {
   AlertCircle,
   Percent,
   MessageCircle,
-  ExternalLink,
   Share2,
   Copy,
   Check,
@@ -405,10 +404,10 @@ export default function PartnerStorefront() {
 
   const currentStoreUrl = window.location.href;
 
-  // Opens the application in a new tab/page with the referral code attached
+  // Opens the loan form on this site so the customer can fill it directly.
   const handleApplyNow = (productPath) => {
     const targetUrl = `${productPath}?ref=${encodeURIComponent(partnerCode)}`;
-    window.open(targetUrl, "_blank", "noopener,noreferrer");
+    window.location.assign(targetUrl);
   };
 
   const handleCopyStoreLink = () => {
@@ -596,11 +595,11 @@ export default function PartnerStorefront() {
               )}
 
               <a
-                href="#official-certificate"
+                href="#loan-products"
                 className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow-md transition hover:scale-[1.02] active:scale-95"
               >
-                <Award className="w-4 h-4 text-amber-950" />
-                <span>View Certificate ↓</span>
+                <Banknote className="w-4 h-4 text-amber-950" />
+                <span>Fill Loan Form ↓</span>
               </a>
 
               <button
@@ -659,150 +658,19 @@ export default function PartnerStorefront() {
           </div>
         </div>
 
-        {/* 4. OPEN DIRECTOR-SIGNED AUTHORIZATION CERTIFICATE (SHOWN DIRECTLY ON PAGE) */}
-        <div id="official-certificate" className="bg-white rounded-3xl p-4 sm:p-7 shadow-sm border border-slate-200 scroll-mt-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-slate-100 gap-3">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 text-xs font-bold border border-amber-200">
-                <Award className="w-4 h-4 text-amber-600" />
-                Director-Signed Authorization Certificate
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-                Official Partner Verification Record
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600">
-                Officially authorized and recorded in the {COMPANY_NAME} partner registry. Verification is public and open for all applicants.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handlePrintCertificate}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition border border-slate-200 self-start sm:self-auto shadow-sm"
-            >
-              <Printer className="w-4 h-4 text-slate-600" />
-              <span>Print Official Certificate</span>
-            </button>
-          </div>
-
-          {/* Certificate Body Container */}
-          <div className="overflow-x-auto pb-2">
-            <div
-              className="relative mx-auto w-full min-w-[320px] max-w-[760px] bg-white border-[10px] border-teal-700 p-5 sm:p-8 rounded-xl shadow-lg overflow-hidden select-none"
-              style={{ minHeight: "460px" }}
-            >
-              {/* Corner Decorative Triangles */}
-              <div className="absolute top-2 left-2 w-0 h-0 border-l-[28px] border-l-teal-700 border-b-[28px] border-b-transparent"></div>
-              <div className="absolute top-2 right-2 w-0 h-0 border-r-[28px] border-r-teal-700 border-b-[28px] border-b-transparent"></div>
-              <div className="absolute bottom-2 left-2 w-0 h-0 border-l-[28px] border-l-teal-700 border-t-[28px] border-t-transparent"></div>
-              <div className="absolute bottom-2 right-2 w-0 h-0 border-r-[28px] border-r-teal-700 border-t-[28px] border-t-transparent"></div>
-
-              {/* Inner Gold Thin Border */}
-              <div className="border-2 border-amber-300/80 p-4 sm:p-6 rounded-lg bg-gradient-to-b from-amber-50/20 via-white to-teal-50/20">
-                {/* Header / Logo */}
-                <div className="text-center mb-3">
-                  <div className="inline-flex items-center justify-center gap-2 mb-1">
-                    <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-teal-800">
-                      Dhan<span className="text-amber-500">Source</span> Capital
-                    </span>
-                  </div>
-                  <p className="text-[11px] sm:text-xs text-slate-500 font-semibold tracking-wider uppercase">
-                    {COMPANY_NAME_LEGAL}
-                  </p>
-                </div>
-
-                {/* Certificate Title */}
-                <div className="text-center my-3">
-                  <span className="inline-block px-4 py-1 bg-teal-50 border border-teal-300 text-teal-900 text-xs sm:text-sm font-black tracking-[2px] uppercase rounded-full shadow-sm">
-                    CERTIFIED CHANNEL PARTNER
-                  </span>
-                </div>
-
-                {/* Recipient Name */}
-                <div className="text-center my-4">
-                  <p className="text-xs text-slate-500 uppercase tracking-widest font-semibold">
-                    This Official Certificate is Proudly Awarded To
-                  </p>
-                  <h3 className="text-2xl sm:text-3xl font-black text-teal-800 font-serif italic tracking-wide mt-1 break-words px-2">
-                    {partnerName}
-                  </h3>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-0.5 mt-2 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
-                    <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-                    Partner ID: <span className="font-mono font-bold text-teal-700">{partnerCode}</span>
-                    {partner?.region && <span className="text-slate-400">• {partner.region}</span>}
-                  </div>
-                </div>
-
-                {/* Authorization Text */}
-                <p className="text-center text-xs sm:text-sm italic leading-relaxed text-slate-700 max-w-lg mx-auto my-3">
-                  You are hereby authorized as an official Channel Partner to promote, process,
-                  and assist applicants for all Financial Products and Services offered by{" "}
-                  <span className="font-bold text-slate-900">{COMPANY_NAME_LEGAL}</span> across India.
-                </p>
-
-                {/* Signatures & Seal */}
-                <div className="grid grid-cols-3 items-end pt-6 sm:pt-8 mt-5 border-t border-slate-200 gap-2">
-                  {/* Left Signature: Anil Bagad (CEO & Director) */}
-                  <div className="text-center">
-                    <div className="h-12 flex items-center justify-center mb-1">
-                      <span className="font-serif italic font-bold text-slate-800 text-base sm:text-lg tracking-wider">
-                        Anil Bagad
-                      </span>
-                    </div>
-                    <div className="w-24 sm:w-32 border-b-2 border-slate-700 mx-auto mb-1"></div>
-                    <div className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-full px-1">Anil Bagad</div>
-                    <div className="text-[10px] sm:text-xs text-teal-700 font-semibold">
-                      CEO &amp; Director
-                    </div>
-                  </div>
-
-                  {/* Middle Seal */}
-                  <div className="text-center">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-full bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-amber-300 shadow flex flex-col items-center justify-center text-white p-1">
-                      <CheckCircle2 className="w-4 h-4 text-white mb-0.5" />
-                      <span className="text-[8px] sm:text-[9px] font-extrabold uppercase leading-tight text-center">
-                        Verified<br />{currentYear}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right Signature: Partner Digital Sign */}
-                  <div className="text-center">
-                    <div className="h-12 flex flex-col items-center justify-center mb-1">
-                      <span className="italic font-serif text-slate-800 text-xs sm:text-sm font-bold truncate max-w-[130px] block mx-auto px-1">
-                        {partnerName}
-                      </span>
-                      <span className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
-                        ✓ Digitally Signed
-                      </span>
-                    </div>
-                    <div className="w-24 sm:w-32 border-b-2 border-slate-700 mx-auto mb-1"></div>
-                    <div className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-[140px] mx-auto px-1">
-                      {partnerName}
-                    </div>
-                    <div className="text-[10px] sm:text-xs text-teal-700 font-semibold">
-                      Partner Digital Sign
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 5. INTERACTIVE LOAN PRODUCTS CATALOG */}
-        <div id="loan-products" className="space-y-4">
+        {/* 4. DIRECT LOAN FORMS — customers apply on this page */}
+        <div id="loan-products" className="space-y-4 scroll-mt-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-1">
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200">
                 <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                Select Any Loan Product to View Eligibility &amp; Apply
+                Apply here — the customer fills the loan form directly
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-                Loan Products &amp; Eligibility
+                Direct Loan Application
               </h2>
               <p className="text-xs sm:text-sm text-slate-600">
-                Click on any card to view detailed <strong>Age, Income, CIBIL &amp; Required Documents</strong>. Click <strong>Apply Now</strong> to open the digital application in a new tab.
+                Choose Personal, Business, Home, or LAP and fill the form on this page. The file is mapped to this advisor.
               </p>
             </div>
 
@@ -968,23 +836,153 @@ export default function PartnerStorefront() {
                     </div>
                   </div>
 
-                  {/* Apply Now Button (Opens designated loan form in a NEW TAB with partnerCode) */}
                   <div className="pt-2">
                     <button
                       type="button"
                       onClick={() => handleApplyNow(prod.path)}
                       className="w-full py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition flex items-center justify-center gap-1.5 group transform active:scale-95"
                     >
-                      <span>Apply for {prod.title}</span>
-                      <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      <span>Fill {prod.title} Form</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                     <p className="text-[10px] text-center text-slate-400 mt-1">
-                      Opens in new tab • Ref: <span className="font-mono font-bold text-slate-600">{partnerCode}</span>
+                      Opens the form on this site • Ref: <span className="font-mono font-bold text-slate-600">{partnerCode}</span>
                     </p>
                   </div>
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* 5. DIRECTOR-SIGNED AUTHORIZATION CERTIFICATE */}
+        <div id="official-certificate" className="bg-white rounded-3xl p-4 sm:p-7 shadow-sm border border-slate-200 scroll-mt-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-slate-100 gap-3">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 text-xs font-bold border border-amber-200">
+                <Award className="w-4 h-4 text-amber-600" />
+                Director-Signed Authorization Certificate
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+                Official Partner Verification Record
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600">
+                Officially authorized and recorded in the {COMPANY_NAME} partner registry. Verification is public and open for all applicants.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePrintCertificate}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition border border-slate-200 self-start sm:self-auto shadow-sm"
+            >
+              <Printer className="w-4 h-4 text-slate-600" />
+              <span>Print Official Certificate</span>
+            </button>
+          </div>
+
+          {/* Certificate Body Container */}
+          <div className="overflow-x-auto pb-2">
+            <div
+              className="relative mx-auto w-full min-w-[320px] max-w-[760px] bg-white border-[10px] border-teal-700 p-5 sm:p-8 rounded-xl shadow-lg overflow-hidden select-none"
+              style={{ minHeight: "460px" }}
+            >
+              {/* Corner Decorative Triangles */}
+              <div className="absolute top-2 left-2 w-0 h-0 border-l-[28px] border-l-teal-700 border-b-[28px] border-b-transparent"></div>
+              <div className="absolute top-2 right-2 w-0 h-0 border-r-[28px] border-r-teal-700 border-b-[28px] border-b-transparent"></div>
+              <div className="absolute bottom-2 left-2 w-0 h-0 border-l-[28px] border-l-teal-700 border-t-[28px] border-t-transparent"></div>
+              <div className="absolute bottom-2 right-2 w-0 h-0 border-r-[28px] border-r-teal-700 border-t-[28px] border-t-transparent"></div>
+
+              {/* Inner Gold Thin Border */}
+              <div className="border-2 border-amber-300/80 p-4 sm:p-6 rounded-lg bg-gradient-to-b from-amber-50/20 via-white to-teal-50/20">
+                {/* Header / Logo */}
+                <div className="text-center mb-3">
+                  <div className="inline-flex items-center justify-center gap-2 mb-1">
+                    <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-teal-800">
+                      Dhan<span className="text-amber-500">Source</span> Capital
+                    </span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-slate-500 font-semibold tracking-wider uppercase">
+                    {COMPANY_NAME_LEGAL}
+                  </p>
+                </div>
+
+                {/* Certificate Title */}
+                <div className="text-center my-3">
+                  <span className="inline-block px-4 py-1 bg-teal-50 border border-teal-300 text-teal-900 text-xs sm:text-sm font-black tracking-[2px] uppercase rounded-full shadow-sm">
+                    CERTIFIED CHANNEL PARTNER
+                  </span>
+                </div>
+
+                {/* Recipient Name */}
+                <div className="text-center my-4">
+                  <p className="text-xs text-slate-500 uppercase tracking-widest font-semibold">
+                    This Official Certificate is Proudly Awarded To
+                  </p>
+                  <h3 className="text-2xl sm:text-3xl font-black text-teal-800 font-serif italic tracking-wide mt-1 break-words px-2">
+                    {partnerName}
+                  </h3>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-0.5 mt-2 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+                    <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+                    Partner ID: <span className="font-mono font-bold text-teal-700">{partnerCode}</span>
+                    {partner?.region && <span className="text-slate-400">• {partner.region}</span>}
+                  </div>
+                </div>
+
+                {/* Authorization Text */}
+                <p className="text-center text-xs sm:text-sm italic leading-relaxed text-slate-700 max-w-lg mx-auto my-3">
+                  You are hereby authorized as an official Channel Partner to promote, process,
+                  and assist applicants for all Financial Products and Services offered by{" "}
+                  <span className="font-bold text-slate-900">{COMPANY_NAME_LEGAL}</span> across India.
+                </p>
+
+                {/* Signatures & Seal */}
+                <div className="grid grid-cols-3 items-end pt-6 sm:pt-8 mt-5 border-t border-slate-200 gap-2">
+                  {/* Left Signature: Anil Bagad (CEO & Director) */}
+                  <div className="text-center">
+                    <div className="h-12 flex items-center justify-center mb-1">
+                      <span className="font-serif italic font-bold text-slate-800 text-base sm:text-lg tracking-wider">
+                        Anil Bagad
+                      </span>
+                    </div>
+                    <div className="w-24 sm:w-32 border-b-2 border-slate-700 mx-auto mb-1"></div>
+                    <div className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-full px-1">Anil Bagad</div>
+                    <div className="text-[10px] sm:text-xs text-teal-700 font-semibold">
+                      CEO &amp; Director
+                    </div>
+                  </div>
+
+                  {/* Middle Seal */}
+                  <div className="text-center">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-full bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-amber-300 shadow flex flex-col items-center justify-center text-white p-1">
+                      <CheckCircle2 className="w-4 h-4 text-white mb-0.5" />
+                      <span className="text-[8px] sm:text-[9px] font-extrabold uppercase leading-tight text-center">
+                        Verified<br />{currentYear}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Signature: Partner Digital Sign */}
+                  <div className="text-center">
+                    <div className="h-12 flex flex-col items-center justify-center mb-1">
+                      <span className="italic font-serif text-slate-800 text-xs sm:text-sm font-bold truncate max-w-[130px] block mx-auto px-1">
+                        {partnerName}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
+                        ✓ Digitally Signed
+                      </span>
+                    </div>
+                    <div className="w-24 sm:w-32 border-b-2 border-slate-700 mx-auto mb-1"></div>
+                    <div className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-[140px] mx-auto px-1">
+                      {partnerName}
+                    </div>
+                    <div className="text-[10px] sm:text-xs text-teal-700 font-semibold">
+                      Partner Digital Sign
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
