@@ -309,7 +309,7 @@ export default function PartnerStorefront() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   // Keep track of which loan card has its eligibility details expanded
-  const [expandedCardId, setExpandedCardId] = useState("personal-loan");
+  const [expandedCardId, setExpandedCardId] = useState(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -482,195 +482,72 @@ export default function PartnerStorefront() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
       {/* 1. TOP ANNOUNCEMENT RIBBON */}
-      <div className="bg-gradient-to-r from-teal-800 via-teal-700 to-emerald-800 text-white py-2 px-4 shadow-sm border-b border-teal-900/20">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2">
-            <Sparkles className="w-4 h-4 text-amber-300 flex-shrink-0 animate-pulse" />
-            <span className="text-xs sm:text-sm font-black tracking-tight text-white">
-              Get free financial consultation for Loans &amp; Financial Products with {partnerName}.
-            </span>
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-[11px] font-semibold text-teal-100 bg-white/10 px-3 py-0.5 rounded-full border border-white/20">
-              Personal • Business • Home • LAP
-            </span>
-          </div>
+      <div className="bg-teal-800 text-white py-1 px-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
+          <span className="text-[11px] sm:text-xs font-bold tracking-tight truncate">
+            Loans with {partnerName}
+          </span>
+          <span className="text-[10px] font-semibold text-teal-100 flex-shrink-0">
+            Personal · Business · Home · LAP
+          </span>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-3 sm:px-6 pt-5 sm:pt-7 space-y-6">
-        {/* 2. OFFICIAL BRAND & PORTAL HEADER */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-slate-200">
-          <div className="flex items-center gap-3">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 pt-3 sm:pt-4 space-y-4">
+        {/* 2. Compact advisor bar so the loan form is the first thing on screen */}
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-white rounded-2xl px-3 py-2 shadow-sm border border-slate-200">
+          <div className="flex items-center gap-2.5 min-w-0">
             {brandLogo ? (
-              <img
-                src={brandLogo}
-                alt={COMPANY_NAME}
-                className="h-8 sm:h-9 w-auto object-contain"
-              />
+              <img src={brandLogo} alt={COMPANY_NAME} className="h-7 w-auto object-contain flex-shrink-0" />
             ) : (
-              <span className="text-lg font-black text-teal-800">{COMPANY_NAME}</span>
+              <span className="text-sm font-black text-teal-800">{COMPANY_NAME}</span>
             )}
-            <span className="hidden sm:inline-block text-slate-300">|</span>
-            <div className="hidden sm:block">
-              <p className="text-xs font-bold text-slate-800 leading-tight">
-                Certified Financial Advisor Digital Store
-              </p>
-              <p className="text-[10px] text-slate-500 font-medium">
-                Authorized by {COMPANY_NAME_LEGAL}
+            <div className="min-w-0">
+              <p className="text-sm font-black text-slate-900 leading-tight truncate">{partnerName}</p>
+              <p className="text-[11px] text-slate-500 font-medium truncate">
+                {partnerCode} · {locationText} · {partnerLevel}
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 sm:gap-3 text-xs">
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              Direct File Assignment
-            </span>
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
-              <Lock className="w-3.5 h-3.5 text-teal-600" />
-              256-Bit SSL Encrypted
-            </span>
-          </div>
-        </div>
-
-        {/* 3. PARTNER HERO SHOWCASE CARD (AUTHENTIC DATA, NO FAKE STATS) */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-950 via-teal-900 to-slate-950 text-white p-5 sm:p-8 shadow-2xl border border-teal-700/60">
-          {/* Ambient Glow */}
-          <div className="absolute -top-20 -right-20 w-72 h-72 bg-teal-400/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            {/* Left: Partner Profile Details (Photo removed per instructions) */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-400/20 text-teal-200 border border-teal-300/30">
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal-300" />
-                  Verified Channel Partner
-                </span>
-                <span className="text-xs font-mono font-bold text-amber-300 bg-amber-400/10 px-2.5 py-0.5 rounded border border-amber-400/20">
-                  ID: {partnerCode}
-                </span>
-                {employeeId && (
-                  <span className="text-xs font-mono text-teal-200 bg-white/10 px-2 py-0.5 rounded border border-white/20">
-                    Emp: {employeeId}
-                  </span>
-                )}
-                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-400/20">
-                  {partnerLevel} Tier
-                </span>
-              </div>
-
-              <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                {partnerName}
-              </h1>
-
-              <p className="text-xs sm:text-sm font-bold text-teal-300">
-                Certified {COMPANY_NAME} Digital Loan Advisor
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 text-xs text-teal-100/80 pt-0.5">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-amber-300" />
-                  {locationText}{pincodeText}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Building2 className="w-3.5 h-3.5 text-teal-300" />
-                  {COMPANY_NAME_LEGAL}
-                </span>
-              </div>
-            </div>
-
-            {/* Right: Actions (Call, Scroll to Certificate, Share) */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 flex-shrink-0">
-              {rawPhone && (
-                <button
-                  type="button"
-                  onClick={handleCallAdvisor}
-                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-teal-600/60 hover:bg-teal-600 text-white text-xs font-bold border border-teal-400/40 transition hover:scale-[1.02] active:scale-95"
-                >
-                  <Phone className="w-4 h-4 text-amber-300" />
-                  <span>Call Advisor</span>
-                </button>
-              )}
-
-              <a
-                href="#loan-products"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow-md transition hover:scale-[1.02] active:scale-95"
-              >
-                <Banknote className="w-4 h-4 text-amber-950" />
-                <span>Fill Loan Form ↓</span>
-              </a>
-
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {rawPhone && (
               <button
                 type="button"
-                onClick={handleShareStorefront}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-teal-100 border border-white/20 text-xs font-bold transition"
-                title="Share Profile"
+                onClick={handleCallAdvisor}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-[11px] font-bold"
               >
-                <Share2 className="w-4 h-4" />
+                <Phone className="w-3.5 h-3.5" />
+                Call
               </button>
-            </div>
-          </div>
-
-          {/* Genuine Partner Guarantees (No fake stats) */}
-          <div className="relative z-10 pt-5 mt-6 border-t border-teal-800/80">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <p className="text-[11px] uppercase tracking-wider font-extrabold text-teal-300">
-                Official DhanSource Channel Partner Guarantees
-              </p>
-              <button
-                type="button"
-                onClick={handleCopyStoreLink}
-                className="text-[11px] font-bold text-teal-200 hover:text-white flex items-center gap-1"
-              >
-                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedLink ? "Link Copied!" : "Copy Advisor Link"}</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-                <span className="text-sm sm:text-base font-black text-white block">Direct Assignment</span>
-                <span className="text-[10px] text-teal-200 uppercase tracking-wider font-semibold">
-                  Mapped to {partnerName.split(" ")[0]}
-                </span>
-              </div>
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-                <span className="text-sm sm:text-base font-black text-amber-300 block">Zero Advance Fees</span>
-                <span className="text-[10px] text-teal-200 uppercase tracking-wider font-semibold">
-                  No Upfront Charges Ever
-                </span>
-              </div>
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-                <span className="text-sm sm:text-base font-black text-white block">Direct Disbursal</span>
-                <span className="text-[10px] text-teal-200 uppercase tracking-wider font-semibold">
-                  Credited Directly to Your Bank
-                </span>
-              </div>
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-                <span className="text-sm sm:text-base font-black text-emerald-300 block">100% Digital</span>
-                <span className="text-[10px] text-teal-200 uppercase tracking-wider font-semibold">
-                  Bank-Grade Encryption
-                </span>
-              </div>
-            </div>
+            )}
+            <button
+              type="button"
+              onClick={handleCopyStoreLink}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold"
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedLink ? "Copied" : "Copy link"}
+            </button>
+            <button
+              type="button"
+              onClick={handleShareStorefront}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
+              title="Share"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
         {/* 4. DIRECT LOAN FORMS — customers apply on this page */}
         <div id="loan-products" className="space-y-4 scroll-mt-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-1">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-2">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200">
-                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                Apply here — the customer fills the loan form directly
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+              <h2 className="text-lg sm:text-xl font-black text-slate-900">
                 Direct Loan Application
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600">
-                Choose Personal, Business, Home, or LAP and fill the form on this page. The file is mapped to this advisor.
+              <p className="text-xs text-slate-600">
+                Pick a loan and fill the form. It is mapped to this advisor.
               </p>
             </div>
 
@@ -852,6 +729,31 @@ export default function PartnerStorefront() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Partner guarantees sit under the form so they do not push it down */}
+        <div className="rounded-2xl bg-teal-950 text-white px-4 py-3 border border-teal-800">
+          <p className="text-[11px] uppercase tracking-wider font-extrabold text-teal-300 mb-2">
+            Official DhanSource Channel Partner Guarantees
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+            <div className="rounded-lg bg-white/5 px-2 py-2 border border-white/10">
+              <span className="text-xs font-black text-white block">Direct Assignment</span>
+              <span className="text-[10px] text-teal-200">Mapped to {partnerName.split(" ")[0]}</span>
+            </div>
+            <div className="rounded-lg bg-white/5 px-2 py-2 border border-white/10">
+              <span className="text-xs font-black text-amber-300 block">Zero Advance Fees</span>
+              <span className="text-[10px] text-teal-200">No Upfront Charges</span>
+            </div>
+            <div className="rounded-lg bg-white/5 px-2 py-2 border border-white/10">
+              <span className="text-xs font-black text-white block">Direct Disbursal</span>
+              <span className="text-[10px] text-teal-200">Credited to Your Bank</span>
+            </div>
+            <div className="rounded-lg bg-white/5 px-2 py-2 border border-white/10">
+              <span className="text-xs font-black text-emerald-300 block">100% Digital</span>
+              <span className="text-[10px] text-teal-200">Bank-Grade Encryption</span>
+            </div>
           </div>
         </div>
 
