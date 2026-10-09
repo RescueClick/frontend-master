@@ -37,6 +37,7 @@ export default function RSM() {
   const initialPeriod = readPeriodState(location);
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -152,7 +153,7 @@ export default function RSM() {
     const term = searchQuery.trim().toLowerCase();
 
     return rsms.filter((r) => {
-      if (!matchesMonthYear(r, { year, month, dateKeys: ["createdAt"] })) return false;
+      if (!matchesMonthYear(r, { year, month, day, dateKeys: ["createdAt"] })) return false;
       if (!term) return true;
       const fullName = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
       const employeeId = (r.employeeId || "").toLowerCase();
@@ -168,7 +169,7 @@ export default function RSM() {
         rsmType.includes(term)
       );
     });
-  }, [rsms, searchQuery, year, month]);
+  }, [rsms, searchQuery, year, month, day]);
 
   const sortedFilteredRsms = sortNewestFirst(filteredRsms, { dateKeys: ["createdAt"] });
 
@@ -826,7 +827,7 @@ export default function RSM() {
               year={year}
               month={month}
               onYearChange={setYear}
-              onMonthChange={setMonth}
+              onMonthChange={setMonth} day={day} onDayChange={setDay}
             />
             <button
               type="button"

@@ -26,15 +26,18 @@ const COLORS = {
   rose: { glow: "from-rose-100 to-rose-50", icon: "from-rose-500 to-rose-600", badge: "bg-rose-50 text-rose-700 border-rose-200" },
 };
 
-export function usePeriodLabel(year, month) {
+export function usePeriodLabel(year, month, day = "all") {
   return useMemo(() => {
-    if (year === "all" && month === "all") return "All Time";
-    if (month === "all") return `Year ${year}`;
+    const d = Number(day);
+    const hasDay = day !== "all" && day != null && day !== "" && Number.isFinite(d) && d >= 1 && d <= 31;
+    if (year === "all" && month === "all" && !hasDay) return "All Time";
+    if (month === "all" && !hasDay) return `Year ${year}`;
     const mIdx = typeof month === "number" ? month - 1 : parseInt(month, 10) - 1;
     const mStr = SHORT_MONTH_NAMES[mIdx] || `Month ${month}`;
+    if (hasDay) return year === "all" ? `${d} ${mStr}` : `${d} ${mStr} ${year}`;
     if (year === "all") return `All Years • ${mStr}`;
     return `${mStr} ${year}`;
-  }, [year, month]);
+  }, [year, month, day]);
 }
 
 /**

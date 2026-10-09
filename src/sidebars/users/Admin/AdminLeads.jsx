@@ -79,6 +79,7 @@ export default function AdminLeads() {
   const [loanTypeFilter, setLoanTypeFilter] = useState("");
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -222,7 +223,7 @@ export default function AdminLeads() {
     .filter((lead) => STATUS_MAPPING[activeStatus]?.includes(lead.status))
     .filter((lead) => {
       if (loanTypeFilter && lead.loanType !== loanTypeFilter) return false;
-      if (!matchesMonthYear(lead, { year, month, dateKeys: ["createdAt"] })) return false;
+      if (!matchesMonthYear(lead, { year, month, day, dateKeys: ["createdAt"] })) return false;
       if (!searchTerm) return true;
       const term = searchTerm.toLowerCase();
       return (
@@ -305,7 +306,7 @@ export default function AdminLeads() {
             </option>
           ))}
         </select>
-        <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
+        <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} day={day} onDayChange={setDay} />
       </div>
 
       {/* Tabs */}

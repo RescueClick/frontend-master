@@ -83,6 +83,7 @@ export default function PartnerTable() {
   const initialPeriod = readPeriodState(location);
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
 
   const { loading, error, data } = useSelector((state) => state.admin.partners);
 
@@ -407,7 +408,7 @@ export default function PartnerTable() {
       const partnerRegion = norm(partner.region);
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;
-      if (!matchesMonthYear(partner, { year, month, dateKeys: ["createdAt"] })) return false;
+      if (!matchesMonthYear(partner, { year, month, day, dateKeys: ["createdAt"] })) return false;
 
       const isActive = !isSoftDeleted && partner.status === "ACTIVE";
       // Active tab: never show suspended/inactive. Suspended tab: only those.
@@ -442,7 +443,7 @@ export default function PartnerTable() {
 
       return haystack.includes(term);
     });
-  }, [data, searchQuery, stateFilter, activeTab, year, month]);
+  }, [data, searchQuery, stateFilter, activeTab, year, month, day]);
 
   const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
@@ -868,7 +869,7 @@ loginAsUser(userId, navigate);
                 year={year}
                 month={month}
                 onYearChange={setYear}
-                onMonthChange={setMonth}
+                onMonthChange={setMonth} day={day} onDayChange={setDay}
               />
               <button
                 type="button"

@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchAdminDashboard, fetchRecentActivities } from '../../../feature/thunks/adminThunks';
+import { FilterDateInput } from '../../../components/MonthYearSelects';
 import { useRealtimeData } from '../../../utils/useRealtimeData';
 
 import {
@@ -63,59 +64,67 @@ const Dashboard = () => {
   const [month, setMonth] = useState(
     location.state?.month !== undefined ? location.state.month : currentMonth
   );
+  const [day, setDay] = useState(
+    location.state?.day !== undefined ? location.state.day : "all"
+  );
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
 
   const { data } = useSelector((state) => state.admin.dashboard);
   const recentActivitiesState = useSelector((state) => state.admin.recentActivities || { activities: [] });
   const activities = recentActivitiesState.activities || [];
 
-  const isFiltered = year !== "all" || month !== "all";
-  const isCurrentMonthActive = year === currentYear && month === currentMonth;
+  const isFiltered = year !== "all" || month !== "all" || (day !== "all" && day != null);
+  const isCurrentMonthActive = year === currentYear && month === currentMonth && (day === "all" || day == null);
 
-  // Period label for titles & subtitles
   const periodLabel = useMemo(() => {
-    if (year === "all" && month === "all") return "All Time";
-    if (month === "all") return `Year ${year}`;
+    const d = Number(day);
+    const hasDay = day !== "all" && day != null && day !== "" && Number.isFinite(d) && d >= 1 && d <= 31;
+    if (year === "all" && month === "all" && !hasDay) return "All Time";
+    if (month === "all" && !hasDay) return `Year ${year}`;
     const mIdx = typeof month === "number" ? month - 1 : parseInt(month, 10) - 1;
     const mStr = SHORT_MONTH_NAMES[mIdx] || `Month ${month}`;
+    if (hasDay) return year === "all" ? `${d} ${mStr}` : `${d} ${mStr} ${year}`;
     if (year === "all") return `All Years • ${mStr}`;
     return `${mStr} ${year}`;
-  }, [year, month]);
+  }, [year, month, day]);
 
   const fullPeriodLabel = useMemo(() => {
-    if (year === "all" && month === "all") return "All Time (Company-wide)";
-    if (month === "all") return `Full Year ${year}`;
+    const d = Number(day);
+    const hasDay = day !== "all" && day != null && day !== "" && Number.isFinite(d) && d >= 1 && d <= 31;
+    if (year === "all" && month === "all" && !hasDay) return "All Time (Company-wide)";
+    if (month === "all" && !hasDay) return `Full Year ${year}`;
     const mIdx = typeof month === "number" ? month - 1 : parseInt(month, 10) - 1;
     const mStr = MONTH_NAMES[mIdx] || `Month ${month}`;
+    if (hasDay) return year === "all" ? `${d} ${mStr}` : `${d} ${mStr} ${year}`;
     if (year === "all") return `${mStr} across all years`;
     return `${mStr} ${year}`;
-  }, [year, month]);
+  }, [year, month, day]);
 
   // Real-time dashboard updates with 30 second polling
   const fetchDashboardAction = useCallback(
-    () => fetchAdminDashboard({ year, month }),
-    [year, month]
+    () => fetchAdminDashboard({ year, month, day }),
+    [year, month, day]
   );
 
   useRealtimeData(fetchDashboardAction, {
     interval: 30000, // 30 seconds
     enabled: true,
-    dependencies: [year, month],
+    dependencies: [year, month, day],
   });
 
   // Explicit initial fetch & refetch on filter change
   useEffect(() => {
-    dispatch(fetchAdminDashboard({ year, month }));
-  }, [dispatch, year, month]);
+    dispatch(fetchAdminDashboard({ year, month, day }));
+  }, [dispatch, year, month, day]);
 
   // Fetch recent activities on mount and every 30 seconds
   useEffect(() => {
-    dispatch(fetchRecentActivities({ limit: 12, year, month }));
+    dispatch(fetchRecentActivities({ limit: 12, year, month, day }));
     const interval = setInterval(() => {
-      dispatch(fetchRecentActivities({ limit: 12, year, month }));
+      dispatch(fetchRecentActivities({ limit: 12, year, month, day }));
     }, 30000);
     return () => clearInterval(interval);
-  }, [dispatch, year, month]);
+  }, [dispatch, year, month, day]);
 
   // Escape key handler for breakdown modal
   useEffect(() => {
@@ -134,22 +143,25 @@ const Dashboard = () => {
   const handleSelectThisMonth = () => {
     setYear(currentYear);
     setMonth(currentMonth);
+    setDay("all");
   };
 
   const handleSelectLastMonth = () => {
     const prevDate = new Date(currentYear, currentMonth - 2, 1);
     setYear(prevDate.getFullYear());
     setMonth(prevDate.getMonth() + 1);
+    setDay("all");
   };
 
   const handleSelectAllTime = () => {
     setYear("all");
     setMonth("all");
+    setDay("all");
   };
 
   // Helper to navigate with current month state preserved
   const navigateWithPeriod = (path) => {
-    navigate(path, { state: { year, month } });
+    navigate(path, { state: { year, month, day } });
   };
 
   const BADGE_CLASSES = {
@@ -159,6 +171,8 @@ const Dashboard = () => {
     emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
   };
 
+  const periodBadge = day !== "all" && day != null ? "Daily" : "Monthly";
+
   const PeriodTitle = ({ label, color }) => (
     <div className="flex items-center gap-1.5 mb-1.5">
       <p className={`${typography.captionSmall()} uppercase tracking-wider`}>
@@ -166,7 +180,7 @@ const Dashboard = () => {
       </p>
       {isFiltered && (
         <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${BADGE_CLASSES[color]}`}>
-          Monthly
+          {periodBadge}
         </span>
       )}
     </div>
@@ -290,9 +304,10 @@ const Dashboard = () => {
               <select
                 id="admin-dash-year"
                 value={year}
-                onChange={(e) =>
-                  setYear(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))
-                }
+                onChange={(e) => {
+                  setYear(e.target.value === "all" ? "all" : parseInt(e.target.value, 10));
+                  setDay("all");
+                }}
                 className="text-xs font-semibold px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="all">All Years</option>
@@ -310,9 +325,10 @@ const Dashboard = () => {
               <select
                 id="admin-dash-month"
                 value={month}
-                onChange={(e) =>
-                  setMonth(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))
-                }
+                onChange={(e) => {
+                  setMonth(e.target.value === "all" ? "all" : parseInt(e.target.value, 10));
+                  setDay("all");
+                }}
                 className="text-xs font-semibold px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="all">All Months</option>
@@ -323,6 +339,16 @@ const Dashboard = () => {
                 ))}
               </select>
             </div>
+
+            <FilterDateInput
+              year={year}
+              month={month}
+              day={day}
+              onYearChange={setYear}
+              onMonthChange={setMonth}
+              onDayChange={setDay}
+              className="text-xs font-semibold px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
 
             {/* Reset Button (visible when non-default) */}
             {!isCurrentMonthActive && (
@@ -355,7 +381,7 @@ const Dashboard = () => {
                 </p>
                 {isFiltered && (
                   <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-red-50 text-red-700 border border-red-200">
-                    Monthly
+                    {periodBadge}
                   </span>
                 )}
               </div>
@@ -388,7 +414,7 @@ const Dashboard = () => {
                 </p>
                 {isFiltered && (
                   <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-                    Monthly
+                    {periodBadge}
                   </span>
                 )}
               </div>
@@ -519,7 +545,7 @@ const Dashboard = () => {
                 </p>
                 {isFiltered && (
                   <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                    Monthly
+                    {periodBadge}
                   </span>
                 )}
               </div>
@@ -576,7 +602,7 @@ const Dashboard = () => {
                 </p>
                 {isFiltered && (
                   <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Monthly
+                    {periodBadge}
                   </span>
                 )}
               </div>
@@ -1049,6 +1075,7 @@ const Dashboard = () => {
                       const handleSelect = () => {
                         setYear(mItem.year);
                         setMonth(mItem.month);
+                        setDay("all");
                         setShowBreakdownModal(false);
                       };
 

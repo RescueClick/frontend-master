@@ -65,6 +65,7 @@ export default function AsmPartner() {
   const initialPeriod = readPeriodState(location);
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const { id } = location.state || {};
 
   const navigate = useNavigate();
@@ -89,7 +90,7 @@ export default function AsmPartner() {
       const partnerRegion = String(c.region || "").trim().toLowerCase();
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;
-      if (!matchesMonthYear(c, { year, month, dateKeys: ["createdAt"] })) return false;
+      if (!matchesMonthYear(c, { year, month, day, dateKeys: ["createdAt"] })) return false;
 
       if (!term) return true;
 
@@ -111,7 +112,7 @@ export default function AsmPartner() {
         region.includes(term)
       );
     });
-  }, [Partners, searchQuery, stateFilter, year, month]);
+  }, [Partners, searchQuery, stateFilter, year, month, day]);
 
   const sortedFilteredCustomers = sortNewestFirst(filteredCustomers, { dateKeys: ["createdAt"] });
 
@@ -564,7 +565,7 @@ loginAsUser(userId, navigate);
                 </option>
               ))}
             </select>
-            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} day={day} onDayChange={setDay} />
             <button
               type="button"
               onClick={() => navigate(location.pathname.startsWith("/asm") ? "/asm/move-partners" : "/rsm/move-partners")}

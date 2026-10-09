@@ -36,6 +36,7 @@ import {
 import { matchesSearchTerm } from "../../../utils/tableFilter";
 import { loanTypeToTableShort, payoutLoanTypePillClass } from "../../../utils/loanTypeShort";
 import { matchesMonthYear } from "../../../utils/dateFilter";
+import { FilterDateInput } from "../../../components/MonthYearSelects";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
@@ -75,6 +76,7 @@ const AdminDonePayout = () => {
   const [month, setMonth] = useState(
     location.state?.month || "all"
   );
+  const [day, setDay] = useState(location.state?.day || "all");
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -124,11 +126,12 @@ const AdminDonePayout = () => {
       if (loanTypeFilter !== "all" && row.loanType !== loanTypeFilter)
         return false;
 
-      if (year !== "all" || month !== "all") {
+      if (year !== "all" || month !== "all" || (day !== "all" && day != null)) {
         if (
           !matchesMonthYear(row, {
-            year,
-            month,
+        year,
+        month,
+        day,
             dateKeys: ["disbursedAt", "createdAt", "applicationDate"],
           })
         ) {
@@ -161,7 +164,7 @@ const AdminDonePayout = () => {
 
       return matchesSearchTerm(searchTerm, searchFields);
     });
-  }, [rawRows, loanTypeFilter, year, month, searchTerm]);
+  }, [rawRows, loanTypeFilter, year, month, day, searchTerm]);
 
   const sortedRows = useMemo(() => {
     return sortNewestFirst(filteredRows, {
@@ -676,6 +679,7 @@ const AdminDonePayout = () => {
                   onClick={() => {
                     setYear("all");
                     setMonth("all");
+                    setDay("all");
                   }}
                   className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition ${
                     year === "all" && month === "all"
@@ -717,6 +721,17 @@ const AdminDonePayout = () => {
                     </option>
                   ))}
                 </select>
+
+
+                <FilterDateInput
+                  year={year}
+                  month={month}
+                  day={day}
+                  onYearChange={setYear}
+                  onMonthChange={setMonth}
+                  onDayChange={setDay}
+                  className="text-xs font-semibold px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 focus:outline-none"
+                />
 
                 <select
                   value={loanTypeFilter}

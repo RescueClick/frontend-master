@@ -180,10 +180,11 @@ export const fetchAsmDashboard = createAsyncThunk(
       return rejectWithValue("Authentication token not found");
     }
     try {
-      const { year, month } = filters || {};
+      const { year, month, day } = filters || {};
       const params = {};
       if (year !== undefined && year !== null) params.year = year;
       if (month !== undefined && month !== null) params.month = month;
+      if (day !== undefined && day !== null) params.day = day;
 
       const response = await axios.get(`${backendurl}/asm/dashboard`, {
         headers: {

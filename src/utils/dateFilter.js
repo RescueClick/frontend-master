@@ -3,14 +3,15 @@
  * Uses the FIRST available valid date in dateKeys (authoritative primary date)
  * to prevent the same record from matching multiple months if updatedAt differs from createdAt.
  */
-export function matchesMonthYear(row, { year, month, dateKeys } = {}) {
+export function matchesMonthYear(row, { year, month, day, dateKeys } = {}) {
   if (!row) return false;
 
   const y = typeof year === "string" ? (year === "all" ? null : parseInt(year, 10)) : year;
   const m = typeof month === "string" ? (month === "all" ? null : parseInt(month, 10)) : month;
+  const d = typeof day === "string" ? (day === "all" || day === "" ? null : parseInt(day, 10)) : day;
 
-  // If both year and month are null/unspecified or 'all', match all
-  if ((y === null || y === undefined) && (m === null || m === undefined)) return true;
+  // If year, month, and day are unspecified, match all
+  if ((y === null || y === undefined) && (m === null || m === undefined) && (d === null || d === undefined)) return true;
 
   const keys = Array.isArray(dateKeys) && dateKeys.length > 0
     ? dateKeys
@@ -33,6 +34,7 @@ export function matchesMonthYear(row, { year, month, dateKeys } = {}) {
 
   const recYear = recordDate.getFullYear();
   const recMonth = recordDate.getMonth() + 1; // 1-12
+  const recDay = recordDate.getDate();
 
   // If year is specified, must match
   if (Number.isFinite(y) && recYear !== y) {
@@ -41,6 +43,11 @@ export function matchesMonthYear(row, { year, month, dateKeys } = {}) {
 
   // If month is specified (1-12), must match
   if (Number.isFinite(m) && m >= 1 && m <= 12 && recMonth !== m) {
+    return false;
+  }
+
+  // Individual calendar day
+  if (Number.isFinite(d) && d >= 1 && d <= 31 && recDay !== d) {
     return false;
   }
 

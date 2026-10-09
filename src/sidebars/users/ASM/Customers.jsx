@@ -31,6 +31,7 @@ const Customer = () => {
   const [filterStatus, setFilterStatus] = useState("All");
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
 
   const [model, setModel] = useState(null)
 
@@ -86,6 +87,7 @@ const Customer = () => {
       const matchesDate = matchesMonthYear(customer, {
         year,
         month,
+        day,
         dateKeys: ["applicationDateRaw", "createdAt"],
       });
 
@@ -96,7 +98,7 @@ const Customer = () => {
       const bTime = b?.applicationDateRaw ? new Date(b.applicationDateRaw).getTime() : 0;
       return bTime - aTime; // newest first
     });
-  }, [customers, searchTerm, filterStatus, year, month]);
+  }, [customers, searchTerm, filterStatus, year, month, day]);
 
   const handleExport = useCallback(() => {
     const rows = filteredCustomers.map((c) => ({
@@ -457,7 +459,7 @@ const Customer = () => {
                 ))}
               </select>
             </div>
-            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} day={day} onDayChange={setDay} />
             <button
               type="button"
               onClick={handleExport}

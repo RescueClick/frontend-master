@@ -35,6 +35,7 @@ import { getAuthData } from "../../../utils/localStorage";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
+import { FilterDateInput } from "../../../components/MonthYearSelects";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -64,6 +65,7 @@ const AdminDisbursedLoans = () => {
   const now = new Date();
   const [year, setYear] = useState(location.state?.year || "all");
   const [month, setMonth] = useState(location.state?.month || "all");
+  const [day, setDay] = useState(location.state?.day || "all");
   const [loanTypeFilter, setLoanTypeFilter] = useState("all");
   const [payoutFilter, setPayoutFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -90,6 +92,7 @@ const AdminDisbursedLoans = () => {
         params: {
           year: year || "all",
           month: month || "all",
+          day: day && day !== "all" ? day : undefined,
           loanType: loanTypeFilter === "all" ? undefined : loanTypeFilter,
         },
       });
@@ -106,7 +109,7 @@ const AdminDisbursedLoans = () => {
     } finally {
       setLoading(false);
     }
-  }, [year, month, loanTypeFilter]);
+  }, [year, month, day, loanTypeFilter]);
 
   useEffect(() => {
     fetchDisbursedLoans();
@@ -389,7 +392,19 @@ const AdminDisbursedLoans = () => {
               <div className="flex items-center justify-between text-xs text-slate-500 mt-1.5">
                 <span>{summaryData.totalFilesCount} Completed Files</span>
                 <span className="font-bold text-emerald-600">
-                  {month === "all" ? (year === "all" ? "All Time" : `Year ${year}`) : new Date(year === "all" ? 2000 : year, month - 1).toLocaleString("default", { month: "short", ...(year !== "all" ? { year: "numeric" } : {}) })}
+                  {(() => {
+                    const d = Number(day);
+                    const hasDay = day !== "all" && day != null && Number.isFinite(d);
+                    if (hasDay && month !== "all") {
+                      return new Date(year === "all" ? new Date().getFullYear() : year, month - 1, d).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        ...(year !== "all" ? { year: "numeric" } : {}),
+                      });
+                    }
+                    if (month === "all") return year === "all" ? "All Time" : `Year ${year}`;
+                    return new Date(year === "all" ? 2000 : year, month - 1).toLocaleString("default", { month: "short", ...(year !== "all" ? { year: "numeric" } : {}) });
+                  })()}
                 </span>
               </div>
             </div>
@@ -476,7 +491,10 @@ const AdminDisbursedLoans = () => {
                 {/* Year */}
                 <select
                   value={year}
-                  onChange={(e) => setYear(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
+                  onChange={(e) => {
+                    setYear(e.target.value === "all" ? "all" : parseInt(e.target.value, 10));
+                    setDay("all");
+                  }}
                   className="text-xs font-semibold px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 focus:outline-none"
                 >
                   <option value="all">All Years</option>
@@ -490,7 +508,10 @@ const AdminDisbursedLoans = () => {
                 {/* Month */}
                 <select
                   value={month}
-                  onChange={(e) => setMonth(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
+                  onChange={(e) => {
+                    setMonth(e.target.value === "all" ? "all" : parseInt(e.target.value, 10));
+                    setDay("all");
+                  }}
                   className="text-xs font-semibold px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 focus:outline-none"
                 >
                   <option value="all">All Months</option>
@@ -500,6 +521,16 @@ const AdminDisbursedLoans = () => {
                     </option>
                   ))}
                 </select>
+
+                <FilterDateInput
+                  year={year}
+                  month={month}
+                  day={day}
+                  onYearChange={setYear}
+                  onMonthChange={setMonth}
+                  onDayChange={setDay}
+                  className="text-xs font-semibold px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 focus:outline-none"
+                />
 
                 {/* Loan Type */}
                 <select

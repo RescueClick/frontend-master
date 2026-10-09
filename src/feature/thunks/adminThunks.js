@@ -88,11 +88,12 @@ export const fetchAdminDashboard = createAsyncThunk(
   async (filters = {}, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
-      const { year, month } = filters || {};
+      const { year, month, day } = filters || {};
 
       const params = {};
       if (year !== undefined && year !== null) params.year = year;
       if (month !== undefined && month !== null) params.month = month;
+      if (day !== undefined && day !== null) params.day = day;
 
       const response = await axios.get(`${backendurl}/admin/dashboard`, {
         headers: {
@@ -119,12 +120,13 @@ export const fetchRecentActivities = createAsyncThunk(
       const limit = typeof arg === "number" ? arg : arg?.limit || 10;
       const year = typeof arg === "object" && arg ? arg.year : undefined;
       const month = typeof arg === "object" && arg ? arg.month : undefined;
+      const day = typeof arg === "object" && arg ? arg.day : undefined;
 
       const response = await axios.get(`${backendurl}/admin/recent-activities`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
-        params: { limit, year, month },
+        params: { limit, year, month, day },
       });
 
       return unwrapApiData(response.data);

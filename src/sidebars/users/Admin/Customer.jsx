@@ -134,7 +134,7 @@ export default function CustomerTable() {
 
   useEffect(() => {
     if (!location?.state || typeof location.state !== "object") return;
-    if (location.state.year !== undefined || location.state.month !== undefined) {
+    if (location.state.year !== undefined || location.state.month !== undefined || location.state.day !== undefined) {
       const next = readPeriodState(location);
       setYear(next.year);
       setMonth(next.month);

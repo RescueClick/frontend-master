@@ -24,6 +24,7 @@ import {
 } from "../../../feature/thunks/asmThunks";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { matchesMonthYear } from "../../../utils/dateFilter";
+import { FilterDateInput } from "../../../components/MonthYearSelects";
 import { matchesSearchTerm, matchesStatusFilter } from "../../../utils/tableFilter";
 import { loanTypeToTableShort, payoutLoanTypePillClass } from "../../../utils/loanTypeShort";
 import AppAntTable from "../../../components/shared/AppAntTable";
@@ -40,6 +41,7 @@ const AsmDonePayout = () => {
   const [month, setMonth] = useState(
     location.state?.allMonths ? "all" : location.state?.month || new Date().getMonth() + 1
   );
+  const [day, setDay] = useState(location.state?.day || "all");
 
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [approvalAmount, setApprovalAmount] = useState("");
@@ -74,17 +76,18 @@ const AsmDonePayout = () => {
       ]);
       const matchesStatus = matchesStatusFilter(row.payOutStatus, selectedFilter);
       const matchesDate =
-        year === "all" || month === "all"
+        (year === "all" || month === "all") && (day === "all" || day == null)
           ? true
           : matchesMonthYear(row, {
               year,
               month,
+              day,
               dateKeys: ["disbursedAt", "updatedAt", "createdAt", "applicationDate"],
             });
       return matchesSearch && matchesStatus && matchesDate;
     });
     return sortNewestFirst(filtered, { dateKeys: ["createdAt", "applicationDate"] });
-  }, [data, searchTerm, selectedFilter, year, month]);
+  }, [data, searchTerm, selectedFilter, year, month, day]);
 
   const { data: customerPartnersPayout } = useSelector(
     (state) => state.asm?.customerPartnersPayout || { data: null }
@@ -419,6 +422,7 @@ const AsmDonePayout = () => {
               onChange={(e) => {
                 const v = e.target.value;
                 setYear(v === "all" ? "all" : parseInt(v, 10));
+                setDay("all");
               }}
               className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
             >
@@ -435,6 +439,7 @@ const AsmDonePayout = () => {
               onChange={(e) => {
                 const v = e.target.value;
                 setMonth(v === "all" ? "all" : parseInt(v, 10));
+                setDay("all");
               }}
               className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
             >
@@ -445,6 +450,15 @@ const AsmDonePayout = () => {
                 </option>
               ))}
             </select>
+            <FilterDateInput
+              year={year}
+              month={month}
+              day={day}
+              onYearChange={setYear}
+              onMonthChange={setMonth}
+              onDayChange={setDay}
+              className="w-full md:w-44 px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
           </div>
         </div>
 

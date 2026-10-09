@@ -33,6 +33,7 @@ import {
 import { matchesSearchTerm } from "../../../utils/tableFilter";
 import { loanTypeToTableShort, payoutLoanTypePillClass } from "../../../utils/loanTypeShort";
 import { matchesMonthYear } from "../../../utils/dateFilter";
+import { FilterDateInput } from "../../../components/MonthYearSelects";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
@@ -76,6 +77,7 @@ const AsmPayouts = () => {
   const [month, setMonth] = useState(
     location.state?.month || "all"
   );
+  const [day, setDay] = useState(location.state?.day || "all");
 
   // Modal State
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -137,10 +139,11 @@ const AsmPayouts = () => {
   const periodFilteredRows = useMemo(() => {
     return allRows.filter((row) => {
       // Date filter (All Time vs Year/Month)
-      if (year !== "all" || month !== "all") {
+      if (year !== "all" || month !== "all" || (day !== "all" && day != null)) {
         const filterOpts = {
           year: year === "all" ? undefined : year,
           month: month === "all" ? undefined : month,
+          day: day === "all" ? undefined : day,
         };
         if (!matchesMonthYear(row, filterOpts)) return false;
       }
@@ -152,7 +155,7 @@ const AsmPayouts = () => {
 
       return true;
     });
-  }, [allRows, year, month, loanTypeFilter]);
+  }, [allRows, year, month, day, loanTypeFilter]);
 
   // Filter by Active Tab (All / Pending / Done)
   const tabFilteredRows = useMemo(() => {
@@ -776,6 +779,7 @@ const AsmPayouts = () => {
                     onClick={() => {
                       setYear("all");
                       setMonth("all");
+                    setDay("all");
                     }}
                     className={`px-2.5 py-1 rounded-lg transition-all ${
                       year === "all" && month === "all"
@@ -791,6 +795,7 @@ const AsmPayouts = () => {
                       const now = new Date();
                       setYear(now.getFullYear());
                       setMonth(now.getMonth() + 1);
+                    setDay("all");
                     }}
                     className={`px-2.5 py-1 rounded-lg transition-all ${
                       year === new Date().getFullYear() &&
@@ -808,6 +813,7 @@ const AsmPayouts = () => {
                   onChange={(e) => {
                     const val = e.target.value;
                     setYear(val === "all" ? "all" : parseInt(val, 10));
+                    setDay("all");
                   }}
                   className="text-xs font-semibold px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 focus:outline-none"
                 >
@@ -824,6 +830,7 @@ const AsmPayouts = () => {
                   onChange={(e) => {
                     const val = e.target.value;
                     setMonth(val === "all" ? "all" : parseInt(val, 10));
+                    setDay("all");
                   }}
                   className="text-xs font-semibold px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 focus:outline-none"
                 >
@@ -834,6 +841,17 @@ const AsmPayouts = () => {
                     </option>
                   ))}
                 </select>
+
+
+                <FilterDateInput
+                  year={year}
+                  month={month}
+                  day={day}
+                  onYearChange={setYear}
+                  onMonthChange={setMonth}
+                  onDayChange={setDay}
+                  className="text-xs font-semibold px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 focus:outline-none"
+                />
 
                 <select
                   value={loanTypeFilter}

@@ -42,6 +42,7 @@ const Partners = () => {
   const initialPeriod = readPeriodState(location);
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const dispatch = useDispatch();
 
   const openPartnerAnalytics = useCallback((partner) => {
@@ -145,11 +146,12 @@ const Partners = () => {
       const matchesDate = matchesMonthYear(partner, {
         year,
         month,
+        day,
         dateKeys: ["createdAt", "joinDate"],
       });
       return matchesSearch && matchesState && matchesActivity && matchesDate;
     });
-  }, [data, searchTerm, stateFilter, activityFilter, year, month]);
+  }, [data, searchTerm, stateFilter, activityFilter, year, month, day]);
 
   // Partners with strongest loan book first so RM can judge performance
   const sortedFilteredPartners = useMemo(() => {
@@ -716,7 +718,7 @@ const Partners = () => {
                   year={year}
                   month={month}
                   onYearChange={setYear}
-                  onMonthChange={setMonth}
+                  onMonthChange={setMonth} day={day} onDayChange={setDay}
                 />
               </div>
             </div>

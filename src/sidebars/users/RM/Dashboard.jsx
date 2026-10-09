@@ -48,6 +48,7 @@ const Dashboard = () => {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [day, setDay] = useState("all");
 
   const openPartnerAnalytics = useCallback((p) => {
     if (!p?.id) return;
@@ -65,22 +66,22 @@ const Dashboard = () => {
   const { data, loading, error } = useSelector((state) => state.rm.dashboard);
 
   const fetchDashboardAction = useCallback(
-    () => fetchDashboard({ year, month }),
-    [year, month]
+    () => fetchDashboard({ year, month, day }),
+    [year, month, day]
   );
 
   // Real-time dashboard updates with 30 second polling
   useRealtimeData(fetchDashboardAction, {
     interval: 30000, // 30 seconds
     enabled: true,
-    dependencies: [year, month],
+    dependencies: [year, month, day],
   });
 
   useEffect(() => {
-    dispatch(fetchDashboard({ year, month }));
-  }, [dispatch, year, month]);
+    dispatch(fetchDashboard({ year, month, day }));
+  }, [dispatch, year, month, day]);
 
-  const periodLabel = usePeriodLabel(year, month);
+  const periodLabel = usePeriodLabel(year, month, day);
   const fileStats = data?.fileStats;
   const isFiltered = Boolean(fileStats?.isFiltered);
 
@@ -96,7 +97,7 @@ const Dashboard = () => {
           : `${formatNumber(t.activePartners || 0)} Active • ${formatNumber(t.inactivePartners || 0)} Suspended`,
         icon: Users,
         color: "emerald",
-        onClick: () => navigate("/rm/partners", { state: { year, month } }),
+        onClick: () => navigate("/rm/partners", { state: { year, month, day } }),
       },
       {
         label: "Customers",
@@ -107,7 +108,7 @@ const Dashboard = () => {
           : "With loan files",
         icon: UserCheck,
         color: "purple",
-        onClick: () => navigate("/rm/customers", { state: { year, month } }),
+        onClick: () => navigate("/rm/customers", { state: { year, month, day } }),
       },
       {
         label: "Disbursed",
@@ -130,7 +131,7 @@ const Dashboard = () => {
         onClick: () => navigate("/rm/Follow-up"),
       },
     ];
-  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate, year, month]);
+  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate, year, month, day]);
 
   const targetVsAchievement = useMemo(() => {
     return (data?.targets || [])?.map((item) => {
@@ -506,8 +507,10 @@ const Dashboard = () => {
           <DashboardPeriodFilter
             year={year}
             month={month}
+            day={day}
             onYearChange={setYear}
             onMonthChange={setMonth}
+            onDayChange={setDay}
           />
         </div>
         {/* Key Metrics Cards */}
@@ -528,7 +531,7 @@ const Dashboard = () => {
           fileStats={fileStats}
           periodLabel={periodLabel}
           loading={loading}
-          onViewAll={() => navigate("/rm/customers", { state: { year, month } })}
+          onViewAll={() => navigate("/rm/customers", { state: { year, month, day } })}
         />
 
         {data?.partnerPayoutSummary?.length > 0 ? (

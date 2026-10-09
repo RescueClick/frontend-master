@@ -84,10 +84,11 @@ export const fetchRsmDashboard = createAsyncThunk(
       if (!rsmToken) {
         return rejectWithValue("Authentication token not found");
       }
-      const { year, month } = filters || {};
+      const { year, month, day } = filters || {};
       const params = {};
       if (year !== undefined && year !== null) params.year = year;
       if (month !== undefined && month !== null) params.month = month;
+      if (day !== undefined && day !== null) params.day = day;
 
       const response = await axios.get(`${backendurl}/rsm/dashboard`, {
         headers: {

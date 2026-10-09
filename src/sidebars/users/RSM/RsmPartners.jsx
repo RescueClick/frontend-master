@@ -19,6 +19,7 @@ export default function RsmPartners() {
   const dispatch = useDispatch();
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const { data = [], loading, error } = useSelector(
     (state) => state.rsm?.partners || { data: [], loading: false, error: null }
   );
@@ -41,7 +42,7 @@ export default function RsmPartners() {
       if (String(partner.status || "").toUpperCase() !== "ACTIVE") return false;
       const partnerRegion = String(partner.region || "").trim().toLowerCase();
       if (selectedState && partnerRegion !== selectedState) return false;
-      if (!matchesMonthYear(partner, { year, month, dateKeys: ["createdAt"] })) return false;
+      if (!matchesMonthYear(partner, { year, month, day, dateKeys: ["createdAt"] })) return false;
       if (!term) return true;
 
       const fullName = `${partner.firstName || ""} ${partner.lastName || ""}`
@@ -57,7 +58,7 @@ export default function RsmPartners() {
         partnerRegion.includes(term)
       );
     });
-  }, [data, searchQuery, stateFilter, year, month]);
+  }, [data, searchQuery, stateFilter, year, month, day]);
 
   const sortedPartners = sortNewestFirst(filteredPartners, {
     dateKeys: ["createdAt"],
@@ -162,7 +163,7 @@ export default function RsmPartners() {
               </option>
             ))}
           </select>
-          <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
+          <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} day={day} onDayChange={setDay} />
           <button
             type="button"
             className="flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"

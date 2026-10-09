@@ -47,6 +47,7 @@ export default function ASM() {
   const [loanTypeFilter, setLoanTypeFilter] = useState("ALL");
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [userToDeactivate, setUserToDeactivate] = useState(null);
   const [searchReplacement, setSearchReplacement] = useState("");
@@ -190,7 +191,7 @@ export default function ASM() {
 
   const displayAsm = useMemo(() => {
     let list = sortedAsm;
-    list = list.filter((c) => matchesMonthYear(c, { year, month, dateKeys: ["createdAt"] }));
+    list = list.filter((c) => matchesMonthYear(c, { year, month, day, dateKeys: ["createdAt"] }));
     if (loanTypeFilter && loanTypeFilter !== "ALL") {
       list = list.filter((c) => {
         const t = (c.asmType || c.rsmType || "").toUpperCase();
@@ -205,7 +206,7 @@ export default function ASM() {
       const code = (c.asmCode || "").toLowerCase();
       return name.includes(q) || id.includes(q) || code.includes(q);
     });
-  }, [sortedAsm, regionQuery, loanTypeFilter, year, month]);
+  }, [sortedAsm, regionQuery, loanTypeFilter, year, month, day]);
 
   const asmDeactivateCandidates = useMemo(() => {
     if (!userToDeactivate || !asm) return [];
@@ -736,7 +737,7 @@ const handleLoginAs = (userId) => {
               year={year}
               month={month}
               onYearChange={setYear}
-              onMonthChange={setMonth}
+              onMonthChange={setMonth} day={day} onDayChange={setDay}
             />
             <button
               type="button"

@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { FilterDateInput } from "./MonthYearSelects";
 
 const SHORT_MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -8,7 +9,7 @@ const SHORT_MONTH_NAMES = [
 /**
  * Admin-style month/year filter bar for ASM / RSM / RM dashboards.
  */
-export default function DashboardPeriodFilter({ year, month, onYearChange, onMonthChange }) {
+export default function DashboardPeriodFilter({ year, month, day = "all", onYearChange, onMonthChange, onDayChange }) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -20,17 +21,24 @@ export default function DashboardPeriodFilter({ year, month, onYearChange, onMon
   }, [currentYear]);
 
   const periodLabel = useMemo(() => {
-    if (year === "all" && month === "all") return "All Time";
+    const dayNum = Number(day);
+    if (year === "all" && month === "all" && !(dayNum >= 1)) return "All Time";
     if (month === "all") return `Year ${year}`;
     const mIdx = typeof month === "number" ? month - 1 : parseInt(month, 10) - 1;
     const mStr = SHORT_MONTH_NAMES[mIdx] || `Month ${month}`;
+    if (dayNum >= 1 && dayNum <= 31) {
+      return `${dayNum} ${mStr}${year === "all" ? "" : ` ${year}`}`;
+    }
     if (year === "all") return mStr;
     return `${mStr} ${year}`;
-  }, [year, month]);
+  }, [year, month, day]);
+
+  const clearDay = () => onDayChange?.("all");
 
   const setThisMonth = () => {
     onYearChange(currentYear);
     onMonthChange(currentMonth);
+    clearDay();
   };
 
   const setLastMonth = () => {
@@ -41,11 +49,13 @@ export default function DashboardPeriodFilter({ year, month, onYearChange, onMon
       onYearChange(currentYear);
       onMonthChange(currentMonth - 1);
     }
+    clearDay();
   };
 
   const setAllTime = () => {
     onYearChange("all");
     onMonthChange("all");
+    clearDay();
   };
 
   const isThisMonth = year === currentYear && month === currentMonth;
@@ -91,6 +101,7 @@ export default function DashboardPeriodFilter({ year, month, onYearChange, onMon
         onChange={(e) => {
           const v = e.target.value;
           onYearChange(v === "all" ? "all" : Number(v));
+          clearDay();
         }}
         className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-medium"
       >
@@ -106,6 +117,7 @@ export default function DashboardPeriodFilter({ year, month, onYearChange, onMon
         onChange={(e) => {
           const v = e.target.value;
           onMonthChange(v === "all" ? "all" : Number(v));
+          clearDay();
         }}
         className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-medium"
       >
@@ -116,6 +128,15 @@ export default function DashboardPeriodFilter({ year, month, onYearChange, onMon
           </option>
         ))}
       </select>
+      <FilterDateInput
+        year={year}
+        month={month}
+        day={day}
+        onYearChange={onYearChange}
+        onMonthChange={onMonthChange}
+        onDayChange={onDayChange}
+        className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-medium"
+      />
     </div>
   );
 }

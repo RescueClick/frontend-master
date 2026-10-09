@@ -63,6 +63,7 @@ export default function AdminQrInventory() {
     batchId: "",
     year: "all",
     month: "all",
+    day: "all",
   });
 
   const [genForm, setGenForm] = useState({
@@ -124,6 +125,7 @@ export default function AdminQrInventory() {
       if (filters.batchId) params.batchId = filters.batchId;
       if (filters.year && filters.year !== "all") params.year = filters.year;
       if (filters.month && filters.month !== "all") params.month = filters.month;
+      if (filters.day && filters.day !== "all") params.day = filters.day;
       const { data } = await axios.get(`${backendurl}/admin/qr-stickers`, {
         headers: authHeaders(),
         params,
@@ -543,13 +545,18 @@ export default function AdminQrInventory() {
           <MonthYearSelects
             year={filters.year}
             month={filters.month}
+            day={filters.day}
             onYearChange={(year) => {
               setPage(1);
-              setFilters((f) => ({ ...f, year }));
+              setFilters((f) => ({ ...f, year, day: "all" }));
             }}
             onMonthChange={(month) => {
               setPage(1);
-              setFilters((f) => ({ ...f, month }));
+              setFilters((f) => ({ ...f, month, day: "all" }));
+            }}
+            onDayChange={(day) => {
+              setPage(1);
+              setFilters((f) => ({ ...f, day }));
             }}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />

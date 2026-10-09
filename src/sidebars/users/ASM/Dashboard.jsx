@@ -23,6 +23,7 @@ const Dashboard = () => {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [day, setDay] = useState("all");
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,22 +59,22 @@ const Dashboard = () => {
   );
 
   const fetchDashboardAction = useCallback(
-    () => fetchAsmDashboard({ year, month }),
-    [year, month]
+    () => fetchAsmDashboard({ year, month, day }),
+    [year, month, day]
   );
 
   // Real-time dashboard updates with 30 second polling
   useRealtimeData(fetchDashboardAction, {
     interval: 30000, // 30 seconds
     enabled: true,
-    dependencies: [year, month],
+    dependencies: [year, month, day],
   });
 
   useEffect(() => {
-    dispatch(fetchAsmDashboard({ year, month }));
-  }, [dispatch, year, month]);
+    dispatch(fetchAsmDashboard({ year, month, day }));
+  }, [dispatch, year, month, day]);
 
-  const periodLabel = usePeriodLabel(year, month);
+  const periodLabel = usePeriodLabel(year, month, day);
   const fileStats = data?.fileStats;
   const isFiltered = Boolean(fileStats?.isFiltered);
 
@@ -204,8 +205,10 @@ const Dashboard = () => {
           <DashboardPeriodFilter
             year={year}
             month={month}
+            day={day}
             onYearChange={setYear}
             onMonthChange={setMonth}
+            onDayChange={setDay}
           />
         </div>
 
@@ -218,7 +221,7 @@ const Dashboard = () => {
               isFiltered={isFiltered}
               periodLabel={periodLabel}
               loading={loading && !data}
-              onClick={metric.path ? () => navigate(metric.path, { state: { year, month } }) : undefined}
+              onClick={metric.path ? () => navigate(metric.path, { state: { year, month, day } }) : undefined}
             />
           ))}
         </div>
@@ -227,7 +230,7 @@ const Dashboard = () => {
           fileStats={fileStats}
           periodLabel={periodLabel}
           loading={loading}
-          onViewAll={() => navigate(`${basePath}/applications`, { state: { year, month } })}
+          onViewAll={() => navigate(`${basePath}/applications`, { state: { year, month, day } })}
         />
 
         {/* Current Month Target Card - ASM focuses on Disbursement (Business Metric) */}

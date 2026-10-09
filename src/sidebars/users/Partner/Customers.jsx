@@ -33,6 +33,7 @@ const Customer = () => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const [customersData, setCustomersData] = useState([]);
   const [isMobileView, setIsMobileView] = useState(false);
 
@@ -81,6 +82,7 @@ const Customer = () => {
     const matchesDate = matchesMonthYear(customer, {
       year,
       month,
+      day,
       dateKeys: ["createdAt", "applicationDate"],
     });
 
@@ -389,7 +391,7 @@ const Customer = () => {
               </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
             </div>
-            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} day={day} onDayChange={setDay} />
             <button
               type="button"
               onClick={handleExport}

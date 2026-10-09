@@ -47,6 +47,7 @@ const Dashboard = () => {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [day, setDay] = useState("all");
 
   const openRmAnalytics = useCallback((rm) => {
     if (!rm?.id) return;
@@ -64,20 +65,20 @@ const Dashboard = () => {
   const { data, loading, error } = useSelector((state) => state.rsm?.dashboard || { data: null, loading: false, error: null });
 
   const fetchDashboardAction = useCallback(
-    () => fetchRsmDashboard({ year, month }),
-    [year, month]
+    () => fetchRsmDashboard({ year, month, day }),
+    [year, month, day]
   );
 
   // Real-time dashboard updates with 30 second polling
   useRealtimeData(fetchDashboardAction, {
     interval: 30000, // 30 seconds
     enabled: true,
-    dependencies: [year, month],
+    dependencies: [year, month, day],
   });
 
   useEffect(() => {
-    dispatch(fetchRsmDashboard({ year, month }));
-  }, [dispatch, year, month]);
+    dispatch(fetchRsmDashboard({ year, month, day }));
+  }, [dispatch, year, month, day]);
 
   const targetVsAchievement = useMemo(() => {
     return (data?.targets || [])?.map((item) => {
@@ -144,7 +145,7 @@ const Dashboard = () => {
     ? (data?.totals?.totalASMs ?? data?.totals?.totalRSMs ?? data?.totals?.totalRMs ?? 0)
     : (data?.totals?.totalRMs || 0);
 
-  const periodLabel = usePeriodLabel(year, month);
+  const periodLabel = usePeriodLabel(year, month, day);
   const fileStats = data?.fileStats;
   const isFiltered = Boolean(fileStats?.isFiltered);
 
@@ -159,7 +160,7 @@ const Dashboard = () => {
           : isRsm ? "ASMs under your management" : "RMs under your management",
         icon: Users,
         color: "blue",
-        onClick: () => navigate(subordinatePath, { state: { year, month } }),
+        onClick: () => navigate(subordinatePath, { state: { year, month, day } }),
       },
       {
         label: "Partners",
@@ -170,7 +171,7 @@ const Dashboard = () => {
           : `${formatNumber(t.activePartners || 0)} Active • ${formatNumber(t.totalPartners || 0)} Total`,
         icon: Building2,
         color: "emerald",
-        onClick: () => navigate(`${basePath}/partners`, { state: { year, month } }),
+        onClick: () => navigate(`${basePath}/partners`, { state: { year, month, day } }),
       },
       {
         label: "Customers",
@@ -181,7 +182,7 @@ const Dashboard = () => {
           : "With loan files",
         icon: UserCheck,
         color: "purple",
-        onClick: () => navigate(`${basePath}/applications`, { state: { year, month } }),
+        onClick: () => navigate(`${basePath}/applications`, { state: { year, month, day } }),
       },
       {
         label: "Disbursed",
@@ -195,7 +196,7 @@ const Dashboard = () => {
         color: "orange",
       },
     ];
-  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate, basePath, isRsm, subordinateTitle, subordinatePath, subordinateCount, year, month]);
+  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate, basePath, isRsm, subordinateTitle, subordinatePath, subordinateCount, year, month, day]);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#F8FAFC" }}>
@@ -264,8 +265,10 @@ const Dashboard = () => {
           <DashboardPeriodFilter
             year={year}
             month={month}
+            day={day}
             onYearChange={setYear}
             onMonthChange={setMonth}
+            onDayChange={setDay}
           />
         </div>
         {/* Key Metrics Cards */}
@@ -285,7 +288,7 @@ const Dashboard = () => {
           fileStats={fileStats}
           periodLabel={periodLabel}
           loading={loading}
-          onViewAll={() => navigate(`${basePath}/applications`, { state: { year, month } })}
+          onViewAll={() => navigate(`${basePath}/applications`, { state: { year, month, day } })}
         />
 
         {/* Current Month Target - RSM focuses on Disbursement (Business Metric) */}
@@ -518,7 +521,7 @@ const Dashboard = () => {
                   <div
                     key={index}
                     className="p-4 border rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`${basePath}/applications`, { state: { year, month } })}
+                    onClick={() => navigate(`${basePath}/applications`, { state: { year, month, day } })}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-3">

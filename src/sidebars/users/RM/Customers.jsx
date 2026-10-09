@@ -121,6 +121,7 @@ const Customers = () => {
   const initialPeriod = readPeriodState(location);
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const { id } = location.state || {};
 
 
@@ -208,6 +209,7 @@ const Customers = () => {
     const matchesDate = matchesMonthYear(customer, {
       year,
       month,
+      day,
       dateKeys: ["createdAt", "applicationDate", "joinDate"],
     });
     return matchesSearch && matchesStatus && matchesLoanType && matchesDate;
@@ -558,7 +560,7 @@ const Customers = () => {
                 year={year}
                 month={month}
                 onYearChange={setYear}
-                onMonthChange={setMonth}
+                onMonthChange={setMonth} day={day} onDayChange={setDay}
               />
               <button
                 type="button"

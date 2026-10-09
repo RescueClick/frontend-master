@@ -75,6 +75,7 @@ function RM() {
   const initialPeriod = readPeriodState(location);
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [rmToDeactivate, setRmToDeactivate] = useState(null);
@@ -126,7 +127,7 @@ function RM() {
     const term = searchQuery.trim().toLowerCase();
 
     return rms.filter((r) => {
-      if (!matchesMonthYear(r, { year, month, dateKeys: ["createdAt"] })) return false;
+      if (!matchesMonthYear(r, { year, month, day, dateKeys: ["createdAt"] })) return false;
       if (!term) return true;
       const fullName = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
       const rmCode = (r.rmCode || "").toLowerCase();
@@ -142,7 +143,7 @@ function RM() {
         asmMongoId.includes(term)
       );
     });
-  }, [rms, searchQuery, year, month]);
+  }, [rms, searchQuery, year, month, day]);
 
   const sortedFilteredRms = sortNewestFirst(filteredRms, { dateKeys: ["createdAt"] });
 
@@ -543,7 +544,7 @@ loginAsUser(userId, navigate);
               year={year}
               month={month}
               onYearChange={setYear}
-              onMonthChange={setMonth}
+              onMonthChange={setMonth} day={day} onDayChange={setDay}
             />
             <button
               type="button"
