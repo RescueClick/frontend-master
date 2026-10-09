@@ -1,5 +1,5 @@
 import React from "react";
-import { BadgeCheck, CreditCard, IndianRupee, Target } from "lucide-react";
+import { BadgeCheck, CreditCard, Hash, IndianRupee, Target } from "lucide-react";
 import { LOAN_PURPOSE_OPTIONS } from "../../utils/captureLeadStep1";
 import { CIBIL_SCORE_OPTIONS } from "../../utils/personFinancial";
 
@@ -21,7 +21,7 @@ export default function LoanApplicantFinancialFields({
     <div className="mb-8 rounded-2xl border border-teal-200 bg-teal-50/70 p-5 md:p-6">
       <h2 className="text-lg font-semibold text-gray-900">Before personal details</h2>
       <p className="text-sm text-gray-600 mt-1 mb-5">
-        Existing loan, monthly EMI, and CIBIL score.
+        Existing loan, monthly EMI, CIBIL score, and bounce.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
@@ -89,6 +89,50 @@ export default function LoanApplicantFinancialFields({
           </div>
           {renderError?.("cibilScoreBand")}
         </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-900">
+            Any bounce? *
+          </label>
+          <div className="relative">
+            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-600 pointer-events-none" />
+            <select
+              name="hasBounce"
+              value={formData.hasBounce || "NO"}
+              onChange={handleInputChange}
+              className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none bg-white border-teal-500"
+              required
+            >
+              <option value="NO">No</option>
+              <option value="YES">Yes</option>
+            </select>
+          </div>
+          {renderError?.("hasBounce")}
+        </div>
+
+        {formData.hasBounce === "YES" ? (
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-900">
+              How many? *
+            </label>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-600" />
+              <input
+                type="number"
+                name="bounceCount"
+                value={formData.bounceCount ?? ""}
+                onChange={handleInputChange}
+                min="1"
+                max="999"
+                step="1"
+                className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none bg-white border-teal-500"
+                placeholder="e.g. 2"
+                required
+              />
+            </div>
+            {renderError?.("bounceCount")}
+          </div>
+        ) : null}
 
         <div>
           <label className="block text-sm font-medium mb-2 text-gray-900">

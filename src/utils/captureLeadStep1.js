@@ -58,6 +58,8 @@ export async function captureLeadOnStep1Next({
         salaryInHand: formData.salaryInHand ?? "",
         salaryReceiptMode: formData.salaryReceiptMode || "",
         cibilScoreBand: formData.cibilScoreBand || "",
+        hasBounce: formData.hasBounce === "YES" ? "YES" : "NO",
+        bounceCount: formData.hasBounce === "YES" ? Number(formData.bounceCount) || 0 : 0,
       },
       financialDetails: {
         hasRunningLoan: hasRunning,
@@ -66,6 +68,8 @@ export async function captureLeadOnStep1Next({
         salaryInHand: formData.salaryInHand ?? "",
         salaryReceiptMode: formData.salaryReceiptMode || "",
         cibilScoreBand: formData.cibilScoreBand || "",
+        hasBounce: formData.hasBounce === "YES" ? "YES" : "NO",
+        bounceCount: formData.hasBounce === "YES" ? Number(formData.bounceCount) || 0 : 0,
       },
     };
 

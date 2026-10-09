@@ -98,6 +98,8 @@ export function mapRmFormDataToLoanFields(payload = {}) {
     loanPurpose: c.loanPurpose || "",
     salaryReceiptMode: c.salaryReceiptMode || "",
     cibilScoreBand: c.cibilScoreBand || "",
+    hasBounce: c.hasBounce || "NO",
+    bounceCount: c.bounceCount ?? "",
     salaryInHand: c.salaryInHand || emp.salaryInHand || "",
     coApplicantName: co.name || co.firstName || "",
     coApplicantPhone: co.phone || "",

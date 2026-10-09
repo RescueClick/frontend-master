@@ -178,6 +178,8 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
     loanPurpose: "",
     salaryReceiptMode: "",
     cibilScoreBand: "",
+    hasBounce: "NO",
+    bounceCount: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);

@@ -153,6 +153,8 @@ const Leads = () => {
         approvedAmount: app.approvedAmount,
         hasRunningLoan: app.hasRunningLoan || "NO",
         monthlyEmiPaying: app.monthlyEmiPaying || 0,
+        hasBounce: app.hasBounce || "NO",
+        bounceCount: app.bounceCount || 0,
         loanPurpose: app.loanPurpose || "",
         leadSource: app.leadSource || "PARTNER",
         leadFollowUp: app.leadFollowUp || { status: "NEW", remarks: "" },
@@ -480,6 +482,13 @@ const Leads = () => {
                           ) : (
                             <span className="text-gray-600">No</span>
                           )}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Bounce:</span>
+                        <span className="font-medium text-gray-800">
+                          {lead.hasBounce === "YES" ? `Yes (${lead.bounceCount || 0})` : "No"}
                         </span>
                       </div>
 

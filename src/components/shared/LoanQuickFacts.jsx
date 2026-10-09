@@ -14,11 +14,13 @@ export function cibilLabel(band) {
 
 export default function LoanQuickFacts({ row = {} }) {
   const existing = row.hasRunningLoan === "YES" ? "Yes" : "No";
+  const bounced = row.hasBounce === "YES";
   const loanAmount = row.loanAmount ?? row.requestedAmount;
   const facts = [
     ["CIBIL", cibilLabel(row.cibilScoreBand)],
     ["Existing loan", existing],
     ["EMI", existing === "Yes" ? formatInr(row.monthlyEmiPaying) : "—"],
+    ["Bounce", bounced ? String(row.bounceCount || 0) : "No"],
     ["Loan amount", formatInr(loanAmount)],
     ["Salary", formatInr(row.salaryInHand)],
   ];

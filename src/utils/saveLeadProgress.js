@@ -45,6 +45,8 @@ function buildCustomerPatch(formData = {}) {
     salaryInHand: formData.salaryInHand ?? "",
     salaryReceiptMode: formData.salaryReceiptMode || "",
     cibilScoreBand: formData.cibilScoreBand || "",
+    hasBounce: formData.hasBounce === "YES" ? "YES" : "NO",
+    bounceCount: formData.hasBounce === "YES" ? Number(formData.bounceCount) || 0 : 0,
   };
 }
 

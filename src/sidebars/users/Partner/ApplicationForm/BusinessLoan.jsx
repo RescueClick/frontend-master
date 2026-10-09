@@ -196,6 +196,8 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
     salaryInHand: "",
     salaryReceiptMode: "",
     cibilScoreBand: "",
+    hasBounce: "NO",
+    bounceCount: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);

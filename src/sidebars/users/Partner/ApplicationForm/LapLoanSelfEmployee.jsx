@@ -181,6 +181,8 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     salaryInHand: "",
     salaryReceiptMode: "",
     cibilScoreBand: "",
+    hasBounce: "NO",
+    bounceCount: "",
   });
 
   const [applicationId, setApplicationId] = useState(null);

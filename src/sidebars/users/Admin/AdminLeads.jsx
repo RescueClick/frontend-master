@@ -136,6 +136,8 @@ export default function AdminLeads() {
         approvedAmount: app.approvedAmount,
         hasRunningLoan: app.hasRunningLoan || app.customer?.hasRunningLoan || "NO",
         monthlyEmiPaying: app.monthlyEmiPaying || app.customer?.monthlyEmiPaying || 0,
+        hasBounce: app.hasBounce || app.customer?.hasBounce || "NO",
+        bounceCount: app.bounceCount ?? app.customer?.bounceCount ?? 0,
         loanPurpose: app.loanPurpose || app.customer?.loanPurpose || "",
         salaryInHand: app.salaryInHand || app.customer?.salaryInHand || "",
         salaryReceiptMode: app.salaryReceiptMode || app.customer?.salaryReceiptMode || "",
@@ -460,6 +462,12 @@ export default function AdminLeads() {
                       </span>
                     </div>
                   ) : null}
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500 font-medium">Bounce:</span>
+                    <span className="font-bold text-gray-900">
+                      {lead.hasBounce === "YES" ? `Yes (${lead.bounceCount || 0})` : "No"}
+                    </span>
+                  </div>
                   {lead.cibilScoreBand ? (
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500 font-medium">CIBIL:</span>

@@ -28,6 +28,7 @@ export default function ApplicationHoverCard({ row = {}, children }) {
     ["CIBIL", cibilLabel(row.cibilScoreBand)],
     ["Existing loan", existing],
     ["EMI", existing === "Yes" ? formatInr(row.monthlyEmiPaying) : "—"],
+    ["Bounce", row.hasBounce === "YES" ? String(row.bounceCount || 0) : "No"],
     ["Loan amount", formatInr(row.loanAmount ?? row.requestedAmount)],
     ["Salary", formatInr(row.salaryInHand)],
     ["Review", review],

@@ -184,6 +184,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     salaryInHand: "",
     salaryReceiptMode: "",
     cibilScoreBand: "",
+    hasBounce: "NO",
+    bounceCount: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);
