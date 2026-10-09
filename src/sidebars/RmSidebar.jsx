@@ -26,7 +26,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
 import { fetchRmProfile } from "../feature/thunks/rmThunks";
 import { clearAuthData, getAuthData } from "../utils/localStorage";
-import { backToOriginalRole, getOriginalRole, backToAdmin, formatRoleName } from "../utils/impersonation";
+import { backToOriginalRole, getReturnRole } from "../utils/impersonation";
 import { useDispatch, useSelector } from "react-redux";
 import { brandLogo, COMPANY_NAME } from "../config/branding";
 import NotificationBell from "../components/NotificationBell";
@@ -90,10 +90,8 @@ export default function RmSidebar() {
 
   const fallbackUser = getFallbackUser();
 
-  // Check if impersonating
-  const { parentUser } = getAuthData();
-  const isImpersonating = !!parentUser;
-  const originalRole = getOriginalRole();
+  // Show a return button whenever this RM session was opened from ASM, RSM, or Admin
+  const returnRole = getReturnRole();
 
   const counts = useSidebarNotifications();
 
@@ -242,19 +240,16 @@ export default function RmSidebar() {
             </div>
 
             <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-              {/* Go Back Buttons - Show when impersonating */}
-              {isImpersonating && originalRole && (
-                <>
-                  {/* Back directly to Admin if available */}
-                  <button
-                    onClick={() => backToAdmin(navigate)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
-                    title="Back to Admin Dashboard (exit all impersonations)"
-                  >
-                    <ArrowLeft size={14} />
-                    <span className="hidden sm:inline">Back to Admin</span>
-                  </button>
-                </>
+              {returnRole && (
+                <button
+                  type="button"
+                  onClick={() => backToOriginalRole(navigate)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium shadow-sm"
+                  title={`Back to ${returnRole.displayName} Dashboard`}
+                >
+                  <ArrowLeft size={14} />
+                  <span>Back to {returnRole.displayName}</span>
+                </button>
               )}
               {/* Notifications */}
               <NotificationBell />

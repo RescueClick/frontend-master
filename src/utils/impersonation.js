@@ -55,28 +55,75 @@ export const formatRoleName = (role) => {
   return roleMap[role] || role;
 };
 
+const ROLE_ROUTES = {
+  SUPER_ADMIN: "/admin",
+  ADMIN: "/admin",
+  ASM: "/asm",
+  RSM: "/rsm",
+  RM: "/rm",
+  PARTNER: "/partner",
+  CUSTOMER: "/customer",
+};
+
+const describeRole = (user) => {
+  if (!user?.role) return null;
+  const role = String(user.role).toUpperCase();
+  return {
+    role,
+    displayName: formatRoleName(role),
+    route: ROLE_ROUTES[role] || "/admin",
+    user,
+  };
+};
+
+// Parent session to return to after "login as".
+// Newer logins store parent_user. Older ASM → RM logins left the ASM
+// session in storage but never wrote parent_user, so recover that too.
+export const getReturnRole = () => {
+  const authData = getAuthData();
+
+  const storedParent = describeRole(authData.parentUser);
+  if (storedParent) return storedParent;
+
+  const stack = authData.impersonationStack || [];
+  const entryParent = describeRole(stack[stack.length - 1]?.parent);
+  if (entryParent) return entryParent;
+
+  if (!stack.length) return null;
+
+  if (authData.asmUser) {
+    return describeRole({ ...authData.asmUser, role: authData.asmUser.role || "ASM" });
+  }
+  if (authData.rsmUser) {
+    return describeRole({ ...authData.rsmUser, role: authData.rsmUser.role || "RSM" });
+  }
+  if (authData.adminUser) {
+    return describeRole({
+      ...authData.adminUser,
+      role: authData.adminUser.role || "SUPER_ADMIN",
+    });
+  }
+  return null;
+};
+
+const tokenForRole = (authData, role) => {
+  const normalized = String(role || "").toUpperCase();
+  if (normalized === "ASM") return authData.rawAsmToken || authData.asmToken || null;
+  if (normalized === "RSM") return authData.rawRsmToken || null;
+  if (normalized === "SUPER_ADMIN" || normalized === "ADMIN") return authData.adminToken || null;
+  if (normalized === "RM") return authData.rmToken || null;
+  if (normalized === "PARTNER") return authData.partnerToken || null;
+  if (normalized === "CUSTOMER") return authData.customerToken || null;
+  return null;
+};
+
 // Get the original role that started the impersonation (check parent_user first)
 export const getOriginalRole = () => {
   const authData = getAuthData();
   
   // First check if there's a parent user (we're impersonating)
-  if (authData.parentUser) {
-    const parent = authData.parentUser;
-    const routeMap = {
-      SUPER_ADMIN: "/admin",
-      ASM: "/asm",
-      RSM: "/rsm",
-      RM: "/rm",
-      PARTNER: "/partner",
-      CUSTOMER: "/customer",
-    };
-    return { 
-      role: parent.role, 
-      displayName: formatRoleName(parent.role),
-      route: routeMap[parent.role] || "/admin",
-      user: parent
-    };
-  }
+  const returnRole = getReturnRole();
+  if (returnRole) return returnRole;
   
   // Fallback: Check in priority order: Admin > RSM > ASM > RM
   if (authData.adminToken) {
@@ -98,8 +145,12 @@ export const getOriginalRole = () => {
 // This logs out current account and redirects to parent
 export const backToOriginalRole = (navigate) => {
   const authData = getAuthData();
-  const parentUser = authData.parentUser;
-  const parentToken = authData.parentToken;
+  const returnRole = getReturnRole();
+  let parentUser = authData.parentUser || returnRole?.user || null;
+  let parentToken =
+    authData.parentToken ||
+    parentUser?.token ||
+    (parentUser ? tokenForRole(authData, parentUser.role) : null);
   
   if (!parentUser || !parentToken) {
     // No parent, fallback to admin or login
@@ -123,30 +174,33 @@ export const backToOriginalRole = (navigate) => {
   }
 
   try {
-    // Get current user role to clear (only the immediate child we're logging out of)
-    const currentUser = authData.asmUser || authData.rsmUser || authData.rmUser || authData.partnerUser || authData.customerUser;
-    const currentRole = currentUser?.role?.toLowerCase();
-    
-    // Only clear the current child session (e.g., RSM when going back to ASM)
-    if (currentRole) {
+    // The active session is the top of the impersonation stack (the RM),
+    // not whichever manager token is still stored underneath it.
+    const stack = [...(authData.impersonationStack || [])];
+    const currentEntry = stack.length > 0 ? stack[stack.length - 1] : null;
+    const currentRole = String(
+      currentEntry?.role || currentEntry?.user?.role || ""
+    ).toLowerCase();
+    const parentRoleKey = String(parentUser.role || "").toLowerCase();
+    const parentStorageKey = parentRoleKey === "admin" ? "super_admin" : parentRoleKey;
+
+    if (currentRole && currentRole !== parentRoleKey) {
       localStorage.removeItem(`${currentRole}_token`);
       localStorage.removeItem(`${currentRole}_user`);
     }
-    
-    // Get the impersonation stack to restore parent's parent if needed
-    const stack = authData.impersonationStack || [];
     
     // Find the parent's entry in the stack to restore its parent tracking
     let parentParent = null;
     let parentParentToken = null;
     
-    // Look for the parent in the stack to get its parent (for nested impersonations)
-    for (let i = stack.length - 1; i >= 0; i--) {
+    // Look for the parent in earlier stack entries (nested impersonations)
+    for (let i = stack.length - 2; i >= 0; i--) {
       const entry = stack[i];
-      if (entry.user && entry.user._id === parentUser._id) {
-        // Found the parent's entry, get its parent
+      const entryId = entry.user?._id || entry.user?.id;
+      const parentId = parentUser._id || parentUser.id;
+      if (entryId && parentId && String(entryId) === String(parentId)) {
         parentParent = entry.parent;
-        parentParentToken = entry.parent?.token;
+        parentParentToken = entry.parent?.token || entry.parentToken;
         break;
       }
     }
@@ -155,17 +209,13 @@ export const backToOriginalRole = (navigate) => {
     localStorage.removeItem("parent_user");
     localStorage.removeItem("parent_token");
     
-    // Update impersonation stack - remove current entry
-    const updatedStack = stack.filter(entry => {
-      // Remove the current child's entry
-      return !(currentUser && entry.user && entry.user._id === currentUser._id);
-    });
+    // Drop only the session we are leaving (top of the stack)
+    const updatedStack = currentEntry ? stack.slice(0, -1) : stack;
     localStorage.setItem("impersonation_stack", JSON.stringify(updatedStack));
     
     // Restore parent session
-    const parentRoleKey = parentUser.role.toLowerCase();
-    localStorage.setItem(`${parentRoleKey}_token`, parentToken);
-    localStorage.setItem(`${parentRoleKey}_user`, JSON.stringify(parentUser));
+    localStorage.setItem(`${parentStorageKey}_token`, parentToken);
+    localStorage.setItem(`${parentStorageKey}_user`, JSON.stringify(parentUser));
     
     // If parent has a parent (nested impersonation), restore that tracking
     // Example: Admin → ASM → RSM, when going back to ASM, restore Admin as ASM's parent
@@ -175,23 +225,13 @@ export const backToOriginalRole = (navigate) => {
     }
     
     // Ensure parent user has correct role
-    if (parentUser.role !== "ASM" && parentUser.role !== "SUPER_ADMIN" && parentUser.role !== "RSM" && parentUser.role !== "RM" && parentUser.role !== "PARTNER" && parentUser.role !== "CUSTOMER") {
+    if (!ROLE_ROUTES[String(parentUser.role || "").toUpperCase()]) {
       console.error("Invalid parent role:", parentUser.role);
       navigate("/LoginPage");
       return;
     }
     
-    // Navigate to parent role dashboard
-    const routeMap = {
-      SUPER_ADMIN: "/admin",
-      ASM: "/asm",
-      RSM: "/rsm",
-      RM: "/rm",
-      PARTNER: "/partner",
-      CUSTOMER: "/customer",
-    };
-    
-    const targetRoute = routeMap[parentUser.role] || "/admin";
+    const targetRoute = ROLE_ROUTES[String(parentUser.role || "").toUpperCase()] || "/admin";
     console.log("Navigating to:", targetRoute, "for role:", parentUser.role, "with token:", parentToken ? "present" : "missing");
     
     // Use replace to avoid back button issues

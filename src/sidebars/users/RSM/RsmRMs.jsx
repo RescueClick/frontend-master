@@ -146,8 +146,18 @@ export default function RsmRMs() {
         { headers: { Authorization: `Bearer ${rsmToken}` } }
       );
 
-      const { token, user } = res.data;
-      saveAuthData(token, user, true);
+      const { token, user, parent } = res.data;
+      const currentAuth = getAuthData();
+      const parentInfo =
+        parent ||
+        (currentAuth.asmUser
+          ? { ...currentAuth.asmUser, token: currentAuth.rawAsmToken || currentAuth.asmToken }
+          : currentAuth.rsmUser
+            ? { ...currentAuth.rsmUser, token: currentAuth.rawRsmToken }
+            : currentAuth.adminUser
+              ? { ...currentAuth.adminUser, token: currentAuth.adminToken }
+              : null);
+      saveAuthData(token, user, true, parentInfo);
 
       switch (user.role) {
         case "SUPER_ADMIN":

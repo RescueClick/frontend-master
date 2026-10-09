@@ -158,10 +158,19 @@ export default function AsmRM() {
         { headers: { Authorization: `Bearer ${asmToken}` } }
       );
   
-      const { token, user } = res.data;
-  
-      // Save impersonated token without removing admin token
-      saveAuthData(token, user, true);
+      const { token, user, parent } = res.data;
+      const currentAuth = getAuthData();
+      const parentInfo =
+        parent ||
+        (currentAuth.asmUser
+          ? { ...currentAuth.asmUser, token: currentAuth.rawAsmToken || currentAuth.asmToken }
+          : currentAuth.rsmUser
+            ? { ...currentAuth.rsmUser, token: currentAuth.rawRsmToken }
+            : currentAuth.adminUser
+              ? { ...currentAuth.adminUser, token: currentAuth.adminToken }
+              : null);
+
+      saveAuthData(token, user, true, parentInfo);
   
       // Navigate to role
       switch (user.role) {
