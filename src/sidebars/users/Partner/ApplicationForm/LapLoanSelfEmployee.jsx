@@ -49,6 +49,10 @@ import {
 import { uploadLeadDocumentEarly } from "../../../../utils/earlyLeadDocUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
+import {
+  personFinancialCustomerFields,
+  validatePersonFinancialFields,
+} from "../../../../utils/personFinancial";
 import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
 import {
   useRmLoanFormResume,
@@ -174,6 +178,9 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     hasRunningLoan: "NO",
     monthlyEmiPaying: "",
     loanPurpose: "",
+    salaryInHand: "",
+    salaryReceiptMode: "",
+    cibilScoreBand: "",
   });
 
   const [applicationId, setApplicationId] = useState(null);
@@ -278,6 +285,9 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           "hasRunningLoan",
           "loanPurpose",
           "monthlyEmiPaying",
+          "salaryInHand",
+          "salaryReceiptMode",
+          "cibilScoreBand",
         ];
       }
       if (stepIndex === 1) {
@@ -434,6 +444,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     if (data.hasRunningLoan === "YES" && (!data.monthlyEmiPaying || Number(data.monthlyEmiPaying) <= 0)) {
       errors.monthlyEmiPaying = "Monthly EMI is required when running loan is Yes.";
     }
+    Object.assign(errors, validatePersonFinancialFields(data));
 
     if (!data.phone) {
       errors.phone = "Phone number is required.";
@@ -623,6 +634,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           hasRunningLoan: formData.hasRunningLoan,
           monthlyEmiPaying: formData.hasRunningLoan === "YES" ? Number(formData.monthlyEmiPaying) || 0 : 0,
           loanPurpose: formData.loanPurpose,
+          ...personFinancialCustomerFields(formData),
         },
         hasRunningLoan: formData.hasRunningLoan,
         monthlyEmiPaying: formData.hasRunningLoan === "YES" ? Number(formData.monthlyEmiPaying) || 0 : 0,

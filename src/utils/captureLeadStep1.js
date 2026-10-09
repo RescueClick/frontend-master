@@ -55,11 +55,17 @@ export async function captureLeadOnStep1Next({
         hasRunningLoan: hasRunning,
         monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
         loanPurpose: formData.loanPurpose || "",
+        salaryInHand: formData.salaryInHand ?? "",
+        salaryReceiptMode: formData.salaryReceiptMode || "",
+        cibilScoreBand: formData.cibilScoreBand || "",
       },
       financialDetails: {
         hasRunningLoan: hasRunning,
         monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
         loanPurpose: formData.loanPurpose || "",
+        salaryInHand: formData.salaryInHand ?? "",
+        salaryReceiptMode: formData.salaryReceiptMode || "",
+        cibilScoreBand: formData.cibilScoreBand || "",
       },
     };
 

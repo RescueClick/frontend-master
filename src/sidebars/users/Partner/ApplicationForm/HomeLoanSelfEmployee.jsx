@@ -49,6 +49,10 @@ import {
 import { uploadLeadDocumentEarly } from "../../../../utils/earlyLeadDocUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
+import {
+  personFinancialCustomerFields,
+  validatePersonFinancialFields,
+} from "../../../../utils/personFinancial";
 import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
 import {
   useRmLoanFormResume,
@@ -177,6 +181,9 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     hasRunningLoan: "NO",
     monthlyEmiPaying: "",
     loanPurpose: "",
+    salaryInHand: "",
+    salaryReceiptMode: "",
+    cibilScoreBand: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);
@@ -381,6 +388,9 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           "hasRunningLoan",
           "loanPurpose",
           "monthlyEmiPaying",
+          "salaryInHand",
+          "salaryReceiptMode",
+          "cibilScoreBand",
         ];
       }
       if (stepIndex === 1) {
@@ -582,6 +592,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     if (formData.hasRunningLoan === "YES" && (!formData.monthlyEmiPaying || Number(formData.monthlyEmiPaying) <= 0)) {
       errors.monthlyEmiPaying = "Monthly EMI is required when running loan is Yes.";
     }
+    Object.assign(errors, validatePersonFinancialFields(formData));
 
 
     if (!formData.phone) {
@@ -813,6 +824,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           hasRunningLoan: formData.hasRunningLoan || "NO",
           monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
           loanPurpose: formData.loanPurpose || "",
+          ...personFinancialCustomerFields(formData),
         },
         product: {
           businessName: formData.businessName,

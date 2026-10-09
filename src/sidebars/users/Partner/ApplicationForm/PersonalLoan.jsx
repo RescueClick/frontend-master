@@ -47,6 +47,10 @@ import {
 import { uploadLeadDocumentEarly } from "../../../../utils/earlyLeadDocUpload";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
+import {
+  personFinancialCustomerFields,
+  validatePersonFinancialFields,
+} from "../../../../utils/personFinancial";
 import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
 import {
   useRmLoanFormResume,
@@ -182,6 +186,8 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     hasRunningLoan: "NO",
     monthlyEmiPaying: "",
     loanPurpose: "",
+    salaryReceiptMode: "",
+    cibilScoreBand: "",
   });
 
   const [sameAddress, setSameAddress] = useState(false);
@@ -565,6 +571,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     if (formData.hasRunningLoan === "YES" && (!formData.monthlyEmiPaying || Number(formData.monthlyEmiPaying) <= 0)) {
       errors.monthlyEmiPaying = "Monthly EMI is required when running loan is Yes.";
     }
+    Object.assign(errors, validatePersonFinancialFields(formData));
 
     // Mandatory document validation
     if (!formData.aadharFront) errors.aadharFront = "Aadhar front is required.";
@@ -591,6 +598,10 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       "email",
       "dob",
       "hasRunningLoan",
+      "monthlyEmiPaying",
+      "salaryInHand",
+      "salaryReceiptMode",
+      "cibilScoreBand",
       "loanPurpose",
     ],
     // 1: Address
@@ -806,6 +817,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
           hasRunningLoan: formData.hasRunningLoan || "NO",
           monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
           loanPurpose: formData.loanPurpose || "",
+          ...personFinancialCustomerFields(formData),
         },
         product: {
           companyName: formData.companyName,

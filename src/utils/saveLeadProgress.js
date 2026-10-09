@@ -42,6 +42,9 @@ function buildCustomerPatch(formData = {}) {
     hasRunningLoan: formData.hasRunningLoan || "NO",
     monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
     loanPurpose: formData.loanPurpose || "",
+    salaryInHand: formData.salaryInHand ?? "",
+    salaryReceiptMode: formData.salaryReceiptMode || "",
+    cibilScoreBand: formData.cibilScoreBand || "",
   };
 }
 
