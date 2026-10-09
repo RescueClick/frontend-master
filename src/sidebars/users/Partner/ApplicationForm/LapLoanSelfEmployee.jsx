@@ -897,6 +897,13 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                   {renderError("lastName")}
                 </div>
 
+                <LoanApplicantFinancialFields
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  renderError={renderError}
+                  fieldErrors={fieldErrors}
+                />
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Mobile Number *
@@ -1047,13 +1054,6 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                   </div>
                 )}
 
-                {/* Financial Details (Running Loan, Monthly EMI, Loan Purpose) */}
-                <LoanApplicantFinancialFields
-                  formData={formData}
-                  handleInputChange={handleInputChange}
-                  renderError={renderError}
-                  fieldErrors={fieldErrors}
-                />
               </div>
             </section>
           )}

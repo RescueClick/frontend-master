@@ -1375,6 +1375,12 @@ const handleSubmit = async () => {
                   />
                   {renderError("lastName")}
                 </div>
+                <LoanApplicantFinancialFields
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  renderError={renderError}
+                  fieldErrors={validationErrors}
+                />
                 {/* Mother Name */}
                 <div>
                   <label
@@ -1635,13 +1641,6 @@ const handleSubmit = async () => {
                   </div>
                 )}
 
-                {/* Financial Details (Running Loan, Monthly EMI, Loan Purpose) */}
-                <LoanApplicantFinancialFields
-                  formData={formData}
-                  handleInputChange={handleInputChange}
-                  renderError={renderError}
-                  fieldErrors={validationErrors}
-                />
               </div>
             </section>
 

@@ -1404,6 +1404,12 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     {renderError("lastName")}
                   </div>
                   {/* name end */}
+                  <LoanApplicantFinancialFields
+                    formData={formData}
+                    handleInputChange={handleInputChange}
+                    renderError={renderError}
+                    fieldErrors={fieldErrors}
+                  />
                   <div>
                     <label
                       className="block text-sm font-medium mb-2"
@@ -1627,14 +1633,6 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     />
                     {renderError("motherName")}
                   </div>
-
-                  {/* Financial Details (Running Loan, Monthly EMI, Loan Purpose) */}
-                  <LoanApplicantFinancialFields
-                    formData={formData}
-                    handleInputChange={handleInputChange}
-                    renderError={renderError}
-                    fieldErrors={fieldErrors}
-                  />
                 </div>
               </section>
 

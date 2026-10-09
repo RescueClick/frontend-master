@@ -1426,6 +1426,12 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
 
                   {formData.lastName ? "" : renderError('lastName')}
                 </div>
+                <LoanApplicantFinancialFields
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  renderError={renderError}
+                  fieldErrors={fieldErrors}
+                />
                 {/* Mother Name */}
                 <div>
                   <label
@@ -1646,13 +1652,6 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                   </div>
                 )}
 
-                {/* Financial Details (Running Loan, Monthly EMI, Loan Purpose) */}
-                <LoanApplicantFinancialFields
-                  formData={formData}
-                  handleInputChange={handleInputChange}
-                  renderError={renderError}
-                  fieldErrors={fieldErrors}
-                />
               </div>
             </section>
 
