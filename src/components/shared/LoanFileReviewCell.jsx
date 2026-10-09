@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { Tooltip } from "antd";
 import { backendurl } from "../../feature/urldata";
 import { getAuthData } from "../../utils/localStorage";
 
@@ -34,6 +35,7 @@ export default function LoanFileReviewCell({
   review,
   scope,
   onSaved,
+  readOnly = false,
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(review?.text || "");
@@ -89,16 +91,28 @@ export default function LoanFileReviewCell({
   return (
     <>
       <div className="max-w-[220px]">
-        {review?.text ? (
-          <>
-            <p className="text-sm text-slate-800 line-clamp-2" title={review.text}>
-              {review.text}
-            </p>
-            <p className="mt-0.5 text-[11px] text-slate-500">{byline}</p>
-          </>
-        ) : (
-          <p className="text-sm text-slate-400">No review</p>
-        )}
+        <Tooltip
+          placement="topLeft"
+          color="#ffffff"
+          title={
+            <div className="max-w-[260px] space-y-1 py-0.5 text-xs text-gray-800">
+              <p className="font-semibold text-gray-900">{review?.text || "No review"}</p>
+              {byline ? <p className="text-gray-500">{byline}</p> : null}
+            </div>
+          }
+        >
+          <div>
+            {review?.text ? (
+              <>
+                <p className="text-sm text-slate-800 line-clamp-2">{review.text}</p>
+                <p className="mt-0.5 text-[11px] text-slate-500">{byline}</p>
+              </>
+            ) : (
+              <p className="text-sm text-slate-400">No review</p>
+            )}
+          </div>
+        </Tooltip>
+        {!readOnly ? (
         <button
           type="button"
           className="mt-1 text-xs font-semibold text-teal-700 hover:text-teal-900"
@@ -109,6 +123,7 @@ export default function LoanFileReviewCell({
         >
           Update review
         </button>
+        ) : null}
       </div>
 
       {open && (

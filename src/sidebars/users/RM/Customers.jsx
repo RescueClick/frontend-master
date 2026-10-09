@@ -39,6 +39,9 @@ import toast from "react-hot-toast";
 import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import LoanQuickFacts from "../../../components/shared/LoanQuickFacts";
+import ApplicationHoverCard from "../../../components/shared/ApplicationHoverCard";
+import LoanFileReviewCell from "../../../components/shared/LoanFileReviewCell";
 
 const formatCurrencyFull = (amount) => {
   const value = Number(amount || 0);
@@ -235,6 +238,7 @@ const Customers = () => {
           ? new Date(c.createdAt).toLocaleDateString("en-IN")
           : c.joinDate || "",
         "Loan Type": loanTypeToTableShort(c.loanType),
+        CIBIL: c.cibilScoreBand || "",
         "Loan Amount": c.requestedAmount ?? "",
         "Approval Amount": c.approvedAmount ?? "",
         Status: getLoanStatusLabel(c.status) || String(c.status || ""),
@@ -306,6 +310,12 @@ const Customers = () => {
         ),
       },
       {
+        title: "CIBIL",
+        key: "cibil",
+        width: 150,
+        render: (_, customer) => <LoanQuickFacts row={customer} />,
+      },
+      {
         title: "Loan",
         key: "loan",
         align: "right",
@@ -330,6 +340,18 @@ const Customers = () => {
         ),
       },
       {
+        title: "Review",
+        key: "review",
+        width: 180,
+        render: (_, customer) => (
+          <LoanFileReviewCell
+            applicationId={customer.applicationId}
+            review={customer.fileReview}
+            readOnly
+          />
+        ),
+      },
+      {
         title: "Status",
         key: "status",
         width: 160,
@@ -343,21 +365,23 @@ const Customers = () => {
         width: 72,
         align: "center",
         render: (_, customer) => (
-          <button
-            type="button"
-            onClick={() =>
-              navigate("/rm/CustomerAppliction", {
-                state: {
-                  customerId: customer?.customerId,
-                  applicationId: customer?.applicationId,
-                },
-              })
-            }
-            className="rounded-full bg-gray-100 p-1 text-gray-700 transition-colors hover:bg-gray-200"
-            title="View details"
-          >
-            <Eye size={14} />
-          </button>
+          <ApplicationHoverCard row={customer}>
+            <button
+              type="button"
+              onClick={() =>
+                navigate("/rm/CustomerAppliction", {
+                  state: {
+                    customerId: customer?.customerId,
+                    applicationId: customer?.applicationId,
+                  },
+                })
+              }
+              className="rounded-full bg-gray-100 p-1 text-gray-700 transition-colors hover:bg-gray-200"
+              aria-label="View details"
+            >
+              <Eye size={14} />
+            </button>
+          </ApplicationHoverCard>
         ),
       },
     ],
