@@ -59,6 +59,7 @@ const Customer = () => {
           loanType: c.loanType,
           loanAmount: c.loanAmount || 0,
           disburseAmount: c.disburseAmount || 0,
+          loginBankName: c.loginBankName || "",
           status: c.status, // comes as "DISBURSED"
           customerId: c.customerId,
           _asmRow: c,
@@ -74,7 +75,8 @@ const Customer = () => {
       const matchesSearch =
         customer.name?.toLowerCase().includes(term) ||
         customer.id?.toLowerCase().includes(term) ||
-        customer.phone?.toLowerCase().includes(term);
+        customer.phone?.toLowerCase().includes(term) ||
+        customer.loginBankName?.toLowerCase().includes(term);
 
       // Normalize loan status for consistent filtering
       const normalizedStatus = normalizeLoanStatus(customer.status);
@@ -105,6 +107,7 @@ const Customer = () => {
       "Loan Type": loanTypeToTableShort(c.loanType),
       "Loan Amount": c.loanAmount ?? "",
       "Disburse Amount": c.disburseAmount ?? "",
+      "Login Bank": c.loginBankName || "",
       Status: getLoanStatusLabel(c.status) || String(c.status || ""),
     }));
     if (!downloadXlsx(rows, "asm-customers.xlsx", "Customers")) {
@@ -196,6 +199,11 @@ const Customer = () => {
         dataIndex: "loanType",
         key: "lt",
         render: (v) => loanTypeToTableShort(v),
+      },
+      {
+        title: "Login Bank",
+        key: "loginBank",
+        render: (_, row) => row.loginBankName || "—",
       },
       {
         title: "Loan",
@@ -380,6 +388,11 @@ const Customer = () => {
               <p className="font-medium text-gray-800">
                 {loanTypeToTableShort(model.loanType)}
               </p>
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <p className="text-xs text-gray-500">Login Bank</p>
+              <p className="font-medium text-gray-800">{model.loginBankName || "—"}</p>
             </div>
 
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">

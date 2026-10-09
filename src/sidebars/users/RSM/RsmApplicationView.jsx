@@ -46,6 +46,8 @@ import { useDispatch } from "react-redux";
 import { getLoanStatusLabel } from "../../../utils/loanStatus";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import BankRmResultsTable from "../../../components/shared/BankRmResultsTable";
+import BankPolicyStrip from "../../../components/shared/BankPolicyStrip";
+import { formatInr } from "../../../utils/lenderPolicies";
 
 // ================== FIELD DEFINITIONS (Outside component) ==================
 const customerFields = [
@@ -190,6 +192,9 @@ const RsmApplicationView = () => {
   }, [showModal, selectedDoc, previewLoadingDoc]);
   
   const [status, setStatus] = useState("");
+  const [loginBankId, setLoginBankId] = useState("");
+  const [loginBanks, setLoginBanks] = useState([]);
+  const [loginBanksLoading, setLoginBanksLoading] = useState(false);
   const [remark, setRemark] = useState("");
   const [approvalAmount, setApprovalAmount] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -197,6 +202,7 @@ const RsmApplicationView = () => {
   
   // Bank Matcher State
   const [eligibleBanks, setEligibleBanks] = useState([]);
+  const [policyFilter, setPolicyFilter] = useState(null);
   const [fetchingBanks, setFetchingBanks] = useState(false);
   const [banksFetched, setBanksFetched] = useState(false);
   const [searchPincode, setSearchPincode] = useState("");
@@ -333,8 +339,16 @@ const RsmApplicationView = () => {
       const record = res.data?.bankSend;
       if (record) {
         setApplicationData((prev) =>
-          prev ? { ...prev, bankSends: [...(prev.bankSends || []), record] } : prev
+          prev
+            ? {
+                ...prev,
+                bankSends: [...(prev.bankSends || []), record],
+                loginBankName: record.bankName || prev.loginBankName,
+                loginBankId: record.bankId || prev.loginBankId,
+              }
+            : prev
         );
+        if (record.bankId) setLoginBankId(String(record.bankId));
       }
       toast.success(res.data?.message || "Sent to bank");
       if (res.data?.failedDocs?.length) {
@@ -578,6 +592,9 @@ const RsmApplicationView = () => {
       const result = await dispatch(fetchRsmApplication(applicationId));
       if (fetchRsmApplication.fulfilled.match(result)) {
         setApplicationData(result.payload);
+        const sends = Array.isArray(result.payload.bankSends) ? result.payload.bankSends : [];
+        const lastSent = [...sends].reverse().find((s) => s?.bankId && s.status !== "FAILED");
+        setLoginBankId(String(result.payload.loginBankId || lastSent?.bankId || ""));
         const rules = await fetchRequiredDocRules(result.payload);
         setRequiredDocRules(rules);
         // Don't preselect REJECTED — force an explicit reopen/update target
@@ -605,16 +622,40 @@ const RsmApplicationView = () => {
         params: {
           pincode: searchPincode,
           loanType: applicationData.loanType,
+          applicationId,
         },
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      setEligibleBanks(response.data || []);
+      const payload = response.data;
+      const list = Array.isArray(payload) ? payload : payload?.banks || [];
+      setEligibleBanks(list);
+      setPolicyFilter(payload?.policyFilter || null);
       setBanksFetched(true);
     } catch (err) {
       console.error("Error fetching eligible banks:", err);
       toast.error("Failed to fetch eligible banks");
     } finally {
       setFetchingBanks(false);
+    }
+  };
+
+  const loadLoginBanks = async () => {
+    if (!applicationData?.loanType) return;
+    setLoginBanksLoading(true);
+    try {
+      const token = getAppAuthToken();
+      const response = await axios.get(`${backendurl}/rsm/banks`, {
+        params: { loanType: applicationData.loanType },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const payload = response.data;
+      const list = Array.isArray(payload) ? payload : payload?.banks || [];
+      setLoginBanks(list);
+    } catch (err) {
+      console.error("Error loading login banks:", err);
+      toast.error("Failed to load banks");
+    } finally {
+      setLoginBanksLoading(false);
     }
   };
 
@@ -776,6 +817,12 @@ const RsmApplicationView = () => {
       fetchEligibleBanks();
     }
   }, [searchPincode, applicationData?.loanType, banksFetched]);
+
+  useEffect(() => {
+    if (status === "LOGIN" && applicationData?.loanType && loginBanks.length === 0) {
+      loadLoginBanks();
+    }
+  }, [status, applicationData?.loanType]);
 
   useEffect(() => {
     fetchRmFilterOptions({
@@ -1004,6 +1051,12 @@ const RsmApplicationView = () => {
         return;
       }
 
+      if (status === "LOGIN" && !loginBankId) {
+        toast.error("Select the bank used for this loan login");
+        setSubmitLoading(false);
+        return;
+      }
+
       if (applicationData) {
         setApplicationData({
           ...applicationData,
@@ -1020,6 +1073,9 @@ const RsmApplicationView = () => {
       if (status === "APPROVED" && approvalAmount) {
         requestBody.approvedLoanAmount = parseInt(approvalAmount, 10);
       }
+      if (status === "LOGIN" && loginBankId) {
+        requestBody.bankId = loginBankId;
+      }
 
       const result = await dispatch(transitionRsmApplication({
         applicationId: applicationData._id,
@@ -1033,6 +1089,8 @@ const RsmApplicationView = () => {
             ...applicationData,
             status: result.payload.status || status,
             approvedLoanAmount: result.payload.approvedLoanAmount || applicationData.approvedLoanAmount,
+            loginBankName: result.payload.loginBankName || applicationData.loginBankName,
+            loginBankId: result.payload.loginBankId || applicationData.loginBankId,
             remarks: wasReopened ? remark : applicationData.remarks,
             deletedAt: wasReopened ? null : applicationData.deletedAt,
           });
@@ -1784,6 +1842,11 @@ const RsmApplicationView = () => {
                                 Approved: ₹{formatCurrency(applicationData.approvedLoanAmount)}
                               </p>
                             )}
+                            {applicationData.loginBankName && (
+                              <p className="text-xs font-semibold text-gray-800">
+                                Login bank: {applicationData.loginBankName}
+                              </p>
+                            )}
                             {applicationData.stageHistory && applicationData.stageHistory.length > 0 && (
                               <div className="border-t border-gray-100 pt-2">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Timeline</p>
@@ -1906,6 +1969,38 @@ const RsmApplicationView = () => {
                           </div>
                         )}
 
+                        {status === "LOGIN" && (
+                          <div className="mt-2.5">
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                              Login Bank *
+                            </label>
+                            <select
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all font-medium text-sm text-gray-700 bg-gray-50 hover:bg-white"
+                              value={loginBankId}
+                              onChange={(e) => setLoginBankId(e.target.value)}
+                              disabled={loginBanksLoading}
+                            >
+                              <option value="">
+                                {loginBanksLoading ? "Loading banks..." : "Select bank"}
+                              </option>
+                              {loginBankId &&
+                                applicationData?.loginBankName &&
+                                !loginBanks.some((bank) => String(bank._id) === String(loginBankId)) && (
+                                  <option value={loginBankId}>{applicationData.loginBankName}</option>
+                                )}
+                              {loginBanks.map((bank) => (
+                                <option key={bank._id} value={bank._id}>
+                                  {bank.bankName}
+                                  {bank.loanType ? ` (${bank.loanType})` : ""}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="mt-1 text-[11px] text-gray-500">
+                              This is the bank the file is logged into. It shows on Admin, RSM, and ASM file tables.
+                            </p>
+                          </div>
+                        )}
+
                         {status && allowedStatuses.includes(status) && (
                           <div className="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
                             <AlertCircle className="w-4 h-4 text-blue-600 mr-1.5 shrink-0 mt-0.5" />
@@ -1977,7 +2072,7 @@ const RsmApplicationView = () => {
 
                       <button
                         onClick={handleSubmit}
-                        disabled={submitLoading || !status || !remark.trim() || (status === "APPROVED" && !approvalAmount)}
+                        disabled={submitLoading || !status || !remark.trim() || (status === "APPROVED" && !approvalAmount) || (status === "LOGIN" && !loginBankId)}
                         className={`mt-2.5 w-full flex items-center justify-center text-white py-2.5 px-4 rounded-lg shadow-sm transition-all font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0 ${
                           applicationData.status === "REJECTED"
                             ? "bg-amber-600 hover:bg-amber-700"
@@ -2007,7 +2102,9 @@ const RsmApplicationView = () => {
                         <Building2 className="w-4 h-4 mr-1.5 text-emerald-100" />
                         Smart Bank Matcher
                       </h3>
-                      <p className="text-emerald-100 text-[11px] mt-0.5 opacity-90">Auto-matching eligible banks for this applicant.</p>
+                      <p className="text-emerald-100 text-[11px] mt-0.5 opacity-90">
+                        Pincode plus salary, age, amount, FOIR, and employment policy.
+                      </p>
                     </div>
 
                     <div className="p-3.5 flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -2029,6 +2126,41 @@ const RsmApplicationView = () => {
                         </button>
                       </div>
 
+                      {policyFilter?.scanned && (
+                        <div className="mb-2 shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
+                          <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                            Scanned from this loan file
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {[
+                              ["Pincode", policyFilter.pincode],
+                              ["Profile", policyFilter.scanned.segment],
+                              ["In-hand", policyFilter.scanned.netSalary ? formatInr(policyFilter.scanned.netSalary) : null],
+                              ["Loan", policyFilter.scanned.loanAmount ? formatInr(policyFilter.scanned.loanAmount) : null],
+                              ["Age", policyFilter.scanned.age != null ? `${policyFilter.scanned.age} yrs` : null],
+                              ["Total exp.", policyFilter.scanned.totalExperienceMonths != null ? `${policyFilter.scanned.totalExperienceMonths} mo` : null],
+                              ["Current co.", policyFilter.scanned.currentExperienceMonths != null ? `${policyFilter.scanned.currentExperienceMonths} mo` : null],
+                              ["FOIR", policyFilter.scanned.foirPercent != null ? `${policyFilter.scanned.foirPercent}%` : null],
+                              ["Score", policyFilter.scanned.creditScore],
+                            ].map(([label, value]) => {
+                              const missing = value == null || value === "";
+                              return (
+                              <span
+                                key={label}
+                                className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
+                                  missing
+                                    ? "border-amber-100 bg-amber-50 text-amber-800"
+                                    : "border-slate-200 bg-white text-slate-700"
+                                }`}
+                              >
+                                {label}: {missing ? "not on file" : value}
+                              </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {fetchingBanks && !banksFetched ? (
                         <div className="py-8 flex flex-col items-center justify-center text-emerald-600 flex-1">
                           <Loader2 className="w-7 h-7 animate-spin mb-2" />
@@ -2036,6 +2168,12 @@ const RsmApplicationView = () => {
                         </div>
                       ) : banksFetched && (
                         <div className="space-y-2.5 mt-1 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5">
+                          {policyFilter?.hidden > 0 && (
+                            <p className="text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                              {policyFilter.hidden} bank{policyFilter.hidden === 1 ? "" : "s"} hidden by policy
+                              {policyFilter.review ? ` · ${policyFilter.review} need a check` : ""}
+                            </p>
+                          )}
                           {eligibleBanks.length > 0 ? (
                             eligibleBanks.map(bank => {
                               const isPwVisible = showBankPassword[bank._id] === true;
@@ -2095,6 +2233,8 @@ const RsmApplicationView = () => {
                                       )}
                                     </div>
                                   </div>
+
+                                  <BankPolicyStrip policy={bank.underwritingPolicy} match={bank.policyMatch} />
 
                                   <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2.5 space-y-1.5 text-xs">
                                     <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded px-2 py-1 shadow-2xs">
@@ -2233,7 +2373,11 @@ const RsmApplicationView = () => {
                             <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                               <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2 opacity-50" />
                               <p className="text-sm font-semibold text-gray-700">No matching banks</p>
-                              <p className="text-xs text-gray-500 mt-1">Try a different pincode or check bank configurations.</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {policyFilter?.hidden
+                                  ? "Every pincode bank failed the salary, amount, age, FOIR, or employment rules."
+                                  : "Try a different pincode or check bank configurations."}
+                              </p>
                             </div>
                           )}
                         </div>

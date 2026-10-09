@@ -173,12 +173,12 @@ export const fetchRsmApplication = createAsyncThunk(
 // Transition Application Status (RSM)
 export const transitionRsmApplication = createAsyncThunk(
   "rsm/transitionApplication",
-  async ({ applicationId, to, note, approvedLoanAmount }, { rejectWithValue, dispatch }) => {
+  async ({ applicationId, to, note, approvedLoanAmount, bankId }, { rejectWithValue, dispatch }) => {
     try {
       const rsmToken = getEffectiveManagerToken();
       const response = await axios.post(
         `${backendurl}/rsm/applications/${applicationId}/transition`,
-        { to, note, approvedLoanAmount },
+        { to, note, approvedLoanAmount, bankId },
         {
           headers: {
             Authorization: `Bearer ${rsmToken}`,

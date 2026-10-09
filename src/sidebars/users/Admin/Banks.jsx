@@ -23,6 +23,9 @@ import {
 
 import { getAuthData } from "../../../utils/localStorage";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import { emptyPolicy, policyFromBank, suggestedPolicy } from "../../../utils/lenderPolicies";
+import BankPolicyStrip from "../../../components/shared/BankPolicyStrip";
+import BankPolicyFields from "../../../components/shared/BankPolicyFields";
 import {
   createBank,
   deleteBank,
@@ -108,6 +111,8 @@ const Banks = () => {
   const [month, setMonth] = useState("all");
   const [sortBy, setSortBy] = useState("NAME");
   const [showAddPassword, setShowAddPassword] = useState(false);
+  const [policy, setPolicy] = useState(() => emptyPolicy());
+  const [policyTouched, setPolicyTouched] = useState(false);
 
   const [showPassword, setShowPassword] = useState({});
   const [showId, setShowId] = useState({});
@@ -201,6 +206,17 @@ const Banks = () => {
       return;
     }
     setBank((prev) => ({ ...prev, [name]: value }));
+    if ((name === "name" || name === "loanType") && !policyTouched) {
+      const nextName = name === "name" ? value : bank.name;
+      const nextType = name === "loanType" ? value : bank.loanType;
+      const suggested = suggestedPolicy(nextName, nextType);
+      if (suggested) setPolicy(suggested);
+    }
+  };
+
+  const handlePolicyChange = (next) => {
+    setPolicyTouched(true);
+    setPolicy(next);
   };
 
   const resetForm = () => {
@@ -221,6 +237,8 @@ const Banks = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (csvInputRef.current) csvInputRef.current.value = "";
     setShowAddPassword(false);
+    setPolicy(emptyPolicy());
+    setPolicyTouched(false);
   };
 
   const extractPincodesFromText = (text) => {
@@ -256,6 +274,8 @@ const Banks = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (csvInputRef.current) csvInputRef.current.value = "";
     setShowAddPassword(false);
+    setPolicy(policyFromBank(b));
+    setPolicyTouched(Boolean(b.underwritingPolicy?.lenderKey || b.underwritingPolicy?.maxLoanAmount));
     setActiveTab("add");
   };
 
@@ -286,6 +306,7 @@ const Banks = () => {
       formData.append("rmName", bank.rmName || "");
       formData.append("rmEmail", bank.rmEmail || "");
       formData.append("serviceablePincodes", bank.serviceablePincodes || "");
+      formData.append("underwritingPolicy", JSON.stringify(policy));
 
       if (isEditing) {
         await dispatch(updateBank({ bankId: editingBankId, formData })).unwrap();
@@ -693,6 +714,13 @@ const Banks = () => {
                     </div>
                   </div>
                 </section>
+
+                <BankPolicyFields
+                  policy={policy}
+                  onChange={handlePolicyChange}
+                  bankName={bank.name}
+                  loanType={bank.loanType}
+                />
                 </div>
                 </div>
 
@@ -968,6 +996,8 @@ const Banks = () => {
                             </div>
                           );
                         })()}
+
+                        <BankPolicyStrip policy={b.underwritingPolicy} />
 
                         <div className="space-y-2">
                           <div className="space-y-1">

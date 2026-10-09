@@ -19,6 +19,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
+import BankPolicyStrip from "../../../components/shared/BankPolicyStrip";
 
 const LOAN_TYPE_FILTERS = [
   { id: "ALL", label: "All Banks" },
@@ -126,6 +127,7 @@ const Banks = () => {
         loanType: b.loanType || "",
         portalLink: b.portalLink || b.link || "#",
         serviceablePincodes: Array.isArray(b.serviceablePincodes) ? b.serviceablePincodes : [],
+        underwritingPolicy: b.underwritingPolicy || null,
         rsmTypes: Array.isArray(b.rsmTypes)
           ? b.rsmTypes
           : b.rsmTypes
@@ -469,6 +471,12 @@ const Banks = () => {
 
                       {/* Divider */}
                       <div className="my-3.5 h-px bg-slate-100" />
+
+                      {bank.underwritingPolicy ? (
+                        <div className="mb-3">
+                          <BankPolicyStrip policy={bank.underwritingPolicy} />
+                        </div>
+                      ) : null}
 
                       {/* Credentials Container */}
                       <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 space-y-2.5">

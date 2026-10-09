@@ -64,6 +64,7 @@ const Application = () => {
             typeof c.payoutAmount === "number" && c.payoutAmount > 0
               ? c.payoutAmount
               : latestPayoutAmount,
+          loginBankName: c.loginBankName || "",
           status: c.status, // comes as backend status enum
         };
       })
@@ -75,6 +76,7 @@ const Application = () => {
         customer.name,
         customer.id,
         customer.phone,
+        customer.loginBankName,
       ]);
 
       const status = normalizeStatus(customer.status);
@@ -100,6 +102,7 @@ const Application = () => {
       "Loan Amount": c.loanAmount ?? "",
       "Disburse Amount": c.disburseAmount ?? "",
       Payout: c.payoutAmount ?? "",
+      "Login Bank": c.loginBankName || "",
       Status: getLoanStatusLabel(c.status) || String(c.status || ""),
     }));
     if (!downloadXlsx(rows, "asm-applications.xlsx", "Applications")) {
@@ -136,6 +139,11 @@ const Application = () => {
         dataIndex: "loanType",
         key: "loanType",
         render: (v) => loanTypeToTableShort(v),
+      },
+      {
+        title: "Login Bank",
+        key: "loginBank",
+        render: (_, row) => row.loginBankName || "—",
       },
       {
         title: "Loan Amount",

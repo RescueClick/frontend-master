@@ -74,6 +74,7 @@ export default function RsmApplications() {
             typeof app.payoutAmount === "number" && app.payoutAmount > 0
               ? app.payoutAmount
               : latestPayoutAmount,
+          loginBankName: app.loginBankName || "",
           status: app.status || "DRAFT",
         };
       })
@@ -89,6 +90,7 @@ export default function RsmApplications() {
         app.appNo,
         app.rmName,
         app.rmEmployeeId,
+        app.loginBankName,
       ]);
 
       const status = normalizeStatus(app.status);
@@ -119,6 +121,7 @@ export default function RsmApplications() {
       "Loan Amount": app.loanAmount ?? "",
       "Approved Amount": app.approvedLoanAmount ?? "",
       Payout: app.payoutAmount ?? "",
+      "Login Bank": app.loginBankName || "",
       Status: getLoanStatusLabel(app.status) || String(app.status || ""),
     }));
     if (!downloadXlsx(rows, "rsm-applications.xlsx", "Applications")) {
@@ -185,6 +188,15 @@ export default function RsmApplications() {
         key: "loanType",
         render: (v) => (
           <span className="text-sm">{loanTypeToTableShort(v)}</span>
+        ),
+      },
+      {
+        title: "Login Bank",
+        key: "loginBank",
+        render: (_, app) => (
+          <span className="text-sm font-medium text-gray-800">
+            {app.loginBankName || "—"}
+          </span>
         ),
       },
       {

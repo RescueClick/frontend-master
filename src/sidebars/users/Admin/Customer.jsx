@@ -93,6 +93,7 @@ export default function CustomerTable() {
       const asmName = (c.asmName || "").toLowerCase();
       const rmName = (c.rmName || "").toLowerCase();
       const partnerName = (c.partnerName || "").toLowerCase();
+      const loginBank = (c.loginBankName || "").toLowerCase();
       const status = String(c.status || "").toLowerCase();
       return (
         fullName.includes(term) ||
@@ -106,6 +107,7 @@ export default function CustomerTable() {
         asmName.includes(term) ||
         rmName.includes(term) ||
         partnerName.includes(term) ||
+        loginBank.includes(term) ||
         status.includes(term)
       );
     });
@@ -277,6 +279,11 @@ export default function CustomerTable() {
         dataIndex: "loanType",
         key: "lt",
         render: (v) => loanTypeToTableShort(v),
+      },
+      {
+        title: "Login Bank",
+        key: "loginBank",
+        render: (_, c) => c.loginBankName || "—",
       },
       {
         title: "Loan",
@@ -601,6 +608,7 @@ export default function CustomerTable() {
                 ["Loan amount", model.loanAmount ?? "—"],
                 ["Disburse amount", model.disburseAmount ?? "—"],
                 ["Loan type", loanTypeToTableShort(model.loanType)],
+                ["Login bank", model.loginBankName || "—"],
                 ["Status", getLoanStatusLabel(model.status)],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg bg-white px-3 py-2.5 border border-slate-100 shadow-sm">
