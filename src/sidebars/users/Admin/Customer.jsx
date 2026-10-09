@@ -14,6 +14,8 @@ import AdminChangePasswordModal from "../../../components/shared/AdminChangePass
 import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 import AdminLeads from "./AdminLeads";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 
  
 
@@ -30,13 +32,16 @@ export default function CustomerTable() {
 
 
   const [model, setModel] = useState(null)
+  const navigate = useNavigate()
+  const location = useLocation()
   const [deleteConfirm, setDeleteConfirm] = useState(null) // Customer to delete
   const [deleting, setDeleting] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("All")
+  const initialPeriod = readPeriodState(location)
+  const [year, setYear] = useState(initialPeriod.year)
+  const [month, setMonth] = useState(initialPeriod.month)
   const [passwordUser, setPasswordUser] = useState(null)
-  const navigate = useNavigate()
-  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get("tab") === "leads" ? "leads" : "customers"
 
@@ -72,6 +77,9 @@ export default function CustomerTable() {
       const statusForMatch =
         normalizedStatus === "DRAFT" ? "SUBMITTED" : normalizedStatus;
       if (selectedStatus && statusForMatch !== selectedStatus) return false;
+      if (!matchesMonthYear(c, { year, month, dateKeys: ["applicationDate", "createdAt", "disbursedAt"] })) {
+        return false;
+      }
       if (!term) return true;
 
       const fullName = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
@@ -101,7 +109,7 @@ export default function CustomerTable() {
         status.includes(term)
       );
     });
-  }, [sortedData, searchQuery, statusFilter]);
+  }, [sortedData, searchQuery, statusFilter, year, month]);
 
   const uniqueCustomerCount = useMemo(() => {
     const ids = new Set(
@@ -115,6 +123,15 @@ export default function CustomerTable() {
   useEffect(() => {
     dispatch(getAllCustomers());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!location?.state || typeof location.state !== "object") return;
+    if (location.state.year !== undefined || location.state.month !== undefined) {
+      const next = readPeriodState(location);
+      setYear(next.year);
+      setMonth(next.month);
+    }
+  }, [location]);
 
   useEffect(() => {
     if (!location?.state) return;
@@ -655,6 +672,12 @@ export default function CustomerTable() {
               </option>
             ))}
           </select>
+          <MonthYearSelects
+            year={year}
+            month={month}
+            onYearChange={setYear}
+            onMonthChange={setMonth}
+          />
           <button
             type="button"
             className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center"
@@ -671,7 +694,7 @@ export default function CustomerTable() {
         dataSource={filteredCustomers}
         loading={loading}
         size="small"
-        locale={{ emptyText: searchQuery.trim() ? "No customers match your search" : "No records" }}
+        locale={{ emptyText: searchQuery.trim() || year !== "all" || month !== "all" ? "No customers match your filters" : "No records" }}
       />
     </DashboardTablePage>
 

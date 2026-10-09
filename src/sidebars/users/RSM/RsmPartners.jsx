@@ -1,4 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 import { Download, Search } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchRsmPartners } from "../../../feature/thunks/rsmThunks";
@@ -11,7 +14,11 @@ import { downloadXlsx } from "../../../utils/downloadXlsx";
 import { INDIAN_STATE_FILTER_OPTIONS } from "../../../utils/indianStates";
 
 export default function RsmPartners() {
+  const location = useLocation();
+  const initialPeriod = readPeriodState(location);
   const dispatch = useDispatch();
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
   const { data = [], loading, error } = useSelector(
     (state) => state.rsm?.partners || { data: [], loading: false, error: null }
   );
@@ -34,6 +41,7 @@ export default function RsmPartners() {
       if (String(partner.status || "").toUpperCase() !== "ACTIVE") return false;
       const partnerRegion = String(partner.region || "").trim().toLowerCase();
       if (selectedState && partnerRegion !== selectedState) return false;
+      if (!matchesMonthYear(partner, { year, month, dateKeys: ["createdAt"] })) return false;
       if (!term) return true;
 
       const fullName = `${partner.firstName || ""} ${partner.lastName || ""}`
@@ -49,7 +57,7 @@ export default function RsmPartners() {
         partnerRegion.includes(term)
       );
     });
-  }, [data, searchQuery, stateFilter]);
+  }, [data, searchQuery, stateFilter, year, month]);
 
   const sortedPartners = sortNewestFirst(filteredPartners, {
     dateKeys: ["createdAt"],
@@ -154,6 +162,7 @@ export default function RsmPartners() {
               </option>
             ))}
           </select>
+          <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
           <button
             type="button"
             className="flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"

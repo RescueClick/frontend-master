@@ -2,7 +2,9 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Search, Filter, Users, Phone, Download, Eye } from "lucide-react";
 import { fetchAsmApplications } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
@@ -14,8 +16,12 @@ import { downloadXlsx } from "../../../utils/downloadXlsx";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 const Application = () => {
+  const location = useLocation();
+  const initialPeriod = readPeriodState(location);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -73,11 +79,16 @@ const Application = () => {
 
       const status = normalizeStatus(customer.status);
       const matchesFilter = matchesStatusFilter(status, filterStatus);
+      const matchesDate = matchesMonthYear(customer, {
+        year,
+        month,
+        dateKeys: ["applicationDateRaw", "createdAt"],
+      });
 
-      return matchesSearch && matchesFilter;
+      return matchesSearch && matchesFilter && matchesDate;
     });
     return sortNewestFirst(filtered, { dateKeys: ["applicationDateRaw"] });
-  }, [applications, searchTerm, filterStatus]);
+  }, [applications, searchTerm, filterStatus, year, month]);
 
   const handleExport = useCallback(() => {
     const rows = filteredCustomers.map((c) => ({
@@ -224,6 +235,7 @@ const Application = () => {
                 ))}
               </select>
             </div>
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
             <button
               type="button"
               onClick={handleExport}

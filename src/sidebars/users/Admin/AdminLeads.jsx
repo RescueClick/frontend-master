@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 import {
   User,
   Phone,
@@ -67,10 +70,14 @@ const FOLLOW_UP_OPTIONS = [
 ];
 
 export default function AdminLeads() {
+  const location = useLocation();
+  const initialPeriod = readPeriodState(location);
   const [leads, setLeads] = useState([]);
   const [activeStatus, setActiveStatus] = useState("New Leads");
   const [searchTerm, setSearchTerm] = useState("");
   const [loanTypeFilter, setLoanTypeFilter] = useState("");
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -211,6 +218,7 @@ export default function AdminLeads() {
     .filter((lead) => STATUS_MAPPING[activeStatus]?.includes(lead.status))
     .filter((lead) => {
       if (loanTypeFilter && lead.loanType !== loanTypeFilter) return false;
+      if (!matchesMonthYear(lead, { year, month, dateKeys: ["createdAt"] })) return false;
       if (!searchTerm) return true;
       const term = searchTerm.toLowerCase();
       return (
@@ -293,6 +301,7 @@ export default function AdminLeads() {
             </option>
           ))}
         </select>
+        <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
       </div>
 
       {/* Tabs */}

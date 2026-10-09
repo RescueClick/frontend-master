@@ -14,6 +14,8 @@ import AppAntTable from "../../../components/shared/AppAntTable";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
 import toast from "react-hot-toast";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -70,6 +72,9 @@ function RM() {
   const location = useLocation();
   const dispatch = useDispatch();
 
+  const initialPeriod = readPeriodState(location);
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [rmToDeactivate, setRmToDeactivate] = useState(null);
@@ -119,9 +124,10 @@ function RM() {
 
 
     const term = searchQuery.trim().toLowerCase();
-    if (!term) return rms;
 
     return rms.filter((r) => {
+      if (!matchesMonthYear(r, { year, month, dateKeys: ["createdAt"] })) return false;
+      if (!term) return true;
       const fullName = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
       const rmCode = (r.rmCode || "").toLowerCase();
       const employeeId = (r.employeeId || "").toLowerCase(); // RM employeeId
@@ -136,7 +142,7 @@ function RM() {
         asmMongoId.includes(term)
       );
     });
-  }, [rms, searchQuery]);
+  }, [rms, searchQuery, year, month]);
 
   const sortedFilteredRms = sortNewestFirst(filteredRms, { dateKeys: ["createdAt"] });
 
@@ -533,6 +539,12 @@ loginAsUser(userId, navigate);
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <MonthYearSelects
+              year={year}
+              month={month}
+              onYearChange={setYear}
+              onMonthChange={setMonth}
+            />
             <button
               type="button"
               className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

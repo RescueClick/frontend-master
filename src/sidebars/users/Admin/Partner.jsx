@@ -14,7 +14,9 @@ import axios from "axios";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
@@ -77,6 +79,10 @@ const toDocLabel = (docType) => {
 export default function PartnerTable() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialPeriod = readPeriodState(location);
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
 
   const { loading, error, data } = useSelector((state) => state.admin.partners);
 
@@ -401,6 +407,7 @@ export default function PartnerTable() {
       const partnerRegion = norm(partner.region);
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;
+      if (!matchesMonthYear(partner, { year, month, dateKeys: ["createdAt"] })) return false;
 
       const isActive = !isSoftDeleted && partner.status === "ACTIVE";
       // Active tab: never show suspended/inactive. Suspended tab: only those.
@@ -435,7 +442,7 @@ export default function PartnerTable() {
 
       return haystack.includes(term);
     });
-  }, [data, searchQuery, stateFilter, activeTab]);
+  }, [data, searchQuery, stateFilter, activeTab, year, month]);
 
   const sortedFilteredPartners = sortNewestFirst(filteredPartners, { dateKeys: ["createdAt"] });
 
@@ -857,6 +864,12 @@ loginAsUser(userId, navigate);
                   </option>
                 ))}
               </select>
+              <MonthYearSelects
+                year={year}
+                month={month}
+                onYearChange={setYear}
+                onMonthChange={setMonth}
+              />
               <button
                 type="button"
                 className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center cursor-pointer"

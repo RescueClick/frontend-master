@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects from "../../../components/MonthYearSelects";
 import {
   Building2,
   Copy,
@@ -102,6 +104,8 @@ const Banks = () => {
   const [loanTypeSearch, setLoanTypeSearch] = useState("");
   const [loanTypeFilter, setLoanTypeFilter] = useState("ALL");
   const [setupFilter, setSetupFilter] = useState("ALL");
+  const [year, setYear] = useState("all");
+  const [month, setMonth] = useState("all");
   const [sortBy, setSortBy] = useState("NAME");
   const [showAddPassword, setShowAddPassword] = useState(false);
 
@@ -139,6 +143,7 @@ const Banks = () => {
     const list = activeBanks.filter((b) => {
       const type = String(b?.loanType || "").toUpperCase();
       if (loanTypeFilter !== "ALL" && type !== loanTypeFilter) return false;
+      if (!matchesMonthYear(b, { year, month, dateKeys: ["createdAt"] })) return false;
       if (setupFilter === "NO_RM_EMAIL" && String(b?.rmEmail || "").trim()) return false;
       if (setupFilter === "NO_PINCODES" && pincodeCount(b) > 0) return false;
       if (!q) return true;
@@ -152,7 +157,7 @@ const Banks = () => {
     if (sortBy === "PINCODES") return list.sort((a, b) => pincodeCount(b) - pincodeCount(a) || byName(a, b));
     if (sortBy === "RECENT") return list.sort((a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0));
     return list.sort(byName);
-  }, [activeBanks, loanTypeSearch, loanTypeFilter, setupFilter, sortBy]);
+  }, [activeBanks, loanTypeSearch, loanTypeFilter, setupFilter, sortBy, year, month]);
 
   const setupCounts = useMemo(() => {
     const scoped =
@@ -167,12 +172,18 @@ const Banks = () => {
   }, [activeBanks, loanTypeFilter]);
 
   const hasActiveFilters =
-    loanTypeFilter !== "ALL" || setupFilter !== "ALL" || String(loanTypeSearch).trim() !== "";
+    loanTypeFilter !== "ALL" ||
+    setupFilter !== "ALL" ||
+    String(loanTypeSearch).trim() !== "" ||
+    year !== "all" ||
+    month !== "all";
 
   const clearFilters = () => {
     setLoanTypeFilter("ALL");
     setSetupFilter("ALL");
     setLoanTypeSearch("");
+    setYear("all");
+    setMonth("all");
   };
 
   const copyText = (text) => {
@@ -733,6 +744,13 @@ const Banks = () => {
                     )}
                   </div>
 
+                  <MonthYearSelects
+                    year={year}
+                    month={month}
+                    onYearChange={setYear}
+                    onMonthChange={setMonth}
+                    className="rounded-xl border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700"
+                  />
                   <div className="flex items-center gap-2">
                     <div className="inline-flex shrink-0 rounded-xl border border-gray-200 bg-white p-0.5 shadow-sm">
                       {setupFilterOptions.map((o) => {

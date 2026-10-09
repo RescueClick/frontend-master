@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { User, Search, Plus, Download } from "lucide-react";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 import { useDispatch, useSelector } from "react-redux";
 
 import { rmActivatePartner, rmDeactivatePartner, fetchPartners } from "../../../feature/thunks/rmThunks";
@@ -36,6 +38,10 @@ const Partners = () => {
   const [replacementSearch, setReplacementSearch] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialPeriod = readPeriodState(location);
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
   const dispatch = useDispatch();
 
   const openPartnerAnalytics = useCallback((partner) => {
@@ -136,9 +142,14 @@ const Partners = () => {
         (activityFilter === "with_loans" && forms > 0) ||
         (activityFilter === "more_info" && partner.moreInfoRequired) ||
         (activityFilter === "no_loans" && forms === 0);
-      return matchesSearch && matchesState && matchesActivity;
+      const matchesDate = matchesMonthYear(partner, {
+        year,
+        month,
+        dateKeys: ["createdAt", "joinDate"],
+      });
+      return matchesSearch && matchesState && matchesActivity && matchesDate;
     });
-  }, [data, searchTerm, stateFilter, activityFilter]);
+  }, [data, searchTerm, stateFilter, activityFilter, year, month]);
 
   // Partners with strongest loan book first so RM can judge performance
   const sortedFilteredPartners = useMemo(() => {
@@ -701,6 +712,12 @@ const Partners = () => {
                     </option>
                   ))}
                 </select>
+                <MonthYearSelects
+                  year={year}
+                  month={month}
+                  onYearChange={setYear}
+                  onMonthChange={setMonth}
+                />
               </div>
             </div>
           </div>

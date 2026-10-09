@@ -110,12 +110,12 @@ const Dashboard = () => {
 
   // Fetch recent activities on mount and every 30 seconds
   useEffect(() => {
-    dispatch(fetchRecentActivities(10));
+    dispatch(fetchRecentActivities({ limit: 12, year, month }));
     const interval = setInterval(() => {
-      dispatch(fetchRecentActivities(10));
+      dispatch(fetchRecentActivities({ limit: 12, year, month }));
     }, 30000);
     return () => clearInterval(interval);
-  }, [dispatch]);
+  }, [dispatch, year, month]);
 
   // Escape key handler for breakdown modal
   useEffect(() => {
@@ -410,7 +410,7 @@ const Dashboard = () => {
         {/* ASM */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
-          onClick={() => navigate("/admin/asm")}
+          onClick={() => navigateWithPeriod("/admin/asm")}
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
@@ -432,7 +432,7 @@ const Dashboard = () => {
         {/* RSMs */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
-          onClick={() => navigate("/admin/rsm")}
+          onClick={() => navigateWithPeriod("/admin/rsm")}
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-teal-100 to-teal-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
@@ -454,7 +454,7 @@ const Dashboard = () => {
         {/* RM */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
-          onClick={() => navigate("/admin/rm")}
+          onClick={() => navigateWithPeriod("/admin/rm")}
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-100 to-amber-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
@@ -476,7 +476,7 @@ const Dashboard = () => {
         {/* PARTNERS */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
-          onClick={() => navigate("/admin/partner")}
+          onClick={() => navigateWithPeriod("/admin/partner")}
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
@@ -508,7 +508,7 @@ const Dashboard = () => {
         {/* CUSTOMERS */}
         <div
           className="group bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden"
-          onClick={() => navigate("/admin/customer")}
+          onClick={() => navigateWithPeriod("/admin/customer")}
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-50 rounded-bl-full opacity-50"></div>
           <div className="relative flex items-center justify-between">
@@ -619,7 +619,7 @@ const Dashboard = () => {
           </div>
           <button
             type="button"
-            onClick={() => navigateWithPeriod("/admin/disbursed-loans")}
+            onClick={() => navigateWithPeriod("/admin/customer")}
             className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors flex items-center gap-1"
           >
             <span>View All Loans</span>
@@ -832,7 +832,9 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-5 flex-shrink-0">
             <div>
               <h3 className={typography.h3()}>Recent Activity</h3>
-              <p className={`${typography.caption()} mt-1`}>Latest system activities and updates</p>
+              <p className={`${typography.caption()} mt-1`}>
+                {isFiltered ? `Activity in ${periodLabel}` : "Latest system activities and updates"}
+              </p>
             </div>
             <div className="bg-gray-100 rounded-lg p-2">
               <Bell className="w-5 h-5 text-gray-600" />

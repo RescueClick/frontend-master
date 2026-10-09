@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 
 import { useLocation, useNavigate } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 import { backendurl } from "../../../feature/urldata";
 import MetricCard from "../../../components/shared/MetricCard";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
@@ -116,6 +118,9 @@ const Customers = () => {
 
 
   const location = useLocation();
+  const initialPeriod = readPeriodState(location);
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
   const { id } = location.state || {};
 
 
@@ -200,7 +205,12 @@ const Customers = () => {
       selectedLoanTypeLower === "all" ||
       customer.loanType?.toLowerCase() === selectedLoanTypeLower;
 
-    return matchesSearch && matchesStatus && matchesLoanType;
+    const matchesDate = matchesMonthYear(customer, {
+      year,
+      month,
+      dateKeys: ["createdAt", "applicationDate", "joinDate"],
+    });
+    return matchesSearch && matchesStatus && matchesLoanType && matchesDate;
   });
 
   const sortedFilteredCustomers = [...(filteredCustomers || [])].sort((a, b) => {
@@ -544,6 +554,12 @@ const Customers = () => {
                   </option>
                 ))}
               </select>
+              <MonthYearSelects
+                year={year}
+                month={month}
+                onYearChange={setYear}
+                onMonthChange={setMonth}
+              />
               <button
                 type="button"
                 className="flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm transition-colors hover:bg-gray-50"

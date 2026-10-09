@@ -159,7 +159,7 @@ const Dashboard = () => {
           : isRsm ? "ASMs under your management" : "RMs under your management",
         icon: Users,
         color: "blue",
-        onClick: () => navigate(subordinatePath),
+        onClick: () => navigate(subordinatePath, { state: { year, month } }),
       },
       {
         label: "Partners",
@@ -170,7 +170,7 @@ const Dashboard = () => {
           : `${formatNumber(t.activePartners || 0)} Active • ${formatNumber(t.totalPartners || 0)} Total`,
         icon: Building2,
         color: "emerald",
-        onClick: () => navigate(`${basePath}/partners`),
+        onClick: () => navigate(`${basePath}/partners`, { state: { year, month } }),
       },
       {
         label: "Customers",
@@ -181,7 +181,7 @@ const Dashboard = () => {
           : "With loan files",
         icon: UserCheck,
         color: "purple",
-        onClick: () => navigate(`${basePath}/applications`),
+        onClick: () => navigate(`${basePath}/applications`, { state: { year, month } }),
       },
       {
         label: "Disbursed",
@@ -195,7 +195,7 @@ const Dashboard = () => {
         color: "orange",
       },
     ];
-  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate, basePath, isRsm, subordinateTitle, subordinatePath, subordinateCount]);
+  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate, basePath, isRsm, subordinateTitle, subordinatePath, subordinateCount, year, month]);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#F8FAFC" }}>
@@ -285,7 +285,7 @@ const Dashboard = () => {
           fileStats={fileStats}
           periodLabel={periodLabel}
           loading={loading}
-          onViewAll={() => navigate(`${basePath}/applications`)}
+          onViewAll={() => navigate(`${basePath}/applications`, { state: { year, month } })}
         />
 
         {/* Current Month Target - RSM focuses on Disbursement (Business Metric) */}
@@ -518,7 +518,7 @@ const Dashboard = () => {
                   <div
                     key={index}
                     className="p-4 border rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`${basePath}/applications`)}
+                    onClick={() => navigate(`${basePath}/applications`, { state: { year, month } })}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-3">

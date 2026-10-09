@@ -18,6 +18,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPartners } from "../../../feature/thunks/adminThunks";
 import { getAuthData } from "../../../utils/localStorage";
+import MonthYearSelects from "../../../components/MonthYearSelects";
 import { backendurl } from "../../../feature/urldata";
 import { PARTNER_CHANNEL_TYPES } from "../../../utils/partnerChannelTypes";
 import { INDIAN_STATES } from "../../../utils/indianStates";
@@ -60,6 +61,8 @@ export default function AdminQrInventory() {
     channelHint: "",
     search: "",
     batchId: "",
+    year: "all",
+    month: "all",
   });
 
   const [genForm, setGenForm] = useState({
@@ -119,6 +122,8 @@ export default function AdminQrInventory() {
       if (filters.channelHint) params.channelHint = filters.channelHint;
       if (filters.search) params.search = filters.search;
       if (filters.batchId) params.batchId = filters.batchId;
+      if (filters.year && filters.year !== "all") params.year = filters.year;
+      if (filters.month && filters.month !== "all") params.month = filters.month;
       const { data } = await axios.get(`${backendurl}/admin/qr-stickers`, {
         headers: authHeaders(),
         params,
@@ -535,6 +540,19 @@ export default function AdminQrInventory() {
               </option>
             ))}
           </select>
+          <MonthYearSelects
+            year={filters.year}
+            month={filters.month}
+            onYearChange={(year) => {
+              setPage(1);
+              setFilters((f) => ({ ...f, year }));
+            }}
+            onMonthChange={(month) => {
+              setPage(1);
+              setFilters((f) => ({ ...f, month }));
+            }}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
           <input
             placeholder="Batch ID"
             value={filters.batchId}

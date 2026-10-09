@@ -5,7 +5,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import { useRealtimeData } from "../../../utils/useRealtimeData";
 import axios from "axios"
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 import { backendurl } from "../../../feature/urldata";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
 import AppAntTable from "../../../components/shared/AppAntTable";
@@ -23,8 +25,12 @@ import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 
 const Customer = () => {
+  const location = useLocation();
+  const initialPeriod = readPeriodState(location);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
 
   const [model, setModel] = useState(null)
 
@@ -75,15 +81,20 @@ const Customer = () => {
       const matchesFilter =
         filterStatus === "All" ||
         normalizedStatus?.toLowerCase() === filterStatus.toLowerCase();
+      const matchesDate = matchesMonthYear(customer, {
+        year,
+        month,
+        dateKeys: ["applicationDateRaw", "createdAt"],
+      });
 
-      return matchesSearch && matchesFilter;
+      return matchesSearch && matchesFilter && matchesDate;
     });
     return [...filtered].sort((a, b) => {
       const aTime = a?.applicationDateRaw ? new Date(a.applicationDateRaw).getTime() : 0;
       const bTime = b?.applicationDateRaw ? new Date(b.applicationDateRaw).getTime() : 0;
       return bTime - aTime; // newest first
     });
-  }, [customers, searchTerm, filterStatus]);
+  }, [customers, searchTerm, filterStatus, year, month]);
 
   const handleExport = useCallback(() => {
     const rows = filteredCustomers.map((c) => ({
@@ -433,6 +444,7 @@ const Customer = () => {
                 ))}
               </select>
             </div>
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
             <button
               type="button"
               onClick={handleExport}

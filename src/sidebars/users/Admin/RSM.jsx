@@ -15,6 +15,8 @@ import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 
 import toast from "react-hot-toast";
 import { INDIAN_STATES } from "../../../utils/indianStates";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -32,6 +34,9 @@ export default function RSM() {
   const location = useLocation();
   const dispatch = useDispatch();
 
+  const initialPeriod = readPeriodState(location);
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -145,9 +150,10 @@ export default function RSM() {
     if (!rsms || rsms.length === 0) return [];
 
     const term = searchQuery.trim().toLowerCase();
-    if (!term) return rsms;
 
     return rsms.filter((r) => {
+      if (!matchesMonthYear(r, { year, month, dateKeys: ["createdAt"] })) return false;
+      if (!term) return true;
       const fullName = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
       const employeeId = (r.employeeId || "").toLowerCase();
       const rsmMongoId = (r._id || "").toLowerCase();
@@ -162,7 +168,7 @@ export default function RSM() {
         rsmType.includes(term)
       );
     });
-  }, [rsms, searchQuery]);
+  }, [rsms, searchQuery, year, month]);
 
   const sortedFilteredRsms = sortNewestFirst(filteredRsms, { dateKeys: ["createdAt"] });
 
@@ -816,6 +822,12 @@ export default function RSM() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <MonthYearSelects
+              year={year}
+              month={month}
+              onYearChange={setYear}
+              onMonthChange={setMonth}
+            />
             <button
               type="button"
               className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

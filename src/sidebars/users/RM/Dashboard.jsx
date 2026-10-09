@@ -96,7 +96,7 @@ const Dashboard = () => {
           : `${formatNumber(t.activePartners || 0)} Active • ${formatNumber(t.inactivePartners || 0)} Suspended`,
         icon: Users,
         color: "emerald",
-        onClick: () => navigate("/rm/partners"),
+        onClick: () => navigate("/rm/partners", { state: { year, month } }),
       },
       {
         label: "Customers",
@@ -107,7 +107,7 @@ const Dashboard = () => {
           : "With loan files",
         icon: UserCheck,
         color: "purple",
-        onClick: () => navigate("/rm/Rm-Application"),
+        onClick: () => navigate("/rm/customers", { state: { year, month } }),
       },
       {
         label: "Disbursed",
@@ -130,7 +130,7 @@ const Dashboard = () => {
         onClick: () => navigate("/rm/Follow-up"),
       },
     ];
-  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate]);
+  }, [data?.totals, fileStats, isFiltered, periodLabel, navigate, year, month]);
 
   const targetVsAchievement = useMemo(() => {
     return (data?.targets || [])?.map((item) => {
@@ -528,7 +528,7 @@ const Dashboard = () => {
           fileStats={fileStats}
           periodLabel={periodLabel}
           loading={loading}
-          onViewAll={() => navigate("/rm/Rm-Application")}
+          onViewAll={() => navigate("/rm/customers", { state: { year, month } })}
         />
 
         {data?.partnerPayoutSummary?.length > 0 ? (

@@ -11,6 +11,8 @@ import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import axios from "axios"
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 import ReassignmentDeactivateModal from "../../../components/shared/ReassignmentDeactivateModal";
 import ActivationConfirmModal from "../../../components/shared/ActivationConfirmModal";
 import AppAntTable from "../../../components/shared/AppAntTable";
@@ -60,6 +62,9 @@ export default function AsmPartner() {
   console.log("Partners", Partners)
 
   const location = useLocation();
+  const initialPeriod = readPeriodState(location);
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
   const { id } = location.state || {};
 
   const navigate = useNavigate();
@@ -84,6 +89,7 @@ export default function AsmPartner() {
       const partnerRegion = String(c.region || "").trim().toLowerCase();
       const matchesState = !selectedState || partnerRegion === selectedState;
       if (!matchesState) return false;
+      if (!matchesMonthYear(c, { year, month, dateKeys: ["createdAt"] })) return false;
 
       if (!term) return true;
 
@@ -105,7 +111,7 @@ export default function AsmPartner() {
         region.includes(term)
       );
     });
-  }, [Partners, searchQuery, stateFilter]);
+  }, [Partners, searchQuery, stateFilter, year, month]);
 
   const sortedFilteredCustomers = sortNewestFirst(filteredCustomers, { dateKeys: ["createdAt"] });
 
@@ -558,6 +564,7 @@ loginAsUser(userId, navigate);
                 </option>
               ))}
             </select>
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
             <button
               type="button"
               onClick={() => navigate(location.pathname.startsWith("/asm") ? "/asm/move-partners" : "/rsm/move-partners")}

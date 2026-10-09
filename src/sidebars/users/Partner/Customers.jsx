@@ -22,10 +22,17 @@ import AppAntTable from "../../../components/shared/AppAntTable";
 import { getLoanStatusLabel, normalizeLoanStatus } from "../../../utils/loanStatus";
 import toast from "react-hot-toast";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
+import { useLocation } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 
 const Customer = () => {
+  const location = useLocation();
+  const initialPeriod = readPeriodState(location);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
   const [customersData, setCustomersData] = useState([]);
   const [isMobileView, setIsMobileView] = useState(false);
 
@@ -71,8 +78,13 @@ const Customer = () => {
     const matchesStatus =
       statusFilter === "All" ||
       normalizedStatus?.toLowerCase() === statusFilter.toLowerCase();
+    const matchesDate = matchesMonthYear(customer, {
+      year,
+      month,
+      dateKeys: ["createdAt", "applicationDate"],
+    });
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const sortedFilteredCustomers = [...(filteredCustomers || [])].sort((a, b) => {
@@ -377,6 +389,7 @@ const Customer = () => {
               </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
             </div>
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
             <button
               type="button"
               onClick={handleExport}

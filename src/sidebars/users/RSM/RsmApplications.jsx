@@ -2,7 +2,9 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Search, Filter, Eye, Phone, FileText, Download } from "lucide-react";
 import { fetchRsmApplications } from "../../../feature/thunks/rsmThunks";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { matchesMonthYear } from "../../../utils/dateFilter";
+import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 import { matchesSearchTerm, matchesStatusFilter, normalizeStatus } from "../../../utils/tableFilter";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import LoanStatusBadge from "../../../components/shared/LoanStatusBadge";
@@ -14,8 +16,12 @@ import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 
 export default function RsmApplications() {
+  const location = useLocation();
+  const initialPeriod = readPeriodState(location);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -87,11 +93,16 @@ export default function RsmApplications() {
 
       const status = normalizeStatus(app.status);
       const matchesFilter = matchesStatusFilter(status, filterStatus);
+      const matchesDate = matchesMonthYear(app, {
+        year,
+        month,
+        dateKeys: ["applicationDateRaw", "createdAt"],
+      });
 
-      return matchesSearch && matchesFilter;
+      return matchesSearch && matchesFilter && matchesDate;
     });
     return sortNewestFirst(filtered, { dateKeys: ["applicationDateRaw"] });
-  }, [applications, searchTerm, filterStatus]);
+  }, [applications, searchTerm, filterStatus, year, month]);
 
   const handleExport = useCallback(() => {
     const rows = filteredApplications.map((app) => ({
@@ -273,6 +284,7 @@ export default function RsmApplications() {
                 ))}
               </select>
             </div>
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
             <button
               type="button"
               onClick={handleExport}

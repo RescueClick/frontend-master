@@ -113,15 +113,18 @@ export const fetchAdminDashboard = createAsyncThunk(
 // Fetch recent activities for admin dashboard
 export const fetchRecentActivities = createAsyncThunk(
   "admin/fetchRecentActivities",
-  async (limit = 10, { rejectWithValue }) => {
+  async (arg = 10, { rejectWithValue }) => {
     try {
       const { adminToken } = getAuthData();
+      const limit = typeof arg === "number" ? arg : arg?.limit || 10;
+      const year = typeof arg === "object" && arg ? arg.year : undefined;
+      const month = typeof arg === "object" && arg ? arg.month : undefined;
 
       const response = await axios.get(`${backendurl}/admin/recent-activities`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
-        params: { limit },
+        params: { limit, year, month },
       });
 
       return unwrapApiData(response.data);

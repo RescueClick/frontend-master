@@ -218,7 +218,7 @@ const Dashboard = () => {
               isFiltered={isFiltered}
               periodLabel={periodLabel}
               loading={loading && !data}
-              onClick={metric.path ? () => navigate(metric.path) : undefined}
+              onClick={metric.path ? () => navigate(metric.path, { state: { year, month } }) : undefined}
             />
           ))}
         </div>
@@ -227,7 +227,7 @@ const Dashboard = () => {
           fileStats={fileStats}
           periodLabel={periodLabel}
           loading={loading}
-          onViewAll={() => navigate(`${basePath}/applications`)}
+          onViewAll={() => navigate(`${basePath}/applications`, { state: { year, month } })}
         />
 
         {/* Current Month Target Card - ASM focuses on Disbursement (Business Metric) */}
