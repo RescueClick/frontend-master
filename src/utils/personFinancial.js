@@ -21,12 +21,6 @@ export const SALARY_RECEIPT_LABELS = {
 
 export function validatePersonFinancialFields(data = {}) {
   const errors = {};
-  if (!data.salaryInHand || Number(data.salaryInHand) <= 0) {
-    errors.salaryInHand = "Salary in hand is required.";
-  }
-  if (data.salaryReceiptMode !== "ONLINE" && data.salaryReceiptMode !== "CASH") {
-    errors.salaryReceiptMode = "Select how salary is received (Online or Cash).";
-  }
   if (!CIBIL_SCORE_OPTIONS.some((option) => option.value === data.cibilScoreBand)) {
     errors.cibilScoreBand = "CIBIL score range is required.";
   }

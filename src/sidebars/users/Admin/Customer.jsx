@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Eye, Download, Trash2, Search, X, KeyRound, Users, Sparkles } from "lucide-react";
+import { Eye, Download, Trash2, Search, X, KeyRound, Users, Sparkles, Info } from "lucide-react";
+import { Tooltip } from "antd";
 
 import { useDispatch, useSelector } from "react-redux";
 import { getAllCustomers } from "../../../feature/thunks/adminThunks";
@@ -13,6 +14,7 @@ import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import AdminChangePasswordModal from "../../../components/shared/AdminChangePasswordModal";
 import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import { CIBIL_SCORE_LABELS } from "../../../utils/personFinancial";
 import LoanFileReviewCell from "../../../components/shared/LoanFileReviewCell";
 import AdminLeads from "./AdminLeads";
 import { matchesMonthYear } from "../../../utils/dateFilter";
@@ -26,6 +28,55 @@ const colors = {
   background: "#F8FAFC",
   text: "#111827",
 };
+
+function formatInr(value) {
+  const amount = Number(String(value ?? "").replace(/,/g, ""));
+  if (!Number.isFinite(amount) || amount <= 0) return "—";
+  return `₹${amount.toLocaleString("en-IN")}`;
+}
+
+function cibilLabel(band) {
+  return CIBIL_SCORE_LABELS[band] || "—";
+}
+
+function LoanQuickFacts({ row }) {
+  const existing = row.hasRunningLoan === "YES" ? "Yes" : "No";
+  const facts = [
+    ["CIBIL", cibilLabel(row.cibilScoreBand)],
+    ["Existing loan", existing],
+    ["EMI", existing === "Yes" ? formatInr(row.monthlyEmiPaying) : "—"],
+    ["Loan amount", formatInr(row.loanAmount)],
+    ["Salary", formatInr(row.salaryInHand)],
+  ];
+
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      <span className="text-sm font-semibold text-gray-900">{cibilLabel(row.cibilScoreBand)}</span>
+      <Tooltip
+        placement="topLeft"
+        color="#ffffff"
+        title={
+          <div className="min-w-[190px] space-y-1.5 py-0.5 text-xs text-gray-800">
+            {facts.map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between gap-4">
+                <span className="text-gray-500">{label}</span>
+                <span className="font-semibold text-gray-900">{value}</span>
+              </div>
+            ))}
+          </div>
+        }
+      >
+        <button
+          type="button"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-teal-200 bg-teal-50 text-teal-700"
+          aria-label="Loan details"
+        >
+          <Info size={12} />
+        </button>
+      </Tooltip>
+    </div>
+  );
+}
  
 
  
@@ -286,6 +337,11 @@ export default function CustomerTable() {
         dataIndex: "loanType",
         key: "lt",
         render: (v) => loanTypeToTableShort(v),
+      },
+      {
+        title: "CIBIL",
+        key: "cibil",
+        render: (_, c) => <LoanQuickFacts row={c} />,
       },
       {
         title: "Login Bank",

@@ -274,8 +274,6 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
           "hasRunningLoan",
           "loanPurpose",
           "monthlyEmiPaying",
-          "salaryInHand",
-          "salaryReceiptMode",
           "cibilScoreBand",
         ];
       }
@@ -862,6 +860,12 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
           {/* Step 0: Personal */}
           {currentStep === 0 && (
             <section className="space-y-6">
+              <LoanApplicantFinancialFields
+                formData={formData}
+                handleInputChange={handleInputChange}
+                renderError={renderError}
+                fieldErrors={fieldErrors}
+              />
               <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                 <User className="w-5 h-5 text-teal-600" />
                 Personal Information
@@ -909,13 +913,6 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
                   />
                   {renderError("lastName")}
                 </div>
-
-                <LoanApplicantFinancialFields
-                  formData={formData}
-                  handleInputChange={handleInputChange}
-                  renderError={renderError}
-                  fieldErrors={fieldErrors}
-                />
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">

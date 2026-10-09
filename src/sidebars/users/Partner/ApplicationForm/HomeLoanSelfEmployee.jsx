@@ -388,8 +388,6 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           "hasRunningLoan",
           "loanPurpose",
           "monthlyEmiPaying",
-          "salaryInHand",
-          "salaryReceiptMode",
           "cibilScoreBand",
         ];
       }
@@ -1348,6 +1346,12 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
 
             {/* Personal Information */}
             <section id="loan-selfe-step-personal" hidden={currentStep !== 0}>
+              <LoanApplicantFinancialFields
+                formData={formData}
+                handleInputChange={handleInputChange}
+                renderError={renderError}
+                fieldErrors={fieldErrors}
+              />
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -1426,12 +1430,6 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
 
                   {formData.lastName ? "" : renderError('lastName')}
                 </div>
-                <LoanApplicantFinancialFields
-                  formData={formData}
-                  handleInputChange={handleInputChange}
-                  renderError={renderError}
-                  fieldErrors={fieldErrors}
-                />
                 {/* Mother Name */}
                 <div>
                   <label

@@ -1286,6 +1286,12 @@ const handleSubmit = async () => {
 
             {/* Personal Information */}
             <section hidden={currentStep !== 0} id="loan-business-step-personal">
+              <LoanApplicantFinancialFields
+                formData={formData}
+                handleInputChange={handleInputChange}
+                renderError={renderError}
+                fieldErrors={validationErrors}
+              />
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -1375,12 +1381,6 @@ const handleSubmit = async () => {
                   />
                   {renderError("lastName")}
                 </div>
-                <LoanApplicantFinancialFields
-                  formData={formData}
-                  handleInputChange={handleInputChange}
-                  renderError={renderError}
-                  fieldErrors={validationErrors}
-                />
                 {/* Mother Name */}
                 <div>
                   <label
