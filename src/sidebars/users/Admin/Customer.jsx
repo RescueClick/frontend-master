@@ -17,6 +17,7 @@ import LoanQuickFacts from "../../../components/shared/LoanQuickFacts";
 import ApplicationHoverCard from "../../../components/shared/ApplicationHoverCard";
 import LoanFileReviewCell from "../../../components/shared/LoanFileReviewCell";
 import AdminLeads from "./AdminLeads";
+import MetaLeadSheetPanel from "../../../components/shared/MetaLeadSheetPanel";
 import { matchesMonthYear } from "../../../utils/dateFilter";
 import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
 
@@ -687,6 +688,8 @@ export default function CustomerTable() {
   </div>
 )}
 
+
+<MetaLeadSheetPanel />
 
 <DashboardTablePage
       title="Customer Applications"
