@@ -10,6 +10,7 @@ const MAX_REVIEW = 500;
 function reviewToken(scope) {
   const auth = getAuthData() || {};
   if (scope === "admin") return auth.adminToken || "";
+  if (scope === "rm") return auth.rmToken || "";
   if (scope === "asm") return auth.asmToken || auth.rsmToken || "";
   return auth.asmToken || auth.rsmToken || auth.adminToken || "";
 }
@@ -141,7 +142,7 @@ export default function LoanFileReviewCell({
               Loan file review
             </h3>
             <p className="mt-1 text-xs text-slate-500">
-              Internal note for Admin, RSM, and ASM. The latest save replaces the column.
+              Internal note for Admin, RSM, ASM, and RM. The latest save replaces the column.
             </p>
             {byline ? <p className="mt-2 text-xs text-slate-600">{byline}</p> : null}
             <textarea

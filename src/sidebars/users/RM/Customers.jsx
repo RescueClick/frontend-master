@@ -347,7 +347,16 @@ const Customers = () => {
           <LoanFileReviewCell
             applicationId={customer.applicationId}
             review={customer.fileReview}
-            readOnly
+            scope="rm"
+            onSaved={(fileReview) => {
+              setCustomers((current) =>
+                current.map((row) =>
+                  String(row.applicationId) === String(customer.applicationId)
+                    ? { ...row, fileReview }
+                    : row
+                )
+              );
+            }}
           />
         ),
       },
