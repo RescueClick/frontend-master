@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import LoanFileReviewCell from "../../../components/shared/LoanFileReviewCell";
 
 const Application = () => {
   const location = useLocation();
@@ -22,6 +23,7 @@ const Application = () => {
   const [filterStatus, setFilterStatus] = useState("All");
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -66,6 +68,7 @@ const Application = () => {
               : latestPayoutAmount,
           loginBankName: c.loginBankName || "",
           status: c.status, // comes as backend status enum
+          fileReview: c.fileReview || null,
         };
       })
     : [];
@@ -84,13 +87,14 @@ const Application = () => {
       const matchesDate = matchesMonthYear(customer, {
         year,
         month,
+        day,
         dateKeys: ["applicationDateRaw", "createdAt"],
       });
 
       return matchesSearch && matchesFilter && matchesDate;
     });
     return sortNewestFirst(filtered, { dateKeys: ["applicationDateRaw"] });
-  }, [applications, searchTerm, filterStatus, year, month]);
+  }, [applications, searchTerm, filterStatus, year, month, day]);
 
   const handleExport = useCallback(() => {
     const rows = filteredCustomers.map((c) => ({
@@ -103,6 +107,8 @@ const Application = () => {
       "Disburse Amount": c.disburseAmount ?? "",
       Payout: c.payoutAmount ?? "",
       "Login Bank": c.loginBankName || "",
+      Review: c.fileReview?.text || "",
+      "Reviewed By": c.fileReview?.updatedByName || "",
       Status: getLoanStatusLabel(c.status) || String(c.status || ""),
     }));
     if (!downloadXlsx(rows, "asm-applications.xlsx", "Applications")) {
@@ -172,6 +178,18 @@ const Application = () => {
         ),
       },
       {
+        title: "Review",
+        key: "review",
+        render: (_, row) => (
+          <LoanFileReviewCell
+            applicationId={row.applicationId}
+            review={row.fileReview}
+            scope="asm"
+            onSaved={() => dispatch(fetchAsmApplications())}
+          />
+        ),
+      },
+      {
         title: "Status",
         dataIndex: "status",
         key: "status",
@@ -202,7 +220,7 @@ const Application = () => {
         ),
       },
     ],
-    [navigate]
+    [dispatch, navigate]
   );
 
   return (
@@ -243,7 +261,7 @@ const Application = () => {
                 ))}
               </select>
             </div>
-            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} day={day} onDayChange={setDay} />
             <button
               type="button"
               onClick={handleExport}

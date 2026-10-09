@@ -13,6 +13,7 @@ import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import AdminChangePasswordModal from "../../../components/shared/AdminChangePasswordModal";
 import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/loanStatus";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import LoanFileReviewCell from "../../../components/shared/LoanFileReviewCell";
 import AdminLeads from "./AdminLeads";
 import { matchesMonthYear } from "../../../utils/dateFilter";
 import MonthYearSelects, { readPeriodState } from "../../../components/MonthYearSelects";
@@ -41,6 +42,7 @@ export default function CustomerTable() {
   const initialPeriod = readPeriodState(location)
   const [year, setYear] = useState(initialPeriod.year)
   const [month, setMonth] = useState(initialPeriod.month)
+  const [day, setDay] = useState(initialPeriod.day)
   const [passwordUser, setPasswordUser] = useState(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get("tab") === "leads" ? "leads" : "customers"
@@ -77,7 +79,7 @@ export default function CustomerTable() {
       const statusForMatch =
         normalizedStatus === "DRAFT" ? "SUBMITTED" : normalizedStatus;
       if (selectedStatus && statusForMatch !== selectedStatus) return false;
-      if (!matchesMonthYear(c, { year, month, dateKeys: ["applicationDate", "createdAt", "disbursedAt"] })) {
+      if (!matchesMonthYear(c, { year, month, day, dateKeys: ["applicationDate", "createdAt", "disbursedAt"] })) {
         return false;
       }
       if (!term) return true;
@@ -95,6 +97,8 @@ export default function CustomerTable() {
       const partnerName = (c.partnerName || "").toLowerCase();
       const loginBank = (c.loginBankName || "").toLowerCase();
       const status = String(c.status || "").toLowerCase();
+      const reviewText = String(c.fileReview?.text || "").toLowerCase();
+      const reviewBy = String(c.fileReview?.updatedByName || "").toLowerCase();
       return (
         fullName.includes(term) ||
         employeeId.includes(term) ||
@@ -108,10 +112,12 @@ export default function CustomerTable() {
         rmName.includes(term) ||
         partnerName.includes(term) ||
         loginBank.includes(term) ||
-        status.includes(term)
+        status.includes(term) ||
+        reviewText.includes(term) ||
+        reviewBy.includes(term)
       );
     });
-  }, [sortedData, searchQuery, statusFilter, year, month]);
+  }, [sortedData, searchQuery, statusFilter, year, month, day]);
 
   const uniqueCustomerCount = useMemo(() => {
     const ids = new Set(
@@ -132,6 +138,7 @@ export default function CustomerTable() {
       const next = readPeriodState(location);
       setYear(next.year);
       setMonth(next.month);
+      setDay(next.day);
     }
   }, [location]);
 
@@ -318,6 +325,27 @@ export default function CustomerTable() {
           ),
       },
       {
+        title: "Review",
+        key: "review",
+        render: (_, c) => (
+          <LoanFileReviewCell
+            applicationId={c.applicationId || c._id}
+            review={c.fileReview}
+            scope="admin"
+            onSaved={(fileReview) => {
+              dispatch(getAllCustomers());
+              setModel((current) =>
+                current &&
+                String(current._id || current.applicationId) ===
+                  String(c._id || c.applicationId)
+                  ? { ...current, fileReview }
+                  : current
+              );
+            }}
+          />
+        ),
+      },
+      {
         title: "Status",
         dataIndex: "status",
         key: "status",
@@ -370,7 +398,7 @@ export default function CustomerTable() {
         ),
       },
     ],
-    []
+    [dispatch]
   );
 
   return (
@@ -610,6 +638,12 @@ export default function CustomerTable() {
                 ["Loan type", loanTypeToTableShort(model.loanType)],
                 ["Login bank", model.loginBankName || "—"],
                 ["Status", getLoanStatusLabel(model.status)],
+                [
+                  "Review",
+                  model.fileReview?.text
+                    ? `${model.fileReview.text} — ${model.fileReview.updatedByName || "Staff"}`
+                    : "No review",
+                ],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg bg-white px-3 py-2.5 border border-slate-100 shadow-sm">
                   <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</dt>
@@ -684,7 +718,7 @@ export default function CustomerTable() {
             year={year}
             month={month}
             onYearChange={setYear}
-            onMonthChange={setMonth}
+            onMonthChange={setMonth} day={day} onDayChange={setDay}
           />
           <button
             type="button"

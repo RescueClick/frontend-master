@@ -14,6 +14,7 @@ import { getLoanStatusLabel, LOAN_STATUS_FILTER_OPTIONS } from "../../../utils/l
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import DashboardTablePage from "../../../components/shared/DashboardTablePage";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import LoanFileReviewCell from "../../../components/shared/LoanFileReviewCell";
 
 export default function RsmApplications() {
   const location = useLocation();
@@ -22,6 +23,7 @@ export default function RsmApplications() {
   const [filterStatus, setFilterStatus] = useState("All");
   const [year, setYear] = useState(initialPeriod.year);
   const [month, setMonth] = useState(initialPeriod.month);
+  const [day, setDay] = useState(initialPeriod.day);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -76,6 +78,7 @@ export default function RsmApplications() {
               : latestPayoutAmount,
           loginBankName: app.loginBankName || "",
           status: app.status || "DRAFT",
+          fileReview: app.fileReview || null,
         };
       })
     : [];
@@ -98,13 +101,14 @@ export default function RsmApplications() {
       const matchesDate = matchesMonthYear(app, {
         year,
         month,
+        day,
         dateKeys: ["applicationDateRaw", "createdAt"],
       });
 
       return matchesSearch && matchesFilter && matchesDate;
     });
     return sortNewestFirst(filtered, { dateKeys: ["applicationDateRaw"] });
-  }, [applications, searchTerm, filterStatus, year, month]);
+  }, [applications, searchTerm, filterStatus, year, month, day]);
 
   const handleExport = useCallback(() => {
     const rows = filteredApplications.map((app) => ({
@@ -122,6 +126,8 @@ export default function RsmApplications() {
       "Approved Amount": app.approvedLoanAmount ?? "",
       Payout: app.payoutAmount ?? "",
       "Login Bank": app.loginBankName || "",
+      Review: app.fileReview?.text || "",
+      "Reviewed By": app.fileReview?.updatedByName || "",
       Status: getLoanStatusLabel(app.status) || String(app.status || ""),
     }));
     if (!downloadXlsx(rows, "rsm-applications.xlsx", "Applications")) {
@@ -227,6 +233,24 @@ export default function RsmApplications() {
         ),
       },
       {
+        title: "Review",
+        key: "review",
+        render: (_, app) => (
+          <LoanFileReviewCell
+            applicationId={app.id}
+            review={app.fileReview}
+            scope="rsm"
+            onSaved={() =>
+              dispatch(
+                fetchRsmApplications({
+                  status: filterStatus !== "All" ? filterStatus : null,
+                })
+              )
+            }
+          />
+        ),
+      },
+      {
         title: "Status",
         dataIndex: "status",
         key: "status",
@@ -255,7 +279,7 @@ export default function RsmApplications() {
         ),
       },
     ],
-    [navigate]
+    [dispatch, filterStatus, navigate]
   );
 
   return (
@@ -296,7 +320,7 @@ export default function RsmApplications() {
                 ))}
               </select>
             </div>
-            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
+            <MonthYearSelects year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} day={day} onDayChange={setDay} />
             <button
               type="button"
               onClick={handleExport}
