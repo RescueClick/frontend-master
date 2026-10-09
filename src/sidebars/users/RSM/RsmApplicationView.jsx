@@ -2103,7 +2103,7 @@ const RsmApplicationView = () => {
                         Smart Bank Matcher
                       </h3>
                       <p className="text-emerald-100 text-[11px] mt-0.5 opacity-90">
-                        Pincode plus salary, age, amount, FOIR, and employment policy.
+                        Pincode decides the list. Policy only marks how well the file fits.
                       </p>
                     </div>
 
@@ -2168,10 +2168,11 @@ const RsmApplicationView = () => {
                         </div>
                       ) : banksFetched && (
                         <div className="space-y-2.5 mt-1 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5">
-                          {policyFilter?.hidden > 0 && (
-                            <p className="text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
-                              {policyFilter.hidden} bank{policyFilter.hidden === 1 ? "" : "s"} hidden by policy
+                          {(policyFilter?.matched > 0 || policyFilter?.outside > 0 || policyFilter?.review > 0) && (
+                            <p className="text-[10px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5">
+                              {policyFilter.matched || 0} policy match
                               {policyFilter.review ? ` · ${policyFilter.review} need a check` : ""}
+                              {policyFilter.outside ? ` · ${policyFilter.outside} outside policy, still shown` : ""}
                             </p>
                           )}
                           {eligibleBanks.length > 0 ? (
@@ -2374,9 +2375,7 @@ const RsmApplicationView = () => {
                               <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2 opacity-50" />
                               <p className="text-sm font-semibold text-gray-700">No matching banks</p>
                               <p className="text-xs text-gray-500 mt-1">
-                                {policyFilter?.hidden
-                                  ? "Every pincode bank failed the salary, amount, age, FOIR, or employment rules."
-                                  : "Try a different pincode or check bank configurations."}
+                                No bank covers this pincode. Try another pin or add pincodes on the bank.
                               </p>
                             </div>
                           )}

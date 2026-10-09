@@ -26,6 +26,7 @@ import { getAuthData } from "../../../utils/localStorage";
 import { backendurl } from "../../../feature/urldata";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
+import { CIBIL_SCORE_LABELS, SALARY_RECEIPT_LABELS } from "../../../utils/personFinancial";
 
 const COLORS = {
   primary: "var(--color-brand-primary)",
@@ -135,6 +136,9 @@ export default function AdminLeads() {
         hasRunningLoan: app.hasRunningLoan || app.customer?.hasRunningLoan || "NO",
         monthlyEmiPaying: app.monthlyEmiPaying || app.customer?.monthlyEmiPaying || 0,
         loanPurpose: app.loanPurpose || app.customer?.loanPurpose || "",
+        salaryInHand: app.salaryInHand || app.customer?.salaryInHand || "",
+        salaryReceiptMode: app.salaryReceiptMode || app.customer?.salaryReceiptMode || "",
+        cibilScoreBand: app.cibilScoreBand || app.customer?.cibilScoreBand || "",
         leadSource: app.leadSource || "PARTNER",
         leadFollowUp: app.leadFollowUp || { status: "NEW", remarks: "" },
         partnerName:
@@ -444,6 +448,25 @@ export default function AdminLeads() {
                       </span>
                     </div>
                   )}
+                  {lead.salaryInHand ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 font-medium">Salary in hand:</span>
+                      <span className="font-bold text-gray-900">
+                        ₹{Number(lead.salaryInHand).toLocaleString("en-IN")}
+                        {lead.salaryReceiptMode
+                          ? ` · ${SALARY_RECEIPT_LABELS[lead.salaryReceiptMode] || lead.salaryReceiptMode}`
+                          : ""}
+                      </span>
+                    </div>
+                  ) : null}
+                  {lead.cibilScoreBand ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 font-medium">CIBIL:</span>
+                      <span className="font-bold text-gray-900">
+                        {CIBIL_SCORE_LABELS[lead.cibilScoreBand] || lead.cibilScoreBand}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Assignment & Source */}

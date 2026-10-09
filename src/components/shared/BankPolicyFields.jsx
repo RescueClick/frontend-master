@@ -29,7 +29,7 @@ export default function BankPolicyFields({ policy, onChange, bankName, loanType 
         <div>
           <h3 className="text-sm font-bold text-gray-900">Underwriting policy</h3>
           <p className="text-[11px] leading-snug text-gray-600">
-            Shown on the bank card. The loan matcher hides a bank when salary, amount, age, FOIR, vintage, or employment fails these rules.
+            Shown on the bank card. Pincode still decides which banks appear. These rules only mark a bank as a match, a check, or outside policy.
           </p>
         </div>
         {suggestion ? (
