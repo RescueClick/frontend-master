@@ -106,6 +106,8 @@ const AdminDonePayout = () => {
     payOutStatus: "DONE",
     note: "",
     companyPercentage: "",
+    disbursementBankId: "",
+    disbursementBankName: "",
   });
 
   const { data: doneData = [], loading } = useSelector(
@@ -277,6 +279,8 @@ const AdminDonePayout = () => {
       payOutStatus: "DONE",
       note: record.payoutNote || "",
       companyPercentage: record.companyPercentage != null ? String(record.companyPercentage) : "",
+      disbursementBankId: record.disbursementBankId ? String(record.disbursementBankId) : "",
+      disbursementBankName: record.disbursementBankName || "",
     });
 
     setModalOpen(true);
@@ -357,6 +361,8 @@ const AdminDonePayout = () => {
           note: modalForm.note || "",
           companyPercentage:
             modalForm.companyPercentage !== "" ? Number(modalForm.companyPercentage) : undefined,
+          bankId: modalForm.disbursementBankId || undefined,
+          disbursementBankName: modalForm.disbursementBankName || "",
         })
       ).unwrap();
 
@@ -1027,6 +1033,15 @@ const AdminDonePayout = () => {
                     value={modalForm.companyPercentage}
                     onChange={(v) => setModalForm((prev) => ({ ...prev, companyPercentage: v }))}
                     partnerGross={modalForm.grossAmount}
+                    bankId={modalForm.disbursementBankId}
+                    bankName={modalForm.disbursementBankName}
+                    onBankChange={({ bankId, bankName }) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        disbursementBankId: bankId,
+                        disbursementBankName: bankName,
+                      }))
+                    }
                   />
 
                   {/* 2. SECTION 194T TDS CONFIG CARD */}
