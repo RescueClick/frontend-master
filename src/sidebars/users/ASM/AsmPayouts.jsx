@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import {
   IndianRupee,
   Clock,
@@ -38,6 +39,8 @@ import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { downloadXlsx } from "../../../utils/downloadXlsx";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import PayoutStatusBadge from "../../../components/shared/PayoutStatusBadge";
+import { backendurl } from "../../../feature/urldata";
+import { getAuthData } from "../../../utils/localStorage";
 
 const formatInr = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", {
@@ -94,7 +97,11 @@ const AsmPayouts = () => {
     payoutAmount: "",
     payOutStatus: "PENDING",
     note: "",
+    actualLoanAmount: "",
+    companyPercentage: "",
+    disbursementBankId: "",
   });
+  const [disbursementBanks, setDisbursementBanks] = useState([]);
 
   // Redux Data
   const { data: pendingData = [], loading: pendingLoading } = useSelector(
@@ -275,10 +282,38 @@ const AsmPayouts = () => {
       // RSM proposes only — admin completes payment
       payOutStatus: "PENDING",
       note: record.payoutNote || "",
+      actualLoanAmount: record.actualLoanAmount != null ? String(record.actualLoanAmount) : "",
+      companyPercentage: record.companyPercentage != null ? String(record.companyPercentage) : "",
+      disbursementBankId: record.disbursementBankId ? String(record.disbursementBankId) : "",
     });
 
     setModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!modalOpen || disbursementBanks.length) return;
+    const { asmToken, rsmToken, adminToken } = getAuthData();
+    const token = asmToken || rsmToken || adminToken;
+    if (!token) return;
+    axios
+      .get(`${backendurl}/rsm/banks?all=1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : res.data?.banks || [];
+        setDisbursementBanks(list);
+      })
+      .catch(() => {
+        toast.error("Could not load the bank list");
+      });
+  }, [modalOpen, disbursementBanks.length]);
+
+  const bankCommissionAmount = useMemo(() => {
+    const actual = Number(modalForm.actualLoanAmount);
+    const pct = Number(modalForm.companyPercentage);
+    if (!Number.isFinite(actual) || actual <= 0 || !Number.isFinite(pct) || pct < 0) return 0;
+    return Number(((actual * pct) / 100).toFixed(2));
+  }, [modalForm.actualLoanAmount, modalForm.companyPercentage]);
 
   const handleCloseModal = () => {
     setModalOpen(false);
@@ -329,6 +364,20 @@ const AsmPayouts = () => {
       toast.error("Application ID is missing");
       return;
     }
+    if (!modalForm.disbursementBankId) {
+      toast.error("Select the bank that disbursed this loan");
+      return;
+    }
+    const actual = Number(modalForm.actualLoanAmount);
+    if (!Number.isFinite(actual) || actual <= 0) {
+      toast.error("Enter the actual loan amount");
+      return;
+    }
+    const bankPct = Number(modalForm.companyPercentage);
+    if (!Number.isFinite(bankPct) || bankPct < 0) {
+      toast.error("Enter the bank commission percentage");
+      return;
+    }
 
     try {
       setIsSaving(true);
@@ -338,6 +387,9 @@ const AsmPayouts = () => {
           partnerId: modalForm.partnerId || undefined,
           payoutAmount: modalForm.payoutAmount ? Number(modalForm.payoutAmount) : undefined,
           payoutPercentage: modalForm.payoutPercentage ? Number(modalForm.payoutPercentage) : undefined,
+          actualLoanAmount: Number(modalForm.actualLoanAmount),
+          companyPercentage: Number(modalForm.companyPercentage),
+          bankId: modalForm.disbursementBankId,
           // Always PENDING — admin pays / marks DONE
           payOutStatus: "PENDING",
           note: modalForm.note || "",
@@ -345,6 +397,13 @@ const AsmPayouts = () => {
       ).unwrap();
 
       toast.success("Payout set successfully — sent to Admin for payment");
+      setDisbursementBanks((current) =>
+        current.map((bank) =>
+          String(bank._id) === String(modalForm.disbursementBankId)
+            ? { ...bank, commissionPercentage: Number(modalForm.companyPercentage) }
+            : bank
+        )
+      );
       handleCloseModal();
       loadData();
     } catch (err) {
@@ -1114,6 +1173,7 @@ const AsmPayouts = () => {
                       <p className="text-sm font-black text-slate-900 mt-0.5">
                         {formatInr(modalForm.approvalAmount)}
                       </p>
+                      <span className="text-[10px] text-slate-400">Approval amount</span>
                     </div>
                   </div>
                 </div>
@@ -1132,7 +1192,7 @@ const AsmPayouts = () => {
                     {/* Input 1: Percentage */}
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-slate-700 block">
-                        Commission Rate (%)
+                        Partner commission (%) from approval amount
                       </label>
                       <div className="relative">
                         <input
@@ -1153,7 +1213,7 @@ const AsmPayouts = () => {
                     {/* Input 2: Amount (₹) */}
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-slate-700 block">
-                        Payout Amount (₹)
+                        Partner payout (₹)
                       </label>
                       <div className="relative">
                         <input
@@ -1192,6 +1252,95 @@ const AsmPayouts = () => {
                           {pct}%
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-3 rounded-lg border border-slate-200 bg-white p-3 space-y-2.5">
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-800">Bank commission — admin only</p>
+                      <p className="text-[10px] text-slate-500 leading-relaxed">
+                        This amount is not paid to the partner. Partner commission stays on the approval amount.
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        Which bank disbursed
+                      </label>
+                      <select
+                        value={modalForm.disbursementBankId}
+                        onChange={(e) => {
+                          const bankId = e.target.value;
+                          const bank = disbursementBanks.find((item) => String(item._id) === bankId);
+                          setModalForm((prev) => ({
+                            ...prev,
+                            disbursementBankId: bankId,
+                            companyPercentage:
+                              bank?.commissionPercentage != null && bank.commissionPercentage !== ""
+                                ? String(bank.commissionPercentage)
+                                : "",
+                          }));
+                        }}
+                        disabled={selectedRecord.payOutStatus === "DONE"}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-slate-50"
+                      >
+                        <option value="">Select which bank</option>
+                        {disbursementBanks.map((bank) => (
+                          <option key={bank._id} value={bank._id}>
+                            {bank.bankName}
+                            {bank.loanType ? ` (${bank.loanType})` : ""}
+                            {bank.commissionPercentage != null && bank.commissionPercentage !== ""
+                              ? ` — gives ${bank.commissionPercentage}%`
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-700 block">
+                          Actual loan amount (₹)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={modalForm.actualLoanAmount}
+                            onChange={(e) =>
+                              setModalForm((prev) => ({ ...prev, actualLoanAmount: e.target.value }))
+                            }
+                            disabled={selectedRecord.payOutStatus === "DONE"}
+                            placeholder="Amount from the bank"
+                            className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-slate-50"
+                          />
+                          <IndianRupee className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-700 block">
+                          Percentage this bank gives (%)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={modalForm.companyPercentage}
+                            onChange={(e) =>
+                              setModalForm((prev) => ({ ...prev, companyPercentage: e.target.value }))
+                            }
+                            disabled={selectedRecord.payOutStatus === "DONE"}
+                            placeholder="What % this bank gives"
+                            className="w-full pl-3 pr-7 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-slate-50"
+                          />
+                          <Percent className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-2 text-[11px]">
+                      <span className="font-semibold text-slate-500">Bank commission amount</span>
+                      <span className="font-black text-slate-900">{formatInrPrecise(bankCommissionAmount)}</span>
                     </div>
                   </div>
 
