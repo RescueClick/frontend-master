@@ -122,11 +122,10 @@ export default function PartnerInvoiceModal({
     const storedNet = Number(record.netAmount);
     const hasRealNet =
       record.netAmount != null && !Number.isNaN(storedNet) && storedNet > 0;
-    const netAmt = hasRealNet
-      ? storedNet
-      : payoutAmt > 0
-      ? payoutAmt
-      : Number(Math.max(0, gross - tdsAmt).toFixed(2));
+    const expectedNet = Number(Math.max(0, gross - (isTds ? tdsAmt : 0)).toFixed(2));
+    const storedIgnoresTax =
+      hasRealNet && isTds && tdsAmt > 0 && Math.abs(storedNet - gross) < 0.05;
+    const netAmt = !hasRealNet || storedIgnoresTax ? expectedNet : storedNet;
 
     const computedPct =
       record.payoutPercentage != null
@@ -606,7 +605,7 @@ export default function PartnerInvoiceModal({
                       : "NET AMOUNT TRANSFERRED TO PARTNER BANK"}
                   </td>
                   <td className="px-4 py-3 text-right font-black text-emerald-700 text-lg">
-                    {formatInr(invoiceDetails.netAmount || invoiceDetails.grossAmount)}
+                    {formatInr(invoiceDetails.netAmount)}
                   </td>
                 </tr>
               </tbody>
