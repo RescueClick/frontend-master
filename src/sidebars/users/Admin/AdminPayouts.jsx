@@ -1193,10 +1193,10 @@ const AdminPayouts = () => {
         </div>
       </div>
 
-      {/* Modern 2-Column NO-SCROLL Payout Modal */}
+      {/* Wide payout modal — fits the viewport without clipping the actions */}
       {modalOpen && selectedRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transform transition-all max-h-[92vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-2">
+          <div className="bg-white rounded-2xl w-[min(96vw,1520px)] shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)]">
             {/* Modal Header */}
             <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
@@ -1225,10 +1225,10 @@ const AdminPayouts = () => {
               </button>
             </div>
 
-            {/* Modal Body - 2 Columns Side by Side (NO SCROLL) */}
-            <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 gap-4 overflow-hidden">
+            {/* Body uses the extra width so the form stays short enough for smaller screens */}
+            <div className="p-3 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 overflow-y-auto">
               {/* LEFT COLUMN: Beneficiary Partner & Loan Details */}
-              <div className="md:col-span-5 flex flex-col gap-3">
+              <div className="lg:col-span-3 flex flex-col gap-3">
                 {/* Beneficiary Partner Bank Info Box */}
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/90 flex flex-col justify-between flex-1">
                   <div>
@@ -1365,9 +1365,9 @@ const AdminPayouts = () => {
                 </div>
               </div>
 
-              {/* RIGHT COLUMN: Calculation & Payout Action */}
-              <div className="md:col-span-7 bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 p-4 rounded-xl border border-emerald-100 flex flex-col justify-between space-y-3">
-                <div className="space-y-3">
+              {/* FORM: two side-by-side panels so height stays inside the screen */}
+              <div className="lg:col-span-9 bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 p-3 rounded-xl border border-emerald-100 grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+                <div className="space-y-2">
                   <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs">
                     <Calculator className="w-4 h-4 text-emerald-600" />
                     <span>Commission &amp; TDS (edit for this payout)</span>
@@ -1517,6 +1517,9 @@ const AdminPayouts = () => {
                     )}
                   </div>
 
+                </div>
+
+                <div className="space-y-2">
                   {/* 3-WAY FINANCIAL SUMMARY BANNER */}
                   <div className="p-3 bg-gradient-to-r from-slate-900 to-teal-950 text-white rounded-xl shadow-sm">
                     <div className="grid grid-cols-3 gap-2 text-center divide-x divide-white/10">
@@ -1639,40 +1642,39 @@ const AdminPayouts = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Modal Footer Actions */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    className="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isSaving}
-                    onClick={handleSubmitPayout}
-                    className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-brand-primary hover:bg-[#0f9b82] shadow-sm transition flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    {isSaving ? (
-                      <>
-                        <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>
-                          {modalForm.payOutStatus === "DONE"
-                            ? "Confirm & Mark as Done"
-                            : "Save Payout Record"}
-                        </span>
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
+            </div>
+
+            <div className="shrink-0 px-3 py-2.5 border-t border-slate-200 bg-white flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={handleSubmitPayout}
+                className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-brand-primary hover:bg-[#0f9b82] shadow-sm transition flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <>
+                    <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>
+                      {modalForm.payOutStatus === "DONE"
+                        ? "Confirm & Mark as Done"
+                        : "Save Payout Record"}
+                    </span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
