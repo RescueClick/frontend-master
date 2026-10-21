@@ -44,8 +44,11 @@ import {
 import {
   validateLoanDocumentUpload,
   loanDocumentFieldHint,
+  snapshotLoanFile,
+  UNREADABLE_LOAN_FILE_MESSAGE,
 } from "../../../../utils/loanDocumentUpload";
 import { uploadLeadDocumentEarly } from "../../../../utils/earlyLeadDocUpload";
+import { postLoanFormWithRetry } from "../../../../utils/loanSubmitRetry";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
 import {
@@ -396,13 +399,22 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
     }
   };
 
-  const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    const file = files[0];
-    if (file) {
-      const err = validateLoanDocumentUpload(file, name);
+  const handleFileChange = async (e) => {
+    const input = e.target;
+    const { name, files } = input;
+    const picked = files[0];
+    if (picked) {
+      const err = validateLoanDocumentUpload(picked, name);
       if (err) {
         toast.error(err);
+        return;
+      }
+      let file;
+      try {
+        file = await snapshotLoanFile(picked);
+      } catch {
+        toast.error(UNREADABLE_LOAN_FILE_MESSAGE);
+        input.value = "";
         return;
       }
       setFormData((prev) => ({
@@ -420,11 +432,18 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
     }));
   };
 
-  const handleFileChangeAddressProofs = (file) => {
-    if (!file) return;
-    const err = validateLoanDocumentUpload(file, "addressProof");
+  const handleFileChangeAddressProofs = async (picked) => {
+    if (!picked) return;
+    const err = validateLoanDocumentUpload(picked, "addressProof");
     if (err) {
       toast.error(err);
+      return;
+    }
+    let file;
+    try {
+      file = await snapshotLoanFile(picked);
+    } catch {
+      toast.error(UNREADABLE_LOAN_FILE_MESSAGE);
       return;
     }
     setFormData((prev) => ({
@@ -767,7 +786,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
           }
         : {};
 
-      const response = await axios.post(endpoint, formDataToSend, { headers });
+      const response = await postLoanFormWithRetry(endpoint, formDataToSend, { headers });
 
       if (response.data.success || response.data.application) {
         setSuccessMessage("LAP application submitted successfully!");

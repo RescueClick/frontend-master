@@ -43,8 +43,11 @@ import {
 import {
   validateLoanDocumentUpload,
   loanDocumentFieldHint,
+  snapshotLoanFile,
+  UNREADABLE_LOAN_FILE_MESSAGE,
 } from "../../../../utils/loanDocumentUpload";
 import { uploadLeadDocumentEarly } from "../../../../utils/earlyLeadDocUpload";
+import { postLoanFormWithRetry } from "../../../../utils/loanSubmitRetry";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
 import {
@@ -411,15 +414,25 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     }
   };
 
-  const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    const file = files?.[0];
-    if (!file) return;
+  const handleFileChange = async (e) => {
+    const input = e.target;
+    const { name, files } = input;
+    const picked = files?.[0];
+    if (!picked) return;
 
-    const err = validateLoanDocumentUpload(file, name);
+    const err = validateLoanDocumentUpload(picked, name);
     if (err) {
       toast.error(err);
-      e.target.value = "";
+      input.value = "";
+      return;
+    }
+
+    let file;
+    try {
+      file = await snapshotLoanFile(picked);
+    } catch {
+      toast.error(UNREADABLE_LOAN_FILE_MESSAGE);
+      input.value = "";
       return;
     }
 
@@ -430,13 +443,22 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: name, file });
   };
 
-  const handleFileChangeAddressProofs = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const err = validateLoanDocumentUpload(file, "addressProof");
+  const handleFileChangeAddressProofs = async (e) => {
+    const input = e.target;
+    const picked = input.files?.[0];
+    if (!picked) return;
+    const err = validateLoanDocumentUpload(picked, "addressProof");
     if (err) {
       toast.error(err);
-      e.target.value = "";
+      input.value = "";
+      return;
+    }
+    let file;
+    try {
+      file = await snapshotLoanFile(picked);
+    } catch {
+      toast.error(UNREADABLE_LOAN_FILE_MESSAGE);
+      input.value = "";
       return;
     }
     setFormData((prev) => ({
@@ -923,7 +945,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       // Create AbortController for request cancellation
       abortControllerRef.current = new AbortController();
 
-      const response = await axios.post(endpoint, formDataToSend, {
+      const response = await postLoanFormWithRetry(endpoint, formDataToSend, {
         headers,
         timeout: 120000, // 120 seconds timeout for file uploads
         maxContentLength: 100 * 1024 * 1024, // 100MB max content length
@@ -1025,7 +1047,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       }
       abortControllerRef.current = new AbortController();
 
-      await axios.post(
+      await postLoanFormWithRetry(
         `${backendurl}/partner/applications/${targetApplicationId}/submit`,
         {},
         {

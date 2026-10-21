@@ -190,6 +190,25 @@ export function validateLoanDocumentUpload(file, fieldName) {
   return null;
 }
 
+export const UNREADABLE_LOAN_FILE_MESSAGE =
+  "Could not read this file. If it is in Google Drive, OneDrive or WhatsApp, download it to your computer first, then select it again.";
+
+/**
+ * Copy a picked File into memory. Chrome aborts the whole multipart upload
+ * (axios reports "Network Error") if the original file was moved, edited, or is a
+ * cloud placeholder by the time the form is submitted.
+ * Rejects if the file cannot be read right now.
+ * @param {File} file
+ * @returns {Promise<File>}
+ */
+export async function snapshotLoanFile(file) {
+  const buffer = await file.arrayBuffer();
+  return new File([buffer], file.name, {
+    type: file.type,
+    lastModified: file.lastModified,
+  });
+}
+
 /** One-line hint under upload controls: stored doc type, formats, max size. */
 export function loanDocumentFieldHint(fieldName) {
   const rawType = loanFieldToApiDocType(fieldName);
