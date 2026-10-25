@@ -13,18 +13,18 @@ export default function LoanStepper({
     steps.length > 1 ? Math.round((currentStep / (steps.length - 1)) * 100) : 0;
 
   return (
-    <div className="px-6 pt-4 pb-2 bg-slate-50 border-b border-slate-200 -mx-6 mb-4">
-      <div className="mb-3 h-2 w-full rounded-full bg-slate-200">
+    <div className="px-4 py-2.5 bg-slate-50/90 border-b border-slate-200 -mx-6 mb-3 sticky top-0 z-20 backdrop-blur-sm">
+      <div className="mb-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
         <div
-          className="h-2 rounded-full transition-all duration-300"
+          className="h-1.5 rounded-full transition-all duration-300"
           style={{
             width: `${progress}%`,
-            backgroundColor: "var(--color-brand-primary)",
+            backgroundColor: "var(--color-brand-primary, #0D9488)",
           }}
         />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
         {steps.map((step, idx) => {
           const label = typeof step === "string" ? step : step?.label || step?.id || `Step ${idx + 1}`;
           const isActive = idx === currentStep;
@@ -38,24 +38,25 @@ export default function LoanStepper({
               type="button"
               onClick={() => isClickable && onStepClick(idx)}
               disabled={!isClickable}
-              className="rounded-lg border px-2 py-1.5 text-center font-medium transition-colors"
+              className="flex-1 min-w-[90px] rounded-md border px-2 py-1 text-center font-medium transition-all text-xs"
               style={{
                 borderColor: isActive
-                  ? "var(--color-brand-primary)"
+                  ? "var(--color-brand-primary, #0D9488)"
                   : isDone
-                  ? "#22C55E"
-                  : "#CBD5E1",
-                backgroundColor: isActive ? "#EEF2FF" : "#FFFFFF",
-                color: isActive ? "#4F46E5" : "#334155",
+                  ? "#10B981"
+                  : "#E2E8F0",
+                backgroundColor: isActive ? "#F0FDFA" : isDone ? "#F0FDF4" : "#FFFFFF",
+                color: isActive ? "#0F766E" : isDone ? "#047857" : "#475569",
                 opacity: isClickable ? 1 : 0.6,
                 cursor: isClickable ? "pointer" : "not-allowed",
               }}
               aria-current={isActive ? "step" : undefined}
             >
-              <span className="inline-flex items-center gap-1">
-                <span>{idx + 1}. {label}</span>
+              <span className="inline-flex items-center justify-center gap-1 w-full truncate">
+                <span className="font-bold">{idx + 1}.</span>
+                <span className="truncate">{label}</span>
                 {stepErrorCount > 0 && (
-                  <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-100 px-1 text-[10px] font-semibold text-red-700">
+                  <span className="inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-red-100 px-1 text-[9px] font-bold text-red-700">
                     {stepErrorCount}
                   </span>
                 )}
@@ -65,7 +66,7 @@ export default function LoanStepper({
         })}
       </div>
 
-      <p className="mt-2 text-sm text-slate-600">{helperText}</p>
+      {helperText ? <p className="mt-1.5 text-[11px] text-slate-500 font-medium">{helperText}</p> : null}
     </div>
   );
 }
