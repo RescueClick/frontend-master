@@ -408,7 +408,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
   const handleFileChange = async (e) => {
     const input = e.target;
     const { name, files } = input;
-    const picked = files[0];
+    const picked = files?.[0];
     if (picked) {
       const err = validateLoanDocumentUpload(picked, name);
       if (err) {
@@ -427,7 +427,22 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
         ...prev,
         [name]: file,
       }));
-      uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: name, file });
+
+      const toastId = toast.loading(`Uploading ${file.name}...`);
+      if (applicationId) {
+        uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: name, file })
+          .then((res) => {
+            if (res?.ok) {
+              toast.success(`${file.name} uploaded successfully!`, { id: toastId });
+            } else {
+              toast.error(`Upload failed for ${file.name}`, { id: toastId });
+            }
+          });
+      } else {
+        setTimeout(() => {
+          toast.success(`${file.name} attached successfully!`, { id: toastId });
+        }, 400);
+      }
     }
   };
 

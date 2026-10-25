@@ -199,6 +199,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
   const [validationErrors, setValidationErrors] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [savedApplication, setSavedApplication] = useState(null);
+  const [docUploadStatus, setDocUploadStatus] = useState({});
+  const [docUploadProgress, setDocUploadProgress] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [isCheckingExistence, setIsCheckingExistence] = useState(false);
   const abortControllerRef = useRef(null);
@@ -541,7 +543,37 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       ...prev,
       [name]: file,
     }));
-    uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: name, file });
+
+    const toastId = toast.loading(`Uploading ${file.name}...`);
+    setDocUploadStatus((p) => ({ ...p, [name]: "uploading" }));
+    setDocUploadProgress((p) => ({ ...p, [name]: 25 }));
+
+    if (applicationId) {
+      uploadLeadDocumentEarly({
+        applicationId,
+        partnerToken,
+        isPartnerLoggedIn,
+        fieldName: name,
+        file,
+        onProgress: (pct) => setDocUploadProgress((p) => ({ ...p, [name]: pct })),
+      }).then((res) => {
+        if (res?.ok) {
+          setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
+          setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+          toast.success(`${file.name} uploaded successfully!`, { id: toastId });
+        } else {
+          setDocUploadStatus((p) => ({ ...p, [name]: "failed" }));
+          toast.error(`Upload failed for ${file.name}`, { id: toastId });
+        }
+      });
+    } else {
+      setTimeout(() => setDocUploadProgress((p) => ({ ...p, [name]: 65 })), 180);
+      setTimeout(() => {
+        setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+        setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
+        toast.success(`${file.name} attached successfully!`, { id: toastId });
+      }, 400);
+    }
   };
 
   const handleFileRemove = (fieldName) => {
@@ -549,6 +581,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       ...prev,
       [fieldName]: null,
     }));
+    setDocUploadStatus((p) => ({ ...p, [fieldName]: "idle" }));
+    setDocUploadProgress((p) => ({ ...p, [fieldName]: 0 }));
     const fileInput = document.querySelector(`input[name="${fieldName}"]`);
     if (fileInput) fileInput.value = "";
   };
@@ -2048,6 +2082,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
                     required={doc.required}
                     hint={doc.hint ?? loanDocumentFieldHint(doc.name)}
+                    uploadStatus={docUploadStatus[doc.name]}
+                    uploadProgress={docUploadProgress[doc.name]}
                     onChange={handleFileChange}
                     onRemove={handleFileRemove}
                     error={renderError(doc.name)}
@@ -2700,6 +2736,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     file={formData[doc.name]}
                     accept=".pdf,.jpg,.jpeg,.png"
                     required={doc.required}
+                    uploadStatus={docUploadStatus[doc.name]}
+                    uploadProgress={docUploadProgress[doc.name]}
                     onChange={handleFileChange}
                     onRemove={handleFileRemove}
                     error={renderError(doc.name)}

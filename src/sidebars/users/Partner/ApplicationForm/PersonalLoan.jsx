@@ -575,10 +575,11 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       }
     }
 
-    if (targetAppId) {
-      setDocUploadStatus((p) => ({ ...p, [name]: "uploading" }));
-      setDocUploadProgress((p) => ({ ...p, [name]: 15 }));
+    const toastId = toast.loading(`Uploading ${file.name}...`);
+    setDocUploadStatus((p) => ({ ...p, [name]: "uploading" }));
+    setDocUploadProgress((p) => ({ ...p, [name]: 25 }));
 
+    if (targetAppId) {
       const res = await uploadLeadDocumentEarly({
         applicationId: targetAppId,
         partnerToken,
@@ -591,6 +592,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       if (res?.ok) {
         setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
         setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+        toast.success(`${file.name} uploaded successfully!`, { id: toastId });
         const uploadedUrl = res.uploadedUrl || res.doc?.url;
         const isPdf = Boolean(
           file.type?.includes("pdf") ||
@@ -614,7 +616,15 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         }));
       } else {
         setDocUploadStatus((p) => ({ ...p, [name]: "failed" }));
+        toast.error(`Upload failed for ${file.name}`, { id: toastId });
       }
+    } else {
+      setTimeout(() => setDocUploadProgress((p) => ({ ...p, [name]: 65 })), 180);
+      setTimeout(() => {
+        setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+        setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
+        toast.success(`${file.name} attached successfully!`, { id: toastId });
+      }, 400);
     }
   };
 

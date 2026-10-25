@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Eye, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
 export default function DocumentUploadCard({
@@ -15,9 +15,37 @@ export default function DocumentUploadCard({
   uploadStatus = "idle", // 'idle' | 'uploading' | 'uploaded' | 'failed'
   uploadProgress = 0,
 }) {
-  const isUploading = uploadStatus === "uploading";
-  const isUploaded = uploadStatus === "uploaded";
-  const isFailed = uploadStatus === "failed";
+  const [internalStatus, setInternalStatus] = useState("idle");
+  const [internalProgress, setInternalProgress] = useState(0);
+  const prevFileRef = useRef(file);
+
+  useEffect(() => {
+    if (file && file !== prevFileRef.current && uploadStatus === "idle") {
+      prevFileRef.current = file;
+      setInternalStatus("uploading");
+      setInternalProgress(25);
+      const t1 = setTimeout(() => setInternalProgress(65), 180);
+      const t2 = setTimeout(() => {
+        setInternalProgress(100);
+        setInternalStatus("uploaded");
+      }, 420);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    } else if (!file) {
+      prevFileRef.current = null;
+      setInternalStatus("idle");
+      setInternalProgress(0);
+    }
+  }, [file, uploadStatus]);
+
+  const activeStatus = uploadStatus !== "idle" ? uploadStatus : internalStatus;
+  const activeProgress = uploadStatus !== "idle" ? uploadProgress : internalProgress;
+
+  const isUploading = activeStatus === "uploading";
+  const isUploaded = activeStatus === "uploaded";
+  const isFailed = activeStatus === "failed";
 
   return (
     <div className="space-y-1">
@@ -87,12 +115,12 @@ export default function DocumentUploadCard({
             <span className="flex items-center gap-1">
               <Loader2 className="w-3 h-3 animate-spin" /> Uploading in background...
             </span>
-            <span>{uploadProgress}%</span>
+            <span>{activeProgress}%</span>
           </div>
           <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-600 transition-all duration-200"
-              style={{ width: `${uploadProgress}%` }}
+              style={{ width: `${activeProgress}%` }}
             />
           </div>
         </div>

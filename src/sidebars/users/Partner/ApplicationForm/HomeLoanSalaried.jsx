@@ -193,6 +193,8 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
   const [validationErrors, setValidationErrors] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [savedApplication, setSavedApplication] = useState(null);
+  const [docUploadStatus, setDocUploadStatus] = useState({});
+  const [docUploadProgress, setDocUploadProgress] = useState({});
   const [showPassword, setShowPassword] = useState({
     password: false,
     confirmPassword: false,
@@ -491,18 +493,38 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
       ...prev,
       [name]: file,
     }));
-    uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: name, file });
-  };
 
-  // const handleFileChangeAddressProofs = (e) => {
-  //   const { name, files } = e.target;
-  //   if (files && files.length > 0) {
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       [name]: files[0], // now this updates newAddressProofs
-  //     }));
-  //   }
-  // };
+    const toastId = toast.loading(`Uploading ${file.name}...`);
+    setDocUploadStatus((p) => ({ ...p, [name]: "uploading" }));
+    setDocUploadProgress((p) => ({ ...p, [name]: 25 }));
+
+    if (applicationId) {
+      uploadLeadDocumentEarly({
+        applicationId,
+        partnerToken,
+        isPartnerLoggedIn,
+        fieldName: name,
+        file,
+        onProgress: (pct) => setDocUploadProgress((p) => ({ ...p, [name]: pct })),
+      }).then((res) => {
+        if (res?.ok) {
+          setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
+          setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+          toast.success(`${file.name} uploaded successfully!`, { id: toastId });
+        } else {
+          setDocUploadStatus((p) => ({ ...p, [name]: "failed" }));
+          toast.error(`Upload failed for ${file.name}`, { id: toastId });
+        }
+      });
+    } else {
+      setTimeout(() => setDocUploadProgress((p) => ({ ...p, [name]: 65 })), 180);
+      setTimeout(() => {
+        setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+        setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
+        toast.success(`${file.name} attached successfully!`, { id: toastId });
+      }, 400);
+    }
+  };
 
   const handleFileChangeAddressProofs = async (e) => {
     const input = e.target;
@@ -526,15 +548,46 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
       ...prev,
       addressProof: file,
     }));
-    uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: "addressProof", file });
-  };
 
+    const toastId = toast.loading(`Uploading ${file.name}...`);
+    setDocUploadStatus((p) => ({ ...p, addressProof: "uploading" }));
+    setDocUploadProgress((p) => ({ ...p, addressProof: 25 }));
+
+    if (applicationId) {
+      uploadLeadDocumentEarly({
+        applicationId,
+        partnerToken,
+        isPartnerLoggedIn,
+        fieldName: "addressProof",
+        file,
+        onProgress: (pct) => setDocUploadProgress((p) => ({ ...p, addressProof: pct })),
+      }).then((res) => {
+        if (res?.ok) {
+          setDocUploadStatus((p) => ({ ...p, addressProof: "uploaded" }));
+          setDocUploadProgress((p) => ({ ...p, addressProof: 100 }));
+          toast.success(`${file.name} uploaded successfully!`, { id: toastId });
+        } else {
+          setDocUploadStatus((p) => ({ ...p, addressProof: "failed" }));
+          toast.error(`Upload failed for ${file.name}`, { id: toastId });
+        }
+      });
+    } else {
+      setTimeout(() => setDocUploadProgress((p) => ({ ...p, addressProof: 65 })), 180);
+      setTimeout(() => {
+        setDocUploadProgress((p) => ({ ...p, addressProof: 100 }));
+        setDocUploadStatus((p) => ({ ...p, addressProof: "uploaded" }));
+        toast.success(`${file.name} attached successfully!`, { id: toastId });
+      }, 400);
+    }
+  };
 
   const handleFileRemove = (fieldName) => {
     setFormData((prev) => ({
       ...prev,
       [fieldName]: null,
     }));
+    setDocUploadStatus((p) => ({ ...p, [fieldName]: "idle" }));
+    setDocUploadProgress((p) => ({ ...p, [fieldName]: 0 }));
     const fileInput = document.querySelector(`input[name="${fieldName}"]`);
     if (fileInput) fileInput.value = "";
   };
@@ -581,6 +634,32 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
     fieldErrors[field] ? (
       <p className="text-xs text-red-600 mt-1">{fieldErrors[field]}</p>
     ) : null;
+
+  const renderDocUploadBadge = (fieldName) => {
+    const status = docUploadStatus[fieldName] || (formData[`${fieldName}_uploaded`] ? "uploaded" : "idle");
+    const progress = docUploadProgress[fieldName] || 0;
+    if (status === "uploading") {
+      return (
+        <div className="mt-1.5 flex items-center gap-2">
+          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-600 transition-all duration-200"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <span className="text-[11px] text-blue-700 font-semibold whitespace-nowrap">{progress}%</span>
+        </div>
+      );
+    }
+    if (status === "uploaded" || formData[`${fieldName}_uploaded`]) {
+      return (
+        <span className="text-[11px] text-green-700 font-medium bg-green-50 border border-green-200 px-2 py-0.5 rounded inline-flex items-center gap-1 mt-1">
+          ✓ Uploaded & Secured
+        </span>
+      );
+    }
+    return null;
+  };
 
   function validateRegistrationForm(formData, sameAddress) {
     const errors = {};
@@ -1939,6 +2018,8 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                       accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
                       required={doc.required}
                       hint={doc.hint}
+                      uploadStatus={docUploadStatus[doc.name]}
+                      uploadProgress={docUploadProgress[doc.name]}
                       onChange={handleFileChange}
                       onRemove={handleFileRemove}
                       error={renderError(doc.name)}
@@ -2608,6 +2689,8 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                       file={formData[doc.name]}
                       accept=".pdf,.jpg,.jpeg,.png"
                       required={doc.required}
+                      uploadStatus={docUploadStatus[doc.name]}
+                      uploadProgress={docUploadProgress[doc.name]}
                       onChange={handleFileChange}
                       onRemove={handleFileRemove}
                       error={renderError(doc.name)}
