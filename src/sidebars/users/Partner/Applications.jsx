@@ -319,42 +319,64 @@ const Application = () => {
         title: "Actions",
         key: "actions",
         align: "center",
-        render: (_, application) => (
-          <div className="flex items-center justify-center gap-1.5">
-            {application.applicationId && (
-              <button
-                type="button"
-                className="px-2 py-1 rounded text-white bg-blue-600 hover:bg-blue-700 transition text-xs flex items-center gap-1 font-semibold"
-                title="View & Edit Loan Form"
-                onClick={() => {
-                  const rawType = String(application.loanType || "PERSONAL").trim();
-                  navigate(
-                    `/partner/personal-loan?type=${rawType}&applicationId=${application.applicationId}&customerId=${application.customerId}`
-                  );
-                }}
-              >
-                <Edit3 size={12} />
-                Edit Form
-              </button>
-            )}
-            {application.applicationId && application.customerId && (
-              <button
-                type="button"
-                className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs flex items-center gap-1"
-                style={{ backgroundColor: "var(--color-brand-primary)" }}
-                title="Upload Documents"
-                onClick={() => {
-                  navigate(
-                    `/partner/complete-application?applicationId=${application.applicationId}&customerId=${application.customerId}`
-                  );
-                }}
-              >
-                <Eye size={12} />
-                Docs
-              </button>
-            )}
-          </div>
-        ),
+        render: (_, application) => {
+          const rawStatus = String(application.status || "").toUpperCase();
+          const isAboveDocsComplete = [
+            "UNDER_REVIEW",
+            "LOGIN",
+            "KYC_PENDING",
+            "KYC_COMPLETE",
+            "APPROVED",
+            "AGREEMENT",
+            "DISBURSED",
+            "REJECTED",
+          ].some((s) => rawStatus.includes(s));
+
+          const rawType = String(application.loanType || "PERSONAL").trim();
+          const normType = rawType.toUpperCase();
+          let targetPath = "/partner/personal-loan";
+          if (normType.includes("BUSINESS")) targetPath = "/partner/bussiness-loan";
+          else if (normType.includes("HOME") && normType.includes("SELF")) targetPath = "/partner/home-loan-self-employee";
+          else if (normType.includes("HOME")) targetPath = "/partner/home-loan-salaried";
+          else if (normType.includes("LAP") && normType.includes("SELF")) targetPath = "/partner/lap-loan-self-employee";
+          else if (normType.includes("LAP")) targetPath = "/partner/lap-loan-salaried";
+
+          return (
+            <div className="flex items-center justify-center gap-1.5">
+              {!isAboveDocsComplete && application.applicationId && (
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded text-white bg-blue-600 hover:bg-blue-700 transition text-xs flex items-center gap-1 font-semibold"
+                  title="View & Edit Loan Form"
+                  onClick={() => {
+                    navigate(
+                      `${targetPath}?type=${rawType}&applicationId=${application.applicationId}&customerId=${application.customerId}`
+                    );
+                  }}
+                >
+                  <Edit3 size={12} />
+                  Edit Form
+                </button>
+              )}
+              {application.applicationId && application.customerId && (
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded text-white hover:opacity-90 transition-opacity text-xs flex items-center gap-1"
+                  style={{ backgroundColor: "var(--color-brand-primary)" }}
+                  title="Upload Documents"
+                  onClick={() => {
+                    navigate(
+                      `/partner/complete-application?applicationId=${application.applicationId}&customerId=${application.customerId}`
+                    );
+                  }}
+                >
+                  <Eye size={12} />
+                  Docs
+                </button>
+              )}
+            </div>
+          );
+        },
       },
     ],
     [navigate]
