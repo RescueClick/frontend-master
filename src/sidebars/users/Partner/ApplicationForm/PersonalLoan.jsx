@@ -59,6 +59,7 @@ import {
   useRmLoanFormResume,
   rmCompleteLoanFormUrl,
 } from "../../../../utils/rmLoanForm";
+import { buildCanonicalLoanPayload } from "../../../../utils/normalizeLoanPayload";
 
 const formatDocTypeName = (docType) => {
   const map = {
@@ -804,59 +805,10 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         return;
       }
 
-      // ✅ Prepare JSON structure
-      const applicationData = {
-        loanType: "PERSONAL",
-        partnerReferralCode: isPartnerLoggedIn
-          ? undefined
-          : formData.partnerReferralCode?.trim() || undefined,
-        customer: {
-          firstName: formData.firstName,
-          middleName: formData.middleName,
-          lastName: formData.lastName || formData.surname,
-          email: formData.email,
-          officialEmail: formData.officialEmail,
-          phone: formData.contactNo,
-          mothersName: formData.motherName,
-          panNumber: formData.pan,
-          dateOfBirth: formData.dob,
-          gender: formData.gender,
-          maritalStatus: formData.maritalStatus,
-          spouseName: formData.wifeName,
-          currentAddress: formData.currentAddress,
-          currentAddressLandmark: formData.currentLandmark,
-          currentAddressPinCode: formData.currentAddressPinCode,
-          currentAddressHouseStatus: formData.currentHouseStatus,
-          permanentAddress: formData.permanentAddress,
-          permanentAddressLandmark: formData.permanentLandmark,
-          permanentAddressPinCode: formData.permanentAddressPinCode,
-          permanentAddressHouseStatus: formData.permanentHouseStatus,
-          stabilityOfResidency: formData.stabilityOfResidency,
-          permanentAddressStability: formData.permanentStability,
-          loanAmount: formData.loanAmount || 0,
-          password: formData.password,
-          bankStatementPassword: formData.bankStatementPassword,
-          hasRunningLoan: formData.hasRunningLoan || "NO",
-          monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
-          loanPurpose: formData.loanPurpose || "",
-          ...personFinancialCustomerFields(formData),
-        },
-        product: {
-          companyName: formData.companyName,
-          designation: formData.designation,
-          companyAddress: formData.companyAddress,
-          monthlySalary: formData.monthlySalary,
-          totalExperience: formData.totalExperience,
-          currentExperience: formData.currentExperience,
-          salaryInHand: formData.salaryInHand,
-        },
-        references: [
-          { name: formData.reference1Name, phone: formData.reference1Contact },
-          { name: formData.reference2Name, phone: formData.reference2Contact },
-        ],
-        docs: [], // files will be appended separately
-        propertyType: formData.propertyType,
-      };
+      // ✅ Prepare canonical JSON structure matching backend schema
+      const applicationData = buildCanonicalLoanPayload(formData, "PERSONAL", {
+        isPartnerLoggedIn,
+      });
 
       // ✅ Prepare FormData
       const formDataToSend = new FormData();

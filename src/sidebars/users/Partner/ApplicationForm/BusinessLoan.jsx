@@ -60,6 +60,7 @@ import {
   useRmLoanFormResume,
   rmCompleteLoanFormUrl,
 } from "../../../../utils/rmLoanForm";
+import { buildCanonicalLoanPayload } from "../../../../utils/normalizeLoanPayload";
 
 const formatDocTypeName = (docType) => {
   const map = {
@@ -784,59 +785,10 @@ const handleSubmit = async () => {
       return;
     }
 
-    // 2) Build payload
-    const applicationData = {
-      loanType: "BUSINESS",
-      partnerReferralCode: isPartnerLoggedIn
-        ? undefined
-        : formData.partnerReferralCode?.trim() || undefined,
-      customer: {
-        firstName: formData.firstName,
-        middleName: formData.middleName,
-        lastName: formData.lastName,
-        mothersName: formData.motherName,
-        phone: formData.phone,
-        alternatePhone: formData.alternateContact,
-        email: formData.email,
-        panNumber: formData.panNumber,
-        gender: formData.gender,
-        maritalStatus: formData.maritalStatus,
-        spouseName: formData.SpouseName,
-        dateOfBirth: formData.dob,
-        currentAddress: formData.currentAddress,
-        currentAddressPinCode: formData.currentAddressPincode,
-        currentAddressHouseStatus: formData.currentAddressOwnRented,
-        currentAddressLandmark: formData.currentAddressLandmark,
-        stabilityOfResidency: formData.currentAddressStability,
-        permanentAddress: formData.permanentAddress,
-        permanentAddressPinCode: formData.permanentAddressPincode,
-        permanentAddressHouseStatus: formData.permanentAddressOwnRented,
-        permanentAddressLandmark: formData.permanentAddressLandmark,
-        permanentAddressStability: formData.permanentAddressStability,
-        loanAmount: formData.loanAmount || 0,
-        password: formData.password,
-        bankStatementPassword: formData.bankStatementPassword,
-        hasRunningLoan: formData.hasRunningLoan || "NO",
-        monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
-        loanPurpose: formData.loanPurpose || "",
-        ...personFinancialCustomerFields(formData),
-      },
-      product: {
-        businessName: formData.businessName,
-        businessAddress: formData.businessAddress,
-        businessLandmark: formData.businessLandmark,
-        businessVintage: formData.businessVintage,
-        yearsInBusiness: formData.businessVintage,
-        annualTurnover: formData.annualTurnover,
-        annualTurnoverInINR: formData.annualTurnover,
-        gstNumber: formData.gstNumber,
-      },
-      references: [
-        { name: formData.reference1Name, phone: formData.reference1Contact },
-        { name: formData.reference2Name, phone: formData.reference2Contact },
-      ],
-      docs: [],
-    };
+    // 2) Build canonical payload matching backend schema
+    const applicationData = buildCanonicalLoanPayload(formData, "BUSINESS", {
+      isPartnerLoggedIn,
+    });
 
     // 3) Build FormData with files
     const formDataToSend = new FormData();
