@@ -37,19 +37,36 @@ const FIELD_TYPES = [
   { value: "text", label: "Text Field" },
   { value: "number", label: "Number / Quantity" },
   { value: "currency", label: "Currency / Amount (₹)" },
-  { value: "phone", label: "Phone / Mobile (10 digits)" },
-  { value: "email", label: "Email Address" },
-  { value: "select", label: "Dropdown Select" },
-  { value: "radio", label: "Radio Option Buttons" },
-  { value: "date", label: "Date Picker" },
-  { value: "textarea", label: "Multi-line Text / Address" },
+  { value: "phone", label: "📞 Phone / Mobile" },
+  { value: "email", label: "📧 Email Address" },
+  { value: "pan", label: "💳 PAN Card" },
+  { value: "aadhaar", label: "🆔 Aadhaar Number" },
+  { value: "select", label: "📋 Dropdown List" },
+  { value: "radio", label: "🔘 Single Choice" },
+  { value: "date", label: "📅 Date Picker" },
+  { value: "textarea", label: "📝 Long Address" },
 ];
 
+const getFieldTypeLabel = (type) => {
+  switch (type) {
+    case "number": return "🔢 Number";
+    case "phone": return "📞 Phone";
+    case "email": return "📧 Email";
+    case "pan": return "💳 PAN";
+    case "aadhaar": return "🆔 Aadhaar";
+    case "select": return "📋 Dropdown";
+    case "radio": return "🔘 Choice";
+    case "date": return "📅 Date";
+    case "textarea": return "📝 Address";
+    default: return "🔤 Text";
+  }
+};
+
 const DEFAULT_STEPS = [
-  { stepIndex: 0, title: "Step 0: Applicant & KYC Details" },
-  { stepIndex: 1, title: "Step 1: Address & Residence" },
-  { stepIndex: 2, title: "Step 2: Employment / Business Profile" },
-  { stepIndex: 3, title: "Step 3: Loan Requirement & Bank Details" },
+  { stepIndex: 0, title: "1. Personal & KYC", icon: "👤" },
+  { stepIndex: 1, title: "2. Address", icon: "🏠" },
+  { stepIndex: 2, title: "3. Income & Job", icon: "💼" },
+  { stepIndex: 3, title: "4. Loan & Bank", icon: "🏦" },
 ];
 
 export default function AdminLoanProducts() {
@@ -875,16 +892,16 @@ export default function AdminLoanProducts() {
       {/* SCHEMA BUILDER MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-gray-100 my-4 overflow-hidden flex flex-col max-h-[95vh]">
+          <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
               <div>
                 <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
                   <Sliders size={20} className="text-emerald-600" />
-                  {editingId ? `Edit Product Schema: ${formData.name}` : "Create New Dynamic Loan Product"}
+                  {editingId ? `Edit Loan Form: ${formData.name}` : "Create New Loan Product"}
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Full control: Add, edit, reorder, or customize any field and document in the loan form.
+                  Easily add, change, or remove questions, mark fields as Required or Optional, and configure loan limits.
                 </p>
               </div>
               <button
@@ -902,18 +919,18 @@ export default function AdminLoanProducts() {
                 onClick={() => setActiveTab("fields")}
                 className={`py-3.5 border-b-2 transition flex items-center gap-2 cursor-pointer ${
                   activeTab === "fields"
-                    ? "border-emerald-600 text-emerald-700"
+                    ? "border-emerald-600 text-emerald-700 font-bold"
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
-                <Sliders size={16} /> 1. Complete Form Fields ({formData.customFields.length})
+                <Sliders size={16} /> 1. Form Questions ({formData.customFields.length})
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("documents")}
                 className={`py-3.5 border-b-2 transition flex items-center gap-2 cursor-pointer ${
                   activeTab === "documents"
-                    ? "border-emerald-600 text-emerald-700"
+                    ? "border-emerald-600 text-emerald-700 font-bold"
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
@@ -924,11 +941,11 @@ export default function AdminLoanProducts() {
                 onClick={() => setActiveTab("basic")}
                 className={`py-3.5 border-b-2 transition flex items-center gap-2 cursor-pointer ${
                   activeTab === "basic"
-                    ? "border-emerald-600 text-emerald-700"
+                    ? "border-emerald-600 text-emerald-700 font-bold"
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
-                <Layers size={16} /> 3. General & Financials
+                <Layers size={16} /> 3. Loan Settings & Status
               </button>
             </div>
 
@@ -936,99 +953,81 @@ export default function AdminLoanProducts() {
             <div className="p-6 overflow-y-auto flex-1 bg-gray-50/30">
               {/* TAB: DYNAMIC FORM FIELDS */}
               {activeTab === "fields" && (
-                <div className="space-y-6">
-                  {/* Step Filter Bar */}
-                  <div className="space-y-3">
-                    {/* Educational Helper Banner */}
-                    <div className="p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50/70 border border-blue-200 rounded-xl flex items-start gap-3 shadow-xs">
-                      <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
-                      <div className="text-xs text-blue-950 leading-relaxed">
-                        <span className="font-extrabold text-blue-900">What are Steps?</span> Steps divide your 20-30 application fields into easy multi-screen pages on the mobile apps & web portal (e.g. Page 1: Personal KYC, Page 2: Address, Page 3: Income, Page 4: Loan & Bank).<br />
-                        <span className="font-extrabold text-emerald-800">Is it required?</span> <strong>No, steps are completely optional!</strong> If you want a single-page form, simply leave all fields in <strong>Step 0</strong>.
+                <div className="space-y-5">
+                  {/* Clean Section Filter Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-gray-500">Show Section:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStepFilter("ALL")}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                            selectedStepFilter === "ALL"
+                              ? "bg-emerald-600 text-white shadow-xs"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          All Questions ({formData.customFields.length})
+                        </button>
+                        {DEFAULT_STEPS.map((step) => {
+                          const count = formData.customFields.filter((f) => f.stepIndex === step.stepIndex).length;
+                          return (
+                            <button
+                              key={step.stepIndex}
+                              type="button"
+                              onClick={() => setSelectedStepFilter(String(step.stepIndex))}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                                selectedStepFilter === String(step.stepIndex)
+                                  ? "bg-emerald-600 text-white shadow-xs"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              }`}
+                            >
+                              {step.icon || "📋"} {step.title} ({count})
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-gray-200">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <ListFilter size={16} className="text-gray-400" />
-                        <span className="text-xs font-bold text-gray-700">Filter by Step:</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedStepFilter("ALL")}
-                            className={`px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
-                              selectedStepFilter === "ALL"
-                                ? "bg-emerald-600 text-white shadow-xs"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            }`}
-                          >
-                            All Steps ({formData.customFields.length})
-                          </button>
-                          {DEFAULT_STEPS.map((step) => {
-                            const count = formData.customFields.filter((f) => f.stepIndex === step.stepIndex).length;
-                            const stepShortTitles = [
-                              "Step 0: KYC",
-                              "Step 1: Address",
-                              "Step 2: Income",
-                              "Step 3: Loan & Bank",
-                            ];
-                            return (
-                              <button
-                                key={step.stepIndex}
-                                type="button"
-                                onClick={() => setSelectedStepFilter(String(step.stepIndex))}
-                                className={`px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
-                                  selectedStepFilter === String(step.stepIndex)
-                                    ? "bg-emerald-600 text-white shadow-xs"
-                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                }`}
-                              >
-                                {stepShortTitles[step.stepIndex] || `Step ${step.stepIndex}`} ({count})
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <span className="text-xs text-gray-500 font-medium">
-                        Showing <strong>{visibleFieldsWithIndices.length}</strong> fields
-                      </span>
-                    </div>
+                    <span className="text-xs text-gray-400 font-medium">
+                      Showing <strong>{visibleFieldsWithIndices.length}</strong> questions
+                    </span>
                   </div>
 
-                  {/* List of Fields */}
-                  <div className="space-y-3">
+                  {/* List of Form Questions */}
+                  <div className="space-y-2.5">
                     {visibleFieldsWithIndices.length === 0 ? (
                       <div className="p-8 text-center bg-white rounded-xl border border-gray-200 text-gray-500">
-                        No fields found for this step. Use the form below to add fields.
+                        No questions in this section yet. Use the simple form below to add questions.
                       </div>
                     ) : (
                       visibleFieldsWithIndices.map(({ field, realIndex }) => {
                         const isEditingThis = editingFieldIndex === realIndex;
 
                         if (isEditingThis) {
-                          // INLINE EDIT FORM FOR THIS FIELD
+                          // INLINE EDIT FORM FOR THIS QUESTION
                           return (
                             <div
                               key={realIndex}
-                              className="p-4 bg-emerald-50/80 border-2 border-emerald-500 rounded-xl shadow-md space-y-4"
+                              className="p-5 bg-emerald-50/90 border-2 border-emerald-500 rounded-2xl shadow-md space-y-4"
                             >
-                              <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
-                                <span className="text-xs font-extrabold uppercase text-emerald-800 tracking-wider">
-                                  Editing Field #{realIndex + 1}: {field.label}
+                              <div className="flex items-center justify-between border-b border-emerald-200 pb-2.5">
+                                <span className="text-xs font-black uppercase text-emerald-900 tracking-wider">
+                                  ✏️ Edit Question #{realIndex + 1}: {field.label}
                                 </span>
                                 <div className="flex items-center gap-2">
                                   <button
                                     type="button"
                                     onClick={handleSaveEditedField}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 cursor-pointer shadow-xs"
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 cursor-pointer shadow-xs"
                                   >
-                                    <Check size={14} /> Save Field
+                                    <Check size={14} /> Save Changes
                                   </button>
                                   <button
                                     type="button"
                                     onClick={handleCancelFieldEdit}
-                                    className="px-3 py-1 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-100 cursor-pointer"
+                                    className="px-3.5 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-100 cursor-pointer"
                                   >
                                     Cancel
                                   </button>
@@ -1037,29 +1036,20 @@ export default function AdminLoanProducts() {
 
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div>
-                                  <label className="text-[11px] font-bold text-gray-700">Label (Display Name) *</label>
+                                  <label className="text-[11px] font-bold text-gray-700">Question Name (Display Label) *</label>
                                   <input
                                     type="text"
                                     value={fieldEditDraft.label}
                                     onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, label: e.target.value })}
-                                    className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1 font-semibold"
+                                    className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-semibold text-gray-900"
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-[11px] font-bold text-gray-700">Field Key (Variable Name) *</label>
-                                  <input
-                                    type="text"
-                                    value={fieldEditDraft.fieldKey}
-                                    onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, fieldKey: e.target.value })}
-                                    className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1 font-mono text-gray-700"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-[11px] font-bold text-gray-700">Field Type</label>
+                                  <label className="text-[11px] font-bold text-gray-700">Question Answer Type</label>
                                   <select
                                     value={fieldEditDraft.fieldType}
                                     onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, fieldType: e.target.value })}
-                                    className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1"
+                                    className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
                                   >
                                     {FIELD_TYPES.map((t) => (
                                       <option key={t.value} value={t.value}>
@@ -1068,24 +1058,12 @@ export default function AdminLoanProducts() {
                                     ))}
                                   </select>
                                 </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div>
-                                  <label className="text-[11px] font-bold text-gray-700">Placeholder Text</label>
-                                  <input
-                                    type="text"
-                                    value={fieldEditDraft.placeholder}
-                                    onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, placeholder: e.target.value })}
-                                    className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-[11px] font-bold text-gray-700">Form Step Assignment</label>
+                                  <label className="text-[11px] font-bold text-gray-700">Form Section</label>
                                   <select
                                     value={fieldEditDraft.stepIndex}
                                     onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, stepIndex: Number(e.target.value) })}
-                                    className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
+                                    className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
                                   >
                                     {DEFAULT_STEPS.map((s) => (
                                       <option key={s.stepIndex} value={s.stepIndex}>
@@ -1094,151 +1072,158 @@ export default function AdminLoanProducts() {
                                     ))}
                                   </select>
                                 </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-[11px] font-bold text-gray-700">Layout Width</label>
-                                  <select
-                                    value={fieldEditDraft.gridCol}
-                                    onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, gridCol: Number(e.target.value) })}
-                                    className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1"
-                                  >
-                                    <option value={12}>Full Width (12 columns)</option>
-                                    <option value={6}>Half Width (6 columns)</option>
-                                  </select>
+                                  <label className="text-[11px] font-bold text-gray-700">Example / Placeholder (Help text)</label>
+                                  <input
+                                    type="text"
+                                    value={fieldEditDraft.placeholder}
+                                    onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, placeholder: e.target.value })}
+                                    className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1"
+                                    placeholder="e.g. As per Aadhaar card"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-bold text-gray-700">Question Required Status</label>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setFieldEditDraft({ ...fieldEditDraft, required: true })}
+                                      className={`px-3 py-2 text-xs font-bold rounded-lg border cursor-pointer transition ${
+                                        fieldEditDraft.required
+                                          ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                          : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      ● Mandatory * (Customer must answer)
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setFieldEditDraft({ ...fieldEditDraft, required: false })}
+                                      className={`px-3 py-2 text-xs font-bold rounded-lg border cursor-pointer transition ${
+                                        !fieldEditDraft.required
+                                          ? "bg-gray-700 text-white border-gray-700 shadow-xs"
+                                          : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      ○ Optional (Can be skipped)
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
 
                               {(fieldEditDraft.fieldType === "select" || fieldEditDraft.fieldType === "radio") && (
                                 <div>
                                   <label className="text-[11px] font-bold text-gray-700">
-                                    Dropdown / Radio Options (Comma-separated)
+                                    Choice Options (Separate with commas)
                                   </label>
                                   <input
                                     type="text"
                                     value={fieldEditDraft.options}
                                     onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, options: e.target.value })}
-                                    className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1"
-                                    placeholder="e.g. Option 1, Option 2, Option 3"
+                                    className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1"
+                                    placeholder="e.g. Salaried, Self-Employed, Business Owner"
                                   />
                                 </div>
                               )}
-
-                              <div className="pt-3 border-t border-emerald-200">
-                                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2">
-                                  Field Requirement (Mandatory vs Optional):
-                                </label>
-                                <div className="flex flex-wrap items-center gap-3">
-                                  <button
-                                    type="button"
-                                    onClick={() => setFieldEditDraft({ ...fieldEditDraft, required: true })}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer border transition ${
-                                      fieldEditDraft.required
-                                        ? "bg-red-50 text-red-700 border-red-300 ring-2 ring-red-400 font-black shadow-xs"
-                                        : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
-                                    }`}
-                                  >
-                                    <CheckCircle2 size={15} /> Mandatory / Required (Customer must fill)
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setFieldEditDraft({ ...fieldEditDraft, required: false })}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer border transition ${
-                                      !fieldEditDraft.required
-                                        ? "bg-gray-100 text-gray-800 border-gray-400 ring-2 ring-gray-400 font-black shadow-xs"
-                                        : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
-                                    }`}
-                                  >
-                                    <XCircle size={15} /> Optional / Not Required (Can be skipped)
-                                  </button>
-                                </div>
-                              </div>
                             </div>
                           );
                         }
 
-                        // STANDARD FIELD ROW VIEW
+                        // CLEAN, SIMPLE FIELD ROW (SUPER EASY FOR ANY USER TO UNDERSTAND)
                         return (
                           <div
                             key={realIndex}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-xs transition gap-3"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white border border-gray-200 rounded-xl hover:border-emerald-300 hover:shadow-xs transition gap-3"
                           >
                             <div className="flex items-start sm:items-center gap-3">
-                              {/* Order & Reorder Controls */}
-                              <div className="flex flex-col items-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveField(realIndex, "up")}
-                                  disabled={realIndex === 0}
-                                  className="text-gray-400 hover:text-emerald-600 disabled:opacity-20 cursor-pointer p-0.5"
-                                  title="Move Up"
-                                >
-                                  <ChevronUp size={16} />
-                                </button>
-                                <span className="text-xs font-bold text-gray-500">{realIndex + 1}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveField(realIndex, "down")}
-                                  disabled={realIndex === formData.customFields.length - 1}
-                                  className="text-gray-400 hover:text-emerald-600 disabled:opacity-20 cursor-pointer p-0.5"
-                                  title="Move Down"
-                                >
-                                  <ChevronDown size={16} />
-                                </button>
+                              {/* Clean Order Pill & Arrows */}
+                              <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 shrink-0">
+                                <span className="text-xs font-extrabold text-gray-700 w-4 text-center">{realIndex + 1}</span>
+                                <div className="flex flex-col">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveField(realIndex, "up")}
+                                    disabled={realIndex === 0}
+                                    className="text-gray-400 hover:text-emerald-600 disabled:opacity-20 cursor-pointer p-0.5"
+                                    title="Move Up"
+                                  >
+                                    <ChevronUp size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveField(realIndex, "down")}
+                                    disabled={realIndex === formData.customFields.length - 1}
+                                    className="text-gray-400 hover:text-emerald-600 disabled:opacity-20 cursor-pointer p-0.5"
+                                    title="Move Down"
+                                  >
+                                    <ChevronDown size={12} />
+                                  </button>
+                                </div>
                               </div>
 
                               <div>
-                                <div className="text-sm font-bold text-gray-900 flex flex-wrap items-center gap-2">
-                                  {field.label}
-                                  <span className="text-xs font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                                    {field.fieldKey}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-bold text-gray-900">{field.label}</span>
+                                  <span className="text-[11px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+                                    {getFieldTypeLabel(field.fieldType)}
                                   </span>
-
-                                  {/* 1-CLICK TOGGLE BUTTON */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleFieldRequired(realIndex)}
-                                    title="Click to toggle Mandatory / Optional"
-                                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide cursor-pointer border transition-all ${
-                                      field.validation?.required
-                                        ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 shadow-xs"
-                                        : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
-                                    }`}
-                                  >
-                                    {field.validation?.required ? "● Mandatory (Click to make Optional)" : "○ Optional (Click to make Mandatory)"}
-                                  </button>
-                                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                                    Step {field.stepIndex !== undefined ? field.stepIndex : 0}
-                                  </span>
-                                </div>
-
-                                <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-2">
-                                  <span>Type: <strong className="text-gray-700 uppercase">{field.fieldType}</strong></span>
-                                  {field.placeholder && (
-                                    <span>• Placeholder: <span className="italic">"{field.placeholder}"</span></span>
-                                  )}
-                                  {field.options?.length > 0 && (
-                                    <span>• Options: {field.options.map((o) => o.label).join(", ")}</span>
+                                  {field.stepIndex !== undefined && (
+                                    <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                                      {DEFAULT_STEPS.find((s) => s.stepIndex === field.stepIndex)?.title || `Section ${field.stepIndex + 1}`}
+                                    </span>
                                   )}
                                 </div>
+                                {field.placeholder && (
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    Example: "{field.placeholder}"
+                                  </p>
+                                )}
                               </div>
                             </div>
 
-                            {/* Action Buttons: EDIT & DELETE */}
-                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => handleStartEditField(realIndex)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
+                            {/* Right Side: Simple Toggle Switch & Action Buttons */}
+                            <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                              {/* Clean iOS-Style Toggle Switch */}
+                              <div
+                                onClick={() => handleToggleFieldRequired(realIndex)}
+                                className="flex items-center gap-2 cursor-pointer select-none group"
+                                title={field.validation?.required ? "Mandatory field. Click to make Optional." : "Optional field. Click to make Mandatory."}
                               >
-                                <Pencil size={13} /> Edit Field
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveCustomField(realIndex)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg transition cursor-pointer"
-                                title="Delete Field"
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                                <span className={`text-xs font-extrabold transition ${
+                                  field.validation?.required ? "text-emerald-700" : "text-gray-400 font-medium"
+                                }`}>
+                                  {field.validation?.required ? "Mandatory *" : "Optional"}
+                                </span>
+                                <div className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+                                  field.validation?.required ? "bg-emerald-600" : "bg-gray-300"
+                                }`}>
+                                  <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${
+                                    field.validation?.required ? "translate-x-5" : "translate-x-0"
+                                  }`} />
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 border-l border-gray-200 pl-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEditField(realIndex)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition"
+                                  title="Edit Field"
+                                >
+                                  <Pencil size={12} /> Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveCustomField(realIndex)}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg cursor-pointer transition"
+                                  title="Delete Field"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
@@ -1246,43 +1231,38 @@ export default function AdminLoanProducts() {
                     )}
                   </div>
 
-                  {/* + ADD NEW FIELD BOX */}
-                  <div className="p-5 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border-2 border-dashed border-emerald-300 rounded-2xl">
-                    <h4 className="text-sm font-extrabold text-emerald-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <Plus size={16} className="text-emerald-700" /> Add New Field to This Loan Form
+                  {/* + ADD NEW QUESTION BOX (SUPER EASY) */}
+                  <div className="p-5 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-300 rounded-2xl shadow-xs">
+                    <h4 className="text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2">
+                      <Plus size={16} className="text-emerald-700" /> + Add a New Question to This Form
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                       <div>
-                        <label className="text-[11px] font-bold text-gray-700">Field Label (Customer Facing) *</label>
+                        <label className="text-[11px] font-bold text-gray-700">Question Name (What customer sees) *</label>
                         <input
                           type="text"
-                          placeholder="e.g. Vehicle Registration Number"
+                          placeholder="e.g. Father's Full Name"
                           value={newField.label}
                           onChange={(e) => {
                             const val = e.target.value;
                             const autoKey = val.toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
-                            setNewField({ ...newField, label: val, fieldKey: newField.fieldKey ? newField.fieldKey : autoKey });
+                            setNewField({
+                              ...newField,
+                              label: val,
+                              fieldKey: newField.fieldKey ? newField.fieldKey : autoKey,
+                            });
                           }}
-                          className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1 font-semibold"
+                          className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-semibold text-gray-900"
                         />
                       </div>
+
                       <div>
-                        <label className="text-[11px] font-bold text-gray-700">Field Key (Unique Variable) *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. rcNumber"
-                          value={newField.fieldKey}
-                          onChange={(e) => setNewField({ ...newField, fieldKey: e.target.value })}
-                          className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1 font-mono text-gray-700"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold text-gray-700">Field Type</label>
+                        <label className="text-[11px] font-bold text-gray-700">Answer Type</label>
                         <select
                           value={newField.fieldType}
                           onChange={(e) => setNewField({ ...newField, fieldType: e.target.value })}
-                          className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1"
+                          className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
                         >
                           {FIELD_TYPES.map((t) => (
                             <option key={t.value} value={t.value}>
@@ -1291,25 +1271,13 @@ export default function AdminLoanProducts() {
                           ))}
                         </select>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                       <div>
-                        <label className="text-[11px] font-bold text-gray-700">Placeholder Text</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. MH12AB1234"
-                          value={newField.placeholder}
-                          onChange={(e) => setNewField({ ...newField, placeholder: e.target.value })}
-                          className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold text-gray-700">Assign to Form Step</label>
+                        <label className="text-[11px] font-bold text-gray-700">Add to Section</label>
                         <select
                           value={newField.stepIndex}
                           onChange={(e) => setNewField({ ...newField, stepIndex: Number(e.target.value) })}
-                          className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
+                          className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
                         >
                           {DEFAULT_STEPS.map((s) => (
                             <option key={s.stepIndex} value={s.stepIndex}>
@@ -1318,51 +1286,59 @@ export default function AdminLoanProducts() {
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <label className="text-[11px] font-bold text-gray-700">Layout Width</label>
-                        <select
-                          value={newField.gridCol}
-                          onChange={(e) => setNewField({ ...newField, gridCol: Number(e.target.value) })}
-                          className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1"
-                        >
-                          <option value={12}>Full Width (12 columns)</option>
-                          <option value={6}>Half Width (6 columns)</option>
-                        </select>
-                      </div>
                     </div>
 
-                    {(newField.fieldType === "select" || newField.fieldType === "radio") && (
-                      <div className="mb-3">
-                        <label className="text-[11px] font-bold text-gray-700">
-                          Options (Comma-separated)
-                        </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-700">Example Text (Shown inside input)</label>
                         <input
                           type="text"
-                          placeholder="e.g. Option 1, Option 2, Option 3"
-                          value={newField.options}
-                          onChange={(e) => setNewField({ ...newField, options: e.target.value })}
-                          className="w-full text-sm px-3 py-1.5 bg-white border border-gray-300 rounded-lg mt-1"
+                          placeholder="e.g. As per PAN card"
+                          value={newField.placeholder}
+                          onChange={(e) => setNewField({ ...newField, placeholder: e.target.value })}
+                          className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1"
                         />
                       </div>
-                    )}
 
-                    <div className="flex items-center justify-between pt-2 border-t border-emerald-200">
-                      <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={newField.required}
-                          onChange={(e) => setNewField({ ...newField, required: e.target.checked })}
-                          className="w-4 h-4 text-emerald-600 rounded"
-                        />
-                        Mandatory / Required Field
-                      </label>
+                      {(newField.fieldType === "select" || newField.fieldType === "radio") && (
+                        <div>
+                          <label className="text-[11px] font-bold text-gray-700">
+                            Options (Comma-separated)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Salaried, Self-Employed, Business"
+                            value={newField.options}
+                            onChange={(e) => setNewField({ ...newField, options: e.target.value })}
+                            className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-emerald-200">
+                      <div
+                        onClick={() => setNewField({ ...newField, required: !newField.required })}
+                        className="flex items-center gap-2 cursor-pointer select-none"
+                      >
+                        <div className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+                          newField.required ? "bg-emerald-600" : "bg-gray-300"
+                        }`}>
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${
+                            newField.required ? "translate-x-5" : "translate-x-0"
+                          }`} />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700">
+                          {newField.required ? "Mandatory * (Customer must fill)" : "Optional (Can be skipped)"}
+                        </span>
+                      </div>
 
                       <button
                         type="button"
                         onClick={handleAddCustomField}
                         className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition cursor-pointer shadow-sm"
                       >
-                        + Add Field to Schema
+                        + Add Question to Form
                       </button>
                     </div>
                   </div>
