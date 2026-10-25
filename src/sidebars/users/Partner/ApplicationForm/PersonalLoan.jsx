@@ -97,6 +97,26 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
   const [documentModel, setdocumentModel] = useState(null);
   const navigate = useNavigate();
 
+  const openDocumentPreview = (docValue) => {
+    if (!docValue) return;
+    const file = docValue instanceof File ? docValue : docValue?.file;
+    const rawUrl = docValue?.preview
+      ? docValue.preview
+      : file instanceof File
+      ? URL.createObjectURL(file)
+      : typeof docValue === "string"
+      ? docValue
+      : "";
+    if (rawUrl) {
+      setdocumentModel({
+        url: rawUrl,
+        name: file?.name || docValue?.name || "Document Preview",
+        type: file?.type || (file?.name?.toLowerCase().endsWith(".pdf") ? "application/pdf" : ""),
+        file,
+      });
+    }
+  };
+
   const { partnerToken, partnerUser, rmToken } = getAuthData();
   const isRmMode = actorRole === "rm" || (actorRole === "auto" && Boolean(rmToken) && !partnerToken);
   const isPartnerLoggedIn = Boolean(partnerToken) && !isRmMode;
@@ -2050,15 +2070,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       error={renderError(doc.name)}
                       uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
                       uploadProgress={docUploadProgress[doc.name] || 0}
-                      onPreview={() =>
-                        setdocumentModel(
-                          formData[doc.name]?.preview
-                            ? formData[doc.name].preview
-                            : formData[doc.name] instanceof File
-                            ? URL.createObjectURL(formData[doc.name])
-                            : ""
-                        )
-                      }
+                      onPreview={() => openDocumentPreview(formData[doc.name])}
                     />
                   ))}
                 </div>
@@ -2106,15 +2118,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       error={renderError(doc.name)}
                       uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
                       uploadProgress={docUploadProgress[doc.name] || 0}
-                      onPreview={() =>
-                        setdocumentModel(
-                          formData[doc.name]?.preview
-                            ? formData[doc.name].preview
-                            : formData[doc.name] instanceof File
-                            ? URL.createObjectURL(formData[doc.name])
-                            : ""
-                        )
-                      }
+                      onPreview={() => openDocumentPreview(formData[doc.name])}
                     />
                   ))}
                 </div>
@@ -2335,15 +2339,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       error={renderError(doc.name)}
                       uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
                       uploadProgress={docUploadProgress[doc.name] || 0}
-                      onPreview={() =>
-                        setdocumentModel(
-                          formData[doc.name]?.preview
-                            ? formData[doc.name].preview
-                            : formData[doc.name] instanceof File
-                            ? URL.createObjectURL(formData[doc.name])
-                            : ""
-                        )
-                      }
+                      onPreview={() => openDocumentPreview(formData[doc.name])}
                     />
                   ))}
                 </div>
@@ -2381,16 +2377,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                   renderError={renderError}
                   uploadStatus={docUploadStatus.addressProof || (formData.addressProof_uploaded ? "uploaded" : "idle")}
                   uploadProgress={docUploadProgress.addressProof || 0}
-                  onPreview={() =>
-                    formData.addressProof &&
-                    setdocumentModel(
-                      formData.addressProof.preview
-                        ? formData.addressProof.preview
-                        : formData.addressProof instanceof File
-                        ? URL.createObjectURL(formData.addressProof)
-                        : ""
-                    )
-                  }
+                  onPreview={() => openDocumentPreview(formData.addressProof)}
                 />
               </section>
 

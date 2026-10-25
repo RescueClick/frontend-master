@@ -299,7 +299,13 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
         : docValue instanceof File
         ? URL.createObjectURL(docValue)
         : "";
-    if (url) setdocumentModel(url);
+    if (url) {
+      setdocumentModel({
+        url,
+        name: docValue?.name || "Document Preview",
+        type: docValue?.type || (docValue?.name?.toLowerCase().endsWith(".pdf") ? "application/pdf" : ""),
+      });
+    }
   };
   const renderPreviewLink = (fieldName) =>
     formData[fieldName] ? (
