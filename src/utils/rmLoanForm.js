@@ -107,6 +107,10 @@ export function mapRmFormDataToLoanFields(payload = {}) {
   };
 }
 
+export function partnerCompleteLoanFormUrl(applicationId) {
+  return `${backendurl}/partner/applications/${applicationId}/complete-form`;
+}
+
 export function useRmLoanFormResume({ enabled, setFormData, setApplicationId }) {
   const [searchParams] = useSearchParams();
   const applicationIdParam = searchParams.get("applicationId");
@@ -122,16 +126,21 @@ export function useRmLoanFormResume({ enabled, setFormData, setApplicationId }) 
       setLoadingResume(true);
       setResumeError("");
       try {
-        const { rmToken } = getAuthData();
-        const { data } = await axios.get(
-          `${backendurl}/rm/applications/${applicationIdParam}/form-data`,
-          { headers: { Authorization: `Bearer ${rmToken}` } }
-        );
+        const { rmToken, partnerToken } = getAuthData();
+        const token = rmToken || partnerToken;
+        const endpoint = rmToken
+          ? `${backendurl}/rm/applications/${applicationIdParam}/form-data`
+          : `${backendurl}/partner/applications/${applicationIdParam}/form-data`;
+
+        const { data } = await axios.get(endpoint, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (cancelled) return;
         setApplicationId?.(data.id || applicationIdParam);
         setFormData?.((prev) => ({
           ...prev,
           ...mapRmFormDataToLoanFields(data),
+          customFieldResponses: data.customFieldResponses || prev.customFieldResponses || {},
         }));
         setResumeMeta({
           id: data.id,
@@ -145,7 +154,7 @@ export function useRmLoanFormResume({ enabled, setFormData, setApplicationId }) 
         setResumeError(
           err.response?.data?.message ||
             err.message ||
-            "Failed to load application for RM form completion"
+            "Failed to load application details for editing"
         );
       } finally {
         if (!cancelled) setLoadingResume(false);

@@ -10,6 +10,7 @@ import {
   CheckCircle,
   XCircle,
   Download,
+  Edit3,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -319,7 +320,23 @@ const Application = () => {
         key: "actions",
         align: "center",
         render: (_, application) => (
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center justify-center gap-1.5">
+            {application.applicationId && (
+              <button
+                type="button"
+                className="px-2 py-1 rounded text-white bg-blue-600 hover:bg-blue-700 transition text-xs flex items-center gap-1 font-semibold"
+                title="View & Edit Loan Form"
+                onClick={() => {
+                  const rawType = String(application.loanType || "PERSONAL").trim();
+                  navigate(
+                    `/partner/personal-loan?type=${rawType}&applicationId=${application.applicationId}&customerId=${application.customerId}`
+                  );
+                }}
+              >
+                <Edit3 size={12} />
+                Edit Form
+              </button>
+            )}
             {application.applicationId && application.customerId && (
               <button
                 type="button"

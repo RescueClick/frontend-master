@@ -19,7 +19,7 @@ import {
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation, useParams } from "react-router-dom";
 
 import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import { getAuthData } from "../../../../utils/localStorage";
@@ -59,6 +59,7 @@ import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
 import {
   useRmLoanFormResume,
   rmCompleteLoanFormUrl,
+  partnerCompleteLoanFormUrl,
 } from "../../../../utils/rmLoanForm";
 import { buildCanonicalLoanPayload } from "../../../../utils/normalizeLoanPayload";
 import {
@@ -160,6 +161,59 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     PUBLIC_LOAN_REFERRAL_FALLBACK
   );
 
+  const [searchParams] = useSearchParams();
+  const { code: routeCode } = useParams();
+  const queryTypeCode = (
+    routeCode ||
+    searchParams.get("type") ||
+    searchParams.get("loanType") ||
+    searchParams.get("code") ||
+    ""
+  ).toUpperCase().trim();
+  const loanTypeCode = queryTypeCode || "PERSONAL";
+
+  const [dynamicProduct, setDynamicProduct] = useState(null);
+  const [loadingProduct, setLoadingProduct] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!loanTypeCode || loanTypeCode === "PERSONAL") {
+      setDynamicProduct(null);
+      return;
+    }
+    setLoadingProduct(true);
+    axios
+      .get(`${backendurl}/loan-products/code/${loanTypeCode}`, { timeout: 8000 })
+      .then((res) => {
+        if (!cancelled && res.data?.data) {
+          setDynamicProduct(res.data.data);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not fetch loan product details:", err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProduct(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loanTypeCode]);
+
+  const dynamicLoanTitle = useMemo(() => {
+    if (dynamicProduct?.name) return dynamicProduct.name;
+    if (loanTypeCode === "PERSONAL") return "Personal Loan";
+    return loanTypeCode
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }, [dynamicProduct, loanTypeCode]);
+
+  const dynamicPageTitle = `${dynamicLoanTitle} Application`;
+  const dynamicSubtitle =
+    dynamicProduct?.description ||
+    "Complete all fields to process your loan application";
+
   const [formData, setFormData] = useState({
     firstName: "",
     middleName: "",
@@ -246,8 +300,11 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
   });
   const [isCheckingExistence, setIsCheckingExistence] = useState(false);
 
+  const applicationIdQuery = searchParams.get("applicationId");
+  const isEditingExistingApp = Boolean(applicationIdQuery);
+
   const { resumeMeta, loadingResume, resumeError } = useRmLoanFormResume({
-    enabled: isRmMode,
+    enabled: isRmMode || (isPartnerLoggedIn && isEditingExistingApp),
     setFormData,
     setApplicationId,
   });
@@ -276,8 +333,8 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     "loan-review-step",
   ];
   const loanDraftStorageKey = embed
-    ? "personalLoanDraft_embed_v1"
-    : "personalLoanDraft_v1";
+    ? `loanDraft_${loanTypeCode.toLowerCase()}_embed_v1`
+    : `loanDraft_${loanTypeCode.toLowerCase()}_v1`;
 
   const stepFirstFieldName = useMemo(
     () => [
@@ -868,7 +925,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         leavingStepIndex: leavingStep,
         nextStepIndex: nextIdx,
         steps,
-        loanType: "PERSONAL",
+        loanType: dynamicProduct?.code || loanTypeCode,
         formData,
         isPartnerLoggedIn,
         partnerToken,
@@ -934,9 +991,24 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       }
 
       // ✅ Prepare canonical JSON structure matching backend schema
-      const applicationData = buildCanonicalLoanPayload(formData, "PERSONAL", {
+      const activeLoanCode = dynamicProduct?.code || loanTypeCode;
+      const applicationData = buildCanonicalLoanPayload(formData, activeLoanCode, {
         isPartnerLoggedIn,
       });
+
+      if (dynamicProduct?.code) {
+        applicationData.loanType = dynamicProduct.code;
+        applicationData.dynamicProductCode = dynamicProduct.code;
+      }
+      if (dynamicProduct?.customFields?.length > 0) {
+        const customResponses = {};
+        dynamicProduct.customFields.forEach((f) => {
+          if (formData[f.fieldKey] !== undefined) {
+            customResponses[f.fieldKey] = formData[f.fieldKey];
+          }
+        });
+        applicationData.customFieldResponses = customResponses;
+      }
 
       // ✅ Prepare FormData
       const formDataToSend = new FormData();
@@ -972,6 +1044,20 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         },
         { file: formData.agreementCopy, type: "AGREEMENT_COPY", key: "agreementCopy" },
       ];
+
+      // Dynamic documents configured for this loan product (e.g. CAR_QUOTATION, RC_BOOK, etc.)
+      if (dynamicProduct?.requiredDocuments?.length > 0) {
+        dynamicProduct.requiredDocuments.forEach((doc) => {
+          const docFile = formData[doc.docType];
+          if (docFile && !docsQueue.some((q) => q.type === doc.docType)) {
+            docsQueue.push({
+              file: docFile,
+              type: doc.docType,
+              key: doc.docType,
+            });
+          }
+        });
+      }
 
       // If already uploaded in background to lead, backend preserves existing docs on submit.
       // We only append pending files to make final submission fast (<1 second).
@@ -1028,6 +1114,28 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         );
         toast.success(data.message || "Loan form completed");
         setTimeout(() => navigate("/rm/leads"), 1200);
+        return;
+      }
+
+      if (isPartnerLoggedIn && isEditingExistingApp && (applicationId || applicationIdQuery)) {
+        const targetAppId = applicationId || applicationIdQuery;
+        abortControllerRef.current = new AbortController();
+        const response = await axios.post(
+          partnerCompleteLoanFormUrl(targetAppId),
+          formDataToSend,
+          {
+            headers: { Authorization: `Bearer ${partnerToken}` },
+            timeout: 120000,
+            maxContentLength: 100 * 1024 * 1024,
+            maxBodyLength: 100 * 1024 * 1024,
+            signal: abortControllerRef.current.signal,
+          }
+        );
+        const data = response.data;
+        setSavedApplication(data);
+        setSuccessMessage(data.message || "Application form updated successfully.");
+        toast.success(data.message || "Loan form updated successfully");
+        setTimeout(() => navigate("/partner/applications"), 1200);
         return;
       }
 
@@ -1390,11 +1498,31 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
             </div>
           )}
 
+          {/* Edit Mode Banner for Partner / RM */}
+          {isEditingExistingApp && (
+            <div className="mb-4 rounded-xl border-2 border-emerald-400 bg-emerald-50 p-4 text-emerald-900 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📝</span>
+                <div>
+                  <h4 className="font-extrabold text-sm text-emerald-900">
+                    Editing Application: {resumeMeta?.appNo || applicationIdQuery}
+                  </h4>
+                  <p className="text-xs text-emerald-700">
+                    Review and update applicant details, loan amounts, and answers below.
+                  </p>
+                </div>
+              </div>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-200 text-emerald-800 self-start sm:self-auto">
+                Status: {resumeMeta?.status || "In-Progress"}
+              </span>
+            </div>
+          )}
+
           {/* Customer Trust Banner & Partner Certificate Info */}
           {!isPartnerLoggedIn && (
             <PublicLoanPartnerTrustBanner
               partner={partnerInfo || (defaultReferralCode ? { partnerCode: defaultReferralCode } : null)}
-              loanTitle="Personal Loan"
+              loanTitle={dynamicLoanTitle}
             />
           )}
 
@@ -1406,10 +1534,10 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
             >
               <div className="text-center sm:text-left flex-1">
                 <h1 className="text-2xl sm:text-3xl font-bold">
-                  Personal Loan Application
+                  {dynamicPageTitle}
                 </h1>
                 <p className="mt-1 opacity-90 text-xs sm:text-sm">
-                  Complete all fields to process your loan application
+                  {dynamicSubtitle}
                 </p>
               </div>
 
@@ -2358,6 +2486,93 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                 </div>
               </section>
 
+              {/* Dynamic Product Custom Fields */}
+              {dynamicProduct?.customFields?.length > 0 && (
+                <section hidden={currentStep !== 2}>
+                  <div className="pt-6 border-t border-slate-200">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="px-2.5 py-1 bg-teal-50 border border-teal-200 rounded-lg text-teal-800 text-xs font-bold uppercase tracking-wider">
+                        {dynamicLoanTitle} Specific
+                      </span>
+                      <h3 className="text-base font-bold text-slate-800">
+                        Additional Loan Information
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {dynamicProduct.customFields.map((field) => (
+                        <div
+                          key={field.fieldKey}
+                          className={field.gridCol === 12 ? "col-span-1 md:col-span-2" : "col-span-1"}
+                        >
+                          <label className="block text-sm font-medium mb-2 text-slate-900">
+                            {field.label} {field.validation?.required ? "*" : ""}
+                          </label>
+                          {field.fieldType === "select" ? (
+                            <select
+                              name={field.fieldKey}
+                              value={formData[field.fieldKey] || ""}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors"
+                              style={{
+                                borderColor: fieldErrors[field.fieldKey]
+                                  ? "#EF4444"
+                                  : "var(--color-brand-primary)",
+                                backgroundColor: "#F8FAFC",
+                              }}
+                              required={field.validation?.required}
+                            >
+                              <option value="">{field.placeholder || `Select ${field.label}`}</option>
+                              {field.options?.map((opt, oIdx) => (
+                                <option key={oIdx} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          ) : field.fieldType === "textarea" ? (
+                            <textarea
+                              name={field.fieldKey}
+                              value={formData[field.fieldKey] || ""}
+                              onChange={handleInputChange}
+                              rows="3"
+                              placeholder={field.placeholder || `Enter ${field.label}`}
+                              className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors resize-none"
+                              style={{
+                                borderColor: fieldErrors[field.fieldKey]
+                                  ? "#EF4444"
+                                  : "var(--color-brand-primary)",
+                                backgroundColor: "#F8FAFC",
+                              }}
+                              required={field.validation?.required}
+                            />
+                          ) : (
+                            <input
+                              type={
+                                field.fieldType === "number" || field.fieldType === "currency"
+                                  ? "number"
+                                  : "text"
+                              }
+                              name={field.fieldKey}
+                              value={formData[field.fieldKey] || ""}
+                              onChange={handleInputChange}
+                              placeholder={field.placeholder || `Enter ${field.label}`}
+                              className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors"
+                              style={{
+                                borderColor: fieldErrors[field.fieldKey]
+                                  ? "#EF4444"
+                                  : "var(--color-brand-primary)",
+                                backgroundColor: "#F8FAFC",
+                              }}
+                              required={field.validation?.required}
+                            />
+                          )}
+                          {renderError(field.fieldKey)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* Bank Details Section */}
               <section hidden={currentStep !== 3}>
                 <h2
@@ -2437,6 +2652,44 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                   onPreview={() => openDocumentPreview(formData.addressProof)}
                 />
               </section>
+
+              {/* Dynamic Product Required Documents */}
+              {dynamicProduct?.requiredDocuments?.length > 0 && (
+                <section hidden={currentStep !== 3} className="pt-6 border-t border-slate-200">
+                  <h2
+                    className="text-2xl font-semibold mb-2 flex items-center gap-3"
+                    style={{ color: "#111827" }}
+                  >
+                    <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
+                    4.5 {dynamicLoanTitle} Specific Documents
+                  </h2>
+                  <p className="text-sm text-slate-600 mb-6">
+                    Upload documents configured specifically for this loan application.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {dynamicProduct.requiredDocuments.map((doc) => (
+                      <DocumentUploadCard
+                        key={doc.docType}
+                        name={doc.docType}
+                        label={`${doc.label}${doc.required ? " *" : ""}`}
+                        file={formData[doc.docType]}
+                        accept={doc.acceptTypes?.join(",") || ".pdf,.jpg,.jpeg,.png"}
+                        required={doc.required}
+                        hint={doc.description || loanDocumentFieldHint(doc.docType)}
+                        onChange={handleFileChange}
+                        onRemove={handleFileRemove}
+                        error={renderError(doc.docType)}
+                        uploadStatus={
+                          docUploadStatus[doc.docType] ||
+                          (formData[`${doc.docType}_uploaded`] ? "uploaded" : "idle")
+                        }
+                        uploadProgress={docUploadProgress[doc.docType] || 0}
+                        onPreview={() => openDocumentPreview(formData[doc.docType])}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* References */}
               <section id="loan-references-step" hidden={currentStep !== 4}>
@@ -2767,10 +3020,10 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
           loan={{
-            id: "personal",
-            title: "Personal Loan",
-            badge: "Upto ₹25L",
-            route: "/partner/application/personal-loan",
+            id: dynamicProduct?.code?.toLowerCase() || loanTypeCode.toLowerCase(),
+            title: dynamicLoanTitle,
+            badge: dynamicProduct?.badgeText || "Instant Approval",
+            route: `/partner/personal-loan?type=${dynamicProduct?.code || loanTypeCode}`,
             hasSubTypes: false,
           }}
           partnerCode={currentPartnerCode}

@@ -262,6 +262,18 @@ const AppRoutes = () => {
         path="/partner/apply"
         element={<PersonalLoan />}
       />
+      <Route
+        path="/partner/apply/:code"
+        element={<PersonalLoan />}
+      />
+      <Route
+        path="/apply/:code"
+        element={<PersonalLoan />}
+      />
+      <Route
+        path="/partner/application/:code"
+        element={<PersonalLoan />}
+      />
 
       <Route
         path="/partner/application/personal-loan"
@@ -516,6 +528,7 @@ const AppRoutes = () => {
 
           <Route path="get-loan" element={<GetLoan />} />
           <Route path="personal-loan" element={<PersonalLoan />} />
+          <Route path="apply/:code" element={<PersonalLoan />} />
           <Route path="bussiness-loan" element={<BusinessLoan />} />
           <Route path="home-loan" element={<HomeLoan />} />
           <Route path="home-loan-salaried" element={<HomeLoanSalaried />} />

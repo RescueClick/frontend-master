@@ -45,6 +45,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Edit3,
+  RotateCcw,
 } from "lucide-react";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
@@ -197,6 +198,100 @@ const DEFAULT_STEPS = [
   { stepIndex: 3, title: "4. Loan & Bank", icon: "🏦", description: "Required loan amount and banking" },
 ];
 
+export const STANDARD_DEFAULT_DOCUMENTS = [
+  { docType: "PAN", label: "PAN Card", required: true },
+  { docType: "AADHAAR_FRONT", label: "Aadhaar Card (Front)", required: true },
+  { docType: "AADHAAR_BACK", label: "Aadhaar Card (Back)", required: true },
+  { docType: "PHOTO", label: "Applicant Photo / Selfie", required: true },
+  { docType: "ADDRESS_PROOF", label: "Address Proof (Rent / Utility)", required: true },
+  { docType: "LIGHT_BILL", label: "Electricity Bill (Current Address)", required: false },
+  { docType: "BANK_STATEMENT_1", label: "Bank Statement (Latest 6-12 Months)", required: true },
+  { docType: "BANK_STATEMENT_2", label: "Secondary Bank Account Statement", required: false },
+  { docType: "CHEQUE_LEAF", label: "Cancelled Cheque / Passbook Copy", required: false },
+  { docType: "SALARY_SLIP_1", label: "Salary Slip / Income Proof", required: true },
+  { docType: "ITR", label: "Last 2-3 Years ITR with Computation", required: false },
+  { docType: "CO_APPLICANT_PAN", label: "Co-Applicant PAN Card", required: false },
+  { docType: "CO_APPLICANT_AADHAAR_FRONT", label: "Co-Applicant Aadhaar (Front)", required: false },
+];
+
+export const STANDARD_DOCUMENT_LIBRARY = [
+  // Identity & KYC
+  { docType: "PAN", label: "PAN Card", category: "🆔 Identity", defaultRequired: true },
+  { docType: "AADHAAR_FRONT", label: "Aadhaar Card (Front)", category: "🆔 Identity", defaultRequired: true },
+  { docType: "AADHAAR_BACK", label: "Aadhaar Card (Back)", category: "🆔 Identity", defaultRequired: true },
+  { docType: "PHOTO", label: "Applicant Photo / Selfie", category: "🆔 Identity", defaultRequired: true },
+
+  // Address Proofs
+  { docType: "ADDRESS_PROOF", label: "Address Proof (Electricity Bill / Rent Agreement)", category: "🏠 Address", defaultRequired: true },
+  { docType: "LIGHT_BILL", label: "Electricity Bill (Current Address)", category: "🏠 Address", defaultRequired: false },
+
+  // Banking & Financials
+  { docType: "BANK_STATEMENT_1", label: "Bank Statement (Latest 6 Months)", category: "💰 Banking", defaultRequired: true },
+  { docType: "BANK_STATEMENT_2", label: "Bank Statement (Secondary Account)", category: "💰 Banking", defaultRequired: false },
+  { docType: "CHEQUE_LEAF", label: "Cancelled Cheque / Passbook Copy", category: "💰 Banking", defaultRequired: false },
+
+  // Salaried Income Proofs
+  { docType: "SALARY_SLIP_1", label: "Salary Slip (Month 1)", category: "💼 Salaried", defaultRequired: true },
+  { docType: "SALARY_SLIP_2", label: "Salary Slip (Month 2)", category: "💼 Salaried", defaultRequired: true },
+  { docType: "SALARY_SLIP_3", label: "Salary Slip (Month 3)", category: "💼 Salaried", defaultRequired: true },
+  { docType: "FORM_16_26AS", label: "Form 16 / 26AS", category: "💼 Salaried", defaultRequired: false },
+  { docType: "COMPANY_ID_CARD", label: "Company ID Card", category: "💼 Salaried", defaultRequired: false },
+
+  // Business / Self-Employed
+  { docType: "ITR", label: "ITR (Last 2 - 3 Years with Computation)", category: "🏢 Business", defaultRequired: true },
+  { docType: "GST_DOCUMENT", label: "GST Certificate / 3B Returns", category: "🏢 Business", defaultRequired: false },
+  { docType: "SHOP_ACT", label: "Shop Act / Gumasta License", category: "🏢 Business", defaultRequired: false },
+  { docType: "UDHYAM_AADHAR", label: "Udyam / MSME Registration", category: "🏢 Business", defaultRequired: false },
+  { docType: "SHOP_PHOTO", label: "Shop / Office Photos (Inside & Outside)", category: "🏢 Business", defaultRequired: false },
+
+  // Vehicle / Auto
+  { docType: "RC_BOOK", label: "Vehicle Registration Certificate (RC)", category: "🚗 Vehicle", defaultRequired: false },
+  { docType: "DRIVING_LICENSE", label: "Driving License (Applicant)", category: "🚗 Vehicle", defaultRequired: true },
+  { docType: "VEHICLE_INSURANCE", label: "Vehicle Comprehensive Insurance Copy", category: "🚗 Vehicle", defaultRequired: false },
+  { docType: "VEHICLE_QUOTATION", label: "Dealer Quotation / Proforma Invoice", category: "🚗 Vehicle", defaultRequired: true },
+
+  // Secured / Property
+  { docType: "PROPERTY_PAPERS", label: "Property Title Deed / Sanctioned Plan / Tax Receipts", category: "🏡 Property", defaultRequired: true },
+
+  // Co-Applicant
+  { docType: "CO_APPLICANT_PAN", label: "Co-Applicant PAN Card", category: "👥 Co-Applicant", defaultRequired: false },
+  { docType: "CO_APPLICANT_AADHAAR_FRONT", label: "Co-Applicant Aadhaar (Front)", category: "👥 Co-Applicant", defaultRequired: false },
+  { docType: "CO_APPLICANT_AADHAAR_BACK", label: "Co-Applicant Aadhaar (Back)", category: "👥 Co-Applicant", defaultRequired: false },
+  { docType: "CO_APPLICANT_SELFIE", label: "Co-Applicant Photo / Selfie", category: "👥 Co-Applicant", defaultRequired: false },
+];
+
+export const STANDARD_DEFAULT_FIELDS = [
+  // Section 0: 1. Personal & KYC
+  { fieldKey: "fullName", label: "Applicant Full Name", fieldType: "text", placeholder: "As per PAN / Aadhaar card", required: true, stepIndex: 0, gridCol: 12 },
+  { fieldKey: "mobileNumber", label: "Mobile Number", fieldType: "phone", placeholder: "10-digit mobile number", required: true, stepIndex: 0, gridCol: 6 },
+  { fieldKey: "email", label: "Email Address", fieldType: "email", placeholder: "name@example.com", required: true, stepIndex: 0, gridCol: 6 },
+  { fieldKey: "dob", label: "Date of Birth", fieldType: "date", placeholder: "YYYY-MM-DD", required: true, stepIndex: 0, gridCol: 6 },
+  { fieldKey: "gender", label: "Gender", fieldType: "select", options: [{ label: "Male", value: "Male" }, { label: "Female", value: "Female" }, { label: "Other", value: "Other" }], required: true, stepIndex: 0, gridCol: 6 },
+  { fieldKey: "panNumber", label: "PAN Card Number", fieldType: "pan", placeholder: "ABCDE1234F", required: true, stepIndex: 0, gridCol: 6 },
+  { fieldKey: "aadhaarNumber", label: "Aadhaar Card Number", fieldType: "aadhaar", placeholder: "12-digit Aadhaar number", required: true, stepIndex: 0, gridCol: 6 },
+
+  // Section 1: 2. Address
+  { fieldKey: "currentAddress", label: "Current Residential Address", fieldType: "textarea", placeholder: "Flat / House No, Street, Locality", required: true, stepIndex: 1, gridCol: 12 },
+  { fieldKey: "currentCity", label: "City", fieldType: "text", placeholder: "e.g. Mumbai, Pune, Delhi", required: true, stepIndex: 1, gridCol: 6 },
+  { fieldKey: "currentState", label: "State", fieldType: "text", placeholder: "e.g. Maharashtra", required: true, stepIndex: 1, gridCol: 6 },
+  { fieldKey: "currentPincode", label: "PIN Code", fieldType: "number", placeholder: "6-digit PIN code", required: true, stepIndex: 1, gridCol: 6 },
+  { fieldKey: "residenceStatus", label: "Residence Ownership Status", fieldType: "select", options: [{ label: "Owned by Self / Family", value: "OWNED" }, { label: "Rented", value: "RENTED" }, { label: "Company Provided", value: "COMPANY_PROVIDED" }], required: true, stepIndex: 1, gridCol: 6 },
+
+  // Section 2: 3. Income & Job
+  { fieldKey: "employmentType", label: "Employment Type", fieldType: "select", options: [{ label: "Salaried", value: "SALARIED" }, { label: "Self-Employed Professional", value: "SELF_EMPLOYED_PROFESSIONAL" }, { label: "Business Owner / MSME", value: "BUSINESS_OWNER" }], required: true, stepIndex: 2, gridCol: 6 },
+  { fieldKey: "companyName", label: "Employer / Business Name", fieldType: "text", placeholder: "Company / Business Name", required: true, stepIndex: 2, gridCol: 6 },
+  { fieldKey: "designation", label: "Designation / Profession", fieldType: "text", placeholder: "e.g. Software Engineer, Manager", required: false, stepIndex: 2, gridCol: 6 },
+  { fieldKey: "monthlyIncome", label: "Net Monthly Income (₹)", fieldType: "currency", placeholder: "e.g. 50,000", required: true, stepIndex: 2, gridCol: 6 },
+  { fieldKey: "salaryBankName", label: "Primary Salary / Business Bank", fieldType: "text", placeholder: "e.g. HDFC Bank, ICICI Bank, SBI", required: true, stepIndex: 2, gridCol: 12 },
+
+  // Section 3: 4. Loan & Bank
+  { fieldKey: "loanAmountRequested", label: "Requested Loan Amount (₹)", fieldType: "currency", placeholder: "e.g. 5,00,000", required: true, stepIndex: 3, gridCol: 6 },
+  { fieldKey: "loanTenureMonths", label: "Desired Tenure (Months)", fieldType: "number", placeholder: "e.g. 36", required: true, stepIndex: 3, gridCol: 6 },
+  { fieldKey: "loanPurpose", label: "Purpose of Loan", fieldType: "text", placeholder: "e.g. Business Expansion, Medical, Home Renovation", required: false, stepIndex: 3, gridCol: 12 },
+  { fieldKey: "hasRunningLoan", label: "Do you have any currently running loans?", fieldType: "radio", options: [{ label: "No", value: "NO" }, { label: "Yes", value: "YES" }], required: true, stepIndex: 3, gridCol: 6 },
+  { fieldKey: "totalRunningEmi", label: "Total Monthly EMI Being Paid (₹)", fieldType: "currency", placeholder: "e.g. 15,000 (if Yes)", required: false, stepIndex: 3, gridCol: 6 },
+];
+
 const SECTION_ICONS = ["👤", "🏠", "💼", "🏦", "🚗", "🏡", "📄", "📑", "👥", "💳", "🛒", "🏢", "📋", "📍", "🛡️", "💰", "🎓", "💍"];
 
 export default function AdminLoanProducts() {
@@ -213,6 +308,7 @@ export default function AdminLoanProducts() {
   const [selectedStepFilter, setSelectedStepFilter] = useState("ALL"); // For filtering fields by step
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({ name: false, code: false });
 
   // Field Editing State
   const [editingFieldIndex, setEditingFieldIndex] = useState(null);
@@ -243,8 +339,8 @@ export default function AdminLoanProducts() {
     maintenanceMessage: "We are currently upgrading this loan service. Please check back shortly.",
     displayOrder: 1,
     steps: DEFAULT_STEPS,
-    customFields: [],
-    requiredDocuments: [],
+    customFields: STANDARD_DEFAULT_FIELDS,
+    requiredDocuments: STANDARD_DEFAULT_DOCUMENTS,
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -279,6 +375,10 @@ export default function AdminLoanProducts() {
   // Visual Answer Type Picker Modal
   const [showTypePickerModal, setShowTypePickerModal] = useState(false);
   const [typePickerTarget, setTypePickerTarget] = useState("new"); // "new" or "edit"
+
+  // Delete & Archive Confirmation State
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -317,7 +417,13 @@ export default function AdminLoanProducts() {
 
   const openCreateModal = () => {
     setEditingId(null);
-    setFormData(initialForm);
+    setFormData({
+      ...initialForm,
+      steps: DEFAULT_STEPS,
+      customFields: [...STANDARD_DEFAULT_FIELDS],
+      requiredDocuments: [...STANDARD_DEFAULT_DOCUMENTS],
+    });
+    setValidationErrors({ name: false, code: false });
     setActiveTab("basic");
     setSelectedStepFilter("ALL");
     setEditingFieldIndex(null);
@@ -327,6 +433,7 @@ export default function AdminLoanProducts() {
 
   const openEditModal = (product) => {
     setEditingId(product._id);
+    setValidationErrors({ name: false, code: false });
     setFormData({
       name: product.name || "",
       code: product.code || "",
@@ -398,25 +505,55 @@ export default function AdminLoanProducts() {
     await handleSetStatus(product, nextStatus);
   };
 
-  const handleDelete = async (product) => {
-    if (!window.confirm(`Are you sure you want to archive '${product.name}'?`)) return;
+  const handleArchiveProduct = async (product) => {
     try {
+      setIsDeleting(true);
       await axios.delete(`${backendurl}/loan-products/admin/${product._id}`, {
         headers: getHeaders(),
       });
-      showToast(`Archived '${product.name}' successfully.`);
+      showToast(`'${product.name}' archived successfully.`);
+      setProductToDelete(null);
       fetchProducts();
     } catch (err) {
-      showToast(err.response?.data?.message || "Failed to delete product", "error");
+      showToast(err.response?.data?.message || "Failed to archive product", "error");
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const handlePermanentDeleteProduct = async (product) => {
+    try {
+      setIsDeleting(true);
+      await axios.delete(`${backendurl}/loan-products/admin/${product._id}?permanent=true`, {
+        headers: getHeaders(),
+      });
+      showToast(`'${product.name}' deleted completely!`);
+      setProductToDelete(null);
+      fetchProducts();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to delete product permanently", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDelete = (product) => {
+    setProductToDelete(product);
   };
 
   const handleSaveProduct = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!formData.name.trim() || !formData.code.trim()) {
+    const hasName = Boolean(formData.name && formData.name.trim());
+    const hasCode = Boolean(formData.code && formData.code.trim());
+
+    if (!hasName || !hasCode) {
+      setValidationErrors({ name: !hasName, code: !hasCode });
+      setActiveTab("basic");
       showToast("Product name and unique code are required", "error");
       return;
     }
+
+    setValidationErrors({ name: false, code: false });
 
     try {
       setSaving(true);
@@ -443,6 +580,91 @@ export default function AdminLoanProducts() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // ==================== DOCUMENT LIBRARY & PRESET HELPERS ====================
+  const handleToggleLibraryDoc = (item) => {
+    const existingIndex = formData.requiredDocuments.findIndex(
+      (d) => d.docType === item.docType
+    );
+    if (existingIndex >= 0) {
+      setFormData((prev) => ({
+        ...prev,
+        requiredDocuments: prev.requiredDocuments.filter((_, i) => i !== existingIndex),
+      }));
+      showToast(`Removed '${item.label}' from required documents.`);
+    } else {
+      const newDocument = {
+        docType: item.docType,
+        label: item.label,
+        required: item.defaultRequired !== undefined ? item.defaultRequired : true,
+      };
+      setFormData((prev) => ({
+        ...prev,
+        requiredDocuments: [...prev.requiredDocuments, newDocument],
+      }));
+      showToast(`Added '${item.label}' to required documents.`);
+    }
+  };
+
+  const handleAddAllStandardKycDocs = () => {
+    const existingTypes = new Set(formData.requiredDocuments.map((d) => d.docType));
+    const toAdd = STANDARD_DEFAULT_DOCUMENTS.filter((d) => !existingTypes.has(d.docType));
+    if (toAdd.length === 0) {
+      showToast("All standard KYC documents are already in this loan product.");
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      requiredDocuments: [...prev.requiredDocuments, ...toAdd],
+    }));
+    showToast(`Added ${toAdd.length} standard KYC documents.`);
+  };
+
+  const handleLoadStandardTemplate = () => {
+    if (
+      !window.confirm(
+        "Load DhanSource Standard Template? This will populate 22 standard questions and 6 KYC documents."
+      )
+    )
+      return;
+    setFormData((prev) => ({
+      ...prev,
+      steps: DEFAULT_STEPS,
+      customFields: [...STANDARD_DEFAULT_FIELDS],
+      requiredDocuments: [...STANDARD_DEFAULT_DOCUMENTS],
+    }));
+    setSelectedStepFilter("ALL");
+    showToast("Standard template loaded (22 questions, 6 documents).");
+  };
+
+  const handleCopyFromProduct = (sourceProductId) => {
+    const source = products.find((p) => p._id === sourceProductId);
+    if (!source) return;
+    if (
+      !window.confirm(
+        `Copy schema from '${source.name}'? This will replace questions, sections, and documents with those from ${source.name}.`
+      )
+    )
+      return;
+    setFormData((prev) => ({
+      ...prev,
+      steps: source.steps?.length ? source.steps : DEFAULT_STEPS,
+      customFields: source.customFields ? JSON.parse(JSON.stringify(source.customFields)) : [],
+      requiredDocuments: source.requiredDocuments ? JSON.parse(JSON.stringify(source.requiredDocuments)) : [],
+    }));
+    setSelectedStepFilter("ALL");
+    showToast(`Schema copied from '${source.name}' (${source.customFields?.length || 0} questions, ${source.requiredDocuments?.length || 0} documents).`);
+  };
+
+  const handleClearAllQuestionsAndDocs = () => {
+    if (!window.confirm("Clear all questions and documents to start with a blank form?")) return;
+    setFormData((prev) => ({
+      ...prev,
+      customFields: [],
+      requiredDocuments: [],
+    }));
+    showToast("Form cleared to blank.");
   };
 
   const currentSteps = formData.steps && formData.steps.length > 0 ? formData.steps : DEFAULT_STEPS;
@@ -843,11 +1065,11 @@ export default function AdminLoanProducts() {
     });
 
   return (
-    <div className="min-h-screen bg-gray-50/60 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6 pb-12">
       {/* Toast Alert */}
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium transition-all ${
+          className={`fixed top-5 right-5 z-[99999] flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl border text-sm font-semibold transition-all ${
             toast.type === "error"
               ? "bg-red-50 border-red-200 text-red-800"
               : "bg-emerald-50 border-emerald-200 text-emerald-800"
@@ -991,7 +1213,11 @@ export default function AdminLoanProducts() {
               <div
                 key={product._id}
                 className={`bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between shadow-sm hover:shadow-md ${
-                  isActive ? "border-gray-200" : "border-gray-200 bg-gray-50/50 opacity-90"
+                  product.status === "ARCHIVED"
+                    ? "border-red-200 bg-red-50/15"
+                    : isActive
+                    ? "border-gray-200"
+                    : "border-gray-200 bg-gray-50/50 opacity-90"
                 }`}
               >
                 <div className="p-5">
@@ -1156,24 +1382,126 @@ export default function AdminLoanProducts() {
                   <span className="text-[11px] text-gray-400">Order #{product.displayOrder || 1}</span>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => openEditModal(product)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50 shadow-xs transition"
-                    >
-                      <Pencil size={13} /> Edit Full Schema
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg transition"
-                      title="Archive Product"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    {product.status === "ARCHIVED" ? (
+                      <>
+                        <button
+                          onClick={() => handleSetStatus(product, "ACTIVE")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50 shadow-xs transition cursor-pointer"
+                          title="Restore Product to Active"
+                        >
+                          <RotateCcw size={13} /> Restore
+                        </button>
+                        <button
+                          onClick={() => setProductToDelete(product)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 text-white hover:bg-red-700 shadow-xs transition cursor-pointer"
+                          title="Delete Permanently from Database"
+                        >
+                          <Trash2 size={13} /> Delete Completely
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => openEditModal(product)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50 shadow-xs transition cursor-pointer"
+                        >
+                          <Pencil size={13} /> Edit Full Schema
+                        </button>
+                        <button
+                          onClick={() => setProductToDelete(product)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg transition cursor-pointer"
+                          title="Archive or Delete Product"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* DELETE / ARCHIVE CONFIRMATION MODAL */}
+      {productToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-150 border border-gray-100">
+            <div className="flex items-start gap-4">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                  productToDelete.status === "ARCHIVED" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
+                }`}
+              >
+                {productToDelete.status === "ARCHIVED" ? <Trash2 size={24} /> : <AlertTriangle size={24} />}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-extrabold text-gray-900">
+                  {productToDelete.status === "ARCHIVED" ? "Delete Product Completely?" : "Archive or Delete Product?"}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-bold text-gray-800 text-sm">{productToDelete.name}</span>
+                  <span className="px-2 py-0.5 text-[10px] font-extrabold bg-gray-100 text-gray-700 rounded tracking-wider">
+                    {productToDelete.code}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                      productToDelete.status === "ARCHIVED"
+                        ? "bg-red-50 text-red-700 border border-red-200"
+                        : "bg-emerald-50 text-emerald-700"
+                    }`}
+                  >
+                    {productToDelete.status}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 mt-2.5 leading-relaxed">
+                  {productToDelete.status === "ARCHIVED"
+                    ? "Do you really want to delete this loan product completely? This will permanently remove its schema, custom form questions, and KYC rules from the database. This action CANNOT be undone."
+                    : "Do you want to archive this product (safely hides it from Partner & Customer apps) or permanently delete it completely from the database?"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setProductToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              {productToDelete.status !== "ARCHIVED" && (
+                <button
+                  type="button"
+                  onClick={() => handleArchiveProduct(productToDelete)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition cursor-pointer"
+                >
+                  Archive (Hide)
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handlePermanentDeleteProduct(productToDelete)}
+                disabled={isDeleting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-xs transition cursor-pointer"
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw size={13} className="animate-spin" /> Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={13} /> Yes, Delete Completely
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1235,6 +1563,58 @@ export default function AdminLoanProducts() {
               >
                 <Layers size={16} /> 3. Loan Settings & Status
               </button>
+            </div>
+
+            {/* Quick Template Preset Bar */}
+            <div className="bg-gradient-to-r from-emerald-50/70 via-teal-50/50 to-blue-50/60 border-b border-gray-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+              <div className="flex items-center gap-2 text-gray-700">
+                <Sparkles size={14} className="text-emerald-600 shrink-0" />
+                <span className="font-extrabold text-gray-800">Schema Presets:</span>
+                <span className="text-gray-500 hidden md:inline">Instant load questions & docs or copy from another loan product</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleLoadStandardTemplate}
+                  title="Populate DhanSource standard 22 questions and 6 KYC documents"
+                  className="px-2.5 py-1 bg-white border border-emerald-300 text-emerald-800 rounded-lg font-bold hover:bg-emerald-50 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                >
+                  ⚡ Load Standard Template
+                </button>
+
+                {products.length > 0 && (
+                  <div className="flex items-center gap-1.5 bg-white border border-gray-300 rounded-lg px-2.5 py-1 shadow-2xs">
+                    <span className="text-gray-500 font-bold">Copy from:</span>
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleCopyFromProduct(e.target.value);
+                          e.target.value = "";
+                        }
+                      }}
+                      defaultValue=""
+                      className="bg-transparent text-gray-800 font-bold focus:outline-none cursor-pointer text-xs"
+                    >
+                      <option value="" disabled>Select Loan Product...</option>
+                      {products.map((p) => (
+                        <option key={p._id} value={p._id}>
+                          {p.name} ({p.customFields?.length || 0} Questions, {p.requiredDocuments?.length || 0} Docs)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleClearAllQuestionsAndDocs}
+                  title="Clear all questions and documents to start with a blank form"
+                  className="px-2.5 py-1 text-gray-500 hover:text-red-600 hover:bg-red-50 border border-gray-200 rounded-lg transition text-xs font-semibold cursor-pointer"
+                >
+                  Clear All
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}
@@ -2045,10 +2425,82 @@ export default function AdminLoanProducts() {
               {/* TAB: REQUIRED DOCUMENTS */}
               {activeTab === "documents" && (
                 <div className="space-y-6">
+                  {/* 📚 Standard Document Library Palette */}
+                  <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-teal-50/60 p-4 rounded-2xl border border-blue-200 shadow-xs space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-blue-900 tracking-wider flex items-center gap-2">
+                          <span>📚 DhanSource Standard Document Library</span>
+                          <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                            1-Click Add
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-gray-600 mt-0.5">
+                          Tap any standard document below to instantly add it to this loan form.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddAllStandardKycDocs}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-xs transition cursor-pointer"
+                      >
+                        ⚡ Add All Standard KYC & Banking Docs
+                      </button>
+                    </div>
+
+                    {/* Categorized Document Chips */}
+                    <div className="space-y-2 pt-1 border-t border-blue-200/60">
+                      {["🆔 Identity", "🏠 Address", "💰 Banking", "💼 Salaried", "🏢 Business", "🚗 Vehicle", "🏡 Property", "👥 Co-Applicant"].map((catName) => {
+                        const docsInCat = STANDARD_DOCUMENT_LIBRARY.filter((d) => d.category === catName);
+                        if (docsInCat.length === 0) return null;
+
+                        return (
+                          <div key={catName} className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] font-black uppercase text-gray-500 w-28 shrink-0">
+                              {catName}:
+                            </span>
+                            <div className="flex flex-wrap items-center gap-1.5 flex-1">
+                              {docsInCat.map((item) => {
+                                const isAlreadyAdded = formData.requiredDocuments.some(
+                                  (d) => d.docType === item.docType
+                                );
+
+                                return (
+                                  <button
+                                    key={item.docType}
+                                    type="button"
+                                    onClick={() => handleToggleLibraryDoc(item)}
+                                    title={isAlreadyAdded ? "Click to remove from form" : `Click to add ${item.label}`}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition flex items-center gap-1 cursor-pointer select-none ${
+                                      isAlreadyAdded
+                                        ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs font-bold"
+                                        : "bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:bg-blue-50/60"
+                                    }`}
+                                  >
+                                    <span>{item.label}</span>
+                                    {isAlreadyAdded ? (
+                                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
+                                        ✓ In Form
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded">
+                                        + Add
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Documents List */}
                   <div>
                     <h4 className="text-xs font-extrabold uppercase text-gray-500 tracking-wider mb-2">
-                      Required Documents ({formData.requiredDocuments.length})
+                      Required Documents in Form ({formData.requiredDocuments.length})
                     </h4>
                     {formData.requiredDocuments.length === 0 ? (
                       <p className="text-xs text-gray-400 italic">No document requirements defined.</p>
@@ -2232,35 +2684,53 @@ export default function AdminLoanProducts() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Loan Product Name *
+                        Loan Product Name <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         placeholder="e.g. Commercial Vehicle Loan"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full text-sm px-3.5 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 font-semibold"
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value });
+                          if (validationErrors.name) setValidationErrors((prev) => ({ ...prev, name: false }));
+                        }}
+                        className={`w-full text-sm px-3.5 py-2 border rounded-xl font-semibold transition-all ${
+                          validationErrors.name
+                            ? "border-red-500 ring-2 ring-red-200 bg-red-50/40"
+                            : "border-gray-200 focus:ring-2 focus:ring-emerald-500"
+                        }`}
                         required
                       />
+                      {validationErrors.name && (
+                        <p className="text-[11px] text-red-600 font-bold mt-1">⚠️ Product name is required</p>
+                      )}
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Product Code (Unique identifier) *
+                        Product Code (Unique identifier) <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         placeholder="e.g. CAR_LOAN"
                         value={formData.code}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setFormData({
                             ...formData,
                             code: e.target.value.toUpperCase().replace(/\s+/g, "_"),
-                          })
-                        }
-                        className="w-full text-sm px-3.5 py-2 border border-gray-200 rounded-xl uppercase font-mono focus:ring-2 focus:ring-emerald-500 font-bold"
+                          });
+                          if (validationErrors.code) setValidationErrors((prev) => ({ ...prev, code: false }));
+                        }}
+                        className={`w-full text-sm px-3.5 py-2 border rounded-xl uppercase font-mono font-bold transition-all ${
+                          validationErrors.code
+                            ? "border-red-500 ring-2 ring-red-200 bg-red-50/40"
+                            : "border-gray-200 focus:ring-2 focus:ring-emerald-500"
+                        }`}
                         required
                       />
+                      {validationErrors.code && (
+                        <p className="text-[11px] text-red-600 font-bold mt-1">⚠️ Product code is required</p>
+                      )}
                     </div>
                   </div>
 

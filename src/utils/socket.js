@@ -52,10 +52,14 @@ class SocketManager {
   }
 
   getSocketUrl() {
+    const isBrowser = typeof window !== "undefined";
+    if (isBrowser && window.location.hostname.includes("dhansourcecapital.com")) {
+      return window.location.origin;
+    }
+
     // Same host as REST API (VITE_API_URL / production) — never hardcode localhost.
     // Optional override: VITE_SOCKET_URL
     const fromEnv = import.meta.env.VITE_SOCKET_URL;
-    const isBrowser = typeof window !== "undefined";
     const isLocalhostHost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
     if (fromEnv && String(fromEnv).trim()) {
