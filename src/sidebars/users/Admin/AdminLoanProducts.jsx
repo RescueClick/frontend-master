@@ -292,6 +292,65 @@ export const STANDARD_DEFAULT_FIELDS = [
   { fieldKey: "totalRunningEmi", label: "Total Monthly EMI Being Paid (₹)", fieldType: "currency", placeholder: "e.g. 15,000 (if Yes)", required: false, stepIndex: 3, gridCol: 6 },
 ];
 
+export const LOAN_PRODUCT_ICONS = [
+  { key: "CAR", label: "Car Loan", icon: "🚗", desc: "Vehicle / Auto", color: "#E11D48" },
+  { key: "BIKE", label: "Two Wheeler", icon: "🏍️", desc: "Bike / Scooter", color: "#D97706" },
+  { key: "PERSONAL", label: "Personal Loan", icon: "👤", desc: "Salaried Personal", color: "#059669" },
+  { key: "BUSINESS", label: "Business Loan", icon: "💼", desc: "MSME / SME", color: "#2563EB" },
+  { key: "HOME", label: "Home Loan", icon: "🏠", desc: "Purchase / Flat", color: "#EA580C" },
+  { key: "LAP", label: "Property (LAP)", icon: "🏢", desc: "Against Property", color: "#7C3AED" },
+  { key: "GOLD", label: "Gold Loan", icon: "🪙", desc: "Secured Gold", color: "#CA8A04" },
+  { key: "EDUCATION", label: "Education Loan", icon: "🎓", desc: "Higher Studies", color: "#4F46E5" },
+  { key: "INSURANCE", label: "Insurance", icon: "🛡️", desc: "Life / Health", color: "#0D9488" },
+  { key: "COMMERCIAL", label: "Commercial Vehicle", icon: "🚛", desc: "Commercial Auto", color: "#0891B2" },
+];
+
+export const VEHICLE_DEFAULT_STEPS = [
+  { stepIndex: 0, title: "1. Personal & KYC", icon: "👤", description: "Basic personal & contact details" },
+  { stepIndex: 1, title: "2. Address Details", icon: "🏠", description: "Current and permanent residence" },
+  { stepIndex: 2, title: "3. Vehicle & Quotation", icon: "🚗", description: "Car brand, model, price & quotation" },
+  { stepIndex: 3, title: "4. Loan & Bank", icon: "🏦", description: "Loan amount and tenure requirements" },
+];
+
+export const VEHICLE_DEFAULT_FIELDS = [
+  // Section 0: 1. Personal & KYC
+  { fieldKey: "fullName", label: "Applicant Full Name", fieldType: "text", placeholder: "As per PAN / Aadhaar card", required: true, stepIndex: 0, gridCol: 12 },
+  { fieldKey: "mobileNumber", label: "Mobile Number", fieldType: "phone", placeholder: "10-digit mobile number", required: true, stepIndex: 0, gridCol: 6 },
+  { fieldKey: "email", label: "Email Address", fieldType: "email", placeholder: "name@example.com", required: true, stepIndex: 0, gridCol: 6 },
+  { fieldKey: "dob", label: "Date of Birth", fieldType: "date", placeholder: "YYYY-MM-DD", required: true, stepIndex: 0, gridCol: 6 },
+  { fieldKey: "panNumber", label: "PAN Card Number", fieldType: "pan", placeholder: "ABCDE1234F", required: true, stepIndex: 0, gridCol: 6 },
+  { fieldKey: "aadhaarNumber", label: "Aadhaar Card Number", fieldType: "aadhaar", placeholder: "12-digit Aadhaar number", required: true, stepIndex: 0, gridCol: 6 },
+
+  // Section 1: 2. Address Details
+  { fieldKey: "currentAddress", label: "Current Residential Address", fieldType: "textarea", placeholder: "Flat / House No, Street, Locality", required: true, stepIndex: 1, gridCol: 12 },
+  { fieldKey: "currentCity", label: "City", fieldType: "text", placeholder: "e.g. Mumbai, Pune", required: true, stepIndex: 1, gridCol: 6 },
+  { fieldKey: "currentPincode", label: "PIN Code", fieldType: "number", placeholder: "6-digit PIN code", required: true, stepIndex: 1, gridCol: 6 },
+  { fieldKey: "residenceStatus", label: "Residence Ownership Status", fieldType: "select", options: [{ label: "Owned by Self / Family", value: "OWNED" }, { label: "Rented", value: "RENTED" }], required: true, stepIndex: 1, gridCol: 12 },
+
+  // Section 2: 3. Vehicle & Quotation
+  { fieldKey: "vehicleType", label: "Vehicle Type", fieldType: "select", options: [{ label: "New Four Wheeler (Car)", value: "NEW_CAR" }, { label: "Used Four Wheeler (Pre-Owned Car)", value: "USED_CAR" }, { label: "Commercial Vehicle", value: "COMMERCIAL" }], required: true, stepIndex: 2, gridCol: 6 },
+  { fieldKey: "vehicleMake", label: "Vehicle Brand / Make", fieldType: "text", placeholder: "e.g. Maruti Suzuki, Tata Motors, Hyundai", required: true, stepIndex: 2, gridCol: 6 },
+  { fieldKey: "vehicleModel", label: "Vehicle Model & Variant", fieldType: "text", placeholder: "e.g. Swift ZXI Plus, Nexon Fearless", required: true, stepIndex: 2, gridCol: 6 },
+  { fieldKey: "onRoadPrice", label: "On-Road Quotation Price (₹)", fieldType: "currency", placeholder: "e.g. 10,50,000", required: true, stepIndex: 2, gridCol: 6 },
+  { fieldKey: "downPayment", label: "Expected Down Payment (₹)", fieldType: "currency", placeholder: "e.g. 2,00,000", required: true, stepIndex: 2, gridCol: 6 },
+  { fieldKey: "dealerName", label: "Authorized Dealer Name & City", fieldType: "text", placeholder: "e.g. Shivam Autozone, Mumbai", required: true, stepIndex: 2, gridCol: 6 },
+
+  // Section 3: 4. Loan & Bank
+  { fieldKey: "loanAmountRequested", label: "Requested Car Loan Amount (₹)", fieldType: "currency", placeholder: "e.g. 8,50,000", required: true, stepIndex: 3, gridCol: 6 },
+  { fieldKey: "loanTenureMonths", label: "Loan Tenure (Months)", fieldType: "number", placeholder: "e.g. 60 (5 Years)", required: true, stepIndex: 3, gridCol: 6 },
+  { fieldKey: "salaryBankName", label: "Salary / Primary Bank Name", fieldType: "text", placeholder: "e.g. HDFC Bank, ICICI Bank", required: true, stepIndex: 3, gridCol: 12 },
+];
+
+export const VEHICLE_DEFAULT_DOCUMENTS = [
+  { docType: "DRIVING_LICENSE", label: "Driving License (Applicant)", required: true },
+  { docType: "VEHICLE_QUOTATION", label: "Vehicle Quotation / Proforma Invoice", required: true },
+  { docType: "PAN", label: "PAN Card", required: true },
+  { docType: "AADHAAR_FRONT", label: "Aadhaar Card (Front)", required: true },
+  { docType: "AADHAAR_BACK", label: "Aadhaar Card (Back)", required: true },
+  { docType: "PHOTO", label: "Applicant Photo / Selfie", required: true },
+  { docType: "BANK_STATEMENT_1", label: "Bank Statement (Latest 6 Months)", required: true },
+];
+
 const SECTION_ICONS = ["👤", "🏠", "💼", "🏦", "🚗", "🏡", "📄", "📑", "👥", "💳", "🛒", "🏢", "📋", "📍", "🛡️", "💰", "🎓", "💍"];
 
 export default function AdminLoanProducts() {
@@ -323,6 +382,8 @@ export default function AdminLoanProducts() {
     name: "",
     code: "",
     slug: "",
+    iconKey: "PERSONAL",
+    iconUrl: "",
     badgeText: "Instant Approval",
     description: "",
     minAmount: 50000,
@@ -438,6 +499,8 @@ export default function AdminLoanProducts() {
       name: product.name || "",
       code: product.code || "",
       slug: product.slug || "",
+      iconKey: product.iconKey || "PERSONAL",
+      iconUrl: product.iconUrl || "",
       badgeText: product.badgeText || "",
       description: product.description || "",
       minAmount: product.minAmount || 50000,
@@ -636,6 +699,27 @@ export default function AdminLoanProducts() {
     }));
     setSelectedStepFilter("ALL");
     showToast("Standard template loaded (22 questions, 6 documents).");
+  };
+
+  const handleLoadVehicleTemplate = () => {
+    if (
+      !window.confirm(
+        "Load Vehicle / Car Loan Template? This will populate standard Vehicle questions (Make, Model, Price, Down Payment) and Vehicle Documents (Driving License, Quotation)."
+      )
+    )
+      return;
+    setFormData((prev) => ({
+      ...prev,
+      name: prev.name || "Car Loan",
+      code: prev.code || "CAR_LOAN",
+      iconKey: "CAR",
+      badgeText: "Upto 100% On-Road Funding",
+      steps: VEHICLE_DEFAULT_STEPS,
+      customFields: [...VEHICLE_DEFAULT_FIELDS],
+      requiredDocuments: [...VEHICLE_DEFAULT_DOCUMENTS],
+    }));
+    setSelectedStepFilter("ALL");
+    showToast("Vehicle Loan template loaded (16 questions, 7 documents)!");
   };
 
   const handleCopyFromProduct = (sourceProductId) => {
@@ -1224,6 +1308,9 @@ export default function AdminLoanProducts() {
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div>
                       <div className="flex items-center gap-2">
+                        <span className="text-xl">
+                          {LOAN_PRODUCT_ICONS.find((i) => i.key === (product.iconKey || product.code))?.icon || "📋"}
+                        </span>
                         <h3 className="text-lg font-bold text-gray-900">{product.name}</h3>
                         <span className="px-2 py-0.5 text-[11px] font-extrabold bg-gray-100 text-gray-700 rounded-md tracking-wider">
                           {product.code}
@@ -1581,6 +1668,15 @@ export default function AdminLoanProducts() {
                   className="px-2.5 py-1 bg-white border border-emerald-300 text-emerald-800 rounded-lg font-bold hover:bg-emerald-50 transition shadow-2xs cursor-pointer flex items-center gap-1"
                 >
                   ⚡ Load Standard Template
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLoadVehicleTemplate}
+                  title="Populate Car / Vehicle Loan questions and documents"
+                  className="px-2.5 py-1 bg-white border border-rose-300 text-rose-800 rounded-lg font-bold hover:bg-rose-50 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                >
+                  🚗 Load Car Loan Template
                 </button>
 
                 {products.length > 0 && (
@@ -2681,6 +2777,46 @@ export default function AdminLoanProducts() {
               {/* TAB: GENERAL & FINANCIALS */}
               {activeTab === "basic" && (
                 <div className="space-y-4">
+                  {/* Visual Icon / Logo Selector */}
+                  <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-gray-800">
+                        Product Icon / Category Logo (Shows on Partner App, Customer App & Web Dashboard)
+                      </label>
+                      <span className="text-[11px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        Selected: {LOAN_PRODUCT_ICONS.find((i) => i.key === (formData.iconKey || "PERSONAL"))?.label || "Personal Loan"} ({formData.iconKey || "PERSONAL"})
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                      {LOAN_PRODUCT_ICONS.map((item) => {
+                        const isSelected = (formData.iconKey || "PERSONAL") === item.key;
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, iconKey: item.key })}
+                            className={`p-2.5 rounded-xl border-2 flex items-center gap-2.5 text-left transition-all cursor-pointer select-none ${
+                              isSelected
+                                ? "border-emerald-500 bg-emerald-50/70 shadow-xs ring-1 ring-emerald-200"
+                                : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            <span className="text-2xl shrink-0">{item.icon}</span>
+                            <div className="min-w-0 flex-1">
+                              <div className={`text-xs font-bold truncate ${isSelected ? "text-emerald-800" : "text-gray-800"}`}>
+                                {item.label}
+                              </div>
+                              <div className="text-[10px] text-gray-400 font-medium truncate">
+                                {item.desc}
+                              </div>
+                            </div>
+                            {isSelected && <Check size={16} className="text-emerald-600 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">

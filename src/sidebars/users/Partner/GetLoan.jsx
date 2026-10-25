@@ -90,14 +90,28 @@ const DEFAULT_LOAN_TYPES = [
   },
 ];
 
-const getDynamicIcon = (code) => {
+const getDynamicIcon = (code, iconKey) => {
+  const k = String(iconKey || "").toUpperCase();
+  if (k === "CAR") return "🚗";
+  if (k === "BIKE") return "🏍️";
+  if (k === "GOLD") return "🪙";
+  if (k === "EDUCATION") return "🎓";
+  if (k === "INSURANCE") return "🛡️";
+  if (k === "COMMERCIAL") return "🚛";
+  if (k === "BUSINESS") return "💼";
+  if (k === "HOME") return "🏠";
+  if (k === "LAP") return "🏢";
+  if (k === "PERSONAL") return "👤";
+
   const c = String(code).toUpperCase();
   if (c.includes("BUSINESS")) return "💼";
   if (c.includes("HOME")) return "🏠";
   if (c.includes("LAP") || c.includes("PROPERTY")) return "🏢";
   if (c.includes("CAR") || c.includes("VEHICLE") || c.includes("AUTO")) return "🚗";
+  if (c.includes("BIKE")) return "🏍️";
   if (c.includes("GOLD")) return "🪙";
   if (c.includes("EDUCATION") || c.includes("STUDY")) return "🎓";
+  if (c.includes("INSUR")) return "🛡️";
   if (c.includes("DOCTOR") || c.includes("MEDICAL")) return "🩺";
   if (c.includes("CARD")) return "💳";
   if (c.includes("PERSONAL")) return "👤";
@@ -185,7 +199,7 @@ const GetLoan = () => {
           title: p.name,
           subtitle: p.badgeText || "Instant Approval",
           description: p.description || "Fast approval and flexible terms with competitive interest rates.",
-          icon: getDynamicIcon(p.code),
+          icon: getDynamicIcon(p.code, p.iconKey),
           badge: p.badgeText || formatAmountBadge(p.maxAmount),
           route: `/partner/personal-loan?type=${p.code}`,
           hasSubTypes: false,
