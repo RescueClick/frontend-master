@@ -56,6 +56,7 @@ import {
   validatePersonFinancialFields,
 } from "../../../../utils/personFinancial";
 import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
+import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
 import {
   useRmLoanFormResume,
   rmCompleteLoanFormUrl,
@@ -618,11 +619,32 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
       return next;
     });
 
-    if (applicationId) {
+    // Auto-create lead if applicationId is missing so background upload ALWAYS starts on select!
+    let targetAppId = applicationId;
+    if (!targetAppId && !isRmMode) {
+      try {
+        const leadRes = await captureLeadOnStep1Next({
+          loanType: "BUSINESS",
+          formData,
+          isPartnerLoggedIn,
+          partnerToken,
+          partnerReferralCode: currentPartnerCode,
+          applicationId: null,
+        });
+        if (leadRes?.applicationId) {
+          targetAppId = leadRes.applicationId;
+          setApplicationId(targetAppId);
+        }
+      } catch (err) {
+        console.warn("Auto-lead creation before doc upload non-fatal:", err);
+      }
+    }
+
+    if (targetAppId) {
       setDocUploadStatus((p) => ({ ...p, [name]: "uploading" }));
       setDocUploadProgress((p) => ({ ...p, [name]: 15 }));
       uploadLeadDocumentEarly({
-        applicationId,
+        applicationId: targetAppId,
         partnerToken,
         isPartnerLoggedIn,
         fieldName: name,
@@ -1980,7 +2002,10 @@ const handleSubmit = async () => {
                 stepLabel="4.1"
                 file={formData.addressProof}
                 onChange={handleFileChange}
+                onRemove={handleFileRemove}
                 renderError={renderError}
+                uploadStatus={docUploadStatus.addressProof || (formData.addressProof_uploaded ? "uploaded" : "idle")}
+                uploadProgress={docUploadProgress.addressProof || 0}
                 onPreview={() => openDocumentPreview(formData.addressProof)}
               />
             </section>
@@ -2044,72 +2069,48 @@ const handleSubmit = async () => {
                   style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Co-applicant Aadhar Front *
-                      </label>
-                      <input
-                        type="file"
-                        name="coApplicantAadharFront"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-                      { formData.coApplicantAadharFront ? "" : renderError("coApplicantAadharFront")}
-                      {renderPreviewLink("coApplicantAadharFront")}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Co-applicant Aadhar Back *
-                      </label>
-                      <input
-                        type="file"
-                        name="coApplicantAadharBack"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-                           { formData.coApplicantAadharBack ? "" : renderError("coApplicantAadharBack")}
-                      {renderPreviewLink("coApplicantAadharBack")}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Co-applicant PAN Card *
-                      </label>
-                      <input
-                        type="file"
-                        name="coApplicantPan"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-                        { formData.coApplicantPan ? "" : renderError("coApplicantPan")}
-                      {renderPreviewLink("coApplicantPan")}
-                    </div>
+                    <DocumentUploadCard
+                      name="coApplicantAadharFront"
+                      label="Co-applicant Aadhar Front"
+                      file={formData.coApplicantAadharFront}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      required={true}
+                      hint={loanDocumentFieldHint("coApplicantAadharFront")}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError("coApplicantAadharFront")}
+                      uploadStatus={docUploadStatus.coApplicantAadharFront || (formData.coApplicantAadharFront_uploaded ? "uploaded" : "idle")}
+                      uploadProgress={docUploadProgress.coApplicantAadharFront || 0}
+                      onPreview={() => openDocumentPreview(formData.coApplicantAadharFront)}
+                    />
+                    <DocumentUploadCard
+                      name="coApplicantAadharBack"
+                      label="Co-applicant Aadhar Back"
+                      file={formData.coApplicantAadharBack}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      required={true}
+                      hint={loanDocumentFieldHint("coApplicantAadharBack")}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError("coApplicantAadharBack")}
+                      uploadStatus={docUploadStatus.coApplicantAadharBack || (formData.coApplicantAadharBack_uploaded ? "uploaded" : "idle")}
+                      uploadProgress={docUploadProgress.coApplicantAadharBack || 0}
+                      onPreview={() => openDocumentPreview(formData.coApplicantAadharBack)}
+                    />
+                    <DocumentUploadCard
+                      name="coApplicantPan"
+                      label="Co-applicant PAN Card"
+                      file={formData.coApplicantPan}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      required={true}
+                      hint={loanDocumentFieldHint("coApplicantPan")}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError("coApplicantPan")}
+                      uploadStatus={docUploadStatus.coApplicantPan || (formData.coApplicantPan_uploaded ? "uploaded" : "idle")}
+                      uploadProgress={docUploadProgress.coApplicantPan || 0}
+                      onPreview={() => openDocumentPreview(formData.coApplicantPan)}
+                    />
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"
@@ -2138,28 +2139,20 @@ const handleSubmit = async () => {
                          { renderError("coApplicantMobile")}
                       </div>
                     </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Co-applicant Selfie *
-                      </label>
-                      <input
-                        type="file"
-                        name="coApplicantSelfie"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        accept=".jpg,.jpeg,.png"
-                        required
-                      />
-                        { formData.coApplicantSelfie ? "" : renderError("coApplicantSelfie")}
-                      {renderPreviewLink("coApplicantSelfie")}
-                    </div>
+                    <DocumentUploadCard
+                      name="coApplicantSelfie"
+                      label="Co-applicant Selfie"
+                      file={formData.coApplicantSelfie}
+                      accept=".jpg,.jpeg,.png"
+                      required={true}
+                      hint={loanDocumentFieldHint("coApplicantSelfie")}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError("coApplicantSelfie")}
+                      uploadStatus={docUploadStatus.coApplicantSelfie || (formData.coApplicantSelfie_uploaded ? "uploaded" : "idle")}
+                      uploadProgress={docUploadProgress.coApplicantSelfie || 0}
+                      onPreview={() => openDocumentPreview(formData.coApplicantSelfie)}
+                    />
                   </div>
                 </div>
               </section>
@@ -2343,143 +2336,30 @@ const handleSubmit = async () => {
                 Keep business registrations and tax files clear and readable.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Shops and Establishment Act/Gumasta License *
-                  </label>
-                  <input
-                    type="file"
-                    name="shopAct"
+                {[
+                  { name: "shopAct", label: "Shops and Establishment Act / Gumasta License", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
+                  { name: "udhyamAadhar", label: "Udhyam Aadhar", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
+                  { name: "itr", label: "ITR (Last 3 Years)", required: true, accept: ".pdf,.jpg,.jpeg,.png", hint: "Upload all 3 years ITR in this file (combined PDF preferred)" },
+                  { name: "gstDoc", label: "GST Document", required: false, accept: ".pdf,.jpg,.jpeg,.png" },
+                  { name: "shopPhoto", label: "Shop Photo", required: true, accept: ".jpg,.jpeg,.png" },
+                  { name: "businessOtherDocs", label: "Other Business Docs", required: false, accept: ".pdf,.jpg,.jpeg,.png" },
+                ].map((doc) => (
+                  <DocumentUploadCard
+                    key={doc.name}
+                    name={doc.name}
+                    label={doc.label}
+                    file={formData[doc.name]}
+                    accept={doc.accept}
+                    required={doc.required}
+                    hint={doc.hint ?? loanDocumentFieldHint(doc.name)}
                     onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
+                    onRemove={handleFileRemove}
+                    error={renderError(doc.name)}
+                    uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
+                    uploadProgress={docUploadProgress[doc.name] || 0}
+                    onPreview={() => openDocumentPreview(formData[doc.name])}
                   />
-                    {formData.shopAct ? "" : renderError("shopAct")}
-                  {renderPreviewLink("shopAct")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Udhyam Aadhar *
-                  </label>
-                  <input
-                    type="file"
-                    name="udhyamAadhar"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
-                  />
-                     { formData.udhyamAadhar ?  "" : renderError("udhyamAadhar")}
-                  {renderPreviewLink("udhyamAadhar")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    ITR (Last 3 Years) *
-                  </label>
-                  <p className="text-xs text-slate-500 mb-2">
-                    Upload all 3 years ITR in this one file (combined PDF preferred)
-                  </p>
-                  <input
-                    type="file"
-                    name="itr"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
-                  />
-                    { formData.itr ? "" : renderError("itr")}
-                  {renderPreviewLink("itr")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    GST Document
-                  </label>
-                  <input
-                    type="file"
-                    name="gstDoc"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-                  {renderPreviewLink("gstDoc")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Shop Photo *
-                  </label>
-                  <div className="relative">
-                    <Camera
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    />
-                    <input
-                      type="file"
-                      name="shopPhoto"
-                      onChange={handleFileChange}
-                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      accept=".jpg,.jpeg,.png"
-                      required
-                    />
-                       {formData.shopPhoto ? "" : renderError("shopPhoto")}
-                  {renderPreviewLink("shopPhoto")}
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Other Business Docs
-                  </label>
-                  <input
-                    type="file"
-                    name="businessOtherDocs"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-                  {renderPreviewLink("businessOtherDocs")}
-                </div>
+                ))}
               </div>
             </section>
 
@@ -2496,54 +2376,26 @@ const handleSubmit = async () => {
                 Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Bank Statement (File 1) *
-                  </label>
-                  <input
-                    type="file"
-                    name="bankStatementFile1"
+                {[
+                  { name: "bankStatementFile1", label: "Bank Statement (File 1)", required: true, accept: ".pdf,application/pdf", hint: "Upload last 12 months bank statement" },
+                  { name: "bankStatementFile2", label: "Bank Statement (File 2)", required: false, accept: ".pdf,application/pdf" },
+                ].map((doc) => (
+                  <DocumentUploadCard
+                    key={doc.name}
+                    name={doc.name}
+                    label={doc.label}
+                    file={formData[doc.name]}
+                    accept={doc.accept}
+                    required={doc.required}
+                    hint={doc.hint ?? loanDocumentFieldHint(doc.name)}
                     onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,application/pdf"
-                    required
+                    onRemove={handleFileRemove}
+                    error={renderError(doc.name)}
+                    uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
+                    uploadProgress={docUploadProgress[doc.name] || 0}
+                    onPreview={() => openDocumentPreview(formData[doc.name])}
                   />
-                  <p
-                    className="text-sm mt-2"
-                    style={{ color: "#111827", opacity: 0.7 }}
-                  >
-                    Upload last 12 months bank statement
-                  </p>
-                  { formData.bankStatementFile1 ? "" : renderError("bankStatementFile1")}
-                  {renderPreviewLink("bankStatementFile1")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Bank Statement (File 2)
-                  </label>
-                  <input
-                    type="file"
-                    name="bankStatementFile2"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,application/pdf"
-                  />
-                  {renderPreviewLink("bankStatementFile2")}
-                </div>
+                ))}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">

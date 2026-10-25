@@ -55,6 +55,7 @@ import {
   validatePersonFinancialFields,
 } from "../../../../utils/personFinancial";
 import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
+import { captureLeadOnStep1Next } from "../../../../utils/captureLeadStep1";
 import {
   useRmLoanFormResume,
   rmCompleteLoanFormUrl,
@@ -444,12 +445,33 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       [name]: file,
     }));
 
-    if (applicationId) {
+    // Auto-create lead if applicationId is missing so background upload ALWAYS starts on select!
+    let targetAppId = applicationId;
+    if (!targetAppId && !isRmMode) {
+      try {
+        const leadRes = await captureLeadOnStep1Next({
+          loanType: "PERSONAL",
+          formData,
+          isPartnerLoggedIn,
+          partnerToken,
+          partnerReferralCode: currentPartnerCode,
+          applicationId: null,
+        });
+        if (leadRes?.applicationId) {
+          targetAppId = leadRes.applicationId;
+          setApplicationId(targetAppId);
+        }
+      } catch (err) {
+        console.warn("Auto-lead creation before doc upload non-fatal:", err);
+      }
+    }
+
+    if (targetAppId) {
       setDocUploadStatus((p) => ({ ...p, [name]: "uploading" }));
       setDocUploadProgress((p) => ({ ...p, [name]: 15 }));
 
       const res = await uploadLeadDocumentEarly({
-        applicationId,
+        applicationId: targetAppId,
         partnerToken,
         isPartnerLoggedIn,
         fieldName: name,
@@ -467,56 +489,6 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         }));
       } else {
         setDocUploadStatus((p) => ({ ...p, [name]: "failed" }));
-      }
-    }
-  };
-
-  const handleFileChangeAddressProofs = async (e) => {
-    const input = e.target;
-    const picked = input.files?.[0];
-    if (!picked) return;
-    const err = validateLoanDocumentUpload(picked, "addressProof");
-    if (err) {
-      toast.error(err);
-      input.value = "";
-      return;
-    }
-    let file;
-    try {
-      file = await snapshotLoanFile(picked);
-    } catch {
-      toast.error(UNREADABLE_LOAN_FILE_MESSAGE);
-      input.value = "";
-      return;
-    }
-    setFormData((prev) => ({
-      ...prev,
-      addressProof: file,
-    }));
-
-    if (applicationId) {
-      setDocUploadStatus((p) => ({ ...p, addressProof: "uploading" }));
-      setDocUploadProgress((p) => ({ ...p, addressProof: 15 }));
-
-      const res = await uploadLeadDocumentEarly({
-        applicationId,
-        partnerToken,
-        isPartnerLoggedIn,
-        fieldName: "addressProof",
-        file,
-        onProgress: (pct) => setDocUploadProgress((p) => ({ ...p, addressProof: pct })),
-      });
-
-      if (res?.ok) {
-        setDocUploadStatus((p) => ({ ...p, addressProof: "uploaded" }));
-        setDocUploadProgress((p) => ({ ...p, addressProof: 100 }));
-        setFormData((prev) => ({
-          ...prev,
-          addressProof: res.file || file,
-          addressProof_uploaded: true,
-        }));
-      } else {
-        setDocUploadStatus((p) => ({ ...p, addressProof: "failed" }));
       }
     }
   };
@@ -2114,407 +2086,37 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                   </ul>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Company ID Card *
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      <input
-                        type="file"
-                        name="companyIdCard"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-                      {formData.companyIdCard ? "" : renderError("companyIdCard")}
-
-                      {formData.companyIdCard && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.companyIdCard.preview
-                                  ? formData.companyIdCard.preview
-                                  : formData.companyIdCard instanceof File
-                                    ? URL.createObjectURL(formData.companyIdCard)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("companyIdCard")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {formData.companyIdCard && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.companyIdCard.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Salary Slip 1 *
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      <input
-                        type="file"
-                        name="salarySlip1"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,application/pdf"
-                        required
-                      />
-                      {formData.salarySlip1 ? "" : renderError("salarySlip1")}
-
-                      {formData.salarySlip1 && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.salarySlip1.preview
-                                  ? formData.salarySlip1.preview
-                                  : formData.salarySlip1 instanceof File
-                                    ? URL.createObjectURL(formData.salarySlip1)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("salarySlip1")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {formData.salarySlip1 && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.salarySlip1.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Salary Slip 2 *
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      <input
-                        type="file"
-                        name="salarySlip2"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,application/pdf"
-                        required
-                      />
-                      {formData.salarySlip2 ? "" : renderError("salarySlip2")}
-                      {formData.salarySlip2 && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.salarySlip2.preview
-                                  ? formData.salarySlip2.preview
-                                  : formData.salarySlip2 instanceof File
-                                    ? URL.createObjectURL(formData.salarySlip2)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("salarySlip2")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {formData.salarySlip2 && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.salarySlip2.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Salary Slip 3 *
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      <input
-                        type="file"
-                        name="salarySlip3"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,application/pdf"
-                        required
-                      />
-                      {formData.salarySlip3 ? "" : renderError("salarySlip3")}
-
-                      {formData.salarySlip3 && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.salarySlip3.preview
-                                  ? formData.salarySlip3.preview
-                                  : formData.salarySlip3 instanceof File
-                                    ? URL.createObjectURL(formData.salarySlip3)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("salarySlip3")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {formData.salarySlip3 && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.salarySlip3.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Form 16 / 26AS
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      <input
-                        type="file"
-                        name="form16_26as"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-
-                      {formData.form16_26as && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.form16_26as.preview
-                                  ? formData.form16_26as.preview
-                                  : formData.form16_26as instanceof File
-                                    ? URL.createObjectURL(formData.form16_26as)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("form16_26as")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {formData.form16_26as && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.form16_26as.name}
-                      </p>
-                    )}
-                  </div>
+                  {[
+                    { name: "companyIdCard", label: "Company ID Card", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
+                    { name: "salarySlip1", label: "Salary Slip 1", required: true, accept: ".pdf,application/pdf" },
+                    { name: "salarySlip2", label: "Salary Slip 2", required: true, accept: ".pdf,application/pdf" },
+                    { name: "salarySlip3", label: "Salary Slip 3", required: true, accept: ".pdf,application/pdf" },
+                    { name: "form16_26as", label: "Form 16 / 26AS", required: false, accept: ".pdf,.jpg,.jpeg,.png" },
+                  ].map((doc) => (
+                    <DocumentUploadCard
+                      key={doc.name}
+                      name={doc.name}
+                      label={doc.label}
+                      file={formData[doc.name]}
+                      accept={doc.accept}
+                      required={doc.required}
+                      hint={loanDocumentFieldHint(doc.name)}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError(doc.name)}
+                      uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
+                      uploadProgress={docUploadProgress[doc.name] || 0}
+                      onPreview={() =>
+                        setdocumentModel(
+                          formData[doc.name]?.preview
+                            ? formData[doc.name].preview
+                            : formData[doc.name] instanceof File
+                            ? URL.createObjectURL(formData[doc.name])
+                            : ""
+                        )
+                      }
+                    />
+                  ))}
                 </div>
               </section>
 
@@ -2716,174 +2318,34 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Bank Statement 1 *
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      {/* File Input */}
-                      <input
-                        type="file"
-                        name="bankStatement1"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,application/pdf"
-                        required
-                      />
-                      {formData.bankStatement1 ? "" : renderError("bankStatement1")}
-                      {/* Action Buttons */}
-                      {formData.bankStatement1 && (
-                        <div className="flex items-center gap-1">
-                          {/* View Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.bankStatement1.preview
-                                  ? formData.bankStatement1.preview
-                                  : formData.bankStatement1 instanceof File
-                                    ? URL.createObjectURL(formData.bankStatement1)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          {/* Remove Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("bankStatement1")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* File Name */}
-                    {formData.bankStatement1 && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.bankStatement1.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Bank Statement 2
-                    </label>
-                    <div className="relative flex items-center gap-2">
-                      {/* File Input */}
-                      <input
-                        type="file"
-                        name="bankStatement2"
-                        onChange={handleFileChange}
-                        className="flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        accept=".pdf,application/pdf"
-                      />
-
-                      {/* Action Buttons */}
-                      {formData.bankStatement2 && (
-                        <div className="flex items-center gap-1">
-                          {/* View Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setdocumentModel(
-                                formData.bankStatement2.preview
-                                  ? formData.bankStatement2.preview
-                                  : formData.bankStatement2 instanceof File
-                                    ? URL.createObjectURL(formData.bankStatement2)
-                                    : ""
-                              )
-                            }
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
-                            style={{ color: "#2563EB" }}
-                            title="View file"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-5 h-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-
-                          {/* Remove Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleFileRemove("bankStatement2")}
-                            className="p-1 rounded-full hover:bg-red-100 transition-colors"
-                            style={{ color: "#EF4444" }}
-                            title="Remove file"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* File Name */}
-                    {formData.bankStatement2 && (
-                      <p className="text-xs mt-1 text-green-600 flex items-center gap-1">
-                        <span>✓</span> {formData.bankStatement2.name}
-                      </p>
-                    )}
-                  </div>
+                  {[
+                    { name: "bankStatement1", label: "Bank Statement 1", required: true, accept: ".pdf,application/pdf" },
+                    { name: "bankStatement2", label: "Bank Statement 2", required: false, accept: ".pdf,application/pdf" },
+                  ].map((doc) => (
+                    <DocumentUploadCard
+                      key={doc.name}
+                      name={doc.name}
+                      label={doc.label}
+                      file={formData[doc.name]}
+                      accept={doc.accept}
+                      required={doc.required}
+                      hint={loanDocumentFieldHint(doc.name)}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError(doc.name)}
+                      uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
+                      uploadProgress={docUploadProgress[doc.name] || 0}
+                      onPreview={() =>
+                        setdocumentModel(
+                          formData[doc.name]?.preview
+                            ? formData[doc.name].preview
+                            : formData[doc.name] instanceof File
+                            ? URL.createObjectURL(formData[doc.name])
+                            : ""
+                        )
+                      }
+                    />
+                  ))}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -2914,11 +2376,20 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                 <LoanAddressProofBlock
                   stepLabel="4.4"
                   file={formData.addressProof}
-                  onChange={handleFileChangeAddressProofs}
+                  onChange={handleFileChange}
+                  onRemove={handleFileRemove}
                   renderError={renderError}
+                  uploadStatus={docUploadStatus.addressProof || (formData.addressProof_uploaded ? "uploaded" : "idle")}
+                  uploadProgress={docUploadProgress.addressProof || 0}
                   onPreview={() =>
                     formData.addressProof &&
-                    setdocumentModel(URL.createObjectURL(formData.addressProof))
+                    setdocumentModel(
+                      formData.addressProof.preview
+                        ? formData.addressProof.preview
+                        : formData.addressProof instanceof File
+                        ? URL.createObjectURL(formData.addressProof)
+                        : ""
+                    )
                   }
                 />
               </section>
