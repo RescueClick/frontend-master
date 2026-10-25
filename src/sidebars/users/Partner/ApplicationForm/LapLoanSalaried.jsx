@@ -34,6 +34,7 @@ import { canonicalPartnerReferralCode } from "../../../../config/branding";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
 import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofBlock";
+import LoanApplicationReviewCard from "../../../../components/loan/LoanApplicationReviewCard";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 import PublicLoanPartnerTrustBanner from "../../../../components/loan/PublicLoanPartnerTrustBanner";
 import ShareLoanModal from "../../../../components/loan/ShareLoanModal";
@@ -204,13 +205,20 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
   }, [resumeError]);
 
   const steps = [
-    "Personal",
+    "Personal & KYC",
     "Address",
-    "Employment & Property",
-    "Documents",
+    "Loan & Employment",
     "References",
-    "Review & Security",
+    "Review & Submit",
   ];
+
+  const stepFirstFieldName = {
+    0: "firstName",
+    1: "currentAddress",
+    2: "loanAmount",
+    3: "reference1Name",
+    4: "password",
+  };
 
   useEffect(() => {
     return () => {
@@ -280,6 +288,11 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
           "loanPurpose",
           "monthlyEmiPaying",
           "cibilScoreBand",
+          "aadharFront",
+          "aadharBack",
+          "panCard",
+          "passportPhoto",
+          "selfie",
         ];
       }
       if (stepIndex === 1) {
@@ -294,6 +307,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
           "permanentLandmark",
           "permanentHouseStatus",
           "permanentAddressPinCode",
+          "addressProof",
         ];
       }
       if (stepIndex === 2) {
@@ -309,26 +323,16 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
           "propertyType",
           "propertyValue",
           "propertyAddress",
-        ];
-      }
-      if (stepIndex === 3) {
-        return [
-          "aadharFront",
-          "aadharBack",
-          "panCard",
-          "passportPhoto",
-          "selfie",
           "companyIdCard",
           "salarySlip1",
           "salarySlip2",
           "salarySlip3",
           "form16_26as",
-          "addressProof",
           "bankStatement1",
           "bankStatement2",
         ];
       }
-      if (stepIndex === 4) {
+      if (stepIndex === 3) {
         return [
           "reference1Name",
           "reference1Contact",
@@ -337,7 +341,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
         ];
       }
       // Review step — password lives here (not on Personal)
-      if (stepIndex === 5) {
+      if (stepIndex === 4) {
         return ["password", "confirmPassword"];
       }
       return [];
@@ -833,6 +837,15 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
     }
   };
 
+  const stepErrorCounts = useMemo(() => {
+    const counts = {};
+    for (let idx = 0; idx <= 3; idx += 1) {
+      const e = validateLapSalariedStep(idx);
+      counts[idx] = Object.keys(e).length;
+    }
+    return counts;
+  }, [formData, sameAddress]);
+
   return (
     <div className={`w-full max-w-5xl mx-auto ${embed ? "p-0" : "p-4 sm:p-6"}`}>
       {isRmMode && (
@@ -900,6 +913,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
             steps={steps}
             currentStep={currentStep}
             maxStep={maxStep}
+            stepErrorCounts={stepErrorCounts}
             onStepClick={(idx) => {
               if (idx <= maxStep) setCurrentStep(idx);
             }}
@@ -1111,7 +1125,54 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
                   />
                   {renderError("motherName")}
                 </div>
+              </div>
 
+              {/* KYC Documents */}
+              <div className="pt-6 border-t border-slate-200">
+                <h3 className="text-base font-bold text-slate-900 mb-1">
+                  Identity & KYC Documents
+                </h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Upload applicant's primary identity verification documents
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DocumentUploadCard
+                    name="aadharFront"
+                    label="Aadhaar Front *"
+                    file={formData.aadharFront}
+                    required
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                    error={renderError("aadharFront")}
+                  />
+                  <DocumentUploadCard
+                    name="aadharBack"
+                    label="Aadhaar Back *"
+                    file={formData.aadharBack}
+                    required
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                    error={renderError("aadharBack")}
+                  />
+                  <DocumentUploadCard
+                    name="panCard"
+                    label="PAN Card *"
+                    file={formData.panCard}
+                    required
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                    error={renderError("panCard")}
+                  />
+                  <DocumentUploadCard
+                    name="passportPhoto"
+                    label="Applicant Photo *"
+                    file={formData.passportPhoto}
+                    required
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                    error={renderError("passportPhoto")}
+                  />
+                </div>
               </div>
             </section>
           )}
@@ -1275,6 +1336,16 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
                     </div>
                   </>
                 )}
+              </div>
+
+              {/* Address Proof Document */}
+              <div className="pt-6 border-t border-slate-200">
+                <LoanAddressProofBlock
+                  stepLabel="2.2"
+                  file={formData.addressProof}
+                  onChange={handleFileChangeAddressProofs}
+                  renderError={renderError}
+                />
               </div>
             </section>
           )}
@@ -1448,67 +1519,15 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
                     </div>
                   </div>
                 </div>
-              </div>
-            </section>
-          )}
 
-          {/* Step 3: Documents */}
-          {currentStep === 3 && (
-            <section className="space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600" />
-                Upload Documents
-              </h2>
-
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">
-                    KYC Documents
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DocumentUploadCard
-                      name="aadharFront"
-                      label="Aadhaar Front *"
-                      file={formData.aadharFront}
-                      required
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError("aadharFront")}
-                    />
-                    <DocumentUploadCard
-                      name="aadharBack"
-                      label="Aadhaar Back *"
-                      file={formData.aadharBack}
-                      required
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError("aadharBack")}
-                    />
-                    <DocumentUploadCard
-                      name="panCard"
-                      label="PAN Card *"
-                      file={formData.panCard}
-                      required
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError("panCard")}
-                    />
-                    <DocumentUploadCard
-                      name="passportPhoto"
-                      label="Applicant Photo *"
-                      file={formData.passportPhoto}
-                      required
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError("passportPhoto")}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">
+                {/* Income & Employment Documents */}
+                <div className="pt-6 border-t border-slate-200">
+                  <h3 className="text-base font-bold text-slate-900 mb-1">
                     Income & Employment Documents
                   </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Upload salary slips, company ID card, and bank statements
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <DocumentUploadCard
                       name="companyIdCard"
@@ -1572,10 +1591,14 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">
+                {/* Collateral Property Documents */}
+                <div className="pt-6 border-t border-slate-200">
+                  <h3 className="text-base font-bold text-slate-900 mb-1">
                     Collateral Property Documents
                   </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Upload documents related to the property pledged as collateral
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <DocumentUploadCard
                       name="titleDeeds"
@@ -1607,19 +1630,12 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
                     />
                   </div>
                 </div>
-
-                <LoanAddressProofBlock
-                  stepLabel="4.4"
-                  file={formData.addressProof}
-                  onChange={handleFileChangeAddressProofs}
-                  renderError={renderError}
-                />
               </div>
             </section>
           )}
 
-          {/* Step 4: References */}
-          {currentStep === 4 && (
+          {/* Step 3: References */}
+          {currentStep === 3 && (
             <section className="space-y-6">
               <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                 <Users className="w-5 h-5 text-teal-600" />
@@ -1699,76 +1715,85 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
             </section>
           )}
 
-          {/* Step 5: Security & Review */}
-          {currentStep === 5 && (
+          {/* Step 4: Review & Submit */}
+          {currentStep === 4 && (
             <section className="space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600" />
-                Security & Review
-              </h2>
+              <LoanApplicationReviewCard
+                formData={formData}
+                loanTitle="Loan Against Property (Salaried)"
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Account Password *
-                  </label>
-                  <div className="relative">
+              {!isPartnerLoggedIn && (
+                <div className="pt-6 border-t border-slate-200">
+                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-4">
+                    <FileText className="w-5 h-5 text-teal-600" />
+                    Security & Account Setup
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Account Password *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name="password"
+                          value={formData.password}
+                          onChange={handleInputChange}
+                          placeholder="Enter strong password"
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {renderError("password")}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Confirm Password *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleInputChange}
+                          placeholder="Repeat password"
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {renderError("confirmPassword")}
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Partner Referral Code (optional) - use {defaultReferralCode} if you don't have a partner code
+                    </label>
                     <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={formData.password}
+                      type="text"
+                      name="partnerReferralCode"
+                      value={formData.partnerReferralCode}
                       onChange={handleInputChange}
-                      placeholder="Enter strong password"
+                      placeholder="Enter partner code"
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
                   </div>
-                  {renderError("password")}
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Confirm Password *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      placeholder="Repeat password"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {renderError("confirmPassword")}
-                </div>
-              </div>
-
-              {/* Review card */}
-              <div className="p-6 rounded-2xl bg-teal-50/50 border border-teal-100 text-sm text-slate-700 space-y-2">
-                <h3 className="font-bold text-teal-900 text-base">Application Summary</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
-                  <p><span className="font-semibold text-slate-500">Applicant:</span> {formData.firstName} {formData.lastName}</p>
-                  <p><span className="font-semibold text-slate-500">Loan Product:</span> LAP (Salaried)</p>
-                  <p><span className="font-semibold text-slate-500">Loan Amount:</span> ₹{Number(formData.loanAmount || 0).toLocaleString()}</p>
-                  <p><span className="font-semibold text-slate-500">Company:</span> {formData.companyName}</p>
-                  <p><span className="font-semibold text-slate-500">Property:</span> {formData.propertyType}</p>
-                  <p><span className="font-semibold text-slate-500">Property Value:</span> ₹{Number(formData.propertyValue || 0).toLocaleString()}</p>
-                </div>
-              </div>
+              )}
 
               {error && (
                 <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">

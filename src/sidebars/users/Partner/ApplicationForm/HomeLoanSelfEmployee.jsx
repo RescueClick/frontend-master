@@ -38,6 +38,7 @@ import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofB
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 import PublicLoanPartnerTrustBanner from "../../../../components/loan/PublicLoanPartnerTrustBanner";
 import ShareLoanModal from "../../../../components/loan/ShareLoanModal";
+import LoanApplicationReviewCard from "../../../../components/loan/LoanApplicationReviewCard";
 import {
   findOversizeInLoanDocsQueue,
   formatLoanDocOversizeError,
@@ -217,7 +218,13 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
   const loanDraftStorageKey = embed
     ? "dhansource.homeLoanSelfEmployeeDraft.embed.v1"
     : "dhansource.homeLoanSelfEmployeeDraft.v1";
-  const steps = ["Personal", "Address", "Loan & Business", "Documents", "References", "Review"];
+  const steps = [
+    "Personal & KYC",
+    "Address",
+    "Business & Loan",
+    "References",
+    "Review & Submit",
+  ];
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStep, setMaxStep] = useState(0);
 
@@ -226,7 +233,6 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       "firstName",
       "currentAddress",
       "loanAmount",
-      "aadharFront",
       "reference1Name",
       isPartnerLoggedIn ? "reference2Contact" : "partnerReferralCode",
     ],
@@ -396,6 +402,15 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           "loanPurpose",
           "monthlyEmiPaying",
           "cibilScoreBand",
+          "aadharFront",
+          "aadharBack",
+          "panCard",
+          "selfie",
+          "passportPhoto",
+          "coApplicantAadharFront",
+          "coApplicantAadharBack",
+          "coApplicantPan",
+          "coApplicantSelfie",
         ];
       }
       if (stepIndex === 1) {
@@ -410,6 +425,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           "permanentLandmark",
           "permanentHouseStatus",
           "permanentAddressPinCode",
+          "addressProof",
         ];
       }
       if (stepIndex === 2) {
@@ -422,33 +438,19 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           "propertyType",
           "propertyValue",
           "propertyAddress",
-        ];
-      }
-      if (stepIndex === 3) {
-        return [
-          "aadharFront",
-          "aadharBack",
-          "panCard",
-          "selfie",
-          "passportPhoto",
-          "addressProof",
           "bankStatementFile1",
           "bankStatementFile2",
           "shopPhoto",
           "shopAct",
           "udhyamAadhar",
           "itr",
-          "coApplicantAadharFront",
-          "coApplicantAadharBack",
-          "coApplicantPan",
-          "coApplicantSelfie",
         ];
       }
-      if (stepIndex === 4) {
+      if (stepIndex === 3) {
         return ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"];
       }
-      // Review step — password lives here (not on Personal)
-      if (stepIndex === 5) {
+      // Review step — password lives here
+      if (stepIndex === 4) {
         return ["password", "confirmPassword"];
       }
       return [];
@@ -1694,11 +1696,192 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     />
 
                     {renderError('SpouseName')}
-
                   </div>
                 )}
-
               </div>
+
+              {/* Personal Document Upload */}
+              <div className="pt-6 border-t border-slate-200 mt-6">
+                <h3
+                  className="text-lg font-semibold mb-2 flex items-center gap-2"
+                  style={{ color: "#111827" }}
+                >
+                  <FileText className="w-5 h-5 text-teal-600" />
+                  Personal Identity Documents
+                </h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Upload in order: Aadhaar Front, Aadhaar Back, PAN, Applicant Photo.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[
+                    { name: "aadharFront", label: "Aadhar Front *", required: true },
+                    { name: "aadharBack", label: "Aadhar Back *", required: true },
+                    {
+                      name: "otherDocs",
+                      label: "Extra supporting file (optional)",
+                      required: false,
+                      hint: OPTIONAL_EXTRA_DOC_CAPTION,
+                    },
+                    { name: "panCard", label: "PAN Card *", required: true },
+                    { name: "selfie", label: "Upload Selfie *", required: true, accept: ".jpg,.jpeg,.png" },
+                  ].map((doc) => (
+                    <DocumentUploadCard
+                      key={doc.name}
+                      name={doc.name}
+                      label={doc.label}
+                      file={formData[doc.name]}
+                      accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
+                      required={doc.required}
+                      hint={doc.hint ?? loanDocumentFieldHint(doc.name)}
+                      uploadStatus={docUploadStatus[doc.name]}
+                      uploadProgress={docUploadProgress[doc.name]}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError(doc.name)}
+                      onPreview={() => openDocumentPreview(formData[doc.name])}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Co-applicant Section (for female applicants) */}
+              {formData.gender === "female" && (
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-2 flex items-center gap-2"
+                    style={{ color: "#111827" }}
+                  >
+                    <Users className="w-5 h-5 text-teal-600" />
+                    Co-applicant Information
+                  </h3>
+                  <div
+                    className="p-6 rounded-lg border-2"
+                    style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Co-applicant Aadhar Front *
+                        </label>
+                        <input
+                          type="file"
+                          name="coApplicantAadharFront"
+                          onChange={handleFileChange}
+                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                          style={{
+                            borderColor: "var(--color-brand-primary)",
+                            backgroundColor: "white",
+                          }}
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          required
+                        />
+                        {renderError('coApplicantAadharFront')}
+                        {renderPreviewLink("coApplicantAadharFront")}
+                      </div>
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Co-applicant Aadhar Back *
+                        </label>
+                        <input
+                          type="file"
+                          name="coApplicantAadharBack"
+                          onChange={handleFileChange}
+                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                          style={{
+                            borderColor: "var(--color-brand-primary)",
+                            backgroundColor: "white",
+                          }}
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          required
+                        />
+
+                        {renderError('coApplicantAadharBack')}
+                        {renderPreviewLink("coApplicantAadharBack")}
+                      </div>
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Co-applicant PAN Card *
+                        </label>
+                        <input
+                          type="file"
+                          name="coApplicantPan"
+                          onChange={handleFileChange}
+                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                          style={{
+                            borderColor: "var(--color-brand-primary)",
+                            backgroundColor: "white",
+                          }}
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          required
+                        />
+
+                        {renderError('coApplicantPan')}
+                        {renderPreviewLink("coApplicantPan")}
+                      </div>
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Co-applicant Mobile Number *
+                        </label>
+                        <div className="relative">
+                          <Phone
+                            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                            style={{ color: "var(--color-brand-primary)" }}
+                          />
+                          <input
+                            type="tel"
+                            name="coApplicantMobile"
+                            value={formData.coApplicantMobile}
+                            onChange={handleInputChange}
+                            className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                            style={{
+                              borderColor: "var(--color-brand-primary)",
+                              backgroundColor: "white",
+                            }}
+                            placeholder="Enter co-applicant mobile number"
+                            required
+                          />
+
+                          {renderError('coApplicantMobile')}
+                        </div>
+                      </div>
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Co-applicant Selfie *
+                        </label>
+                        <input
+                          type="file"
+                          name="coApplicantSelfie"
+                          onChange={handleFileChange}
+                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                          style={{
+                            borderColor: "var(--color-brand-primary)",
+                            backgroundColor: "white",
+                          }}
+                          accept=".jpg,.jpeg,.png"
+                          required
+                        />
+                        {renderError('coApplicantSelfie')}
+                        {renderPreviewLink("coApplicantSelfie")}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* Address Information */}
@@ -1993,9 +2176,20 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     </div>
                   </div>
                 </div>
+                {/* Address proof — one upload */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <LoanAddressProofBlock
+                    stepLabel="2.3"
+                    file={formData.addressProof}
+                    onChange={handleFileChange}
+                    renderError={renderError}
+                    onPreview={() => openDocumentPreview(formData.addressProof)}
+                  />
+                </div>
               </div>
             </section>
 
+            {/* Business & Loan Information */}
             <section id="loan-selfe-step-loan" hidden={currentStep !== 2}>
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
@@ -2004,7 +2198,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                 <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
                 Loan Amount Details
               </h2>
-              <div className="space-y-6">
+              <div className="space-y-6 mb-8">
                 <div>
                   <label
                     className="block text-sm font-medium mb-2"
@@ -2036,211 +2230,16 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                   {renderError('loanAmount')}
                 </div>
               </div>
-            </section>
 
-            {/* Address proof — one upload */}
-            <section id="loan-selfe-step-docs" hidden={currentStep !== 3}>
-              <LoanAddressProofBlock
-                stepLabel="4.1"
-                file={formData.addressProof}
-                onChange={handleFileChange}
-                renderError={renderError}
-                onPreview={() => openDocumentPreview(formData.addressProof)}
-              />
-            </section>
-
-            {/* Personal Document Upload */}
-            <section hidden={currentStep !== 3}>
-              <h2
-                className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                style={{ color: "#111827" }}
-              >
-                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                4.2 Personal Identity Documents
-              </h2>
-              <p className="text-sm text-slate-600 mb-4">
-                Upload in order: Aadhaar Front, Aadhaar Back, PAN, Applicant Photo.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                  { name: "aadharFront", label: "Aadhar Front *", required: true },
-                  { name: "aadharBack", label: "Aadhar Back *", required: true },
-                  {
-                    name: "otherDocs",
-                    label: "Extra supporting file (optional)",
-                    required: false,
-                    hint: OPTIONAL_EXTRA_DOC_CAPTION,
-                  },
-                  { name: "panCard", label: "PAN Card *", required: true },
-                  { name: "selfie", label: "Upload Selfie *", required: true, accept: ".jpg,.jpeg,.png" },
-                ].map((doc) => (
-                  <DocumentUploadCard
-                    key={doc.name}
-                    name={doc.name}
-                    label={doc.label}
-                    file={formData[doc.name]}
-                    accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
-                    required={doc.required}
-                    hint={doc.hint ?? loanDocumentFieldHint(doc.name)}
-                    uploadStatus={docUploadStatus[doc.name]}
-                    uploadProgress={docUploadProgress[doc.name]}
-                    onChange={handleFileChange}
-                    onRemove={handleFileRemove}
-                    error={renderError(doc.name)}
-                    onPreview={() => openDocumentPreview(formData[doc.name])}
-                  />
-                ))}
-              </div>
-            </section>
-
-            {/* Co-applicant Section (for female applicants) */}
-            {formData.gender === "female" && (
-              <section hidden={currentStep !== 3}>
-                <h2
+              <div className="pt-6 border-t border-slate-200">
+                <h3
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
-                  <Users className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Co-applicant Information
-                </h2>
-                <div
-                  className="p-6 rounded-lg border-2"
-                  style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Co-applicant Aadhar Front *
-                      </label>
-                      <input
-                        type="file"
-                        name="coApplicantAadharFront"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-                      {renderError('coApplicantAadharFront')}
-                      {renderPreviewLink("coApplicantAadharFront")}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Co-applicant Aadhar Back *
-                      </label>
-                      <input
-                        type="file"
-                        name="coApplicantAadharBack"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-
-                      {renderError('coApplicantAadharBack')}
-                      {renderPreviewLink("coApplicantAadharBack")}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Co-applicant PAN Card *
-                      </label>
-                      <input
-                        type="file"
-                        name="coApplicantPan"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        required
-                      />
-
-                      {renderError('coApplicantPan')}
-                      {renderPreviewLink("coApplicantPan")}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Co-applicant Mobile Number *
-                      </label>
-                      <div className="relative">
-                        <Phone
-                          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                          style={{ color: "var(--color-brand-primary)" }}
-                        />
-                        <input
-                          type="tel"
-                          name="coApplicantMobile"
-                          value={formData.coApplicantMobile}
-                          onChange={handleInputChange}
-                          className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "white",
-                          }}
-                          placeholder="Enter co-applicant mobile number"
-                          required
-                        />
-
-                        {renderError('coApplicantMobile')}
-                      </div>
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Co-applicant Selfie *
-                      </label>
-                      <input
-                        type="file"
-                        name="coApplicantSelfie"
-                        onChange={handleFileChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        accept=".jpg,.jpeg,.png"
-                        required
-                      />
-                      {renderError('coApplicantSelfie')}
-                      {renderPreviewLink("coApplicantSelfie")}
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Business Information */}
-            <section hidden={currentStep !== 2}>
-              <h2
-                className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                style={{ color: "#111827" }}
-              >
-                <Store className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Business Information
-              </h2>
+                  <Store className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
+                  Business Information
+                </h3>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label
@@ -2465,17 +2464,16 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                   </div>
                 </div>
               </div>
-            </section>
 
-            {/* Business Documents */}
-            <section hidden={currentStep !== 3}>
-              <h2
-                className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                style={{ color: "#111827" }}
-              >
-                <Shield className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                4.3 Business Documents
-              </h2>
+              {/* Business Documents */}
+              <div className="pt-6 border-t border-slate-200 mt-6">
+                <h3
+                  className="text-lg font-semibold mb-2 flex items-center gap-2"
+                  style={{ color: "#111827" }}
+                >
+                  <Shield className="w-5 h-5 text-teal-600" />
+                  Business Documents
+                </h3>
               <p className="text-sm text-slate-600 mb-4">
                 Keep business registrations and tax files clear and readable.
               </p>
@@ -2620,17 +2618,17 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                   {renderPreviewLink("businessOtherDocs")}
                 </div>
               </div>
-            </section>
+              </div>
 
-            {/* Financial Documents */}
-            <section hidden={currentStep !== 3}>
-              <h2
-                className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                style={{ color: "#111827" }}
-              >
-                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                4.4 Bank Documents
-              </h2>
+              {/* Financial Documents */}
+              <div className="pt-6 border-t border-slate-200 mt-6">
+                <h3
+                  className="text-lg font-semibold mb-2 flex items-center gap-2"
+                  style={{ color: "#111827" }}
+                >
+                  <FileText className="w-5 h-5 text-teal-600" />
+                  Bank Documents
+                </h3>
               <p className="text-sm text-slate-600 mb-4">
                 Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
               </p>
@@ -2708,47 +2706,48 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                   />
                 </div>
               </div>
-            </section>
+              </div>
 
-            {/* Property Documents */}
-            <section hidden={currentStep !== 3}>
-              <h2
-                className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                style={{ color: "#111827" }}
-              >
-                <Home className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                4.5 Property Documents
-              </h2>
-              <p className="text-sm text-slate-600 mb-4">
-                Upload allotment letter, sale deed / title deeds, payment receipts, or agreement copy.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[
-                  { name: "allotmentLetter", label: "Allotment Letter / Agreement Copy", required: false },
-                  { name: "titleDeeds", label: "Title Deeds / Chain Documents", required: false },
-                  { name: "newPropertyPaymentReceipts", label: "Property Payment Receipts", required: false },
-                  { name: "agreementCopy", label: "Registered Agreement / Draft Agreement", required: false },
-                ].map((doc) => (
-                  <DocumentUploadCard
-                    key={doc.name}
-                    name={doc.name}
-                    label={doc.label}
-                    file={formData[doc.name]}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required={doc.required}
-                    uploadStatus={docUploadStatus[doc.name]}
-                    uploadProgress={docUploadProgress[doc.name]}
-                    onChange={handleFileChange}
-                    onRemove={handleFileRemove}
-                    error={renderError(doc.name)}
-                    onPreview={() => openDocumentPreview(formData[doc.name])}
-                  />
-                ))}
+              {/* Property Documents */}
+              <div className="pt-6 border-t border-slate-200 mt-6">
+                <h3
+                  className="text-lg font-semibold mb-2 flex items-center gap-2"
+                  style={{ color: "#111827" }}
+                >
+                  <Home className="w-5 h-5 text-teal-600" />
+                  Property Documents
+                </h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Upload allotment letter, sale deed / title deeds, payment receipts, or agreement copy.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { name: "allotmentLetter", label: "Allotment Letter / Agreement Copy", required: false },
+                    { name: "titleDeeds", label: "Title Deeds / Chain Documents", required: false },
+                    { name: "newPropertyPaymentReceipts", label: "Property Payment Receipts", required: false },
+                    { name: "agreementCopy", label: "Registered Agreement / Draft Agreement", required: false },
+                  ].map((doc) => (
+                    <DocumentUploadCard
+                      key={doc.name}
+                      name={doc.name}
+                      label={doc.label}
+                      file={formData[doc.name]}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      required={doc.required}
+                      uploadStatus={docUploadStatus[doc.name]}
+                      uploadProgress={docUploadProgress[doc.name]}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      error={renderError(doc.name)}
+                      onPreview={() => openDocumentPreview(formData[doc.name])}
+                    />
+                  ))}
+                </div>
               </div>
             </section>
 
             {/* References */}
-            <section id="loan-selfe-step-references" hidden={currentStep !== 4}>
+            <section id="loan-selfe-step-references" hidden={currentStep !== 3}>
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -2890,8 +2889,12 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
               </div>
             </section>
 
-            {/* Partner Referral — public only; section kept for step anchor */}
-            <section id="loan-selfe-step-review" hidden={currentStep !== 5}>
+            {/* Step 4: Review & Submit */}
+            <section id="loan-selfe-step-review" hidden={currentStep !== 4}>
+              <LoanApplicationReviewCard
+                formData={formData}
+                loanTitle="Home Loan (Self-Employed)"
+              />
               {!isPartnerLoggedIn && (
                 <>
                   <h2

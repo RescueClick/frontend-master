@@ -37,6 +37,7 @@ import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofB
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 import PublicLoanPartnerTrustBanner from "../../../../components/loan/PublicLoanPartnerTrustBanner";
 import ShareLoanModal from "../../../../components/loan/ShareLoanModal";
+import LoanApplicationReviewCard from "../../../../components/loan/LoanApplicationReviewCard";
 import {
   findOversizeInLoanDocsQueue,
   formatLoanDocOversizeError,
@@ -215,7 +216,13 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
   const loanDraftStorageKey = embed
     ? "dhansource.homeLoanSalariedDraft.embed.v1"
     : "dhansource.homeLoanSalariedDraft.v1";
-  const steps = ["Personal", "Address", "Loan & Employment", "Documents", "References", "Review"];
+  const steps = [
+    "Personal & KYC",
+    "Address",
+    "Loan & Employment",
+    "References",
+    "Review & Submit",
+  ];
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStep, setMaxStep] = useState(0);
 
@@ -224,7 +231,6 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
       "firstName",
       "currentAddress",
       "loanAmount",
-      "aadharFront",
       "reference1Name",
       isPartnerLoggedIn ? "password" : "partnerReferralCode",
     ],
@@ -373,36 +379,55 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
           "loanPurpose",
           "monthlyEmiPaying",
           "cibilScoreBand",
-        ];
-      }
-      if (stepIndex === 1) {
-        return ["currentAddress", "stabilityOfResidency", "currentLandmark", "currentHouseStatus", "currentAddressPinCode", "permanentAddress", "permanentStability", "permanentLandmark", "permanentHouseStatus", "permanentAddressPinCode"];
-      }
-      if (stepIndex === 2) {
-        return ["loanAmount", "companyName", "designation", "companyAddress", "monthlySalary", "totalExperience", "currentExperience", "salaryInHand", "propertyType", "propertyValue", "propertyAddress"];
-      }
-      if (stepIndex === 3) {
-        return [
           "aadharFront",
           "aadharBack",
           "panCard",
           "passportPhoto",
           "selfie",
+        ];
+      }
+      if (stepIndex === 1) {
+        return [
+          "currentAddress",
+          "stabilityOfResidency",
+          "currentLandmark",
+          "currentHouseStatus",
+          "currentAddressPinCode",
+          "permanentAddress",
+          "permanentStability",
+          "permanentLandmark",
+          "permanentHouseStatus",
+          "permanentAddressPinCode",
+          "addressProof",
+        ];
+      }
+      if (stepIndex === 2) {
+        return [
+          "loanAmount",
+          "companyName",
+          "designation",
+          "companyAddress",
+          "monthlySalary",
+          "totalExperience",
+          "currentExperience",
+          "salaryInHand",
+          "propertyType",
+          "propertyValue",
+          "propertyAddress",
           "companyIdCard",
           "salarySlip1",
           "salarySlip2",
           "salarySlip3",
           "form16_26as",
-          "addressProof",
           "bankStatement1",
           "bankStatement2",
         ];
       }
-      if (stepIndex === 4) {
+      if (stepIndex === 3) {
         return ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"];
       }
-      // Review step — password lives here (not on Personal)
-      if (stepIndex === 5) {
+      // Review step — password lives here
+      if (stepIndex === 4) {
         return ["password", "confirmPassword"];
       }
       return [];
@@ -1650,6 +1675,65 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                     {renderError("motherName")}
                   </div>
                 </div>
+
+                {/* Identity & Core Documents */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-2 flex items-center gap-2"
+                    style={{ color: "#111827" }}
+                  >
+                    <FileText className="w-5 h-5 text-teal-600" />
+                    Identity & Core Documents
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Accepted files: PDF, JPG, JPEG, PNG. Preview appears after upload.
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { name: "aadharFront", label: "Aadhar Card (Front) *", required: true },
+                      { name: "aadharBack", label: "Aadhar Card (Back) *", required: true },
+                      { name: "panCard", label: "PAN Card *", required: true },
+                      {
+                        name: "passportPhoto",
+                        label: "Passport Photo *",
+                        required: true,
+                        accept: ".jpg,.jpeg,.png",
+                      },
+                      {
+                        name: "otherDocument",
+                        label: "Extra supporting file (optional)",
+                        required: false,
+                        hint: OPTIONAL_EXTRA_DOC_CAPTION,
+                      },
+                    ].map((doc) => (
+                      <DocumentUploadCard
+                        key={doc.name}
+                        name={doc.name}
+                        label={doc.label}
+                        file={formData[doc.name]}
+                        accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
+                        required={doc.required}
+                        hint={doc.hint}
+                        uploadStatus={docUploadStatus[doc.name]}
+                        uploadProgress={docUploadProgress[doc.name]}
+                        onChange={handleFileChange}
+                        onRemove={handleFileRemove}
+                        error={renderError(doc.name)}
+                        onPreview={() => {
+                          let url = "";
+                          if (formData[doc.name]?.preview) {
+                            url = formData[doc.name].preview;
+                          } else if (formData[doc.name] instanceof File) {
+                            url = URL.createObjectURL(formData[doc.name]);
+                            objectUrlsRef.current.push(url);
+                          }
+                          setdocumentModel(url);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
               </section>
 
               {/* Address Information */}
@@ -1935,6 +2019,22 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                     </div>
                   </div>
                 </div>
+
+                {/* Address proof — one upload, any accepted type */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <LoanAddressProofBlock
+                    stepLabel="2.3"
+                    file={formData.addressProof}
+                    onChange={handleFileChangeAddressProofs}
+                    renderError={renderError}
+                    onPreview={() => {
+                      if (!formData.addressProof) return;
+                      const url = URL.createObjectURL(formData.addressProof);
+                      objectUrlsRef.current.push(url);
+                      setdocumentModel(url);
+                    }}
+                  />
+                </div>
               </section>
 
               <section hidden={currentStep !== 2}>
@@ -1977,75 +2077,14 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                     {renderError("loanAmount")}
                   </div>
                 </div>
-              </section>
-
-              {/* Document Upload */}
-              <section hidden={currentStep !== 3}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  4.1 Identity & Core Documents
-                </h2>
-                <p className="text-sm text-slate-600 mb-4">
-                  Accepted files: PDF, JPG, JPEG, PNG. Preview appears after upload.
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    { name: "aadharFront", label: "Aadhar Card (Front) *", required: true },
-                    { name: "aadharBack", label: "Aadhar Card (Back) *", required: true },
-                    { name: "panCard", label: "PAN Card *", required: true },
-                    {
-                      name: "passportPhoto",
-                      label: "Passport Photo *",
-                      required: true,
-                      accept: ".jpg,.jpeg,.png",
-                    },
-                    {
-                      name: "otherDocument",
-                      label: "Extra supporting file (optional)",
-                      required: false,
-                      hint: OPTIONAL_EXTRA_DOC_CAPTION,
-                    },
-                  ].map((doc) => (
-                    <DocumentUploadCard
-                      key={doc.name}
-                      name={doc.name}
-                      label={doc.label}
-                      file={formData[doc.name]}
-                      accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
-                      required={doc.required}
-                      hint={doc.hint}
-                      uploadStatus={docUploadStatus[doc.name]}
-                      uploadProgress={docUploadProgress[doc.name]}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError(doc.name)}
-                      onPreview={() => {
-                        let url = "";
-                        if (formData[doc.name]?.preview) {
-                          url = formData[doc.name].preview;
-                        } else if (formData[doc.name] instanceof File) {
-                          url = URL.createObjectURL(formData[doc.name]);
-                          objectUrlsRef.current.push(url);
-                        }
-                        setdocumentModel(url);
-                      }}
-                    />
-                  ))}
-                </div>
-              </section>
-
-              <section hidden={currentStep !== 3}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <Briefcase className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  4.2 Employment & income documents
-                </h2>
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-2 flex items-center gap-2"
+                    style={{ color: "#111827" }}
+                  >
+                    <Briefcase className="w-5 h-5 text-teal-600" />
+                    Employment & Income Documents
+                  </h3>
                 <p className="text-sm text-slate-600 mb-4">
                   Company ID, salary slips, and Form 16 / 26AS (if applicable).
                 </p>
@@ -2201,18 +2240,18 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                     )}
                   </div>
                 </div>
-              </section>
+              </div>
 
-              {/* Employment Information */}
-              <section hidden={currentStep !== 2}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <Building className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Employment Information
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Employment Information */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-6 flex items-center gap-3"
+                    style={{ color: "#111827" }}
+                  >
+                    <Building className="w-5 h-5 text-teal-600" />
+                    Employment Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label
                       className="block text-sm font-medium mb-2"
@@ -2381,6 +2420,7 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                     {renderError('salaryInHand')}
                   </div>
                 </div>
+              </div>
 
                 <div className="mt-8 pt-6 border-t border-slate-200">
                   <h3 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: "#111827" }}>
@@ -2449,17 +2489,16 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                     </div>
                   </div>
                 </div>
-              </section>
 
-              {/* Bank Details Section */}
-              <section hidden={currentStep !== 3}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  4.3 Bank Statements
-                </h2>
+                {/* Bank Details Section */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-2 flex items-center gap-2"
+                    style={{ color: "#111827" }}
+                  >
+                    <FileText className="w-5 h-5 text-teal-600" />
+                    Bank Statements
+                  </h3>
                 <p className="text-sm text-slate-600 mb-4">
                   Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
                 </p>
@@ -2661,71 +2700,58 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                     />
                   </div>
                 </div>
-              </section>
+              </div>
 
-              <section hidden={currentStep !== 3}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <Home className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  4.4 Property Documents
-                </h2>
-                <p className="text-sm text-slate-600 mb-4">
-                  Upload allotment letter, sale deed / title deeds, payment receipts, or agreement copy.
-                </p>
+                {/* Property Documents */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-2 flex items-center gap-2"
+                    style={{ color: "#111827" }}
+                  >
+                    <Home className="w-5 h-5 text-teal-600" />
+                    Property Documents
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Upload allotment letter, sale deed / title deeds, payment receipts, or agreement copy.
+                  </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    { name: "allotmentLetter", label: "Allotment Letter / Agreement Copy", required: false },
-                    { name: "titleDeeds", label: "Title Deeds / Chain Documents", required: false },
-                    { name: "newPropertyPaymentReceipts", label: "Property Payment Receipts", required: false },
-                    { name: "agreementCopy", label: "Registered Agreement / Draft Agreement", required: false },
-                  ].map((doc) => (
-                    <DocumentUploadCard
-                      key={doc.name}
-                      name={doc.name}
-                      label={doc.label}
-                      file={formData[doc.name]}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      required={doc.required}
-                      uploadStatus={docUploadStatus[doc.name]}
-                      uploadProgress={docUploadProgress[doc.name]}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError(doc.name)}
-                      onPreview={() => {
-                        let url = "";
-                        if (formData[doc.name]?.preview) {
-                          url = formData[doc.name].preview;
-                        } else if (formData[doc.name] instanceof File) {
-                          url = URL.createObjectURL(formData[doc.name]);
-                          objectUrlsRef.current.push(url);
-                        }
-                        setdocumentModel(url);
-                      }}
-                    />
-                  ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { name: "allotmentLetter", label: "Allotment Letter / Agreement Copy", required: false },
+                      { name: "titleDeeds", label: "Title Deeds / Chain Documents", required: false },
+                      { name: "newPropertyPaymentReceipts", label: "Property Payment Receipts", required: false },
+                      { name: "agreementCopy", label: "Registered Agreement / Draft Agreement", required: false },
+                    ].map((doc) => (
+                      <DocumentUploadCard
+                        key={doc.name}
+                        name={doc.name}
+                        label={doc.label}
+                        file={formData[doc.name]}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        required={doc.required}
+                        uploadStatus={docUploadStatus[doc.name]}
+                        uploadProgress={docUploadProgress[doc.name]}
+                        onChange={handleFileChange}
+                        onRemove={handleFileRemove}
+                        error={renderError(doc.name)}
+                        onPreview={() => {
+                          let url = "";
+                          if (formData[doc.name]?.preview) {
+                            url = formData[doc.name].preview;
+                          } else if (formData[doc.name] instanceof File) {
+                            url = URL.createObjectURL(formData[doc.name]);
+                            objectUrlsRef.current.push(url);
+                          }
+                          setdocumentModel(url);
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </section>
 
-              <section hidden={currentStep !== 3}>
-                <LoanAddressProofBlock
-                  stepLabel="4.5"
-                  file={formData.addressProof}
-                  onChange={handleFileChangeAddressProofs}
-                  renderError={renderError}
-                  onPreview={() => {
-                    if (!formData.addressProof) return;
-                    const url = URL.createObjectURL(formData.addressProof);
-                    objectUrlsRef.current.push(url);
-                    setdocumentModel(url);
-                  }}
-                />
-              </section>
-
               {/* References */}
-              <section hidden={currentStep !== 4}>
+              <section hidden={currentStep !== 3}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2860,8 +2886,13 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                 </div>
               </section>
 
-              {/* Password Section */}
-              <section hidden={currentStep !== 5}>
+              {/* Review & Password Section */}
+              <section hidden={currentStep !== 4}>
+                <LoanApplicationReviewCard
+                  formData={formData}
+                  loanTitle="Home Loan (Salaried)"
+                />
+
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2955,7 +2986,7 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
 
               {/* Partner Referral — public applicants only */}
               {!isPartnerLoggedIn && (
-                <section hidden={currentStep !== 5}>
+                <section hidden={currentStep !== 4}>
                   <h2
                     className="text-2xl font-semibold mb-6 flex items-center gap-3"
                     style={{ color: "#111827" }}
@@ -3121,10 +3152,10 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                 )}
               </div>
             </div>
-            </div>
           </div>
         </div>
       </div>
+    </div>
 
       {isPartnerLoggedIn && (
         <ShareLoanModal

@@ -33,6 +33,7 @@ import { canonicalPartnerReferralCode } from "../../../../config/branding";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
 import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofBlock";
+import LoanApplicationReviewCard from "../../../../components/loan/LoanApplicationReviewCard";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 import PublicLoanPartnerTrustBanner from "../../../../components/loan/PublicLoanPartnerTrustBanner";
 import ShareLoanModal from "../../../../components/loan/ShareLoanModal";
@@ -313,14 +314,13 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     if (resumeError) setError(resumeError);
   }, [resumeError]);
 
-  // Multi-step wizard state
+  // Multi-step wizard state (5 steps with inline documents matching Partner App)
   const steps = [
-    "Personal",
+    "Personal & KYC",
     "Address",
     "Loan & Employment",
-    "Documents",
     "References",
-    "Review",
+    "Review & Submit",
   ];
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStep, setMaxStep] = useState(0);
@@ -328,7 +328,6 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     "loan-personal-step",
     "loan-address-step",
     "loan-loan-step",
-    "loan-docs-step",
     "loan-references-step",
     "loan-review-step",
   ];
@@ -341,7 +340,6 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       "firstName",
       "currentAddress",
       "loanAmount",
-      "aadharFront",
       "reference1Name",
       isPartnerLoggedIn ? "password" : "partnerReferralCode",
     ],
@@ -805,7 +803,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
   }
 
   const stepFieldKeys = [
-    // 0: Personal
+    // 0: Personal & KYC
     [
       "firstName",
       "middleName",
@@ -821,6 +819,11 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       "monthlyEmiPaying",
       "cibilScoreBand",
       "loanPurpose",
+      "aadharFront",
+      "aadharBack",
+      "panCard",
+      "passportPhoto",
+      "selfie",
     ],
     // 1: Address
     [
@@ -834,8 +837,9 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       "permanentLandmark",
       "permanentStability",
       "permanentAddressPinCode",
+      "addressProof",
     ],
-    // 2: Loan & Employment (text/details only — files on Documents step)
+    // 2: Loan & Employment
     [
       "loanAmount",
       "companyName",
@@ -845,14 +849,6 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       "totalExperience",
       "currentExperience",
       "salaryInHand",
-    ],
-    // 3: Documents
-    [
-      "aadharFront",
-      "aadharBack",
-      "panCard",
-      "passportPhoto",
-      "selfie",
       "companyIdCard",
       "salarySlip1",
       "salarySlip2",
@@ -860,11 +856,10 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       "form16_26as",
       "bankStatement1",
       "bankStatement2",
-      "addressProof",
     ],
-    // 4: References
+    // 3: References
     ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"],
-    // 5: Review
+    // 4: Review & Submit
     ["password", "confirmPassword"],
   ];
 
@@ -1893,6 +1888,55 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     {renderError("motherName")}
                   </div>
                 </div>
+
+                {/* Inline Identity & KYC Documents */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-2 flex items-center gap-2"
+                    style={{ color: "#111827" }}
+                  >
+                    <FileText className="w-5 h-5 text-teal-600" />
+                    Identity & Core Documents
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Attach PAN Card, Aadhaar Card (front & back), and passport photo.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { name: "aadharFront", label: "Aadhar Card (Front) *", required: true },
+                      { name: "aadharBack", label: "Aadhar Card (Back) *", required: true },
+                      { name: "panCard", label: "PAN Card *", required: true },
+                      {
+                        name: "passportPhoto",
+                        label: "Passport Photo *",
+                        required: true,
+                        accept: ".jpg,.jpeg,.png",
+                      },
+                      {
+                        name: "otherDocument",
+                        label: "Extra supporting file (optional)",
+                        required: false,
+                        hint: OPTIONAL_EXTRA_DOC_CAPTION,
+                      },
+                    ].map((doc) => (
+                      <DocumentUploadCard
+                        key={doc.name}
+                        name={doc.name}
+                        label={doc.label}
+                        file={formData[doc.name]}
+                        accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
+                        required={doc.required}
+                        hint={loanDocumentFieldHint(doc.name)}
+                        onChange={handleFileChange}
+                        onRemove={handleFileRemove}
+                        error={renderError(doc.name)}
+                        uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
+                        uploadProgress={docUploadProgress[doc.name] || 0}
+                        onPreview={() => openDocumentPreview(formData[doc.name])}
+                      />
+                    ))}
+                  </div>
+                </div>
               </section>
 
               {/* Address Information */}
@@ -2175,6 +2219,20 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     </div>
                   </div>
                 </div>
+
+                {/* Inline Address Proof */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <LoanAddressProofBlock
+                    stepLabel="2.2"
+                    formData={formData}
+                    handleFileChangeAddressProofs={handleFileChangeAddressProofs}
+                    handleFileRemove={handleFileRemove}
+                    renderError={renderError}
+                    uploadStatus={docUploadStatus.addressProof || (formData.addressProof_uploaded ? "uploaded" : "idle")}
+                    uploadProgress={docUploadProgress.addressProof || 0}
+                    onPreview={() => openDocumentPreview(formData.addressProof)}
+                  />
+                </div>
               </section>
 
               <section id="loan-loan-step" hidden={currentStep !== 2}>
@@ -2218,116 +2276,16 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     {formData.loanAmount ? "" : renderError("loanAmount")}
                   </div>
                 </div>
-              </section>
 
-              {/* Document Upload */}
-              <section id="loan-docs-step" hidden={currentStep !== 3}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  4.1 Identity & Core Documents
-                </h2>
-                <p className="text-sm text-slate-600 mb-4">
-                  Each field shows the document type stored in the application, allowed
-                  formats, and max size. Passport photo: images only (no PDF).
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    { name: "aadharFront", label: "Aadhar Card (Front) *", required: true },
-                    { name: "aadharBack", label: "Aadhar Card (Back) *", required: true },
-                    { name: "panCard", label: "PAN Card *", required: true },
-                    {
-                      name: "passportPhoto",
-                      label: "Passport Photo *",
-                      required: true,
-                      accept: ".jpg,.jpeg,.png",
-                    },
-                    {
-                      name: "otherDocument",
-                      label: "Extra supporting file (optional)",
-                      required: false,
-                      hint: OPTIONAL_EXTRA_DOC_CAPTION,
-                    },
-                  ].map((doc) => (
-                    <DocumentUploadCard
-                      key={doc.name}
-                      name={doc.name}
-                      label={doc.label}
-                      file={formData[doc.name]}
-                      accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
-                      required={doc.required}
-                      hint={loanDocumentFieldHint(doc.name)}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError(doc.name)}
-                      uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
-                      uploadProgress={docUploadProgress[doc.name] || 0}
-                      onPreview={() => openDocumentPreview(formData[doc.name])}
-                    />
-                  ))}
-                </div>
-              </section>
-
-              <section hidden={currentStep !== 3}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <Briefcase className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  4.2 Employment & income documents
-                </h2>
-                <p className="text-sm text-slate-600 mb-2">
-                  Company ID, salary slips, and Form 16 / 26AS (if applicable).
-                </p>
-                <div className="text-xs text-slate-600 mb-4 space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="font-semibold text-slate-700">Saved document types</p>
-                  <ul className="list-disc pl-4 space-y-0.5">
-                    <li>{loanDocumentFieldHint("companyIdCard")}</li>
-                    <li>{loanDocumentFieldHint("salarySlip1")}</li>
-                    <li>{loanDocumentFieldHint("salarySlip2")}</li>
-                    <li>{loanDocumentFieldHint("salarySlip3")}</li>
-                    <li>{loanDocumentFieldHint("form16_26as")}</li>
-                  </ul>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    { name: "companyIdCard", label: "Company ID Card", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
-                    { name: "salarySlip1", label: "Salary Slip 1", required: true, accept: ".pdf,application/pdf" },
-                    { name: "salarySlip2", label: "Salary Slip 2", required: true, accept: ".pdf,application/pdf" },
-                    { name: "salarySlip3", label: "Salary Slip 3", required: true, accept: ".pdf,application/pdf" },
-                    { name: "form16_26as", label: "Form 16 / 26AS", required: false, accept: ".pdf,.jpg,.jpeg,.png" },
-                  ].map((doc) => (
-                    <DocumentUploadCard
-                      key={doc.name}
-                      name={doc.name}
-                      label={doc.label}
-                      file={formData[doc.name]}
-                      accept={doc.accept}
-                      required={doc.required}
-                      hint={loanDocumentFieldHint(doc.name)}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError(doc.name)}
-                      uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
-                      uploadProgress={docUploadProgress[doc.name] || 0}
-                      onPreview={() => openDocumentPreview(formData[doc.name])}
-                    />
-                  ))}
-                </div>
-              </section>
-
-              {/* Employment Information */}
-              <section hidden={currentStep !== 2}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <Building className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Employment Information
-                </h2>
+                {/* Employment Information */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-4 flex items-center gap-2"
+                    style={{ color: "#111827" }}
+                  >
+                    <Building className="w-5 h-5 text-teal-600" />
+                    Employment Information
+                  </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label
@@ -2494,11 +2452,11 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     {renderError("salaryInHand")}
                   </div>
                 </div>
-              </section>
+              </div>
 
               {/* Dynamic Product Custom Fields */}
               {dynamicProduct?.customFields?.length > 0 && (
-                <section hidden={currentStep !== 2}>
+                <div>
                   <div className="pt-6 border-t border-slate-200">
                     <div className="flex items-center gap-2 mb-4">
                       <span className="px-2.5 py-1 bg-teal-50 border border-teal-200 rounded-lg text-teal-800 text-xs font-bold uppercase tracking-wider">
@@ -2580,129 +2538,148 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       ))}
                     </div>
                   </div>
-                </section>
+                </div>
               )}
 
-              {/* Bank Details Section */}
-              <section hidden={currentStep !== 3}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  4.3 Bank Statements
-                </h2>
-                <p className="text-sm text-slate-600 mb-2">
-                  Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
-                </p>
-                <div className="text-xs text-slate-600 mb-4 space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="font-semibold text-slate-700">Saved document types</p>
-                  <ul className="list-disc pl-4 space-y-0.5">
-                    <li>{loanDocumentFieldHint("bankStatement1")}</li>
-                    <li>{loanDocumentFieldHint("bankStatement2")}</li>
-                  </ul>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    { name: "bankStatement1", label: "Bank Statement 1", required: true, accept: ".pdf,application/pdf" },
-                    { name: "bankStatement2", label: "Bank Statement 2", required: false, accept: ".pdf,application/pdf" },
-                  ].map((doc) => (
-                    <DocumentUploadCard
-                      key={doc.name}
-                      name={doc.name}
-                      label={doc.label}
-                      file={formData[doc.name]}
-                      accept={doc.accept}
-                      required={doc.required}
-                      hint={loanDocumentFieldHint(doc.name)}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError(doc.name)}
-                      uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
-                      uploadProgress={docUploadProgress[doc.name] || 0}
-                      onPreview={() => openDocumentPreview(formData[doc.name])}
-                    />
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Bank Statement Password (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      name="bankStatementPassword"
-                      value={formData.bankStatementPassword}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      placeholder="Password (if protected)"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              <section hidden={currentStep !== 3}>
-                <LoanAddressProofBlock
-                  stepLabel="4.4"
-                  file={formData.addressProof}
-                  onChange={handleFileChange}
-                  onRemove={handleFileRemove}
-                  renderError={renderError}
-                  uploadStatus={docUploadStatus.addressProof || (formData.addressProof_uploaded ? "uploaded" : "idle")}
-                  uploadProgress={docUploadProgress.addressProof || 0}
-                  onPreview={() => openDocumentPreview(formData.addressProof)}
-                />
-              </section>
-
-              {/* Dynamic Product Required Documents */}
-              {dynamicProduct?.requiredDocuments?.length > 0 && (
-                <section hidden={currentStep !== 3} className="pt-6 border-t border-slate-200">
-                  <h2
-                    className="text-2xl font-semibold mb-2 flex items-center gap-3"
+                {/* Employment & Income Documents */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-2 flex items-center gap-2"
                     style={{ color: "#111827" }}
                   >
-                    <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                    4.5 {dynamicLoanTitle} Specific Documents
-                  </h2>
-                  <p className="text-sm text-slate-600 mb-6">
-                    Upload documents configured specifically for this loan application.
+                    <Briefcase className="w-5 h-5 text-teal-600" />
+                    Employment & Income Documents
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Company ID, salary slips, and Form 16 / 26AS (if applicable).
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {dynamicProduct.requiredDocuments.map((doc) => (
+                    {[
+                      { name: "companyIdCard", label: "Company ID Card", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
+                      { name: "salarySlip1", label: "Salary Slip 1", required: true, accept: ".pdf,application/pdf" },
+                      { name: "salarySlip2", label: "Salary Slip 2", required: true, accept: ".pdf,application/pdf" },
+                      { name: "salarySlip3", label: "Salary Slip 3", required: true, accept: ".pdf,application/pdf" },
+                      { name: "form16_26as", label: "Form 16 / 26AS", required: false, accept: ".pdf,.jpg,.jpeg,.png" },
+                    ].map((doc) => (
                       <DocumentUploadCard
-                        key={doc.docType}
-                        name={doc.docType}
-                        label={`${doc.label}${doc.required ? " *" : ""}`}
-                        file={formData[doc.docType]}
-                        accept={doc.acceptTypes?.join(",") || ".pdf,.jpg,.jpeg,.png"}
+                        key={doc.name}
+                        name={doc.name}
+                        label={doc.label}
+                        file={formData[doc.name]}
+                        accept={doc.accept}
                         required={doc.required}
-                        hint={doc.description || loanDocumentFieldHint(doc.docType)}
+                        hint={loanDocumentFieldHint(doc.name)}
                         onChange={handleFileChange}
                         onRemove={handleFileRemove}
-                        error={renderError(doc.docType)}
-                        uploadStatus={
-                          docUploadStatus[doc.docType] ||
-                          (formData[`${doc.docType}_uploaded`] ? "uploaded" : "idle")
-                        }
-                        uploadProgress={docUploadProgress[doc.docType] || 0}
-                        onPreview={() => openDocumentPreview(formData[doc.docType])}
+                        error={renderError(doc.name)}
+                        uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
+                        uploadProgress={docUploadProgress[doc.name] || 0}
+                        onPreview={() => openDocumentPreview(formData[doc.name])}
                       />
                     ))}
                   </div>
-                </section>
-              )}
+                </div>
+
+                {/* Bank Details Section */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3
+                    className="text-lg font-semibold mb-2 flex items-center gap-2"
+                    style={{ color: "#111827" }}
+                  >
+                    <FileText className="w-5 h-5 text-teal-600" />
+                    Bank Statements
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { name: "bankStatement1", label: "Bank Statement 1", required: true, accept: ".pdf,application/pdf" },
+                      { name: "bankStatement2", label: "Bank Statement 2", required: false, accept: ".pdf,application/pdf" },
+                    ].map((doc) => (
+                      <DocumentUploadCard
+                        key={doc.name}
+                        name={doc.name}
+                        label={doc.label}
+                        file={formData[doc.name]}
+                        accept={doc.accept}
+                        required={doc.required}
+                        hint={loanDocumentFieldHint(doc.name)}
+                        onChange={handleFileChange}
+                        onRemove={handleFileRemove}
+                        error={renderError(doc.name)}
+                        uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
+                        uploadProgress={docUploadProgress[doc.name] || 0}
+                        onPreview={() => openDocumentPreview(formData[doc.name])}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                      <label
+                        className="block text-sm font-medium mb-2"
+                        style={{ color: "#111827" }}
+                      >
+                        Bank Statement Password (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        name="bankStatementPassword"
+                        value={formData.bankStatementPassword}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        placeholder="Password (if protected)"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dynamic Product Required Documents */}
+                {dynamicProduct?.requiredDocuments?.length > 0 && (
+                  <div className="pt-6 border-t border-slate-200 mt-6">
+                    <h3
+                      className="text-lg font-semibold mb-2 flex items-center gap-2"
+                      style={{ color: "#111827" }}
+                    >
+                      <FileText className="w-5 h-5 text-teal-600" />
+                      {dynamicLoanTitle} Specific Documents
+                    </h3>
+                    <p className="text-xs text-slate-500 mb-4">
+                      Upload documents configured specifically for this loan application.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {dynamicProduct.requiredDocuments.map((doc) => (
+                        <DocumentUploadCard
+                          key={doc.docType}
+                          name={doc.docType}
+                          label={`${doc.label}${doc.required ? " *" : ""}`}
+                          file={formData[doc.docType]}
+                          accept={doc.acceptTypes?.join(",") || ".pdf,.jpg,.jpeg,.png"}
+                          required={doc.required}
+                          hint={doc.description || loanDocumentFieldHint(doc.docType)}
+                          onChange={handleFileChange}
+                          onRemove={handleFileRemove}
+                          error={renderError(doc.docType)}
+                          uploadStatus={
+                            docUploadStatus[doc.docType] ||
+                            (formData[`${doc.docType}_uploaded`] ? "uploaded" : "idle")
+                          }
+                          uploadProgress={docUploadProgress[doc.docType] || 0}
+                          onPreview={() => openDocumentPreview(formData[doc.docType])}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
 
               {/* References */}
-              <section id="loan-references-step" hidden={currentStep !== 4}>
+              <section id="loan-references-step" hidden={currentStep !== 3}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2834,8 +2811,13 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                 </div>
               </section>
 
-              {/* Password Section */}
-              <section id="loan-review-step" hidden={currentStep !== 5}>
+              {/* Review & Password Section */}
+              <section id="loan-review-step" hidden={currentStep !== 4}>
+                <LoanApplicationReviewCard
+                  formData={formData}
+                  loanTitle={dynamicLoanTitle}
+                />
+
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2928,7 +2910,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
               {/* Partner Referral — public applicants only (e.g. from home); hidden in partner dashboard */}
               {!isPartnerLoggedIn && (
-                <section hidden={currentStep !== 5}>
+                <section hidden={currentStep !== 4}>
                   <h2
                     className="text-2xl font-semibold mb-6 flex items-center gap-3"
                     style={{ color: "#111827" }}
