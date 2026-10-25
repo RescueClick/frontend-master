@@ -61,6 +61,11 @@ import {
   rmCompleteLoanFormUrl,
 } from "../../../../utils/rmLoanForm";
 import { buildCanonicalLoanPayload } from "../../../../utils/normalizeLoanPayload";
+import {
+  fetchLeadDocuments,
+  buildHydratedDocFields,
+  serializeDraftWithDocs,
+} from "../../../../utils/rehydrateLeadDocuments";
 
 const formatDocTypeName = (docType) => {
   const map = {
@@ -102,16 +107,24 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     const file = docValue instanceof File ? docValue : docValue?.file;
     const rawUrl = docValue?.preview
       ? docValue.preview
+      : docValue?.url
+      ? docValue.url
       : file instanceof File
       ? URL.createObjectURL(file)
       : typeof docValue === "string"
       ? docValue
       : "";
     if (rawUrl) {
+      const isPdf = Boolean(
+        file?.type?.includes("pdf") ||
+        docValue?.type?.includes("pdf") ||
+        (file?.name || docValue?.name || "").toLowerCase().endsWith(".pdf") ||
+        rawUrl.toLowerCase().includes(".pdf")
+      );
       setdocumentModel({
         url: rawUrl,
         name: file?.name || docValue?.name || "Document Preview",
-        type: file?.type || (file?.name?.toLowerCase().endsWith(".pdf") ? "application/pdf" : ""),
+        type: isPdf ? "application/pdf" : (file?.type || docValue?.type || "image/jpeg"),
         file,
       });
     }
@@ -312,25 +325,6 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         typeof v.size === "number" &&
         typeof v.type === "string"));
 
-  const serializeDraftFormData = (data) => {
-    const serialized = {};
-    for (const [k, v] of Object.entries(data || {})) {
-      // Do not persist password data in localStorage
-      if (k === "password" || k === "confirmPassword") {
-        serialized[k] = "";
-        continue;
-      }
-
-      if (fileLike(v)) {
-        serialized[k] = null;
-        continue;
-      }
-
-      serialized[k] = v;
-    }
-    return serialized;
-  };
-
   const scrollToStep = (idx) => {
     const stepId = stepAnchorIds[idx];
     if (!stepId) return;
@@ -356,12 +350,15 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     }
   };
 
-  // Load draft (best-effort). Files can't be persisted, but scalar progress can.
+  // Load draft & restore uploaded documents state from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(loanDraftStorageKey);
       if (!raw) return;
       const parsed = JSON.parse(raw);
+      if (parsed?.applicationId) {
+        setApplicationId(parsed.applicationId);
+      }
       if (parsed?.formData && typeof parsed.formData === "object") {
         setFormData((prev) => ({
           ...prev,
@@ -371,6 +368,16 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
               ? prev.loanAmount
               : parsed.formData.loanAmount,
         }));
+
+        const initialStatuses = {};
+        for (const [k, v] of Object.entries(parsed.formData)) {
+          if (parsed.formData[`${k}_uploaded`] || (v && typeof v === "object" && (v.url || v.isExistingDoc))) {
+            initialStatuses[k] = "uploaded";
+          }
+        }
+        if (Object.keys(initialStatuses).length > 0) {
+          setDocUploadStatus((prev) => ({ ...prev, ...initialStatuses }));
+        }
       }
       if (typeof parsed?.currentStep === "number") {
         setCurrentStep(
@@ -386,16 +393,41 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist draft with throttling (so typing doesn't spam localStorage).
+  // Authoritative sync: rehydrate verified/uploaded documents from server on refresh
+  useEffect(() => {
+    if (!applicationId) return;
+    let isCancelled = false;
+
+    fetchLeadDocuments(applicationId, { partnerToken, isPartnerLoggedIn }).then((res) => {
+      if (!isCancelled && res.ok && Array.isArray(res.docs) && res.docs.length > 0) {
+        const { fields, statuses } = buildHydratedDocFields(res.docs);
+        setFormData((prev) => ({
+          ...prev,
+          ...fields,
+        }));
+        setDocUploadStatus((prev) => ({
+          ...prev,
+          ...statuses,
+        }));
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [applicationId, partnerToken, isPartnerLoggedIn]);
+
+  // Persist draft with throttling (including applicationId and uploaded doc descriptors)
   useEffect(() => {
     const t = setTimeout(() => {
       try {
         localStorage.setItem(
           loanDraftStorageKey,
           JSON.stringify({
+            applicationId,
             currentStep,
             maxStep,
-            formData: serializeDraftFormData(formData),
+            formData: serializeDraftWithDocs(formData),
           })
         );
       } catch (e) {
@@ -403,7 +435,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       }
     }, 600);
     return () => clearTimeout(t);
-  }, [formData, currentStep, maxStep]);
+  }, [formData, currentStep, maxStep, applicationId]);
 
   // Cleanup function to cancel pending requests
   useEffect(() => {
@@ -502,10 +534,26 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       if (res?.ok) {
         setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
         setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+        const uploadedUrl = res.uploadedUrl || res.doc?.url;
+        const isPdf = Boolean(
+          file.type?.includes("pdf") ||
+          file.name?.toLowerCase().endsWith(".pdf") ||
+          uploadedUrl?.toLowerCase().includes(".pdf")
+        );
+        const docObj = {
+          name: file.name,
+          size: file.size,
+          type: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+          url: uploadedUrl,
+          preview: uploadedUrl || (file instanceof Blob ? URL.createObjectURL(file) : undefined),
+          file: res.file || file,
+        };
         setFormData((prev) => ({
           ...prev,
-          [name]: res.file || file,
+          [name]: docObj,
           [`${name}_uploaded`]: true,
+          [`${name}_url`]: uploadedUrl,
+          [`${name}_name`]: file.name,
         }));
       } else {
         setDocUploadStatus((p) => ({ ...p, [name]: "failed" }));
@@ -931,15 +979,24 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         if (file) {
           const isUploadedEarly = Boolean(applicationId && formData[`${key}_uploaded`]);
           if (!isUploadedEarly) {
-            formDataToSend.append("docs", file);
-            formDataToSend.append("docTypes", type);
+            const rawFile = file instanceof File ? file : file?.file;
+            if (rawFile instanceof File) {
+              formDataToSend.append("docs", rawFile);
+              formDataToSend.append("docTypes", type);
+            }
           }
         }
       });
 
-      const pendingUploads = docsQueue.filter(
-        ({ file, key }) => file && !(applicationId && formData[`${key}_uploaded`])
-      );
+      const pendingUploads = docsQueue
+        .map(({ file, type, key }) => ({
+          file: file instanceof File ? file : file?.file,
+          type,
+          key,
+        }))
+        .filter(
+          ({ file, key }) => file instanceof File && !(applicationId && formData[`${key}_uploaded`])
+        );
       if (!checkFileSize(pendingUploads)) {
         setLoading(false);
         return;

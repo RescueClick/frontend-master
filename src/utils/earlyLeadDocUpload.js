@@ -50,12 +50,15 @@ export async function uploadLeadDocumentEarly({
       },
     });
 
+    const docObj = response.data?.document || response.data?.doc;
+    const uploadedUrl = docObj?.url || response.data?.uploadedUrl || "";
+
     return {
       ok: true,
       docType,
       file: compressedFile,
-      doc: response.data?.doc,
-      uploadedUrl: response.data?.doc?.url,
+      doc: docObj,
+      uploadedUrl,
     };
   } catch (err) {
     console.warn(

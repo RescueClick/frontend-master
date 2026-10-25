@@ -62,6 +62,11 @@ import {
   rmCompleteLoanFormUrl,
 } from "../../../../utils/rmLoanForm";
 import { buildCanonicalLoanPayload } from "../../../../utils/normalizeLoanPayload";
+import {
+  fetchLeadDocuments,
+  buildHydratedDocFields,
+  serializeDraftWithDocs,
+} from "../../../../utils/rehydrateLeadDocuments";
 
 const formatDocTypeName = (docType) => {
   const map = {
@@ -285,25 +290,37 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      if (documentModel && documentModel.startsWith("blob:")) {
-        URL.revokeObjectURL(documentModel);
+      const blobUrl = typeof documentModel === "string" ? documentModel : documentModel?.url;
+      if (blobUrl && blobUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(blobUrl);
       }
     };
   }, [documentModel]);
 
   const openDocumentPreview = (docValue) => {
     if (!docValue) return;
-    const url =
-      docValue?.preview
-        ? docValue.preview
-        : docValue instanceof File
-        ? URL.createObjectURL(docValue)
-        : "";
-    if (url) {
+    const file = docValue instanceof File ? docValue : docValue?.file;
+    const rawUrl = docValue?.preview
+      ? docValue.preview
+      : docValue?.url
+      ? docValue.url
+      : file instanceof File
+      ? URL.createObjectURL(file)
+      : typeof docValue === "string"
+      ? docValue
+      : "";
+    if (rawUrl) {
+      const isPdf = Boolean(
+        file?.type?.includes("pdf") ||
+        docValue?.type?.includes("pdf") ||
+        (file?.name || docValue?.name || "").toLowerCase().endsWith(".pdf") ||
+        rawUrl.toLowerCase().includes(".pdf")
+      );
       setdocumentModel({
-        url,
-        name: docValue?.name || "Document Preview",
-        type: docValue?.type || (docValue?.name?.toLowerCase().endsWith(".pdf") ? "application/pdf" : ""),
+        url: rawUrl,
+        name: file?.name || docValue?.name || "Document Preview",
+        type: isPdf ? "application/pdf" : (file?.type || docValue?.type || "image/jpeg"),
+        file,
       });
     }
   };
@@ -326,24 +343,27 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
     if (error) toast.error(error);
   }, [error]);
 
-  const serializeDraftFormData = (data) => {
-    const copy = { ...data };
-    // localStorage can't persist File objects; drop them so draft restore doesn't break.
-    for (const key of Object.keys(copy)) {
-      const v = copy[key];
-      if (v instanceof File) copy[key] = null;
-    }
-    return copy;
-  };
-
-  // Load draft from localStorage
+  // Load draft & restore uploaded documents from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(loanDraftStorageKey);
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed?.formData) {
+      if (parsed?.applicationId) {
+        setApplicationId(parsed.applicationId);
+      }
+      if (parsed?.formData && typeof parsed.formData === "object") {
         setFormData((prev) => ({ ...prev, ...parsed.formData }));
+
+        const initialStatuses = {};
+        for (const [k, v] of Object.entries(parsed.formData)) {
+          if (parsed.formData[`${k}_uploaded`] || (v && typeof v === "object" && (v.url || v.isExistingDoc))) {
+            initialStatuses[k] = "uploaded";
+          }
+        }
+        if (Object.keys(initialStatuses).length > 0) {
+          setDocUploadStatus((prev) => ({ ...prev, ...initialStatuses }));
+        }
       }
       if (typeof parsed?.currentStep === "number") {
         setCurrentStep(Math.max(0, Math.min(parsed.currentStep, steps.length - 1)));
@@ -357,16 +377,41 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist draft as the user progresses
+  // Authoritative sync: rehydrate verified/uploaded documents from server on refresh
+  useEffect(() => {
+    if (!applicationId) return;
+    let isCancelled = false;
+
+    fetchLeadDocuments(applicationId, { partnerToken, isPartnerLoggedIn }).then((res) => {
+      if (!isCancelled && res.ok && Array.isArray(res.docs) && res.docs.length > 0) {
+        const { fields, statuses } = buildHydratedDocFields(res.docs);
+        setFormData((prev) => ({
+          ...prev,
+          ...fields,
+        }));
+        setDocUploadStatus((prev) => ({
+          ...prev,
+          ...statuses,
+        }));
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [applicationId, partnerToken, isPartnerLoggedIn]);
+
+  // Persist draft as the user progresses (including applicationId and uploaded doc descriptors)
   useEffect(() => {
     const t = setTimeout(() => {
       try {
         localStorage.setItem(
           loanDraftStorageKey,
           JSON.stringify({
+            applicationId,
             currentStep,
             maxStep,
-            formData: serializeDraftFormData(formData),
+            formData: serializeDraftWithDocs(formData),
           })
         );
       } catch (e) {
@@ -374,7 +419,7 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [currentStep, maxStep, formData]);
+  }, [currentStep, maxStep, formData, applicationId]);
 
   const fileLike = (v) =>
     v instanceof File ||
@@ -660,10 +705,26 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
         if (res?.ok) {
           setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
           setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+          const uploadedUrl = res.uploadedUrl || res.doc?.url;
+          const isPdf = Boolean(
+            file.type?.includes("pdf") ||
+            file.name?.toLowerCase().endsWith(".pdf") ||
+            uploadedUrl?.toLowerCase().includes(".pdf")
+          );
+          const docObj = {
+            name: file.name,
+            size: file.size,
+            type: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+            url: uploadedUrl,
+            preview: uploadedUrl || (file instanceof Blob ? URL.createObjectURL(file) : undefined),
+            file: res.file || file,
+          };
           setFormData((prev) => ({
             ...prev,
-            [name]: res.file || file,
+            [name]: docObj,
             [`${name}_uploaded`]: true,
+            [`${name}_url`]: uploadedUrl,
+            [`${name}_name`]: file.name,
           }));
         } else {
           setDocUploadStatus((p) => ({ ...p, [name]: "failed" }));
@@ -879,15 +940,24 @@ const handleSubmit = async () => {
       if (file) {
         const isUploadedEarly = Boolean(applicationId && formData[`${key}_uploaded`]);
         if (!isUploadedEarly) {
-          formDataToSend.append("docs", file);
-          formDataToSend.append("docTypes", type);
+          const rawFile = file instanceof File ? file : file?.file;
+          if (rawFile instanceof File) {
+            formDataToSend.append("docs", rawFile);
+            formDataToSend.append("docTypes", type);
+          }
         }
       }
     });
 
-    const pendingUploads = docsQueue.filter(
-      ({ file, key }) => file && !(applicationId && formData[`${key}_uploaded`])
-    );
+    const pendingUploads = docsQueue
+      .map(({ file, type, key }) => ({
+        file: file instanceof File ? file : file?.file,
+        type,
+        key,
+      }))
+      .filter(
+        ({ file, key }) => file instanceof File && !(applicationId && formData[`${key}_uploaded`])
+      );
     if (!checkFileSize(pendingUploads)) {
       setLoading(false);
       return;
