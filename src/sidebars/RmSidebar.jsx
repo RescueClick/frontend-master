@@ -282,7 +282,7 @@ export default function RmSidebar() {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 p-2 sm:p-3 md:p-4 bg-gray-50 min-w-0">
+        <main className="flex-1 p-2 sm:p-3 md:p-4 bg-gray-50 overflow-y-auto min-w-0">
           <Suspense
             fallback={
               <DhanSourceLoader label="Loading page…" className="min-h-[50vh]" />
