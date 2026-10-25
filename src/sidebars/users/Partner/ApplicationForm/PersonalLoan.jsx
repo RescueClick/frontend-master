@@ -204,6 +204,8 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
   const [validationErrors, setValidationErrors] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [savedApplication, setSavedApplication] = useState(null);
+  const [docUploadProgress, setDocUploadProgress] = useState({});
+  const [docUploadStatus, setDocUploadStatus] = useState({});
   const [showPassword, setShowPassword] = useState({
     password: false,
     confirmPassword: false,
@@ -441,7 +443,32 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       ...prev,
       [name]: file,
     }));
-    uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: name, file });
+
+    if (applicationId) {
+      setDocUploadStatus((p) => ({ ...p, [name]: "uploading" }));
+      setDocUploadProgress((p) => ({ ...p, [name]: 15 }));
+
+      const res = await uploadLeadDocumentEarly({
+        applicationId,
+        partnerToken,
+        isPartnerLoggedIn,
+        fieldName: name,
+        file,
+        onProgress: (pct) => setDocUploadProgress((p) => ({ ...p, [name]: pct })),
+      });
+
+      if (res?.ok) {
+        setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
+        setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+        setFormData((prev) => ({
+          ...prev,
+          [name]: res.file || file,
+          [`${name}_uploaded`]: true,
+        }));
+      } else {
+        setDocUploadStatus((p) => ({ ...p, [name]: "failed" }));
+      }
+    }
   };
 
   const handleFileChangeAddressProofs = async (e) => {
@@ -466,14 +493,42 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       ...prev,
       addressProof: file,
     }));
-    uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: "addressProof", file });
+
+    if (applicationId) {
+      setDocUploadStatus((p) => ({ ...p, addressProof: "uploading" }));
+      setDocUploadProgress((p) => ({ ...p, addressProof: 15 }));
+
+      const res = await uploadLeadDocumentEarly({
+        applicationId,
+        partnerToken,
+        isPartnerLoggedIn,
+        fieldName: "addressProof",
+        file,
+        onProgress: (pct) => setDocUploadProgress((p) => ({ ...p, addressProof: pct })),
+      });
+
+      if (res?.ok) {
+        setDocUploadStatus((p) => ({ ...p, addressProof: "uploaded" }));
+        setDocUploadProgress((p) => ({ ...p, addressProof: 100 }));
+        setFormData((prev) => ({
+          ...prev,
+          addressProof: res.file || file,
+          addressProof_uploaded: true,
+        }));
+      } else {
+        setDocUploadStatus((p) => ({ ...p, addressProof: "failed" }));
+      }
+    }
   };
 
   const handleFileRemove = (fieldName) => {
     setFormData((prev) => ({
       ...prev,
       [fieldName]: null,
+      [`${fieldName}_uploaded`]: false,
     }));
+    setDocUploadStatus((p) => ({ ...p, [fieldName]: "idle" }));
+    setDocUploadProgress((p) => ({ ...p, [fieldName]: 0 }));
     const fileInput = document.querySelector(`input[name="${fieldName}"]`);
     if (fileInput) fileInput.value = "";
   };
@@ -482,6 +537,39 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     fieldErrors[field] ? (
       <p className="text-xs text-red-600 mt-1">{fieldErrors[field]}</p>
     ) : null;
+
+  const renderDocUploadBadge = (fieldName) => {
+    const status = docUploadStatus[fieldName] || (formData[`${fieldName}_uploaded`] ? "uploaded" : "idle");
+    const progress = docUploadProgress[fieldName] || 0;
+    if (status === "uploading") {
+      return (
+        <div className="mt-1.5 flex items-center gap-2">
+          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-600 transition-all duration-200"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <span className="text-[11px] text-blue-700 font-semibold whitespace-nowrap">{progress}%</span>
+        </div>
+      );
+    }
+    if (status === "uploaded" || formData[`${fieldName}_uploaded`]) {
+      return (
+        <span className="text-[11px] text-green-700 font-medium bg-green-50 border border-green-200 px-2 py-0.5 rounded inline-flex items-center gap-1 mt-1">
+          ✓ Uploaded & Secured
+        </span>
+      );
+    }
+    if (status === "failed") {
+      return (
+        <span className="text-[11px] text-red-600 font-medium inline-flex items-center gap-1 mt-1">
+          ⚠️ Upload retry pending
+        </span>
+      );
+    }
+    return null;
+  };
 
   const handleSameAddressChange = (e) => {
     setSameAddress(e.target.checked);
@@ -814,43 +902,53 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       const formDataToSend = new FormData();
       formDataToSend.append("data", JSON.stringify(applicationData));
 
-      // Append files
+      // Append files (only upload docs that were not already sent early via background upload)
       const applicantPhoto = formData.passportPhoto || formData.selfie;
       const docsQueue = [
-        { file: formData.aadharFront, type: "AADHAR_FRONT" },
-        { file: formData.aadharBack, type: "AADHAR_BACK" },
-        { file: formData.panCard, type: "PAN" },
-        { file: applicantPhoto, type: "PHOTO" },
-        { file: formData.addressProof, type: "ADDRESS_PROOF" },
-        { file: formData.otherDocument, type: "OTHER_DOCS" },
-        { file: formData.companyIdCard, type: "COMPANY_ID_CARD" },
-        { file: formData.salarySlip1, type: "SALARY_SLIP_1" },
-        { file: formData.salarySlip2, type: "SALARY_SLIP_2" },
-        { file: formData.salarySlip3, type: "SALARY_SLIP_3" },
-        { file: formData.form16_26as, type: "FORM_16_26AS" },
-        { file: formData.bankStatement1, type: "BANK_STATEMENT_1" },
-        { file: formData.bankStatement2, type: "BANK_STATEMENT_2" },
-        { file: formData.allotmentLetter, type: "ALLOTMENT_LETTER" },
+        { file: formData.aadharFront, type: "AADHAR_FRONT", key: "aadharFront" },
+        { file: formData.aadharBack, type: "AADHAR_BACK", key: "aadharBack" },
+        { file: formData.panCard, type: "PAN", key: "panCard" },
+        { file: applicantPhoto, type: "PHOTO", key: formData.passportPhoto ? "passportPhoto" : "selfie" },
+        { file: formData.addressProof, type: "ADDRESS_PROOF", key: "addressProof" },
+        { file: formData.otherDocument, type: "OTHER_DOCS", key: "otherDocument" },
+        { file: formData.companyIdCard, type: "COMPANY_ID_CARD", key: "companyIdCard" },
+        { file: formData.salarySlip1, type: "SALARY_SLIP_1", key: "salarySlip1" },
+        { file: formData.salarySlip2, type: "SALARY_SLIP_2", key: "salarySlip2" },
+        { file: formData.salarySlip3, type: "SALARY_SLIP_3", key: "salarySlip3" },
+        { file: formData.form16_26as, type: "FORM_16_26AS", key: "form16_26as" },
+        { file: formData.bankStatement1, type: "BANK_STATEMENT_1", key: "bankStatement1" },
+        { file: formData.bankStatement2, type: "BANK_STATEMENT_2", key: "bankStatement2" },
+        { file: formData.allotmentLetter, type: "ALLOTMENT_LETTER", key: "allotmentLetter" },
         {
           file: formData.newPropertyPaymentReceipts,
           type: "NEW_PROPERTY_PAYMENT_RECEIPTS",
+          key: "newPropertyPaymentReceipts",
         },
-        { file: formData.titleDeeds, type: "TITLE_DEEDS" },
+        { file: formData.titleDeeds, type: "TITLE_DEEDS", key: "titleDeeds" },
         {
           file: formData.resalePaymentReceipts,
           type: "RESALE_PAYMENT_RECEIPTS",
+          key: "resalePaymentReceipts",
         },
-        { file: formData.agreementCopy, type: "AGREEMENT_COPY" },
+        { file: formData.agreementCopy, type: "AGREEMENT_COPY", key: "agreementCopy" },
       ];
 
-      docsQueue.forEach(({ file, type }) => {
+      // If already uploaded in background to lead, backend preserves existing docs on submit.
+      // We only append pending files to make final submission fast (<1 second).
+      docsQueue.forEach(({ file, type, key }) => {
         if (file) {
-          formDataToSend.append("docs", file);
-          formDataToSend.append("docTypes", type);
+          const isUploadedEarly = Boolean(applicationId && formData[`${key}_uploaded`]);
+          if (!isUploadedEarly) {
+            formDataToSend.append("docs", file);
+            formDataToSend.append("docTypes", type);
+          }
         }
       });
 
-      if (!checkFileSize(docsQueue)) {
+      const pendingUploads = docsQueue.filter(
+        ({ file, key }) => file && !(applicationId && formData[`${key}_uploaded`])
+      );
+      if (!checkFileSize(pendingUploads)) {
         setLoading(false);
         return;
       }
@@ -1978,6 +2076,8 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       onChange={handleFileChange}
                       onRemove={handleFileRemove}
                       error={renderError(doc.name)}
+                      uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
+                      uploadProgress={docUploadProgress[doc.name] || 0}
                       onPreview={() =>
                         setdocumentModel(
                           formData[doc.name]?.preview

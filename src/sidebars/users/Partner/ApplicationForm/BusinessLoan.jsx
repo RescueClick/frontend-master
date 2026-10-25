@@ -213,6 +213,8 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
   const [successMessage, setSuccessMessage] = useState("");
   const [savedApplication, setSavedApplication] = useState(null);
   const [isCheckingExistence, setIsCheckingExistence] = useState(false);
+  const [docUploadProgress, setDocUploadProgress] = useState({});
+  const [docUploadStatus, setDocUploadStatus] = useState({});
   const abortControllerRef = useRef(null);
 
   const { resumeMeta, loadingResume, resumeError } = useRmLoanFormResume({
@@ -615,14 +617,41 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
       }
       return next;
     });
-    uploadLeadDocumentEarly({ applicationId, partnerToken, isPartnerLoggedIn, fieldName: name, file });
+
+    if (applicationId) {
+      setDocUploadStatus((p) => ({ ...p, [name]: "uploading" }));
+      setDocUploadProgress((p) => ({ ...p, [name]: 15 }));
+      uploadLeadDocumentEarly({
+        applicationId,
+        partnerToken,
+        isPartnerLoggedIn,
+        fieldName: name,
+        file,
+        onProgress: (pct) => setDocUploadProgress((p) => ({ ...p, [name]: pct })),
+      }).then((res) => {
+        if (res?.ok) {
+          setDocUploadStatus((p) => ({ ...p, [name]: "uploaded" }));
+          setDocUploadProgress((p) => ({ ...p, [name]: 100 }));
+          setFormData((prev) => ({
+            ...prev,
+            [name]: res.file || file,
+            [`${name}_uploaded`]: true,
+          }));
+        } else {
+          setDocUploadStatus((p) => ({ ...p, [name]: "failed" }));
+        }
+      });
+    }
   };
 
   const handleFileRemove = (fieldName) => {
     setFormData((prev) => ({
       ...prev,
       [fieldName]: null,
+      [`${fieldName}_uploaded`]: false,
     }));
+    setDocUploadStatus((p) => ({ ...p, [fieldName]: "idle" }));
+    setDocUploadProgress((p) => ({ ...p, [fieldName]: 0 }));
     const fileInput = document.querySelector(`input[name="${fieldName}"]`);
     if (fileInput) fileInput.value = "";
   };
@@ -796,35 +825,42 @@ const handleSubmit = async () => {
 
     const applicantPhoto = formData.passportPhoto || formData.selfie;
     const docsQueue = [
-      { file: formData.aadharFront, type: "AADHAR_FRONT" },
-      { file: formData.aadharBack, type: "AADHAR_BACK" },
-      { file: formData.otherDocs, type: "OTHER_DOCS" },
-      { file: formData.panCard, type: "PAN" },
-      { file: applicantPhoto, type: "PHOTO" },
-      { file: formData.addressProof, type: "ADDRESS_PROOF" },
-      { file: formData.shopPhoto, type: "SHOP_PHOTO" },
-      { file: formData.shopAct, type: "SHOP_ACT" },
-      { file: formData.udhyamAadhar, type: "UDHYAM_AADHAR" },
-      { file: formData.itr, type: "ITR" },
-      { file: formData.gstDoc, type: "GST_DOC" },
-      { file: formData.bankStatementFile1, type: "BANK_STATEMENT_1" },
-      { file: formData.bankStatementFile2, type: "BANK_STATEMENT_2" },
-      { file: formData.businessOtherDocs, type: "BUSINESS_OTHER_DOCS" },
+      { file: formData.aadharFront, type: "AADHAR_FRONT", key: "aadharFront" },
+      { file: formData.aadharBack, type: "AADHAR_BACK", key: "aadharBack" },
+      { file: formData.otherDocs, type: "OTHER_DOCS", key: "otherDocs" },
+      { file: formData.panCard, type: "PAN", key: "panCard" },
+      { file: applicantPhoto, type: "PHOTO", key: formData.passportPhoto ? "passportPhoto" : "selfie" },
+      { file: formData.addressProof, type: "ADDRESS_PROOF", key: "addressProof" },
+      { file: formData.shopPhoto, type: "SHOP_PHOTO", key: "shopPhoto" },
+      { file: formData.shopAct, type: "SHOP_ACT", key: "shopAct" },
+      { file: formData.udhyamAadhar, type: "UDHYAM_AADHAR", key: "udhyamAadhar" },
+      { file: formData.itr, type: "ITR", key: "itr" },
+      { file: formData.gstDoc, type: "GST_DOC", key: "gstDoc" },
+      { file: formData.bankStatementFile1, type: "BANK_STATEMENT_1", key: "bankStatementFile1" },
+      { file: formData.bankStatementFile2, type: "BANK_STATEMENT_2", key: "bankStatementFile2" },
+      { file: formData.businessOtherDocs, type: "BUSINESS_OTHER_DOCS", key: "businessOtherDocs" },
       // Co-applicant docs (if any)
-      { file: formData.coApplicantAadharFront, type: "CO_APPLICANT_AADHAR_FRONT" },
-      { file: formData.coApplicantAadharBack, type: "CO_APPLICANT_AADHAR_BACK" },
-      { file: formData.coApplicantPan, type: "CO_APPLICANT_PAN" },
-      { file: formData.coApplicantSelfie, type: "CO_APPLICANT_SELFIE" },
+      { file: formData.coApplicantAadharFront, type: "CO_APPLICANT_AADHAR_FRONT", key: "coApplicantAadharFront" },
+      { file: formData.coApplicantAadharBack, type: "CO_APPLICANT_AADHAR_BACK", key: "coApplicantAadharBack" },
+      { file: formData.coApplicantPan, type: "CO_APPLICANT_PAN", key: "coApplicantPan" },
+      { file: formData.coApplicantSelfie, type: "CO_APPLICANT_SELFIE", key: "coApplicantSelfie" },
     ];
 
-    docsQueue.forEach(({ file, type }) => {
+    // Backend retains existing docs on save; we only append pending files for instant sub-second submit
+    docsQueue.forEach(({ file, type, key }) => {
       if (file) {
-        formDataToSend.append("docs", file);
-        formDataToSend.append("docTypes", type);
+        const isUploadedEarly = Boolean(applicationId && formData[`${key}_uploaded`]);
+        if (!isUploadedEarly) {
+          formDataToSend.append("docs", file);
+          formDataToSend.append("docTypes", type);
+        }
       }
     });
 
-    if (!checkFileSize(docsQueue)) {
+    const pendingUploads = docsQueue.filter(
+      ({ file, key }) => file && !(applicationId && formData[`${key}_uploaded`])
+    );
+    if (!checkFileSize(pendingUploads)) {
       setLoading(false);
       return;
     }
@@ -1985,6 +2021,8 @@ const handleSubmit = async () => {
                     onChange={handleFileChange}
                     onRemove={handleFileRemove}
                     error={renderError(doc.name)}
+                    uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
+                    uploadProgress={docUploadProgress[doc.name] || 0}
                     onPreview={() => openDocumentPreview(formData[doc.name])}
                   />
                 ))}

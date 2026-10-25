@@ -1,12 +1,13 @@
 import axios from "axios";
 import { backendurl } from "../feature/urldata";
 import { loanFieldToApiDocType } from "./loanDocumentUpload";
+import { compressImageIfApplicable } from "./compressImage";
 
 /**
- * Upload a picked partner loan document straight to the LEAD created on step 1,
- * so the RM receives the file with its documents even if the partner never submits.
- * Final submit still re-sends every file and replaces the doc list.
- * Non-fatal: never throws.
+ * Upload a picked loan document immediately to the LEAD/application in the background.
+ * Uses client-side image compression to reduce 5MB-10MB photos to ~500KB.
+ * Supports both Partner (authenticated) and Public/Guest applicants.
+ * Returns the compressed file and server upload status.
  */
 export async function uploadLeadDocumentEarly({
   applicationId,
@@ -14,26 +15,53 @@ export async function uploadLeadDocumentEarly({
   isPartnerLoggedIn,
   fieldName,
   file,
+  onProgress,
 }) {
-  if (!applicationId || !partnerToken || !isPartnerLoggedIn || !file) {
-    return { ok: false, skipped: true };
+  if (!applicationId || !file) {
+    return { ok: false, skipped: true, file };
   }
+
   try {
+    // 1. Compress image in browser if applicable
+    const compressedFile = await compressImageIfApplicable(file);
+
     const docType = loanFieldToApiDocType(fieldName);
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", compressedFile);
     fd.append("docType", docType);
-    await axios.post(
-      `${backendurl}/partner/applications/${applicationId}/documents?docType=${encodeURIComponent(docType)}`,
-      fd,
-      { headers: { Authorization: `Bearer ${partnerToken}` }, timeout: 120000 }
-    );
-    return { ok: true, docType };
+
+    const headers = {};
+    if (isPartnerLoggedIn && partnerToken) {
+      headers.Authorization = `Bearer ${partnerToken}`;
+    }
+
+    const endpoint = isPartnerLoggedIn && partnerToken
+      ? `${backendurl}/partner/applications/${applicationId}/documents?docType=${encodeURIComponent(docType)}`
+      : `${backendurl}/partner/public/applications/${applicationId}/documents?docType=${encodeURIComponent(docType)}`;
+
+    const response = await axios.post(endpoint, fd, {
+      headers,
+      timeout: 60000,
+      onUploadProgress: (progressEvent) => {
+        if (typeof onProgress === "function" && progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percent);
+        }
+      },
+    });
+
+    return {
+      ok: true,
+      docType,
+      file: compressedFile,
+      doc: response.data?.doc,
+      uploadedUrl: response.data?.doc?.url,
+    };
   } catch (err) {
     console.warn(
-      `[earlyLeadDoc] ${fieldName} not synced to RM yet:`,
+      `[earlyLeadDoc] ${fieldName} background sync error:`,
       err?.response?.data?.message || err?.message
     );
-    return { ok: false, error: err };
+    return { ok: false, error: err, file };
   }
 }

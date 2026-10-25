@@ -6,3 +6,5 @@ export function normalizeMobileDigits(value) {
   if (!d) return "";
   return d.length > 10 ? d.slice(-10) : d.slice(0, 10);
 }
+
+export const normalizePhoneToTen = normalizeMobileDigits;
