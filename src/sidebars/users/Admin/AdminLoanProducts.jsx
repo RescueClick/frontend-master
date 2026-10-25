@@ -345,6 +345,40 @@ export default function AdminLoanProducts() {
     });
   };
 
+  // Quick toggle field required / optional
+  const handleToggleFieldRequired = (index) => {
+    setFormData((prev) => {
+      const list = [...prev.customFields];
+      const isReq = Boolean(list[index].validation?.required);
+      list[index] = {
+        ...list[index],
+        validation: {
+          ...list[index].validation,
+          required: !isReq,
+        },
+      };
+      return { ...prev, customFields: list };
+    });
+    const fieldName = formData.customFields[index]?.label;
+    const nowReq = !Boolean(formData.customFields[index]?.validation?.required);
+    showToast(`'${fieldName}' is now ${nowReq ? "Mandatory (Required)" : "Optional (Not Required)"}`);
+  };
+
+  // Quick toggle doc required / optional
+  const handleToggleDocRequired = (index) => {
+    setFormData((prev) => {
+      const list = [...prev.requiredDocuments];
+      list[index] = {
+        ...list[index],
+        required: !Boolean(list[index].required),
+      };
+      return { ...prev, requiredDocuments: list };
+    });
+    const docName = formData.requiredDocuments[index]?.label;
+    const nowReq = !Boolean(formData.requiredDocuments[index]?.required);
+    showToast(`'${docName}' is now ${nowReq ? "Mandatory" : "Optional"}`);
+  };
+
   // Remove field
   const handleRemoveCustomField = (index) => {
     const fieldName = formData.customFields[index]?.label;
@@ -997,16 +1031,34 @@ export default function AdminLoanProducts() {
                                 </div>
                               )}
 
-                              <div className="flex items-center gap-3 pt-2">
-                                <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={fieldEditDraft.required}
-                                    onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, required: e.target.checked })}
-                                    className="w-4 h-4 text-emerald-600 rounded"
-                                  />
-                                  Mandatory / Required Field (Customer must fill to submit)
+                              <div className="pt-3 border-t border-emerald-200">
+                                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2">
+                                  Field Requirement (Mandatory vs Optional):
                                 </label>
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => setFieldEditDraft({ ...fieldEditDraft, required: true })}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer border transition ${
+                                      fieldEditDraft.required
+                                        ? "bg-red-50 text-red-700 border-red-300 ring-2 ring-red-400 font-black shadow-xs"
+                                        : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    <CheckCircle2 size={15} /> Mandatory / Required (Customer must fill)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setFieldEditDraft({ ...fieldEditDraft, required: false })}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer border transition ${
+                                      !fieldEditDraft.required
+                                        ? "bg-gray-100 text-gray-800 border-gray-400 ring-2 ring-gray-400 font-black shadow-xs"
+                                        : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    <XCircle size={15} /> Optional / Not Required (Can be skipped)
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -1048,15 +1100,20 @@ export default function AdminLoanProducts() {
                                   <span className="text-xs font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
                                     {field.fieldKey}
                                   </span>
-                                  {field.validation?.required ? (
-                                    <span className="text-[10px] font-extrabold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full uppercase">
-                                      Required
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full uppercase">
-                                      Optional
-                                    </span>
-                                  )}
+
+                                  {/* 1-CLICK TOGGLE BUTTON */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleFieldRequired(realIndex)}
+                                    title="Click to toggle Mandatory / Optional"
+                                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide cursor-pointer border transition-all ${
+                                      field.validation?.required
+                                        ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 shadow-xs"
+                                        : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                                    }`}
+                                  >
+                                    {field.validation?.required ? "● Mandatory (Click to make Optional)" : "○ Optional (Click to make Mandatory)"}
+                                  </button>
                                   <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
                                     Step {field.stepIndex !== undefined ? field.stepIndex : 0}
                                   </span>
@@ -1309,15 +1366,18 @@ export default function AdminLoanProducts() {
                                     <span className="text-xs font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
                                       {doc.docType}
                                     </span>
-                                    {doc.required ? (
-                                      <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full uppercase">
-                                        Mandatory
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full uppercase">
-                                        Optional
-                                      </span>
-                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleDocRequired(idx)}
+                                      title="Click to toggle Mandatory / Optional"
+                                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide cursor-pointer border transition-all ${
+                                        doc.required
+                                          ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                                          : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                                      }`}
+                                    >
+                                      {doc.required ? "● Mandatory (Click to make Optional)" : "○ Optional (Click to make Mandatory)"}
+                                    </button>
                                   </div>
                                 </div>
                               </div>
