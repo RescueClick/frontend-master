@@ -25,6 +25,7 @@ import {
   Search,
   QrCode,
   Target,
+  Layers,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -145,6 +146,7 @@ const AdminSideBar = () => {
     { name: "Banners", icon: Sparkles, path: "/admin/banner", highlight: true },
 
     // Banking & Compliance
+    { name: "Loan Products", icon: Layers, path: "/admin/loan-products", highlight: true },
     { name: "Add Bank", icon: Building2, path: "/admin/banks", highlight: true },
     { name: "Find Bank RM", icon: Search, path: "/admin/find-bank-rm" },
     { name: "CIBIL Audit", icon: Shield, path: "/admin/cibil-audit", highlight: true },
