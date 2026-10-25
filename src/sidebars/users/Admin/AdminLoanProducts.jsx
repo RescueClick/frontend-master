@@ -29,45 +29,175 @@ import {
   Info,
   Clock,
   AlertTriangle,
+  Camera,
+  UploadCloud,
+  File,
+  PenTool,
+  Calendar,
+  CreditCard,
+  Hash,
+  IndianRupee,
+  Phone,
+  Mail,
+  Type,
+  AlignLeft,
+  FolderPlus,
+  ArrowLeft,
+  ArrowRight,
+  Edit3,
 } from "lucide-react";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 
 const FIELD_TYPES = [
-  { value: "text", label: "Text Field" },
-  { value: "number", label: "Number / Quantity" },
-  { value: "currency", label: "Currency / Amount (₹)" },
-  { value: "phone", label: "📞 Phone / Mobile" },
-  { value: "email", label: "📧 Email Address" },
-  { value: "pan", label: "💳 PAN Card" },
-  { value: "aadhaar", label: "🆔 Aadhaar Number" },
-  { value: "select", label: "📋 Dropdown List" },
-  { value: "radio", label: "🔘 Single Choice" },
-  { value: "date", label: "📅 Date Picker" },
-  { value: "textarea", label: "📝 Long Address" },
+  {
+    value: "text",
+    label: "Short Text",
+    icon: "🔤",
+    category: "Text & Numbers",
+    desc: "Single-line text (e.g. Applicant Name, City, Father's Name)",
+    badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+  {
+    value: "textarea",
+    label: "Long Address / Notes",
+    icon: "📝",
+    category: "Text & Numbers",
+    desc: "Multi-line text for detailed full addresses & remarks",
+    badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  },
+  {
+    value: "phone",
+    label: "Phone / Mobile",
+    icon: "📞",
+    category: "Identity & Contact",
+    desc: "10-digit mobile number with 🇮🇳 +91 verification",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  {
+    value: "email",
+    label: "Email Address",
+    icon: "📧",
+    category: "Identity & Contact",
+    desc: "Valid email address with @ check",
+    badgeColor: "bg-sky-50 text-sky-700 border-sky-200",
+  },
+  {
+    value: "currency",
+    label: "Currency / Amount (₹)",
+    icon: "💰",
+    category: "Text & Numbers",
+    desc: "Indian Rupee (₹) amount with comma formatting",
+    badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
+  },
+  {
+    value: "number",
+    label: "Number / Quantity",
+    icon: "🔢",
+    category: "Text & Numbers",
+    desc: "Numeric digits only (e.g. Dependents, Age, Years)",
+    badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
+  },
+  {
+    value: "date",
+    label: "Date Picker",
+    icon: "📅",
+    category: "Text & Numbers",
+    desc: "Calendar date (e.g. Date of Birth, Work Since)",
+    badgeColor: "bg-pink-50 text-pink-700 border-pink-200",
+  },
+  {
+    value: "pan",
+    label: "PAN Card",
+    icon: "💳",
+    category: "Identity & Contact",
+    desc: "10-character PAN number with auto-uppercase (ABCDE1234F)",
+    badgeColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  },
+  {
+    value: "aadhaar",
+    label: "Aadhaar Number",
+    icon: "🆔",
+    category: "Identity & Contact",
+    desc: "12-digit Indian Aadhaar card number",
+    badgeColor: "bg-teal-50 text-teal-700 border-teal-200",
+  },
+  {
+    value: "image",
+    label: "Photo / Image Upload",
+    icon: "📸",
+    category: "Uploads & Media",
+    desc: "Camera & gallery photo upload (Selfie, Shop, Cheque, Asset)",
+    badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
+  },
+  {
+    value: "file",
+    label: "Document / PDF File",
+    icon: "📄",
+    category: "Uploads & Media",
+    desc: "Upload PDF or document file (Bank statement, salary slips)",
+    badgeColor: "bg-orange-50 text-orange-700 border-orange-200",
+  },
+  {
+    value: "signature",
+    label: "Digital Signature",
+    icon: "✍️",
+    category: "Uploads & Media",
+    desc: "Customer draws signature on screen or uploads signature photo",
+    badgeColor: "bg-violet-50 text-violet-700 border-violet-200",
+  },
+  {
+    value: "select",
+    label: "Dropdown Menu",
+    icon: "📋",
+    category: "Choices & Agreements",
+    desc: "Select one option from a clean dropdown list",
+    badgeColor: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  },
+  {
+    value: "radio",
+    label: "Single Choice (Radio)",
+    icon: "🔘",
+    category: "Choices & Agreements",
+    desc: "Click one option among radio buttons (e.g. Yes/No)",
+    badgeColor: "bg-lime-50 text-lime-700 border-lime-200",
+  },
+  {
+    value: "checkbox",
+    label: "Checkbox / Toggle",
+    icon: "☑️",
+    category: "Choices & Agreements",
+    desc: "Yes/No confirmation checkbox or declaration agreement",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
 ];
 
+const getFieldTypeMeta = (type) => {
+  return (
+    FIELD_TYPES.find((f) => f.value === type) || {
+      value: type,
+      label: type || "Short Text",
+      icon: "🔤",
+      category: "Text & Numbers",
+      desc: "Input field",
+      badgeColor: "bg-gray-100 text-gray-700 border-gray-200",
+    }
+  );
+};
+
 const getFieldTypeLabel = (type) => {
-  switch (type) {
-    case "number": return "🔢 Number";
-    case "phone": return "📞 Phone";
-    case "email": return "📧 Email";
-    case "pan": return "💳 PAN";
-    case "aadhaar": return "🆔 Aadhaar";
-    case "select": return "📋 Dropdown";
-    case "radio": return "🔘 Choice";
-    case "date": return "📅 Date";
-    case "textarea": return "📝 Address";
-    default: return "🔤 Text";
-  }
+  const meta = getFieldTypeMeta(type);
+  return `${meta.icon} ${meta.label}`;
 };
 
 const DEFAULT_STEPS = [
-  { stepIndex: 0, title: "1. Personal & KYC", icon: "👤" },
-  { stepIndex: 1, title: "2. Address", icon: "🏠" },
-  { stepIndex: 2, title: "3. Income & Job", icon: "💼" },
-  { stepIndex: 3, title: "4. Loan & Bank", icon: "🏦" },
+  { stepIndex: 0, title: "1. Personal & KYC", icon: "👤", description: "Basic personal & contact information" },
+  { stepIndex: 1, title: "2. Address", icon: "🏠", description: "Current and permanent address" },
+  { stepIndex: 2, title: "3. Income & Job", icon: "💼", description: "Income, employer, and banking details" },
+  { stepIndex: 3, title: "4. Loan & Bank", icon: "🏦", description: "Required loan amount and banking" },
 ];
+
+const SECTION_ICONS = ["👤", "🏠", "💼", "🏦", "🚗", "🏡", "📄", "📑", "👥", "💳", "🛒", "🏢", "📋", "📍", "🛡️", "💰", "🎓", "💍"];
 
 export default function AdminLoanProducts() {
   const [products, setProducts] = useState([]);
@@ -136,6 +266,19 @@ export default function AdminLoanProducts() {
     label: "",
     required: true,
   });
+
+  // Section Management State (Full CRUD)
+  const [isAddingSection, setIsAddingSection] = useState(false);
+  const [newSectionTitle, setNewSectionTitle] = useState("");
+  const [newSectionIcon, setNewSectionIcon] = useState("📁");
+
+  const [editingSectionIndex, setEditingSectionIndex] = useState(null);
+  const [editSectionTitle, setEditSectionTitle] = useState("");
+  const [editSectionIcon, setEditSectionIcon] = useState("📋");
+
+  // Visual Answer Type Picker Modal
+  const [showTypePickerModal, setShowTypePickerModal] = useState(false);
+  const [typePickerTarget, setTypePickerTarget] = useState("new"); // "new" or "edit"
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -302,6 +445,138 @@ export default function AdminLoanProducts() {
     }
   };
 
+  const currentSteps = formData.steps && formData.steps.length > 0 ? formData.steps : DEFAULT_STEPS;
+
+  // ==================== SECTION CRUD OPERATIONS ====================
+  const handleCreateSection = () => {
+    if (!newSectionTitle.trim()) {
+      showToast("Please enter a section title", "error");
+      return;
+    }
+    const nextIndex = currentSteps.length;
+    const cleanTitle = newSectionTitle.trim().replace(/^\d+\.\s*/, "");
+    const newSection = {
+      stepIndex: nextIndex,
+      title: `${nextIndex + 1}. ${cleanTitle}`,
+      icon: newSectionIcon || "📁",
+      description: "",
+    };
+    const updatedSteps = [...currentSteps, newSection];
+    setFormData((prev) => ({
+      ...prev,
+      steps: updatedSteps,
+    }));
+    setNewSectionTitle("");
+    setNewSectionIcon("📁");
+    setIsAddingSection(false);
+    setSelectedStepFilter(String(nextIndex));
+    setNewField((prev) => ({ ...prev, stepIndex: nextIndex }));
+    showToast(`Section '${newSection.title}' created!`);
+  };
+
+  const handleStartEditSection = (index) => {
+    const target = currentSteps[index];
+    setEditingSectionIndex(index);
+    setEditSectionTitle(target.title || "");
+    setEditSectionIcon(target.icon || "📋");
+  };
+
+  const handleSaveEditSection = () => {
+    if (!editSectionTitle.trim()) {
+      showToast("Section title cannot be empty", "error");
+      return;
+    }
+    const updatedSteps = currentSteps.map((step, idx) =>
+      idx === editingSectionIndex
+        ? { ...step, title: editSectionTitle.trim(), icon: editSectionIcon }
+        : step
+    );
+    setFormData((prev) => ({
+      ...prev,
+      steps: updatedSteps,
+    }));
+    setEditingSectionIndex(null);
+    showToast("Section updated!");
+  };
+
+  const handleDeleteSection = (indexToDelete) => {
+    if (currentSteps.length <= 1) {
+      showToast("You must keep at least one section in the form.", "error");
+      return;
+    }
+    const sectionTitle = currentSteps[indexToDelete]?.title;
+    if (
+      !window.confirm(
+        `Delete section '${sectionTitle}'? Any questions inside this section will be safely moved to Section 1 so you don't lose them.`
+      )
+    ) {
+      return;
+    }
+
+    // Safely reassign any fields in this section to step 0
+    const updatedFields = formData.customFields.map((f) => {
+      if (f.stepIndex === indexToDelete) {
+        return { ...f, stepIndex: 0 };
+      } else if (f.stepIndex > indexToDelete) {
+        return { ...f, stepIndex: f.stepIndex - 1 };
+      }
+      return f;
+    });
+
+    // Remove section and re-index
+    const updatedSteps = currentSteps
+      .filter((_, idx) => idx !== indexToDelete)
+      .map((s, idx) => ({ ...s, stepIndex: idx }));
+
+    setFormData((prev) => ({
+      ...prev,
+      steps: updatedSteps,
+      customFields: updatedFields,
+    }));
+
+    if (selectedStepFilter === String(indexToDelete)) {
+      setSelectedStepFilter("ALL");
+    } else if (Number(selectedStepFilter) > indexToDelete) {
+      setSelectedStepFilter(String(Number(selectedStepFilter) - 1));
+    }
+    showToast(`Section '${sectionTitle}' deleted.`);
+  };
+
+  const handleMoveSection = (index, direction) => {
+    const targetIndex = direction === "left" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= currentSteps.length) return;
+
+    const newSteps = [...currentSteps];
+    const temp = newSteps[index];
+    newSteps[index] = newSteps[targetIndex];
+    newSteps[targetIndex] = temp;
+
+    // Re-index stepIndex
+    const reindexedSteps = newSteps.map((s, idx) => ({ ...s, stepIndex: idx }));
+
+    // Re-map field stepIndices
+    const updatedFields = formData.customFields.map((f) => {
+      if (f.stepIndex === index) {
+        return { ...f, stepIndex: targetIndex };
+      } else if (f.stepIndex === targetIndex) {
+        return { ...f, stepIndex: index };
+      }
+      return f;
+    });
+
+    setFormData((prev) => ({
+      ...prev,
+      steps: reindexedSteps,
+      customFields: updatedFields,
+    }));
+
+    if (selectedStepFilter === String(index)) {
+      setSelectedStepFilter(String(targetIndex));
+    } else if (selectedStepFilter === String(targetIndex)) {
+      setSelectedStepFilter(String(index));
+    }
+  };
+
   // ==================== FIELD CRUD OPERATIONS ====================
 
   // Start editing a field
@@ -322,10 +597,16 @@ export default function AdminLoanProducts() {
 
   // Save the edited field
   const handleSaveEditedField = () => {
-    if (!fieldEditDraft.label.trim() || !fieldEditDraft.fieldKey.trim()) {
-      showToast("Field label and key are required", "error");
+    if (!fieldEditDraft.label.trim()) {
+      showToast("Question label is required", "error");
       return;
     }
+
+    const autoKey = (fieldEditDraft.fieldKey || fieldEditDraft.label)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9]/g, "");
+    const formattedKey = autoKey || `field_${Date.now()}`;
 
     const optionsArray = fieldEditDraft.options
       ? fieldEditDraft.options
@@ -336,9 +617,9 @@ export default function AdminLoanProducts() {
       : [];
 
     const updatedField = {
-      fieldKey: fieldEditDraft.fieldKey.trim().replace(/\s+/g, ""),
+      fieldKey: formattedKey,
       label: fieldEditDraft.label.trim(),
-      fieldType: fieldEditDraft.fieldType,
+      fieldType: fieldEditDraft.fieldType || "text",
       placeholder: fieldEditDraft.placeholder.trim(),
       validation: { required: fieldEditDraft.required },
       stepIndex: Number(fieldEditDraft.stepIndex) || 0,
@@ -424,22 +705,29 @@ export default function AdminLoanProducts() {
 
   // Add new field
   const handleAddCustomField = () => {
-    if (!newField.fieldKey.trim() || !newField.label.trim()) {
-      showToast("Field key and label are required", "error");
+    if (!newField.label.trim()) {
+      showToast("Question Name is required", "error");
       return;
     }
 
-    const formattedKey = newField.fieldKey.trim().replace(/\s+/g, "");
+    const autoKey = (newField.fieldKey || newField.label)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9]/g, "");
+    const formattedKey = autoKey || `field_${Date.now()}`;
+
     const optionsArray = newField.options
-      .split(",")
-      .map((opt) => opt.trim())
-      .filter(Boolean)
-      .map((opt) => ({ label: opt, value: opt.toUpperCase().replace(/\s+/g, "_") }));
+      ? newField.options
+          .split(",")
+          .map((opt) => opt.trim())
+          .filter(Boolean)
+          .map((opt) => ({ label: opt, value: opt.toUpperCase().replace(/\s+/g, "_") }))
+      : [];
 
     const fieldToAdd = {
       fieldKey: formattedKey,
       label: newField.label.trim(),
-      fieldType: newField.fieldType,
+      fieldType: newField.fieldType || "text",
       placeholder: newField.placeholder.trim(),
       validation: { required: newField.required },
       options: optionsArray,
@@ -453,17 +741,17 @@ export default function AdminLoanProducts() {
       customFields: [...prev.customFields, fieldToAdd],
     }));
 
-    setNewField({
+    setNewField((prev) => ({
       fieldKey: "",
       label: "",
       fieldType: "text",
       placeholder: "",
       required: true,
       options: "",
-      stepIndex: 0,
+      stepIndex: prev.stepIndex,
       gridCol: 12,
-    });
-    showToast(`Added '${fieldToAdd.label}' to Step ${fieldToAdd.stepIndex}`);
+    }));
+    showToast(`Added '${fieldToAdd.label}' to Section ${(fieldToAdd.stepIndex || 0) + 1}`);
   };
 
   // ==================== DOCUMENT CRUD OPERATIONS ====================
@@ -954,45 +1242,256 @@ export default function AdminLoanProducts() {
               {/* TAB: DYNAMIC FORM FIELDS */}
               {activeTab === "fields" && (
                 <div className="space-y-5">
-                  {/* Clean Section Filter Bar */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-xs">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-gray-500">Show Section:</span>
-                      <div className="flex flex-wrap gap-1.5">
+                  {/* Clean Section Filter Bar WITH FULL CRUD */}
+                  <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black uppercase text-gray-500 tracking-wider">
+                          Form Sections
+                        </span>
+                        <span className="text-[11px] bg-emerald-50 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          {currentSteps.length} Sections
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setSelectedStepFilter("ALL")}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
-                            selectedStepFilter === "ALL"
-                              ? "bg-emerald-600 text-white shadow-xs"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          }`}
+                          onClick={() => {
+                            setIsAddingSection(true);
+                            setEditingSectionIndex(null);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
                         >
-                          All Questions ({formData.customFields.length})
+                          <Plus size={14} /> + Add New Section
                         </button>
-                        {DEFAULT_STEPS.map((step) => {
-                          const count = formData.customFields.filter((f) => f.stepIndex === step.stepIndex).length;
-                          return (
-                            <button
-                              key={step.stepIndex}
-                              type="button"
-                              onClick={() => setSelectedStepFilter(String(step.stepIndex))}
-                              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
-                                selectedStepFilter === String(step.stepIndex)
-                                  ? "bg-emerald-600 text-white shadow-xs"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
-                            >
-                              {step.icon || "📋"} {step.title} ({count})
-                            </button>
-                          );
-                        })}
+                        <span className="text-xs text-gray-400 font-medium">
+                          Showing <strong>{visibleFieldsWithIndices.length}</strong> questions
+                        </span>
                       </div>
                     </div>
 
-                    <span className="text-xs text-gray-400 font-medium">
-                      Showing <strong>{visibleFieldsWithIndices.length}</strong> questions
-                    </span>
+                    {/* Section Navigation Pills with Reorder, Edit & Delete */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStepFilter("ALL")}
+                        className={`px-3.5 py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
+                          selectedStepFilter === "ALL"
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        All Questions ({formData.customFields.length})
+                      </button>
+
+                      {currentSteps.map((step, idx) => {
+                        const count = formData.customFields.filter((f) => f.stepIndex === step.stepIndex).length;
+                        const isSelected = selectedStepFilter === String(step.stepIndex);
+
+                        return (
+                          <div
+                            key={step.stepIndex}
+                            className={`flex items-center rounded-xl transition border ${
+                              isSelected
+                                ? "bg-emerald-50 border-emerald-500 shadow-xs"
+                                : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStepFilter(String(step.stepIndex))}
+                              className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
+                                isSelected ? "text-emerald-800" : "text-gray-700"
+                              }`}
+                            >
+                              <span>{step.icon || "📋"}</span>
+                              <span>{step.title}</span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                                  isSelected ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-600"
+                                }`}
+                              >
+                                {count}
+                              </span>
+                            </button>
+
+                            {/* Section CRUD Actions: Move, Edit, Delete */}
+                            <div className="flex items-center gap-0.5 pr-1.5 border-l border-gray-200/80 pl-1">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveSection(idx, "left")}
+                                disabled={idx === 0}
+                                className="p-1 text-gray-400 hover:text-emerald-700 disabled:opacity-20 cursor-pointer"
+                                title="Move Section Left"
+                              >
+                                <ArrowLeft size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveSection(idx, "right")}
+                                disabled={idx === currentSteps.length - 1}
+                                className="p-1 text-gray-400 hover:text-emerald-700 disabled:opacity-20 cursor-pointer"
+                                title="Move Section Right"
+                              >
+                                <ArrowRight size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditSection(idx)}
+                                className="p-1 text-gray-400 hover:text-blue-600 cursor-pointer"
+                                title="Edit / Rename Section"
+                              >
+                                <Pencil size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSection(idx)}
+                                className="p-1 text-gray-400 hover:text-red-600 cursor-pointer"
+                                title="Delete Section"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* INLINE ADD SECTION DRAWER */}
+                    {isAddingSection && (
+                      <div className="p-4 bg-emerald-50/70 border border-emerald-300 rounded-xl space-y-3 animate-in fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-emerald-900 flex items-center gap-1.5">
+                            <FolderPlus size={15} /> Create New Form Section
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingSection(false)}
+                            className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-bold text-gray-700">Section Title *</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Vehicle Details or Co-Applicant KYC"
+                              value={newSectionTitle}
+                              onChange={(e) => setNewSectionTitle(e.target.value)}
+                              className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-semibold text-gray-900"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-gray-700">Choose Section Icon</label>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {SECTION_ICONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => setNewSectionIcon(emoji)}
+                                  className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center cursor-pointer transition ${
+                                    newSectionIcon === emoji
+                                      ? "bg-emerald-600 text-white scale-110 shadow-xs"
+                                      : "bg-white border border-gray-200 hover:bg-gray-100"
+                                  }`}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingSection(false)}
+                            className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCreateSection}
+                            className="px-4 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-xs cursor-pointer"
+                          >
+                            Save Section
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* INLINE EDIT SECTION DRAWER */}
+                    {editingSectionIndex !== null && (
+                      <div className="p-4 bg-blue-50/70 border border-blue-300 rounded-xl space-y-3 animate-in fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-blue-900 flex items-center gap-1.5">
+                            <Pencil size={14} /> Rename Section #{editingSectionIndex + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingSectionIndex(null)}
+                            className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-bold text-gray-700">Section Title *</label>
+                            <input
+                              type="text"
+                              value={editSectionTitle}
+                              onChange={(e) => setEditSectionTitle(e.target.value)}
+                              className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-semibold text-gray-900"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-gray-700">Choose Section Icon</label>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {SECTION_ICONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => setEditSectionIcon(emoji)}
+                                  className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center cursor-pointer transition ${
+                                    editSectionIcon === emoji
+                                      ? "bg-blue-600 text-white scale-110 shadow-xs"
+                                      : "bg-white border border-gray-200 hover:bg-gray-100"
+                                  }`}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingSectionIndex(null)}
+                            className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSaveEditSection}
+                            className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-xs cursor-pointer"
+                          >
+                            Update Section
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* List of Form Questions */}
@@ -1045,18 +1544,30 @@ export default function AdminLoanProducts() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-[11px] font-bold text-gray-700">Question Answer Type</label>
-                                  <select
-                                    value={fieldEditDraft.fieldType}
-                                    onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, fieldType: e.target.value })}
-                                    className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
+                                  <label className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
+                                    <span>Real Answer Type</span>
+                                    <span className="text-[10px] text-emerald-700 font-extrabold">Tap to change</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setTypePickerTarget("edit");
+                                      setShowTypePickerModal(true);
+                                    }}
+                                    className="w-full flex items-center justify-between p-2 mt-1 bg-white border border-gray-300 hover:border-emerald-500 rounded-lg transition cursor-pointer text-left shadow-xs"
                                   >
-                                    {FIELD_TYPES.map((t) => (
-                                      <option key={t.value} value={t.value}>
-                                        {t.label}
-                                      </option>
-                                    ))}
-                                  </select>
+                                    <div className="flex items-center gap-2 truncate">
+                                      <span className="text-lg p-0.5 bg-gray-50 rounded shrink-0">
+                                        {getFieldTypeMeta(fieldEditDraft.fieldType).icon}
+                                      </span>
+                                      <span className="text-xs font-bold text-gray-800 truncate">
+                                        {getFieldTypeMeta(fieldEditDraft.fieldType).label}
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
+                                      Change ▾
+                                    </span>
+                                  </button>
                                 </div>
                                 <div>
                                   <label className="text-[11px] font-bold text-gray-700">Form Section</label>
@@ -1065,9 +1576,9 @@ export default function AdminLoanProducts() {
                                     onChange={(e) => setFieldEditDraft({ ...fieldEditDraft, stepIndex: Number(e.target.value) })}
                                     className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
                                   >
-                                    {DEFAULT_STEPS.map((s) => (
+                                    {currentSteps.map((s) => (
                                       <option key={s.stepIndex} value={s.stepIndex}>
-                                        {s.title}
+                                        {s.icon || "📋"} {s.title}
                                       </option>
                                     ))}
                                   </select>
@@ -1132,98 +1643,179 @@ export default function AdminLoanProducts() {
                           );
                         }
 
-                        // CLEAN, SIMPLE FIELD ROW (SUPER EASY FOR ANY USER TO UNDERSTAND)
+                        const fieldMeta = getFieldTypeMeta(field.fieldType);
+
+                        // CLEAN, SIMPLE FIELD ROW (WITH REAL INPUT PREVIEW)
                         return (
                           <div
                             key={realIndex}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white border border-gray-200 rounded-xl hover:border-emerald-300 hover:shadow-xs transition gap-3"
+                            className="p-4 bg-white border border-gray-200 rounded-2xl hover:border-emerald-400 hover:shadow-xs transition space-y-3"
                           >
-                            <div className="flex items-start sm:items-center gap-3">
-                              {/* Clean Order Pill & Arrows */}
-                              <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 shrink-0">
-                                <span className="text-xs font-extrabold text-gray-700 w-4 text-center">{realIndex + 1}</span>
-                                <div className="flex flex-col">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMoveField(realIndex, "up")}
-                                    disabled={realIndex === 0}
-                                    className="text-gray-400 hover:text-emerald-600 disabled:opacity-20 cursor-pointer p-0.5"
-                                    title="Move Up"
-                                  >
-                                    <ChevronUp size={12} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMoveField(realIndex, "down")}
-                                    disabled={realIndex === formData.customFields.length - 1}
-                                    className="text-gray-400 hover:text-emerald-600 disabled:opacity-20 cursor-pointer p-0.5"
-                                    title="Move Down"
-                                  >
-                                    <ChevronDown size={12} />
-                                  </button>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-start sm:items-center gap-3">
+                                {/* Clean Order Pill & Arrows */}
+                                <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 shrink-0">
+                                  <span className="text-xs font-extrabold text-gray-700 w-4 text-center">{realIndex + 1}</span>
+                                  <div className="flex flex-col">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveField(realIndex, "up")}
+                                      disabled={realIndex === 0}
+                                      className="text-gray-400 hover:text-emerald-600 disabled:opacity-20 cursor-pointer p-0.5"
+                                      title="Move Up"
+                                    >
+                                      <ChevronUp size={12} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveField(realIndex, "down")}
+                                      disabled={realIndex === formData.customFields.length - 1}
+                                      className="text-gray-400 hover:text-emerald-600 disabled:opacity-20 cursor-pointer p-0.5"
+                                      title="Move Down"
+                                    >
+                                      <ChevronDown size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-extrabold text-gray-900">{field.label}</span>
+                                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${fieldMeta.badgeColor}`}>
+                                      {fieldMeta.icon} {fieldMeta.label}
+                                    </span>
+                                    {field.stepIndex !== undefined && (
+                                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                                        {currentSteps.find((s) => s.stepIndex === field.stepIndex)?.title || `Section ${field.stepIndex + 1}`}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {field.placeholder && (
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                      Placeholder: "{field.placeholder}"
+                                    </p>
+                                  )}
                                 </div>
                               </div>
 
-                              <div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-bold text-gray-900">{field.label}</span>
-                                  <span className="text-[11px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
-                                    {getFieldTypeLabel(field.fieldType)}
+                              {/* Right Side: Simple Toggle Switch & Action Buttons */}
+                              <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                                {/* Clean iOS-Style Toggle Switch */}
+                                <div
+                                  onClick={() => handleToggleFieldRequired(realIndex)}
+                                  className="flex items-center gap-2 cursor-pointer select-none group"
+                                  title={field.validation?.required ? "Mandatory field. Click to make Optional." : "Optional field. Click to make Mandatory."}
+                                >
+                                  <span className={`text-xs font-extrabold transition ${
+                                    field.validation?.required ? "text-emerald-700" : "text-gray-400 font-medium"
+                                  }`}>
+                                    {field.validation?.required ? "Mandatory *" : "Optional"}
                                   </span>
-                                  {field.stepIndex !== undefined && (
-                                    <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                                      {DEFAULT_STEPS.find((s) => s.stepIndex === field.stepIndex)?.title || `Section ${field.stepIndex + 1}`}
-                                    </span>
-                                  )}
+                                  <div className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+                                    field.validation?.required ? "bg-emerald-600" : "bg-gray-300"
+                                  }`}>
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${
+                                      field.validation?.required ? "translate-x-5" : "translate-x-0"
+                                    }`} />
+                                  </div>
                                 </div>
-                                {field.placeholder && (
-                                  <p className="text-xs text-gray-400 mt-0.5">
-                                    Example: "{field.placeholder}"
-                                  </p>
-                                )}
+
+                                <div className="flex items-center gap-1 border-l border-gray-200 pl-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditField(realIndex)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition"
+                                    title="Edit Field"
+                                  >
+                                    <Pencil size={12} /> Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveCustomField(realIndex)}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg cursor-pointer transition"
+                                    title="Delete Field"
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </div>
                               </div>
                             </div>
 
-                            {/* Right Side: Simple Toggle Switch & Action Buttons */}
-                            <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
-                              {/* Clean iOS-Style Toggle Switch */}
-                              <div
-                                onClick={() => handleToggleFieldRequired(realIndex)}
-                                className="flex items-center gap-2 cursor-pointer select-none group"
-                                title={field.validation?.required ? "Mandatory field. Click to make Optional." : "Optional field. Click to make Mandatory."}
-                              >
-                                <span className={`text-xs font-extrabold transition ${
-                                  field.validation?.required ? "text-emerald-700" : "text-gray-400 font-medium"
-                                }`}>
-                                  {field.validation?.required ? "Mandatory *" : "Optional"}
-                                </span>
-                                <div className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
-                                  field.validation?.required ? "bg-emerald-600" : "bg-gray-300"
-                                }`}>
-                                  <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${
-                                    field.validation?.required ? "translate-x-5" : "translate-x-0"
-                                  }`} />
+                            {/* REAL VISUAL INPUT PREVIEW (SUPER CLEAR FOR UNEDUCATED / NON-TECHNICAL ADMINS) */}
+                            <div className="pt-2 border-t border-gray-100">
+                              {field.fieldType === "image" && (
+                                <div className="p-3 bg-rose-50/50 border-2 border-dashed border-rose-300 rounded-xl flex items-center justify-center gap-2 text-rose-700 text-xs font-bold">
+                                  <Camera size={16} />
+                                  <span>📸 Take Photo or Upload Image (Selfie, Shop photo, Vehicle, Cheque leaf)</span>
                                 </div>
-                              </div>
-
-                              <div className="flex items-center gap-1 border-l border-gray-200 pl-3">
-                                <button
-                                  type="button"
-                                  onClick={() => handleStartEditField(realIndex)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition"
-                                  title="Edit Field"
-                                >
-                                  <Pencil size={12} /> Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveCustomField(realIndex)}
-                                  className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg cursor-pointer transition"
-                                  title="Delete Field"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              </div>
+                              )}
+                              {field.fieldType === "file" && (
+                                <div className="p-3 bg-orange-50/50 border-2 border-dashed border-orange-300 rounded-xl flex items-center justify-center gap-2 text-orange-700 text-xs font-bold">
+                                  <FileText size={16} />
+                                  <span>📄 Choose PDF or Document File to Upload (Max 10MB)</span>
+                                </div>
+                              )}
+                              {field.fieldType === "signature" && (
+                                <div className="p-3 bg-violet-50/50 border-2 border-dashed border-violet-300 rounded-xl flex items-center justify-center gap-2 text-violet-700 text-xs font-bold">
+                                  <PenTool size={16} />
+                                  <span>✍️ Customer Signature Pad (Sign with finger / stylus)</span>
+                                </div>
+                              )}
+                              {field.fieldType === "phone" && (
+                                <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-500 max-w-sm">
+                                  <span className="font-bold text-gray-700">🇮🇳 +91</span>
+                                  <span className="text-gray-400">{field.placeholder || "98765 43210"}</span>
+                                </div>
+                              )}
+                              {field.fieldType === "currency" && (
+                                <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-500 max-w-sm">
+                                  <span className="font-bold text-emerald-700">₹</span>
+                                  <span className="text-gray-400">{field.placeholder || "0.00"}</span>
+                                </div>
+                              )}
+                              {field.fieldType === "pan" && (
+                                <div className="flex items-center gap-2 bg-cyan-50/60 border border-cyan-300 rounded-lg px-3 py-1.5 text-xs font-mono text-cyan-800 max-w-sm">
+                                  <span className="font-bold">💳 PAN:</span>
+                                  <span className="tracking-widest font-bold uppercase">{field.placeholder || "ABCDE1234F"}</span>
+                                </div>
+                              )}
+                              {field.fieldType === "aadhaar" && (
+                                <div className="flex items-center gap-2 bg-teal-50/60 border border-teal-300 rounded-lg px-3 py-1.5 text-xs font-mono text-teal-800 max-w-sm">
+                                  <span className="font-bold">🆔 UID:</span>
+                                  <span className="tracking-widest font-bold">{field.placeholder || "XXXX-XXXX-XXXX"}</span>
+                                </div>
+                              )}
+                              {field.fieldType === "date" && (
+                                <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-500 max-w-sm">
+                                  <Calendar size={14} className="text-pink-600" />
+                                  <span className="text-gray-400">{field.placeholder || "DD / MM / YYYY"}</span>
+                                </div>
+                              )}
+                              {field.fieldType === "checkbox" && (
+                                <div className="flex items-center gap-2 text-xs text-gray-700 font-medium">
+                                  <div className="w-4 h-4 border-2 border-emerald-600 rounded bg-emerald-50 flex items-center justify-center text-emerald-700 text-[10px]">✓</div>
+                                  <span>{field.placeholder || "I agree and confirm this declaration"}</span>
+                                </div>
+                              )}
+                              {(field.fieldType === "select" || field.fieldType === "radio") && (
+                                <div className="flex flex-wrap gap-1.5 items-center">
+                                  <span className="text-[11px] font-bold text-gray-400">Options:</span>
+                                  {(field.options || []).length > 0 ? (
+                                    field.options.map((opt, oi) => (
+                                      <span key={oi} className="text-[11px] font-semibold bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md border border-gray-200">
+                                        {opt.label || opt.value || opt}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-[11px] text-gray-400 italic">No options added yet</span>
+                                  )}
+                                </div>
+                              )}
+                              {(field.fieldType === "text" || field.fieldType === "textarea" || field.fieldType === "number" || field.fieldType === "email") && (
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-400 max-w-sm truncate">
+                                  {field.placeholder || `Customer fills ${field.label.toLowerCase()} here...`}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -1231,18 +1823,18 @@ export default function AdminLoanProducts() {
                     )}
                   </div>
 
-                  {/* + ADD NEW QUESTION BOX (SUPER EASY) */}
-                  <div className="p-5 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-300 rounded-2xl shadow-xs">
-                    <h4 className="text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2">
+                  {/* + ADD NEW QUESTION BOX (WITH VISUAL TYPE PICKER & LIVE PREVIEW) */}
+                  <div className="p-5 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-300 rounded-2xl shadow-xs space-y-4">
+                    <h4 className="text-sm font-extrabold text-emerald-900 flex items-center gap-2">
                       <Plus size={16} className="text-emerald-700" /> + Add a New Question to This Form
                     </h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="text-[11px] font-bold text-gray-700">Question Name (What customer sees) *</label>
                         <input
                           type="text"
-                          placeholder="e.g. Father's Full Name"
+                          placeholder="e.g. Applicant Selfie or Father's Name"
                           value={newField.label}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -1257,19 +1849,37 @@ export default function AdminLoanProducts() {
                         />
                       </div>
 
+                      {/* Visual Answer Type Button (Replaces ugly native select) */}
                       <div>
-                        <label className="text-[11px] font-bold text-gray-700">Answer Type</label>
-                        <select
-                          value={newField.fieldType}
-                          onChange={(e) => setNewField({ ...newField, fieldType: e.target.value })}
-                          className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
+                        <label className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
+                          <span>Real Input / Answer Type *</span>
+                          <span className="text-[10px] text-emerald-700 font-extrabold">Tap to change</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTypePickerTarget("new");
+                            setShowTypePickerModal(true);
+                          }}
+                          className="w-full flex items-center justify-between p-2 mt-1 bg-white border-2 border-emerald-400 hover:border-emerald-600 rounded-xl transition cursor-pointer text-left shadow-xs group"
                         >
-                          {FIELD_TYPES.map((t) => (
-                            <option key={t.value} value={t.value}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </select>
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="text-lg p-0.5 bg-emerald-50 rounded shrink-0">
+                              {getFieldTypeMeta(newField.fieldType).icon}
+                            </span>
+                            <div className="truncate">
+                              <p className="text-xs font-black text-gray-900 group-hover:text-emerald-700 truncate">
+                                {getFieldTypeMeta(newField.fieldType).label}
+                              </p>
+                              <p className="text-[10px] text-gray-400 truncate">
+                                {getFieldTypeMeta(newField.fieldType).desc}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 shrink-0">
+                            Change ▾
+                          </span>
+                        </button>
                       </div>
 
                       <div>
@@ -1279,21 +1889,21 @@ export default function AdminLoanProducts() {
                           onChange={(e) => setNewField({ ...newField, stepIndex: Number(e.target.value) })}
                           className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-medium"
                         >
-                          {DEFAULT_STEPS.map((s) => (
+                          {currentSteps.map((s) => (
                             <option key={s.stepIndex} value={s.stepIndex}>
-                              {s.title}
+                              {s.icon || "📋"} {s.title}
                             </option>
                           ))}
                         </select>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-[11px] font-bold text-gray-700">Example Text (Shown inside input)</label>
                         <input
                           type="text"
-                          placeholder="e.g. As per PAN card"
+                          placeholder="e.g. As per Aadhaar or PAN"
                           value={newField.placeholder}
                           onChange={(e) => setNewField({ ...newField, placeholder: e.target.value })}
                           className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1"
@@ -1312,6 +1922,93 @@ export default function AdminLoanProducts() {
                             onChange={(e) => setNewField({ ...newField, options: e.target.value })}
                             className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1"
                           />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* LIVE REAL INPUT PREVIEW IN ADD BOX */}
+                    <div className="bg-white/80 p-3 rounded-xl border border-emerald-200/80">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">
+                          Live Preview: Real input format for "{getFieldTypeMeta(newField.fieldType).label}"
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full border ${getFieldTypeMeta(newField.fieldType).badgeColor}`}>
+                          {getFieldTypeMeta(newField.fieldType).icon} {getFieldTypeMeta(newField.fieldType).label}
+                        </span>
+                      </div>
+
+                      {newField.fieldType === "image" && (
+                        <div className="p-3 bg-rose-50/50 border-2 border-dashed border-rose-300 rounded-xl flex items-center justify-center gap-2 text-rose-700 text-xs font-bold">
+                          <Camera size={16} />
+                          <span>📸 Take Photo or Upload Image (Selfie, Shop, Vehicle, Cheque leaf)</span>
+                        </div>
+                      )}
+                      {newField.fieldType === "file" && (
+                        <div className="p-3 bg-orange-50/50 border-2 border-dashed border-orange-300 rounded-xl flex items-center justify-center gap-2 text-orange-700 text-xs font-bold">
+                          <FileText size={16} />
+                          <span>📄 Choose PDF or Document File to Upload (Max 10MB)</span>
+                        </div>
+                      )}
+                      {newField.fieldType === "signature" && (
+                        <div className="p-3 bg-violet-50/50 border-2 border-dashed border-violet-300 rounded-xl flex items-center justify-center gap-2 text-violet-700 text-xs font-bold">
+                          <PenTool size={16} />
+                          <span>✍️ Customer Signature Pad (Sign with finger / stylus)</span>
+                        </div>
+                      )}
+                      {newField.fieldType === "phone" && (
+                        <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-500 max-w-sm">
+                          <span className="font-bold text-gray-700">🇮🇳 +91</span>
+                          <span className="text-gray-400">{newField.placeholder || "98765 43210"}</span>
+                        </div>
+                      )}
+                      {newField.fieldType === "currency" && (
+                        <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-500 max-w-sm">
+                          <span className="font-bold text-emerald-700">₹</span>
+                          <span className="text-gray-400">{newField.placeholder || "0.00"}</span>
+                        </div>
+                      )}
+                      {newField.fieldType === "pan" && (
+                        <div className="flex items-center gap-2 bg-cyan-50/60 border border-cyan-300 rounded-lg px-3 py-1.5 text-xs font-mono text-cyan-800 max-w-sm">
+                          <span className="font-bold">💳 PAN:</span>
+                          <span className="tracking-widest font-bold uppercase">{newField.placeholder || "ABCDE1234F"}</span>
+                        </div>
+                      )}
+                      {newField.fieldType === "aadhaar" && (
+                        <div className="flex items-center gap-2 bg-teal-50/60 border border-teal-300 rounded-lg px-3 py-1.5 text-xs font-mono text-teal-800 max-w-sm">
+                          <span className="font-bold">🆔 UID:</span>
+                          <span className="tracking-widest font-bold">{newField.placeholder || "XXXX-XXXX-XXXX"}</span>
+                        </div>
+                      )}
+                      {newField.fieldType === "date" && (
+                        <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-500 max-w-sm">
+                          <Calendar size={14} className="text-pink-600" />
+                          <span className="text-gray-400">{newField.placeholder || "DD / MM / YYYY"}</span>
+                        </div>
+                      )}
+                      {newField.fieldType === "checkbox" && (
+                        <div className="flex items-center gap-2 text-xs text-gray-700 font-medium">
+                          <div className="w-4 h-4 border-2 border-emerald-600 rounded bg-emerald-50 flex items-center justify-center text-emerald-700 text-[10px]">✓</div>
+                          <span>{newField.placeholder || "I agree and confirm this declaration"}</span>
+                        </div>
+                      )}
+                      {(newField.fieldType === "select" || newField.fieldType === "radio") && (
+                        <div className="text-xs text-gray-500">
+                          {newField.options ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {newField.options.split(",").map((o, idx) => (
+                                <span key={idx} className="bg-gray-100 px-2 py-0.5 rounded text-gray-700 font-semibold text-[11px]">
+                                  {o.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="italic text-gray-400">Type comma-separated options above to preview chips</span>
+                          )}
+                        </div>
+                      )}
+                      {(newField.fieldType === "text" || newField.fieldType === "textarea" || newField.fieldType === "number" || newField.fieldType === "email") && (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-400 max-w-sm truncate">
+                          {newField.placeholder || "Customer fills text answer here..."}
                         </div>
                       )}
                     </div>
@@ -1336,9 +2033,9 @@ export default function AdminLoanProducts() {
                       <button
                         type="button"
                         onClick={handleAddCustomField}
-                        className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition cursor-pointer shadow-sm"
+                        className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition cursor-pointer shadow-sm flex items-center gap-1.5"
                       >
-                        + Add Question to Form
+                        <Plus size={14} /> + Add Question to Form
                       </button>
                     </div>
                   </div>
@@ -1794,6 +2491,111 @@ export default function AdminLoanProducts() {
                     <Save size={16} /> Save & Publish Product
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VISUAL ANSWER TYPE PICKER MODAL (ALL REAL INPUT TYPES) */}
+      {showTypePickerModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
+                  <Sparkles size={18} className="text-emerald-600" />
+                  Choose Real Answer / Input Type
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Select how customers or partners will answer this question.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTypePickerModal(false)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-200 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Content: Categorized Grid */}
+            <div className="p-6 max-h-[75vh] overflow-y-auto space-y-5">
+              {[
+                { title: "📸 Photos, Documents & Signature", category: "Uploads & Media" },
+                { title: "🆔 Identity & Contact Verification", category: "Identity & Contact" },
+                { title: "💰 Loan Amount, Numbers & Dates", category: "Text & Numbers" },
+                { title: "🔘 Choices & Agreements", category: "Choices & Agreements" },
+              ].map((grp) => {
+                const typesInGroup = FIELD_TYPES.filter((t) => t.category === grp.category);
+                if (typesInGroup.length === 0) return null;
+
+                return (
+                  <div key={grp.title}>
+                    <h4 className="text-xs font-black uppercase text-gray-400 tracking-wider mb-2">
+                      {grp.title}
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {typesInGroup.map((typeObj) => {
+                        const isCurrent =
+                          typePickerTarget === "new"
+                            ? newField.fieldType === typeObj.value
+                            : fieldEditDraft?.fieldType === typeObj.value;
+
+                        return (
+                          <div
+                            key={typeObj.value}
+                            onClick={() => {
+                              if (typePickerTarget === "new") {
+                                setNewField({ ...newField, fieldType: typeObj.value });
+                              } else if (fieldEditDraft) {
+                                setFieldEditDraft({ ...fieldEditDraft, fieldType: typeObj.value });
+                              }
+                              setShowTypePickerModal(false);
+                            }}
+                            className={`p-3 rounded-xl border-2 transition cursor-pointer flex items-start gap-3 select-none ${
+                              isCurrent
+                                ? "bg-emerald-50/80 border-emerald-500 shadow-xs"
+                                : "bg-white border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30"
+                            }`}
+                          >
+                            <span className="text-2xl p-2 bg-gray-50 rounded-xl border border-gray-200 shrink-0">
+                              {typeObj.icon}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-extrabold text-gray-900">
+                                  {typeObj.label}
+                                </span>
+                                {isCurrent && (
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+                                    Selected ✓
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                                {typeObj.desc}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowTypePickerModal(false)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>
