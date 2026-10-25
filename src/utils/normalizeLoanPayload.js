@@ -1,11 +1,16 @@
 import { personFinancialCustomerFields } from "./personFinancial";
-import { normalizePhoneToTen } from "./phoneNormalize";
+import { normalizeMobileDigits } from "./phoneNormalize";
 
 /**
  * Normalizes phone numbers to clean 10 digits
  */
 export function normalizePhone(value) {
-  return normalizePhoneToTen(value);
+  if (typeof normalizeMobileDigits === "function") {
+    return normalizeMobileDigits(value);
+  }
+  const d = String(value ?? "").replace(/\D/g, "");
+  if (!d) return "";
+  return d.length > 10 ? d.slice(-10) : d.slice(0, 10);
 }
 
 /**
