@@ -26,6 +26,9 @@ import {
   ListFilter,
   CheckSquare,
   Square,
+  Info,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
@@ -88,6 +91,9 @@ export default function AdminLoanProducts() {
     publishToPartnerApp: true,
     publishToCustomerApp: true,
     status: "ACTIVE",
+    isComingSoon: false,
+    isUnderMaintenance: false,
+    maintenanceMessage: "We are currently upgrading this loan service. Please check back shortly.",
     displayOrder: 1,
     steps: DEFAULT_STEPS,
     customFields: [],
@@ -176,6 +182,11 @@ export default function AdminLoanProducts() {
       publishToPartnerApp: Boolean(product.publishToPartnerApp),
       publishToCustomerApp: Boolean(product.publishToCustomerApp),
       status: product.status || "ACTIVE",
+      isComingSoon: product.status === "COMING_SOON" || Boolean(product.isComingSoon),
+      isUnderMaintenance: product.status === "MAINTENANCE" || Boolean(product.isUnderMaintenance),
+      maintenanceMessage:
+        product.maintenanceMessage ||
+        "We are currently upgrading this loan service. Please check back shortly.",
       displayOrder: product.displayOrder || 1,
       steps: product.steps?.length ? product.steps : DEFAULT_STEPS,
       customFields: product.customFields || [],
@@ -206,8 +217,7 @@ export default function AdminLoanProducts() {
     }
   };
 
-  const handleToggleStatus = async (product) => {
-    const nextStatus = product.status === "ACTIVE" ? "DRAFT" : "ACTIVE";
+  const handleSetStatus = async (product, nextStatus) => {
     try {
       await axios.put(
         `${backendurl}/loan-products/admin/${product._id}`,
@@ -217,10 +227,15 @@ export default function AdminLoanProducts() {
       setProducts((prev) =>
         prev.map((p) => (p._id === product._id ? { ...p, status: nextStatus } : p))
       );
-      showToast(`${product.name} marked as ${nextStatus}.`);
+      showToast(`'${product.name}' status set to ${nextStatus}.`);
     } catch (err) {
       showToast("Failed to update status", "error");
     }
+  };
+
+  const handleToggleStatus = async (product) => {
+    const nextStatus = product.status === "ACTIVE" ? "DRAFT" : "ACTIVE";
+    await handleSetStatus(product, nextStatus);
   };
 
   const handleDelete = async (product) => {
@@ -630,7 +645,9 @@ export default function AdminLoanProducts() {
             className="text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active</option>
+            <option value="ACTIVE">Active (Live)</option>
+            <option value="COMING_SOON">Coming Soon</option>
+            <option value="MAINTENANCE">Under Maintenance</option>
             <option value="DRAFT">Draft</option>
             <option value="ARCHIVED">Archived</option>
           </select>
@@ -669,7 +686,7 @@ export default function AdminLoanProducts() {
               <div
                 key={product._id}
                 className={`bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between shadow-sm hover:shadow-md ${
-                  isActive ? "border-gray-200" : "border-gray-200 bg-gray-50/50 opacity-80"
+                  isActive ? "border-gray-200" : "border-gray-200 bg-gray-50/50 opacity-90"
                 }`}
               >
                 <div className="p-5">
@@ -686,16 +703,73 @@ export default function AdminLoanProducts() {
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => handleToggleStatus(product)}
-                      className={`px-2.5 py-1 text-xs font-bold rounded-full uppercase tracking-wider shrink-0 cursor-pointer ${
-                        isActive
-                          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                          : "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                      }`}
-                    >
-                      {product.status}
-                    </button>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span
+                        className={`px-2.5 py-1 text-xs font-bold rounded-full uppercase tracking-wider ${
+                          product.status === "ACTIVE"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : product.status === "COMING_SOON"
+                            ? "bg-purple-100 text-purple-800"
+                            : product.status === "MAINTENANCE"
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {product.status === "COMING_SOON" ? "Coming Soon" : product.status === "MAINTENANCE" ? "Maintenance" : product.status}
+                      </span>
+
+                      {/* Quick 1-click status switch pills */}
+                      <div className="flex items-center gap-1 bg-gray-100/90 p-0.5 rounded-lg border border-gray-200">
+                        <button
+                          type="button"
+                          onClick={() => handleSetStatus(product, "ACTIVE")}
+                          title="Make Live & Active"
+                          className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer transition ${
+                            product.status === "ACTIVE"
+                              ? "bg-emerald-600 text-white shadow-xs"
+                              : "text-gray-500 hover:text-gray-900"
+                          }`}
+                        >
+                          Live
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetStatus(product, "COMING_SOON")}
+                          title="Set Coming Soon"
+                          className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer transition ${
+                            product.status === "COMING_SOON"
+                              ? "bg-purple-600 text-white shadow-xs"
+                              : "text-gray-500 hover:text-gray-900"
+                          }`}
+                        >
+                          Soon
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetStatus(product, "MAINTENANCE")}
+                          title="Set Under Maintenance"
+                          className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer transition ${
+                            product.status === "MAINTENANCE"
+                              ? "bg-amber-600 text-white shadow-xs"
+                              : "text-gray-500 hover:text-gray-900"
+                          }`}
+                        >
+                          Maint
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetStatus(product, "DRAFT")}
+                          title="Set Draft (Hidden)"
+                          className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer transition ${
+                            product.status === "DRAFT"
+                              ? "bg-gray-700 text-white shadow-xs"
+                              : "text-gray-500 hover:text-gray-900"
+                          }`}
+                        >
+                          Draft
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Financial Bounds Tagline */}
@@ -864,45 +938,62 @@ export default function AdminLoanProducts() {
               {activeTab === "fields" && (
                 <div className="space-y-6">
                   {/* Step Filter Bar */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-gray-200">
-                    <div className="flex items-center gap-2">
-                      <ListFilter size={16} className="text-gray-400" />
-                      <span className="text-xs font-bold text-gray-700">Filter by Step:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedStepFilter("ALL")}
-                          className={`px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
-                            selectedStepFilter === "ALL"
-                              ? "bg-emerald-600 text-white"
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                          }`}
-                        >
-                          All Steps ({formData.customFields.length})
-                        </button>
-                        {DEFAULT_STEPS.map((step) => {
-                          const count = formData.customFields.filter((f) => f.stepIndex === step.stepIndex).length;
-                          return (
-                            <button
-                              key={step.stepIndex}
-                              type="button"
-                              onClick={() => setSelectedStepFilter(String(step.stepIndex))}
-                              className={`px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
-                                selectedStepFilter === String(step.stepIndex)
-                                  ? "bg-emerald-600 text-white"
-                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              }`}
-                            >
-                              Step {step.stepIndex} ({count})
-                            </button>
-                          );
-                        })}
+                  <div className="space-y-3">
+                    {/* Educational Helper Banner */}
+                    <div className="p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50/70 border border-blue-200 rounded-xl flex items-start gap-3 shadow-xs">
+                      <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
+                      <div className="text-xs text-blue-950 leading-relaxed">
+                        <span className="font-extrabold text-blue-900">What are Steps?</span> Steps divide your 20-30 application fields into easy multi-screen pages on the mobile apps & web portal (e.g. Page 1: Personal KYC, Page 2: Address, Page 3: Income, Page 4: Loan & Bank).<br />
+                        <span className="font-extrabold text-emerald-800">Is it required?</span> <strong>No, steps are completely optional!</strong> If you want a single-page form, simply leave all fields in <strong>Step 0</strong>.
                       </div>
                     </div>
 
-                    <span className="text-xs text-gray-500">
-                      Showing <strong>{visibleFieldsWithIndices.length}</strong> fields
-                    </span>
+                    <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-gray-200">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <ListFilter size={16} className="text-gray-400" />
+                        <span className="text-xs font-bold text-gray-700">Filter by Step:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedStepFilter("ALL")}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+                              selectedStepFilter === "ALL"
+                                ? "bg-emerald-600 text-white shadow-xs"
+                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                          >
+                            All Steps ({formData.customFields.length})
+                          </button>
+                          {DEFAULT_STEPS.map((step) => {
+                            const count = formData.customFields.filter((f) => f.stepIndex === step.stepIndex).length;
+                            const stepShortTitles = [
+                              "Step 0: KYC",
+                              "Step 1: Address",
+                              "Step 2: Income",
+                              "Step 3: Loan & Bank",
+                            ];
+                            return (
+                              <button
+                                key={step.stepIndex}
+                                type="button"
+                                onClick={() => setSelectedStepFilter(String(step.stepIndex))}
+                                className={`px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+                                  selectedStepFilter === String(step.stepIndex)
+                                    ? "bg-emerald-600 text-white shadow-xs"
+                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                }`}
+                              >
+                                {stepShortTitles[step.stepIndex] || `Step ${step.stepIndex}`} ({count})
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <span className="text-xs text-gray-500 font-medium">
+                        Showing <strong>{visibleFieldsWithIndices.length}</strong> fields
+                      </span>
+                    </div>
                   </div>
 
                   {/* List of Fields */}
@@ -1642,6 +1733,61 @@ export default function AdminLoanProducts() {
                         Web Portal
                       </label>
                     </div>
+                  </div>
+
+                  {/* Product Status & Availability Mode */}
+                  <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50 space-y-3">
+                    <h4 className="text-xs font-extrabold uppercase text-gray-700 tracking-wider">
+                      Product Status & Availability Mode
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-600">Product Status</label>
+                        <select
+                          value={formData.status}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1 font-bold text-gray-800"
+                        >
+                          <option value="ACTIVE">🟢 Active (Live & open for applications)</option>
+                          <option value="COMING_SOON">🟣 Coming Soon (Visible in apps/web, applications blocked)</option>
+                          <option value="MAINTENANCE">🟠 Under Maintenance (Visible in apps/web, applications blocked)</option>
+                          <option value="DRAFT">⚪ Draft (Hidden from users)</option>
+                          <option value="ARCHIVED">🔴 Archived (Hidden)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-600">Display Order</label>
+                        <input
+                          type="number"
+                          value={formData.displayOrder}
+                          onChange={(e) => setFormData({ ...formData, displayOrder: Number(e.target.value) })}
+                          className="w-full text-sm px-3 py-2 bg-white border border-gray-300 rounded-lg mt-1"
+                        />
+                      </div>
+                    </div>
+
+                    {(formData.status === "COMING_SOON" || formData.status === "MAINTENANCE") && (
+                      <div className="pt-2 border-t border-gray-200 space-y-1">
+                        <label className="text-[11px] font-bold text-amber-800">
+                          {formData.status === "COMING_SOON" ? "Coming Soon Notice Message" : "Under Maintenance Notice Message"}
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={
+                            formData.status === "COMING_SOON"
+                              ? "e.g. This loan product will be available soon. Stay tuned!"
+                              : "e.g. We are currently upgrading this loan service. Please check back shortly."
+                          }
+                          value={formData.maintenanceMessage || ""}
+                          onChange={(e) => setFormData({ ...formData, maintenanceMessage: e.target.value })}
+                          className="w-full text-sm px-3 py-2 bg-white border border-amber-300 rounded-lg"
+                        />
+                        <p className="text-[11px] text-gray-500">
+                          When users tap this product on the mobile app or web, this message is displayed and the application is blocked.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
