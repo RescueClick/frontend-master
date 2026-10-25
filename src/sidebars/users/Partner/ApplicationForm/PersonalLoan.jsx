@@ -2224,9 +2224,9 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                 <div className="pt-6 border-t border-slate-200 mt-6">
                   <LoanAddressProofBlock
                     stepLabel="2.2"
-                    formData={formData}
-                    handleFileChangeAddressProofs={handleFileChangeAddressProofs}
-                    handleFileRemove={handleFileRemove}
+                    file={formData.addressProof}
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
                     renderError={renderError}
                     uploadStatus={docUploadStatus.addressProof || (formData.addressProof_uploaded ? "uploaded" : "idle")}
                     uploadProgress={docUploadProgress.addressProof || 0}
