@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import axios from "axios";
 import {
   Building,
   Building2,
@@ -12,14 +13,125 @@ import {
   Share2,
 } from "lucide-react";
 import { getAuthData } from "../../../utils/localStorage";
+import { backendurl } from "../../../feature/urldata";
 import { canonicalPartnerReferralCode } from "../../../config/branding";
 import ShareLoanModal from "../../../components/loan/ShareLoanModal";
+
+const DEFAULT_LOAN_TYPES = [
+  {
+    id: "personal",
+    code: "PERSONAL",
+    title: "Personal Loan",
+    subtitle: "For Salaried Individuals",
+    description: "Quick personal loans with competitive rates for salaried professionals",
+    icon: "👤",
+    badge: "Upto ₹25L",
+    route: "/partner/personal-loan",
+    hasSubTypes: false,
+  },
+  {
+    id: "business",
+    code: "BUSINESS",
+    title: "Business Loan",
+    subtitle: "For Entrepreneurs",
+    description: "Flexible business financing solutions for growing enterprises",
+    icon: "💼",
+    badge: "Upto ₹2Cr",
+    route: "/partner/bussiness-loan",
+    hasSubTypes: false,
+  },
+  {
+    id: "home",
+    code: "HOME_LOAN",
+    title: "Home Loan",
+    subtitle: "Salaried & Self-Employed",
+    description: "Affordable home loans with attractive rates for buying or constructing homes",
+    icon: "🏠",
+    badge: "Upto ₹5Cr",
+    hasSubTypes: true,
+    subTypes: [
+      {
+        title: "Home Loan (Salaried)",
+        desc: "For individuals with fixed monthly salary and salary slips",
+        route: "/partner/home-loan-salaried",
+        tag: "Salaried",
+      },
+      {
+        title: "Home Loan (Self-Employed)",
+        desc: "For business owners, traders, proprietors, and professionals",
+        route: "/partner/home-loan-self-employee",
+        tag: "Self-Employed",
+      },
+    ],
+  },
+  {
+    id: "lap",
+    code: "LAP",
+    title: "LAP Loan",
+    subtitle: "Loan Against Property",
+    description: "Unlock high-value funding against your residential, commercial, or industrial property",
+    icon: "🏢",
+    badge: "Upto ₹5Cr",
+    hasSubTypes: true,
+    subTypes: [
+      {
+        title: "LAP (Salaried)",
+        desc: "For salaried applicants pledging owned residential or commercial property",
+        route: "/partner/lap-loan-salaried",
+        tag: "Salaried",
+      },
+      {
+        title: "LAP (Self-Employed)",
+        desc: "For business owners & entrepreneurs pledging property for funding",
+        route: "/partner/lap-loan-self-employee",
+        tag: "Self-Employed",
+      },
+    ],
+  },
+];
+
+const getDynamicIcon = (code) => {
+  const c = String(code).toUpperCase();
+  if (c.includes("BUSINESS")) return "💼";
+  if (c.includes("HOME")) return "🏠";
+  if (c.includes("LAP") || c.includes("PROPERTY")) return "🏢";
+  if (c.includes("CAR") || c.includes("VEHICLE") || c.includes("AUTO")) return "🚗";
+  if (c.includes("GOLD")) return "🪙";
+  if (c.includes("EDUCATION") || c.includes("STUDY")) return "🎓";
+  if (c.includes("DOCTOR") || c.includes("MEDICAL")) return "🩺";
+  if (c.includes("CARD")) return "💳";
+  if (c.includes("PERSONAL")) return "👤";
+  return "💰";
+};
+
+const formatAmountBadge = (maxAmount) => {
+  if (!maxAmount) return "Flexible Limit";
+  if (maxAmount >= 10000000) return `Upto ₹${(maxAmount / 10000000).toFixed(0)}Cr`;
+  if (maxAmount >= 100000) return `Upto ₹${(maxAmount / 100000).toFixed(0)}L`;
+  return `Upto ₹${(maxAmount / 1000).toFixed(0)}k`;
+};
 
 const GetLoan = () => {
   const [selectedLoan, setSelectedLoan] = useState("");
   const [subTypeModal, setSubTypeModal] = useState(null); // 'home' | 'lap' | null
   const [shareModalLoan, setShareModalLoan] = useState(null); // loan object to share
+  const [dynamicProducts, setDynamicProducts] = useState([]);
   const navigate = useNavigate();
+
+  // Fetch live products from backend
+  useEffect(() => {
+    const fetchDynamicProducts = async () => {
+      try {
+        const res = await axios.get(`${backendurl}/loan-products?client=web`);
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setDynamicProducts(res.data.data);
+        }
+      } catch (err) {
+        console.warn("Could not load dynamic loan products:", err.message);
+      }
+    };
+    fetchDynamicProducts();
+  }, []);
 
   // Get current partner profile data
   const profileState = useSelector((state) => state?.partner?.profile?.data);
@@ -44,77 +156,55 @@ const GetLoan = () => {
     [partnerUser?.firstName, partnerUser?.lastName].filter(Boolean).join(" ") ||
     "Authorized Partner";
 
-  const loanTypes = [
-    {
-      id: "personal",
-      title: "Personal Loan",
-      subtitle: "For Salaried Individuals",
-      description: "Quick personal loans with competitive rates for salaried professionals",
-      icon: "👤",
-      badge: "Upto ₹25L",
-      route: "/partner/personal-loan",
-      hasSubTypes: false,
-    },
-    {
-      id: "business",
-      title: "Business Loan",
-      subtitle: "For Entrepreneurs",
-      description: "Flexible business financing solutions for growing enterprises",
-      icon: "💼",
-      badge: "Upto ₹2Cr",
-      route: "/partner/bussiness-loan",
-      hasSubTypes: false,
-    },
-    {
-      id: "home",
-      title: "Home Loan",
-      subtitle: "Salaried & Self-Employed",
-      description: "Affordable home loans with attractive rates for buying or constructing homes",
-      icon: "🏠",
-      badge: "Upto ₹5Cr",
-      hasSubTypes: true,
-      subTypes: [
-        {
-          title: "Home Loan (Salaried)",
-          desc: "For individuals with fixed monthly salary and salary slips",
-          route: "/partner/home-loan-salaried",
-          tag: "Salaried",
-        },
-        {
-          title: "Home Loan (Self-Employed)",
-          desc: "For business owners, traders, proprietors, and professionals",
-          route: "/partner/home-loan-self-employee",
-          tag: "Self-Employed",
-        },
-      ],
-    },
-    {
-      id: "lap",
-      title: "LAP Loan",
-      subtitle: "Loan Against Property",
-      description: "Unlock high-value funding against your residential, commercial, or industrial property",
-      icon: "🏢",
-      badge: "Upto ₹5Cr",
-      hasSubTypes: true,
-      subTypes: [
-        {
-          title: "LAP (Salaried)",
-          desc: "For salaried applicants pledging owned residential or commercial property",
-          route: "/partner/lap-loan-salaried",
-          tag: "Salaried",
-        },
-        {
-          title: "LAP (Self-Employed)",
-          desc: "For business owners & entrepreneurs pledging property for funding",
-          route: "/partner/lap-loan-self-employee",
-          tag: "Self-Employed",
-        },
-      ],
-    },
-  ];
+  // Build unified loanTypes list from dynamic backend schema with fallback to default types
+  const loanTypes = dynamicProducts.length > 0
+    ? dynamicProducts.map((p) => {
+        const matchingDefault = DEFAULT_LOAN_TYPES.find(
+          (d) => d.code === p.code || d.id === String(p.code).toLowerCase()
+        );
+
+        const isComingSoon = p.status === "COMING_SOON" || Boolean(p.isComingSoon);
+        const isUnderMaintenance = p.status === "MAINTENANCE" || Boolean(p.isUnderMaintenance);
+
+        if (matchingDefault) {
+          return {
+            ...matchingDefault,
+            title: p.name || matchingDefault.title,
+            badge: p.badgeText || formatAmountBadge(p.maxAmount),
+            description: p.description || matchingDefault.description,
+            isComingSoon,
+            isUnderMaintenance,
+            maintenanceMessage: p.maintenanceMessage,
+          };
+        }
+
+        // For newly created custom dynamic loan products
+        return {
+          id: p.code.toLowerCase(),
+          code: p.code,
+          title: p.name,
+          subtitle: p.badgeText || "Instant Approval",
+          description: p.description || "Fast approval and flexible terms with competitive interest rates.",
+          icon: getDynamicIcon(p.code),
+          badge: p.badgeText || formatAmountBadge(p.maxAmount),
+          route: `/partner/personal-loan?type=${p.code}`,
+          hasSubTypes: false,
+          isComingSoon,
+          isUnderMaintenance,
+          maintenanceMessage: p.maintenanceMessage,
+        };
+      })
+    : DEFAULT_LOAN_TYPES;
 
   const handleLoanSelection = (loan) => {
-    if (loan.isComingSoon) return;
+    if (loan.isComingSoon) {
+      alert(`${loan.title} will be available soon! Stay tuned.`);
+      return;
+    }
+    if (loan.isUnderMaintenance) {
+      alert(loan.maintenanceMessage || `${loan.title} is currently under maintenance. Please check back shortly.`);
+      return;
+    }
     if (loan.hasSubTypes) {
       setSubTypeModal(loan);
       return;
@@ -194,10 +284,15 @@ const GetLoan = () => {
                 <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition" />
               </div>
 
-              {/* Coming Soon Flag */}
+              {/* Coming Soon / Maintenance Flag */}
               {loan.isComingSoon && (
-                <div className="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded shadow">
+                <div className="absolute top-3 right-3 bg-purple-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow">
                   SOON
+                </div>
+              )}
+              {loan.isUnderMaintenance && (
+                <div className="absolute top-3 right-3 bg-amber-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow">
+                  MAINTENANCE
                 </div>
               )}
             </div>
