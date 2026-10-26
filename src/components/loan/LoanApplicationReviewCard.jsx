@@ -13,14 +13,59 @@ export default function LoanApplicationReviewCard({
   formData = {},
   loanTitle = "Personal Loan",
 }) {
-  const fullName = [formData.firstName, formData.middleName, formData.lastName]
-    .filter(Boolean)
-    .join(" ") || "Applicant";
+  const safeString = (val) =>
+    typeof val === "string" ? val.trim() : typeof val === "number" ? String(val) : "";
 
-  const loanAmount = formData.loanAmount || formData.requestedLoanAmount;
-  const formattedLoanAmount = loanAmount
-    ? `₹${Number(loanAmount).toLocaleString("en-IN")}`
-    : "—";
+  const fullName =
+    [formData.firstName, formData.middleName, formData.lastName]
+      .filter((part) => typeof part === "string" && part.trim())
+      .join(" ") || "Applicant";
+
+  const rawLoanAmount = formData.loanAmount || formData.requestedLoanAmount;
+  const numLoanAmount = Number(String(rawLoanAmount || "").replace(/,/g, ""));
+  const formattedLoanAmount =
+    !isNaN(numLoanAmount) && numLoanAmount > 0
+      ? `₹${numLoanAmount.toLocaleString("en-IN")}`
+      : safeString(rawLoanAmount) || "—";
+
+  const contactText =
+    safeString(formData.contactNo) ||
+    safeString(formData.contactNumber) ||
+    safeString(formData.phone) ||
+    "—";
+
+  const emailText = safeString(formData.email) || "—";
+  const panText = safeString(formData.pan) || safeString(formData.panNumber) || "—";
+  const dobText = safeString(formData.dob) || safeString(formData.dateOfBirth) || "—";
+  const purposeText = safeString(formData.loanPurpose);
+  const companyOrBusiness =
+    safeString(formData.companyName) || safeString(formData.businessName);
+
+  const rawSalary = formData.monthlySalary || formData.salaryInHand;
+  const numSalary = Number(String(rawSalary || "").replace(/,/g, ""));
+  const salaryOrTurnover =
+    !isNaN(numSalary) && numSalary > 0
+      ? `₹${numSalary.toLocaleString("en-IN")}/mo`
+      : safeString(formData.annualTurnover) || safeString(rawSalary);
+
+  const currentAddressText = safeString(formData.currentAddress) || "—";
+  const currentPinText =
+    safeString(formData.currentAddressPinCode) ||
+    safeString(formData.currentAddressPincode) ||
+    safeString(formData.currentPincode);
+
+  const permanentAddressText = safeString(formData.permanentAddress);
+  const permanentPinText =
+    safeString(formData.permanentAddressPinCode) ||
+    safeString(formData.permanentAddressPincode) ||
+    safeString(formData.permanentPincode);
+
+  const ref1Name = safeString(formData.reference1Name);
+  const ref1Contact =
+    safeString(formData.reference1Contact) || safeString(formData.reference1Phone);
+  const ref2Name = safeString(formData.reference2Name);
+  const ref2Contact =
+    safeString(formData.reference2Contact) || safeString(formData.reference2Phone);
 
   // Check which documents are attached
   const docFields = [
@@ -28,15 +73,22 @@ export default function LoanApplicationReviewCard({
     { key: "aadharBack", label: "Aadhaar (Back)" },
     { key: "panCard", label: "PAN Card" },
     { key: "passportPhoto", label: "Applicant Photo" },
+    { key: "selfie", label: "Applicant Photo" },
     { key: "addressProof", label: "Address Proof" },
     { key: "companyIdCard", label: "Company ID" },
     { key: "salarySlip1", label: "Salary Slip 1" },
     { key: "bankStatement1", label: "Bank Statement 1" },
   ];
 
-  const attachedDocs = docFields.filter(
-    (d) => Boolean(formData[d.key]) || Boolean(formData[`${d.key}_uploaded`])
-  );
+  const seenLabels = new Set();
+  const attachedDocs = docFields.filter((d) => {
+    const isPresent = Boolean(formData[d.key]) || Boolean(formData[`${d.key}_uploaded`]);
+    if (isPresent && !seenLabels.has(d.label)) {
+      seenLabels.add(d.label);
+      return true;
+    }
+    return false;
+  });
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 shadow-sm">
@@ -72,20 +124,18 @@ export default function LoanApplicationReviewCard({
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-slate-500">Contact:</span>
-            <span className="font-semibold text-slate-800">
-              {formData.contactNo || formData.contactNumber || "—"}
-            </span>
+            <span className="font-semibold text-slate-800">{contactText}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-slate-500">Email:</span>
             <span className="font-semibold text-slate-800 truncate max-w-[180px]">
-              {formData.email || "—"}
+              {emailText}
             </span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-slate-500">PAN / DOB:</span>
             <span className="font-semibold text-slate-800">
-              {formData.pan || formData.panCard || formData.panNumber || "—"} • {formData.dob || "—"}
+              {panText} • {dobText}
             </span>
           </div>
         </div>
@@ -101,29 +151,25 @@ export default function LoanApplicationReviewCard({
               {formattedLoanAmount}
             </span>
           </div>
-          {formData.loanPurpose && (
+          {purposeText && (
             <div className="flex justify-between text-xs">
               <span className="text-slate-500">Purpose:</span>
-              <span className="font-semibold text-slate-800">
-                {formData.loanPurpose}
-              </span>
+              <span className="font-semibold text-slate-800">{purposeText}</span>
             </div>
           )}
-          {(formData.companyName || formData.businessName) && (
+          {companyOrBusiness && (
             <div className="flex justify-between text-xs">
               <span className="text-slate-500">Company / Business:</span>
               <span className="font-semibold text-slate-800 truncate max-w-[180px]">
-                {formData.companyName || formData.businessName}
+                {companyOrBusiness}
               </span>
             </div>
           )}
-          {(formData.monthlySalary || formData.annualTurnover) && (
+          {salaryOrTurnover && (
             <div className="flex justify-between text-xs">
               <span className="text-slate-500">Salary / Turnover:</span>
               <span className="font-semibold text-slate-800">
-                {formData.monthlySalary
-                  ? `₹${Number(formData.monthlySalary).toLocaleString("en-IN")}/mo`
-                  : formData.annualTurnover}
+                {salaryOrTurnover}
               </span>
             </div>
           )}
@@ -137,16 +183,15 @@ export default function LoanApplicationReviewCard({
           <div className="text-xs">
             <span className="text-slate-500 block mb-1">Current Address:</span>
             <span className="font-medium text-slate-800">
-              {formData.currentAddress || "—"}{" "}
-              {formData.currentAddressPinCode ? `(${formData.currentAddressPinCode})` : ""}
+              {currentAddressText} {currentPinText ? `(${currentPinText})` : ""}
             </span>
           </div>
-          {formData.permanentAddress && (
+          {permanentAddressText && (
             <div className="text-xs pt-1">
               <span className="text-slate-500 block mb-1">Permanent Address:</span>
               <span className="font-medium text-slate-800">
-                {formData.permanentAddress}{" "}
-                {formData.permanentAddressPinCode ? `(${formData.permanentAddressPinCode})` : ""}
+                {permanentAddressText}{" "}
+                {permanentPinText ? `(${permanentPinText})` : ""}
               </span>
             </div>
           )}
@@ -163,39 +208,43 @@ export default function LoanApplicationReviewCard({
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {attachedDocs.map((doc) => (
-              <span
-                key={doc.key}
-                className="inline-flex items-center gap-1 text-[11px] font-medium bg-white text-slate-700 border border-slate-200 px-2 py-1 rounded"
-              >
-                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                {doc.label}
-              </span>
-            ))}
+            {attachedDocs.length > 0 ? (
+              attachedDocs.map((doc) => (
+                <span
+                  key={doc.key}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium bg-white text-slate-700 border border-slate-200 px-2 py-1 rounded"
+                >
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  {doc.label}
+                </span>
+              ))
+            ) : (
+              <span className="text-xs text-slate-400 italic">No documents attached yet</span>
+            )}
           </div>
         </div>
       </div>
 
       {/* References */}
-      {(formData.reference1Name || formData.reference2Name) && (
+      {(ref1Name || ref2Name) && (
         <div className="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-100">
           <div className="flex items-center gap-2 text-teal-700 font-semibold text-xs uppercase tracking-wider mb-2">
             <Users className="w-4 h-4" /> References
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            {formData.reference1Name && (
+            {ref1Name && (
               <div>
                 <span className="text-slate-500">Ref 1: </span>
                 <span className="font-semibold text-slate-800">
-                  {formData.reference1Name} ({formData.reference1Contact || "—"})
+                  {ref1Name} ({ref1Contact || "—"})
                 </span>
               </div>
             )}
-            {formData.reference2Name && (
+            {ref2Name && (
               <div>
                 <span className="text-slate-500">Ref 2: </span>
                 <span className="font-semibold text-slate-800">
-                  {formData.reference2Name} ({formData.reference2Contact || "—"})
+                  {ref2Name} ({ref2Contact || "—"})
                 </span>
               </div>
             )}

@@ -21,7 +21,7 @@ import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
@@ -204,8 +204,13 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
   const abortControllerRef = useRef(null);
   const objectUrlsRef = useRef([]); // Store all created object URLs
 
+  const [searchParams] = useSearchParams();
+  const applicationIdQuery = searchParams.get("applicationId");
+  const isEditingExistingApp = Boolean(applicationIdQuery);
+  const isPasswordRequired = !isRmMode && !isEditingExistingApp;
+
   const { resumeMeta, loadingResume, resumeError } = useRmLoanFormResume({
-    enabled: isRmMode,
+    enabled: isRmMode || (isPartnerLoggedIn && isEditingExistingApp),
     setFormData,
     setApplicationId,
   });
@@ -428,7 +433,7 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
       }
       // Review step — password lives here
       if (stepIndex === 4) {
-        return ["password", "confirmPassword"];
+        return isPasswordRequired ? ["password", "confirmPassword"] : [];
       }
       return [];
     })();
@@ -706,8 +711,10 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
     }
     Object.assign(errors, validatePersonFinancialFields(formData));
 
-    if (!formData.password) errors.password = "Password is required.";
-    if (!formData.confirmPassword) errors.confirmPassword = "Confirm Password is required.";
+    if (isPasswordRequired) {
+      if (!formData.password) errors.password = "Password is required.";
+      if (!formData.confirmPassword) errors.confirmPassword = "Confirm Password is required.";
+    }
     if (
       formData.password &&
       formData.confirmPassword &&
@@ -2901,95 +2908,99 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                   loanTitle="Home Loan (Salaried)"
                 />
 
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  Password Information
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {isPasswordRequired && (
                   <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
+                    <h2
+                      className="text-2xl font-semibold mb-6 flex items-center gap-3"
                       style={{ color: "#111827" }}
                     >
-                      Password *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword.password ? "text" : "password"}
-                        name="password"
-                        value={formData.password || ""}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="Enter password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPassword((prev) => ({
-                            ...prev,
-                            password: !prev.password,
-                          }))
-                        }
-                        className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
-                      >
-                        {showPassword.password ? (
-                          <EyeOff className="w-5 h-5" />
-                        ) : (
-                          <Eye className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
+                      Password Information
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Password *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword.password ? "text" : "password"}
+                            name="password"
+                            value={formData.password || ""}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                            style={{
+                              borderColor: "var(--color-brand-primary)",
+                              backgroundColor: "white",
+                            }}
+                            placeholder="Enter password"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPassword((prev) => ({
+                                ...prev,
+                                password: !prev.password,
+                              }))
+                            }
+                            className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                          >
+                            {showPassword.password ? (
+                              <EyeOff className="w-5 h-5" />
+                            ) : (
+                              <Eye className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
 
-                    {renderError('password')}
-                  </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Confirm Password *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword.confirmPassword ? "text" : "password"}
-                        name="confirmPassword"
-                        value={formData.confirmPassword || ""}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="Re-enter password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPassword((prev) => ({
-                            ...prev,
-                            confirmPassword: !prev.confirmPassword,
-                          }))
-                        }
-                        className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
-                      >
-                        {showPassword.confirmPassword ? (
-                          <EyeOff className="w-5 h-5" />
-                        ) : (
-                          <Eye className="w-5 h-5" />
-                        )}
-                      </button>
+                        {renderError('password')}
+                      </div>
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Confirm Password *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword.confirmPassword ? "text" : "password"}
+                            name="confirmPassword"
+                            value={formData.confirmPassword || ""}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                            style={{
+                              borderColor: "var(--color-brand-primary)",
+                              backgroundColor: "white",
+                            }}
+                            placeholder="Re-enter password"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPassword((prev) => ({
+                                ...prev,
+                                confirmPassword: !prev.confirmPassword,
+                              }))
+                            }
+                            className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                          >
+                            {showPassword.confirmPassword ? (
+                              <EyeOff className="w-5 h-5" />
+                            ) : (
+                              <Eye className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                        {renderError('confirmPassword')}
+                      </div>
                     </div>
-                    {renderError('confirmPassword')}
                   </div>
-                </div>
+                )}
               </section>
 
               {/* Partner Referral — public applicants only */}

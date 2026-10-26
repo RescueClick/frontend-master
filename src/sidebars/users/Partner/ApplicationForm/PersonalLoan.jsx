@@ -303,6 +303,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
   const applicationIdQuery = searchParams.get("applicationId");
   const isEditingExistingApp = Boolean(applicationIdQuery);
+  const isPasswordRequired = !isRmMode && !isEditingExistingApp;
 
   const { resumeMeta, loadingResume, resumeError } = useRmLoanFormResume({
     enabled: isRmMode || (isPartnerLoggedIn && isEditingExistingApp),
@@ -341,9 +342,11 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       "currentAddress",
       "loanAmount",
       "reference1Name",
-      isPartnerLoggedIn ? "password" : "partnerReferralCode",
+      isPasswordRequired
+        ? (isPartnerLoggedIn ? "password" : "partnerReferralCode")
+        : "loanAmount",
     ],
-    [isPartnerLoggedIn]
+    [isPasswordRequired, isPartnerLoggedIn]
   );
 
   useEffect(() => {
@@ -515,14 +518,33 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "loanAmount" ? parseInt(value, 10) || 0 : value,
-    }));
+    setFormData((prev) => {
+      const nextVal = name === "loanAmount" ? parseInt(value, 10) || 0 : value;
+      const updated = {
+        ...prev,
+        [name]: nextVal,
+      };
+      if (sameAddress) {
+        if (name === "currentAddress") updated.permanentAddress = nextVal;
+        if (name === "currentHouseStatus") updated.permanentHouseStatus = nextVal;
+        if (name === "currentLandmark") updated.permanentLandmark = nextVal;
+        if (name === "stabilityOfResidency") updated.permanentStability = nextVal;
+        if (name === "currentAddressPinCode") updated.permanentAddressPinCode = nextVal;
+      }
+      return updated;
+    });
+
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
         delete next[name];
+        if (sameAddress) {
+          if (name === "currentAddress") delete next.permanentAddress;
+          if (name === "currentHouseStatus") delete next.permanentHouseStatus;
+          if (name === "currentLandmark") delete next.permanentLandmark;
+          if (name === "stabilityOfResidency") delete next.permanentStability;
+          if (name === "currentAddressPinCode") delete next.permanentAddressPinCode;
+        }
         return next;
       });
     }
@@ -680,16 +702,34 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
   };
 
   const handleSameAddressChange = (e) => {
-    setSameAddress(e.target.checked);
-    if (e.target.checked) {
+    const isSame = e.target.checked;
+    setSameAddress(isSame);
+    if (isSame) {
       setFormData((prev) => ({
         ...prev,
-        permanentAddress: prev.currentAddress,
+        permanentAddress: prev.currentAddress || "",
+        permanentHouseStatus: prev.currentHouseStatus || "",
+        permanentLandmark: prev.currentLandmark || "",
+        permanentStability: prev.stabilityOfResidency || "",
+        permanentAddressPinCode: prev.currentAddressPinCode || "",
       }));
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.permanentAddress;
+        delete next.permanentHouseStatus;
+        delete next.permanentLandmark;
+        delete next.permanentStability;
+        delete next.permanentAddressPinCode;
+        return next;
+      });
     } else {
       setFormData((prev) => ({
         ...prev,
         permanentAddress: "",
+        permanentHouseStatus: "",
+        permanentLandmark: "",
+        permanentStability: "",
+        permanentAddressPinCode: "",
       }));
     }
   };
@@ -705,8 +745,10 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     if (!formData.pan) errors.pan = "PAN number is required.";
     if (!formData.gender) errors.gender = "Gender is required.";
     if (!formData.maritalStatus) errors.maritalStatus = "Marital status is required.";
-    if (!formData.password) errors.password = "Password is required.";
-    if (!formData.confirmPassword) errors.confirmPassword = "Confirm Password is required.";
+    if (isPasswordRequired) {
+      if (!formData.password) errors.password = "Password is required.";
+      if (!formData.confirmPassword) errors.confirmPassword = "Confirm Password is required.";
+    }
     if (
       formData.password &&
       formData.confirmPassword &&
@@ -805,66 +847,69 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     return errors;
   }
 
-  const stepFieldKeys = [
-    // 0: Personal & KYC
-    [
-      "firstName",
-      "middleName",
-      "lastName",
-      "motherName",
-      "pan",
-      "gender",
-      "maritalStatus",
-      "contactNo",
-      "email",
-      "dob",
-      "hasRunningLoan",
-      "monthlyEmiPaying",
-      "cibilScoreBand",
-      "loanPurpose",
-      "aadharFront",
-      "aadharBack",
-      "panCard",
-      "passportPhoto",
-      "selfie",
+  const stepFieldKeys = useMemo(
+    () => [
+      // 0: Personal & KYC
+      [
+        "firstName",
+        "middleName",
+        "lastName",
+        "motherName",
+        "pan",
+        "gender",
+        "maritalStatus",
+        "contactNo",
+        "email",
+        "dob",
+        "hasRunningLoan",
+        "monthlyEmiPaying",
+        "cibilScoreBand",
+        "loanPurpose",
+        "aadharFront",
+        "aadharBack",
+        "panCard",
+        "passportPhoto",
+        "selfie",
+      ],
+      // 1: Address
+      [
+        "currentAddress",
+        "permanentAddress",
+        "stabilityOfResidency",
+        "currentHouseStatus",
+        "currentLandmark",
+        "currentAddressPinCode",
+        "permanentHouseStatus",
+        "permanentLandmark",
+        "permanentStability",
+        "permanentAddressPinCode",
+        "addressProof",
+      ],
+      // 2: Loan & Employment
+      [
+        "loanAmount",
+        "companyName",
+        "designation",
+        "companyAddress",
+        "monthlySalary",
+        "totalExperience",
+        "currentExperience",
+        "salaryInHand",
+        "companyIdCard",
+        "salarySlip1",
+        "salarySlip2",
+        "salarySlip3",
+        "form16_26as",
+        "bankStatement1",
+        "bankStatement2",
+      ],
+      // 3: References
+      ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"],
+      // 4: Review & Submit
+      isPasswordRequired ? ["password", "confirmPassword"] : [],
     ],
-    // 1: Address
-    [
-      "currentAddress",
-      "permanentAddress",
-      "stabilityOfResidency",
-      "currentHouseStatus",
-      "currentLandmark",
-      "currentAddressPinCode",
-      "permanentHouseStatus",
-      "permanentLandmark",
-      "permanentStability",
-      "permanentAddressPinCode",
-      "addressProof",
-    ],
-    // 2: Loan & Employment
-    [
-      "loanAmount",
-      "companyName",
-      "designation",
-      "companyAddress",
-      "monthlySalary",
-      "totalExperience",
-      "currentExperience",
-      "salaryInHand",
-      "companyIdCard",
-      "salarySlip1",
-      "salarySlip2",
-      "salarySlip3",
-      "form16_26as",
-      "bankStatement1",
-      "bankStatement2",
-    ],
-    // 3: References
-    ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"],
-    // 4: Review & Submit
-    ["password", "confirmPassword"],
-  ];
+    [isPasswordRequired]
+  );
 
   const validateStep = (stepIdx) => {
     const errors = validateRegistrationForm(formData);
@@ -877,11 +922,11 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
   const canSubmit = useMemo(
     () => Object.keys(validateRegistrationForm(formData)).length === 0,
-    [formData]
+    [formData, isPasswordRequired]
   );
   const stepErrorCounts = useMemo(
     () => steps.map((_, idx) => Object.keys(validateStep(idx)).length),
-    [formData]
+    [formData, isPasswordRequired]
   );
 
   const handleNext = async () => {
@@ -2138,6 +2183,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                             borderColor: "var(--color-brand-primary)",
                             backgroundColor: "#F8FAFC",
                           }}
+                          disabled={sameAddress}
                           required
                         >
 
@@ -2166,6 +2212,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                             backgroundColor: "#F8FAFC",
                           }}
                           placeholder="Enter landmark for permanent address"
+                          disabled={sameAddress}
                           required
                         />
                         {renderError("permanentLandmark")}
@@ -2192,6 +2239,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                             backgroundColor: "#F8FAFC",
                           }}
                           placeholder="Enter stability for permanent address"
+                          disabled={sameAddress}
                           required
                         />
                         {renderError("permanentStability")}
@@ -2215,6 +2263,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                             backgroundColor: "#F8FAFC",
                           }}
                           placeholder="Enter pin code"
+                          disabled={sameAddress}
                           required
                         />
                         {renderError("permanentAddressPinCode")}
@@ -2821,94 +2870,98 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                   loanTitle={dynamicLoanTitle}
                 />
 
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  Password Information
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
+                {isPasswordRequired && (
+                  <div className="mt-8">
+                    <h2
+                      className="text-2xl font-semibold mb-6 flex items-center gap-3"
                       style={{ color: "#111827" }}
                     >
-                      Password *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword.password ? "text" : "password"}
-                        name="password"
-                        value={formData.password || ""}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="Enter password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPassword((prev) => ({
-                            ...prev,
-                            password: !prev.password,
-                          }))
-                        }
-                        className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
-                      >
-                        {showPassword.password ? (
-                          <EyeOff className="w-5 h-5" />
-                        ) : (
-                          <Eye className="w-5 h-5" />
-                        )}
-                      </button>
+                      Password Information
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Password *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword.password ? "text" : "password"}
+                            name="password"
+                            value={formData.password || ""}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                            style={{
+                              borderColor: "var(--color-brand-primary)",
+                              backgroundColor: "white",
+                            }}
+                            placeholder="Enter password"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPassword((prev) => ({
+                                ...prev,
+                                password: !prev.password,
+                              }))
+                            }
+                            className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                          >
+                            {showPassword.password ? (
+                              <EyeOff className="w-5 h-5" />
+                            ) : (
+                              <Eye className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                        {renderError("password")}
+                      </div>
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Confirm Password *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword.confirmPassword ? "text" : "password"}
+                            name="confirmPassword"
+                            value={formData.confirmPassword || ""}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                            style={{
+                              borderColor: "var(--color-brand-primary)",
+                              backgroundColor: "white",
+                            }}
+                            placeholder="Re-enter password"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPassword((prev) => ({
+                                ...prev,
+                                confirmPassword: !prev.confirmPassword,
+                              }))
+                            }
+                            className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                          >
+                            {showPassword.confirmPassword ? (
+                              <EyeOff className="w-5 h-5" />
+                            ) : (
+                              <Eye className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                        {renderError("confirmPassword")}
+                      </div>
                     </div>
-                    {renderError("password")}
                   </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Confirm Password *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword.confirmPassword ? "text" : "password"}
-                        name="confirmPassword"
-                        value={formData.confirmPassword || ""}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="Re-enter password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPassword((prev) => ({
-                            ...prev,
-                            confirmPassword: !prev.confirmPassword,
-                          }))
-                        }
-                        className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
-                      >
-                        {showPassword.confirmPassword ? (
-                          <EyeOff className="w-5 h-5" />
-                        ) : (
-                          <Eye className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                    {renderError("confirmPassword")}
-                  </div>
-                </div>
+                )}
               </section>
 
               {/* Partner Referral — public applicants only (e.g. from home); hidden in partner dashboard */}
