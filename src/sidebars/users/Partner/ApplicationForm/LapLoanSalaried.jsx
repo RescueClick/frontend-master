@@ -416,6 +416,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
       const err = validateLoanDocumentUpload(picked, name);
       if (err) {
         toast.error(err);
+        input.value = "";
         return;
       }
       let file;
@@ -430,6 +431,12 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
         ...prev,
         [name]: file,
       }));
+      setFieldErrors((prev) => {
+        if (!prev[name]) return prev;
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
 
       const toastId = toast.loading(`Uploading ${file.name}...`);
       if (applicationId) {
@@ -456,11 +463,14 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
     }));
   };
 
-  const handleFileChangeAddressProofs = async (picked) => {
+  const handleFileChangeAddressProofs = async (eOrFile) => {
+    const input = eOrFile?.target;
+    const picked = input?.files ? input.files[0] : (eOrFile instanceof File ? eOrFile : null);
     if (!picked) return;
     const err = validateLoanDocumentUpload(picked, "addressProof");
     if (err) {
       toast.error(err);
+      if (input) input.value = "";
       return;
     }
     let file;
@@ -468,12 +478,19 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
       file = await snapshotLoanFile(picked);
     } catch {
       toast.error(UNREADABLE_LOAN_FILE_MESSAGE);
+      if (input) input.value = "";
       return;
     }
     setFormData((prev) => ({
       ...prev,
       addressProof: file,
     }));
+    setFieldErrors((prev) => {
+      if (!prev.addressProof) return prev;
+      const next = { ...prev };
+      delete next.addressProof;
+      return next;
+    });
 
     const toastId = toast.loading(`Uploading ${file.name}...`);
     if (applicationId) {

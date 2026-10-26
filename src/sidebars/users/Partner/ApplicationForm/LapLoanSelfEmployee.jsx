@@ -431,6 +431,12 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
         ...prev,
         [name]: file,
       }));
+      setFieldErrors((prev) => {
+        if (!prev[name]) return prev;
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
 
       const toastId = toast.loading(`Uploading ${file.name}...`);
       if (applicationId) {
@@ -1347,7 +1353,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                 <LoanAddressProofBlock
                   stepLabel="2.2"
                   file={formData.addressProof}
-                  onChange={(f) => setFormData((p) => ({ ...p, addressProof: f }))}
+                  onChange={handleFileChange}
                   renderError={renderError}
                 />
               </div>

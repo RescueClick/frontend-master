@@ -2125,7 +2125,64 @@ const CustomerApplication = () => {
                   <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2"><User className="w-4 h-4 text-slate-500"/> Customer Details</h2>
                   {renderFields(
                     customerFields,
-                    applicationData.customer
+                    {
+                      ...applicationData,
+                      ...applicationData?.product,
+                      ...applicationData?.loan,
+                      ...applicationData?.customer,
+                      loanAmount:
+                        applicationData?.customer?.loanAmount ??
+                        applicationData?.loanAmount ??
+                        applicationData?.requestedAmount ??
+                        applicationData?.loan?.amount ??
+                        applicationData?.product?.loanAmount ??
+                        "N/A",
+                      currentAddress:
+                        applicationData?.customer?.currentAddress ||
+                        applicationData?.currentAddress ||
+                        applicationData?.product?.currentAddress ||
+                        applicationData?.loan?.currentAddress,
+                      currentAddressLandmark:
+                        applicationData?.customer?.currentAddressLandmark ||
+                        applicationData?.currentAddressLandmark ||
+                        applicationData?.product?.currentAddressLandmark,
+                      currentAddressPinCode:
+                        applicationData?.customer?.currentAddressPinCode ||
+                        applicationData?.currentAddressPinCode ||
+                        applicationData?.product?.currentAddressPinCode,
+                      currentAddressHouseStatus:
+                        applicationData?.customer?.currentAddressHouseStatus ||
+                        applicationData?.currentAddressHouseStatus ||
+                        applicationData?.currentHouseStatus ||
+                        applicationData?.product?.currentAddressHouseStatus,
+                      stabilityOfResidency:
+                        applicationData?.customer?.stabilityOfResidency ||
+                        applicationData?.stabilityOfResidency ||
+                        applicationData?.product?.stabilityOfResidency,
+                      permanentAddress:
+                        applicationData?.customer?.permanentAddress ||
+                        applicationData?.permanentAddress ||
+                        applicationData?.product?.permanentAddress ||
+                        applicationData?.loan?.permanentAddress,
+                      permanentAddressLandmark:
+                        applicationData?.customer?.permanentAddressLandmark ||
+                        applicationData?.permanentAddressLandmark ||
+                        applicationData?.product?.permanentAddressLandmark,
+                      permanentAddressPinCode:
+                        applicationData?.customer?.permanentAddressPinCode ||
+                        applicationData?.permanentAddressPinCode ||
+                        applicationData?.product?.permanentAddressPinCode,
+                      permanentAddressHouseStatus:
+                        applicationData?.customer?.permanentAddressHouseStatus ||
+                        applicationData?.permanentAddressHouseStatus ||
+                        applicationData?.permanentHouseStatus ||
+                        applicationData?.product?.permanentAddressHouseStatus,
+                      permanentAddressStability:
+                        applicationData?.customer?.permanentAddressStability ||
+                        applicationData?.permanentAddressStability ||
+                        applicationData?.permanentStability ||
+                        applicationData?.product?.permanentAddressStability,
+                    }
                   )}
                 </div>
                 <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
@@ -2134,8 +2191,18 @@ const CustomerApplication = () => {
                     {isSalariedLoanType(applicationData.loanType) ? "Employment Information" : "Business Information"}
                   </h2>
                   {isSalariedLoanType(applicationData.loanType)
-                    ? renderFields(employmentFields, applicationData.employmentInfo)
-                    : renderFields(businessFields, applicationData.businessInfo)}
+                    ? renderFields(employmentFields, {
+                        ...applicationData,
+                        ...applicationData?.product,
+                        ...applicationData?.employment,
+                        ...applicationData?.employmentInfo,
+                      })
+                    : renderFields(businessFields, {
+                        ...applicationData,
+                        ...applicationData?.product,
+                        ...applicationData?.business,
+                        ...applicationData?.businessInfo,
+                      })}
                 </div>
 
                 {/* References Section */}
