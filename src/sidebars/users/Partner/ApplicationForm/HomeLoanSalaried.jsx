@@ -162,6 +162,14 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
     resalePaymentReceipts: "",
     agreementCopy: "",
 
+    // Co-applicant
+    hasCoApplicant: false,
+    coApplicantMobile: "",
+    coApplicantAadharFront: null,
+    coApplicantAadharBack: null,
+    coApplicantPan: null,
+    coApplicantSelfie: null,
+
     // Document
     aadharFront: "",
     aadharBack: "",
@@ -389,6 +397,15 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
           "panCard",
           "passportPhoto",
           "selfie",
+          ...(formData.hasCoApplicant
+            ? [
+                "coApplicantMobile",
+                "coApplicantAadharFront",
+                "coApplicantAadharBack",
+                "coApplicantPan",
+                "coApplicantSelfie",
+              ]
+            : []),
         ];
       }
       if (stepIndex === 1) {
@@ -809,6 +826,23 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
       errors.addressProof = "Address proof is required.";
     }
 
+    // Co-applicant validation
+    if (formData.hasCoApplicant) {
+      if (!formData.coApplicantAadharFront)
+        errors.coApplicantAadharFront = "Co-applicant Aadhar front is required.";
+      if (!formData.coApplicantAadharBack)
+        errors.coApplicantAadharBack = "Co-applicant Aadhar back is required.";
+      if (!formData.coApplicantPan)
+        errors.coApplicantPan = "Co-applicant PAN is required.";
+      if (!formData.coApplicantMobile) {
+        errors.coApplicantMobile = "Co-applicant mobile is required.";
+      } else if (!/^\d{10}$/.test(formData.coApplicantMobile)) {
+        errors.coApplicantMobile = "Mobile must be 10 digits.";
+      }
+      if (!formData.coApplicantSelfie)
+        errors.coApplicantSelfie = "Co-applicant selfie is required.";
+    }
+
 
     // Employment
     if (!formData.companyName) errors.companyName = "Company name is required.";
@@ -936,6 +970,15 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
           { name: formData.reference1Name, phone: formData.reference1Contact },
           { name: formData.reference2Name, phone: formData.reference2Contact },
         ],
+        coApplicant: formData.hasCoApplicant
+          ? {
+              aadharFront: formData.coApplicantAadharFront,
+              aadharBack: formData.coApplicantAadharBack,
+              panCard: formData.coApplicantPan,
+              phone: formData.coApplicantMobile,
+              selfie: formData.coApplicantSelfie,
+            }
+          : undefined,
         docs: [], // files will be appended separately
         propertyType: formData.propertyType,
         propertyValue: formData.propertyValue ? Number(formData.propertyValue) : undefined,
@@ -974,6 +1017,17 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
         },
         { file: formData.agreementCopy, type: "AGREEMENT_COPY" },
       ];
+
+      if (formData.hasCoApplicant) {
+        if (formData.coApplicantAadharFront)
+          docsQueue.push({ file: formData.coApplicantAadharFront, type: "CO_APPLICANT_AADHAR_FRONT" });
+        if (formData.coApplicantAadharBack)
+          docsQueue.push({ file: formData.coApplicantAadharBack, type: "CO_APPLICANT_AADHAR_BACK" });
+        if (formData.coApplicantPan)
+          docsQueue.push({ file: formData.coApplicantPan, type: "CO_APPLICANT_PAN" });
+        if (formData.coApplicantSelfie)
+          docsQueue.push({ file: formData.coApplicantSelfie, type: "CO_APPLICANT_SELFIE" });
+      }
 
       docsQueue.forEach(({ file, type }) => {
         const rawFile = file instanceof File ? file : file?.file;
@@ -1241,6 +1295,13 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
       bankStatement1: "",
       bankStatement2: "",
       bankStatement3: "",
+
+      hasCoApplicant: false,
+      coApplicantMobile: "",
+      coApplicantAadharFront: null,
+      coApplicantAadharBack: null,
+      coApplicantPan: null,
+      coApplicantSelfie: null,
 
       password: "",
       confirmPassword: "",
@@ -1748,6 +1809,122 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                       />
                     ))}
                   </div>
+                </div>
+
+                {/* Co-applicant Section */}
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-teal-600" />
+                      <div>
+                        <h3 className="text-lg font-semibold" style={{ color: "#111827" }}>
+                          Co-applicant Details
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Add a co-applicant to strengthen the loan application (optional)
+                        </p>
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                      <input
+                        type="checkbox"
+                        name="hasCoApplicant"
+                        checked={Boolean(formData.hasCoApplicant)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData((prev) => ({
+                            ...prev,
+                            hasCoApplicant: checked,
+                            ...(!checked
+                              ? {
+                                  coApplicantAadharFront: null,
+                                  coApplicantAadharBack: null,
+                                  coApplicantPan: null,
+                                  coApplicantMobile: "",
+                                  coApplicantSelfie: null,
+                                }
+                              : {}),
+                          }));
+                        }}
+                        className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
+                      />
+                      <span className="text-sm font-semibold text-slate-800">Add Co-Applicant</span>
+                    </label>
+                  </div>
+
+                  {formData.hasCoApplicant && (
+                    <div
+                      className="p-6 rounded-xl border-2"
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="md:col-span-2 max-w-sm">
+                          <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: "#111827" }}
+                          >
+                            Co-applicant Mobile Number *
+                          </label>
+                          <div className="relative">
+                            <Phone
+                              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                              style={{ color: "var(--color-brand-primary)" }}
+                            />
+                            <input
+                              type="tel"
+                              maxLength={10}
+                              name="coApplicantMobile"
+                              value={formData.coApplicantMobile}
+                              onChange={handleInputChange}
+                              className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                              style={{
+                                borderColor: "var(--color-brand-primary)",
+                                backgroundColor: "white",
+                              }}
+                              placeholder="Enter 10-digit mobile number"
+                              required
+                            />
+                            {renderError("coApplicantMobile")}
+                          </div>
+                        </div>
+
+                        {[
+                          { name: "coApplicantAadharFront", label: "Co-Applicant Aadhaar (Front) *" },
+                          { name: "coApplicantAadharBack", label: "Co-Applicant Aadhaar (Back) *" },
+                          { name: "coApplicantPan", label: "Co-Applicant PAN Card *" },
+                          {
+                            name: "coApplicantSelfie",
+                            label: "Co-Applicant Photo / Selfie *",
+                            accept: ".jpg,.jpeg,.png",
+                          },
+                        ].map((doc) => (
+                          <DocumentUploadCard
+                            key={doc.name}
+                            name={doc.name}
+                            label={doc.label}
+                            file={formData[doc.name]}
+                            accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
+                            required
+                            uploadStatus={docUploadStatus[doc.name]}
+                            uploadProgress={docUploadProgress[doc.name]}
+                            onChange={handleFileChange}
+                            onRemove={handleFileRemove}
+                            error={renderError(doc.name)}
+                            onPreview={() => {
+                              let url = "";
+                              if (formData[doc.name]?.preview) {
+                                url = formData[doc.name].preview;
+                              } else if (formData[doc.name] instanceof File) {
+                                url = URL.createObjectURL(formData[doc.name]);
+                                objectUrlsRef.current.push(url);
+                              }
+                              setdocumentModel(url);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
 

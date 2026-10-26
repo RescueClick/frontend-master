@@ -161,7 +161,8 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     agreementCopy: null,
     allotmentLetter: null,
 
-    // Female co-applicant
+    // Co-applicant
+    hasCoApplicant: false,
     coApplicantAadharFront: null,
     coApplicantAadharBack: null,
     coApplicantPan: null,
@@ -294,7 +295,6 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           "dob",
           "panNumber",
           "SpouseName",
-          "coApplicantMobile",
           "hasRunningLoan",
           "loanPurpose",
           "monthlyEmiPaying",
@@ -304,6 +304,15 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           "panCard",
           "selfie",
           "passportPhoto",
+          ...(formData.hasCoApplicant
+            ? [
+                "coApplicantMobile",
+                "coApplicantAadharFront",
+                "coApplicantAadharBack",
+                "coApplicantPan",
+                "coApplicantSelfie",
+              ]
+            : []),
         ];
       }
       if (stepIndex === 1) {
@@ -543,7 +552,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     if (!data.propertyValue) errors.propertyValue = "Property estimated value is required.";
     if (!data.propertyAddress) errors.propertyAddress = "Property address is required.";
 
-    if (String(data.gender || "").toLowerCase() === "female") {
+    if (data.hasCoApplicant) {
       if (!data.coApplicantAadharFront) errors.coApplicantAadharFront = "Co-applicant Aadhar front is required.";
       if (!data.coApplicantAadharBack) errors.coApplicantAadharBack = "Co-applicant Aadhar back is required.";
       if (!data.coApplicantPan) errors.coApplicantPan = "Co-applicant PAN is required.";
@@ -694,16 +703,15 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           { name: formData.reference1Name, phone: formData.reference1Contact },
           { name: formData.reference2Name, phone: formData.reference2Contact },
         ],
-        coApplicant:
-          String(formData.gender || "").toLowerCase() === "female"
-            ? {
-                aadharFront: formData.coApplicantAadharFront,
-                aadharBack: formData.coApplicantAadharBack,
-                panCard: formData.coApplicantPan,
-                phone: formData.coApplicantMobile,
-                selfie: formData.coApplicantSelfie,
-              }
-            : undefined,
+        coApplicant: formData.hasCoApplicant
+          ? {
+              aadharFront: formData.coApplicantAadharFront,
+              aadharBack: formData.coApplicantAadharBack,
+              panCard: formData.coApplicantPan,
+              phone: formData.coApplicantMobile,
+              selfie: formData.coApplicantSelfie,
+            }
+          : undefined,
       };
 
       const formDataToSend = new FormData();
@@ -732,7 +740,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       if (formData.agreementCopy) docsQueue.push({ file: formData.agreementCopy, type: "AGREEMENT_COPY" });
       if (formData.allotmentLetter) docsQueue.push({ file: formData.allotmentLetter, type: "ALLOTMENT_LETTER" });
 
-      if (String(formData.gender || "").toLowerCase() === "female") {
+      if (formData.hasCoApplicant) {
         if (formData.coApplicantAadharFront) docsQueue.push({ file: formData.coApplicantAadharFront, type: "CO_APPLICANT_AADHAR_FRONT" });
         if (formData.coApplicantAadharBack) docsQueue.push({ file: formData.coApplicantAadharBack, type: "CO_APPLICANT_AADHAR_BACK" });
         if (formData.coApplicantPan) docsQueue.push({ file: formData.coApplicantPan, type: "CO_APPLICANT_PAN" });
@@ -1084,23 +1092,6 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                   {renderError("motherName")}
                 </div>
 
-                {String(formData.gender || "").toLowerCase() === "female" && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                      Co-Applicant Mobile (Female Applicant) *
-                    </label>
-                    <input
-                      type="tel"
-                      maxLength={10}
-                      name="coApplicantMobile"
-                      value={formData.coApplicantMobile}
-                      onChange={handleInputChange}
-                      placeholder="Co-applicant phone"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                    />
-                    {renderError("coApplicantMobile")}
-                  </div>
-                )}
               </div>
 
               {/* KYC Documents */}
@@ -1151,54 +1142,103 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                 </div>
               </div>
 
-              {String(formData.gender || "").toLowerCase() === "female" && (
-                <div className="pt-6 border-t border-slate-200">
-                  <h3 className="text-base font-bold text-slate-900 mb-1">
-                    Co-Applicant Documents (Female Applicant)
-                  </h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Upload co-applicant verification documents
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DocumentUploadCard
-                      name="coApplicantAadharFront"
-                      label="Co-Applicant Aadhaar Front *"
-                      file={formData.coApplicantAadharFront}
-                      required
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError("coApplicantAadharFront")}
-                    />
-                    <DocumentUploadCard
-                      name="coApplicantAadharBack"
-                      label="Co-Applicant Aadhaar Back *"
-                      file={formData.coApplicantAadharBack}
-                      required
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError("coApplicantAadharBack")}
-                    />
-                    <DocumentUploadCard
-                      name="coApplicantPan"
-                      label="Co-Applicant PAN Card *"
-                      file={formData.coApplicantPan}
-                      required
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError("coApplicantPan")}
-                    />
-                    <DocumentUploadCard
-                      name="coApplicantSelfie"
-                      label="Co-Applicant Photo / Selfie *"
-                      file={formData.coApplicantSelfie}
-                      required
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError("coApplicantSelfie")}
-                    />
+              {/* Co-Applicant Section */}
+              <div className="pt-6 border-t border-slate-200">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Co-Applicant Details
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Add a co-applicant to strengthen the loan application (optional)
+                    </p>
                   </div>
+                  <label className="flex items-center gap-2 cursor-pointer select-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      name="hasCoApplicant"
+                      checked={Boolean(formData.hasCoApplicant)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData((prev) => ({
+                          ...prev,
+                          hasCoApplicant: checked,
+                          ...(!checked
+                            ? {
+                                coApplicantAadharFront: null,
+                                coApplicantAadharBack: null,
+                                coApplicantPan: null,
+                                coApplicantMobile: "",
+                                coApplicantSelfie: null,
+                              }
+                            : {}),
+                        }));
+                      }}
+                      className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
+                    />
+                    <span className="text-sm font-semibold text-slate-800">Add Co-Applicant</span>
+                  </label>
                 </div>
-              )}
+
+                {formData.hasCoApplicant && (
+                  <div className="mt-4 p-5 rounded-xl border border-teal-200 bg-teal-50/20">
+                    <div className="mb-5 max-w-sm">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Co-Applicant Mobile Number *
+                      </label>
+                      <input
+                        type="tel"
+                        maxLength={10}
+                        name="coApplicantMobile"
+                        value={formData.coApplicantMobile}
+                        onChange={handleInputChange}
+                        placeholder="Enter 10-digit mobile number"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm bg-white"
+                      />
+                      {renderError("coApplicantMobile")}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <DocumentUploadCard
+                        name="coApplicantAadharFront"
+                        label="Co-Applicant Aadhaar Front *"
+                        file={formData.coApplicantAadharFront}
+                        required
+                        onChange={handleFileChange}
+                        onRemove={handleFileRemove}
+                        error={renderError("coApplicantAadharFront")}
+                      />
+                      <DocumentUploadCard
+                        name="coApplicantAadharBack"
+                        label="Co-Applicant Aadhaar Back *"
+                        file={formData.coApplicantAadharBack}
+                        required
+                        onChange={handleFileChange}
+                        onRemove={handleFileRemove}
+                        error={renderError("coApplicantAadharBack")}
+                      />
+                      <DocumentUploadCard
+                        name="coApplicantPan"
+                        label="Co-Applicant PAN Card *"
+                        file={formData.coApplicantPan}
+                        required
+                        onChange={handleFileChange}
+                        onRemove={handleFileRemove}
+                        error={renderError("coApplicantPan")}
+                      />
+                      <DocumentUploadCard
+                        name="coApplicantSelfie"
+                        label="Co-Applicant Photo / Selfie *"
+                        file={formData.coApplicantSelfie}
+                        required
+                        onChange={handleFileChange}
+                        onRemove={handleFileRemove}
+                        error={renderError("coApplicantSelfie")}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </section>
           )}
 

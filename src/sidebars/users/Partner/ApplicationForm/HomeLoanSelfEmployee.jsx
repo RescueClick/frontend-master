@@ -160,7 +160,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     businessOtherDocs: null,
     selfie: null,
 
-    // Co-applicant (for female applicants)
+    // Co-applicant
+    hasCoApplicant: false,
     coApplicantAadharFront: null,
     coApplicantAadharBack: null,
     coApplicantPan: null,
@@ -397,7 +398,6 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           "dob",
           "panNumber",
           "SpouseName",
-          "coApplicantMobile",
           "hasRunningLoan",
           "loanPurpose",
           "monthlyEmiPaying",
@@ -407,10 +407,15 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           "panCard",
           "selfie",
           "passportPhoto",
-          "coApplicantAadharFront",
-          "coApplicantAadharBack",
-          "coApplicantPan",
-          "coApplicantSelfie",
+          ...(formData.hasCoApplicant
+            ? [
+                "coApplicantMobile",
+                "coApplicantAadharFront",
+                "coApplicantAadharBack",
+                "coApplicantPan",
+                "coApplicantSelfie",
+              ]
+            : []),
         ];
       }
       if (stepIndex === 1) {
@@ -745,8 +750,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       errors.propertyAddress = "Property address is required.";
 
 
-    // Female applicant requires co-applicant docs
-    if (String(formData.gender || "").toLowerCase() === "female") {
+    // Co-applicant validation
+    if (formData.hasCoApplicant) {
       if (!formData.coApplicantAadharFront)
         errors.coApplicantAadharFront = "Co-applicant Aadhar front is required.";
       if (!formData.coApplicantAadharBack)
@@ -901,16 +906,15 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
             phone: formData.reference2Contact,
           },
         ],
-        coApplicant:
-          String(formData.gender || "").toLowerCase() === "female"
-            ? {
+        coApplicant: formData.hasCoApplicant
+          ? {
               aadharFront: formData.coApplicantAadharFront,
               aadharBack: formData.coApplicantAadharBack,
               panCard: formData.coApplicantPan,
               phone: formData.coApplicantMobile,
               selfie: formData.coApplicantSelfie,
             }
-            : undefined,
+          : undefined,
       };
 
       // Prepare FormData with ordered docs/docTypes
@@ -971,8 +975,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       if (formData.agreementCopy)
         docsQueue.push({ file: formData.agreementCopy, type: "AGREEMENT_COPY" });
 
-      // Co-applicant documents for female applicants
-      if (String(formData.gender || "").toLowerCase() === "female") {
+      // Co-applicant documents
+      if (formData.hasCoApplicant) {
         if (formData.coApplicantAadharFront)
           docsQueue.push({
             file: formData.coApplicantAadharFront,
@@ -1248,7 +1252,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       businessOtherDocs: null,
       selfie: null,
 
-      // Co-applicant (for female applicants)
+      // Co-applicant
+      hasCoApplicant: false,
       coApplicantAadharFront: null,
       coApplicantAadharBack: null,
       coApplicantPan: null,
@@ -1753,21 +1758,86 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                 </div>
               </div>
 
-              {/* Co-applicant Section (for female applicants) */}
-              {String(formData.gender || "").toLowerCase() === "female" && (
-                <div className="pt-6 border-t border-slate-200 mt-6">
-                  <h3
-                    className="text-lg font-semibold mb-2 flex items-center gap-2"
-                    style={{ color: "#111827" }}
-                  >
+              {/* Co-applicant Section */}
+              <div className="pt-6 border-t border-slate-200 mt-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2">
                     <Users className="w-5 h-5 text-teal-600" />
-                    Co-applicant Information
-                  </h3>
+                    <div>
+                      <h3
+                        className="text-lg font-semibold"
+                        style={{ color: "#111827" }}
+                      >
+                        Co-applicant Information
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Add a co-applicant to strengthen the loan application (optional)
+                      </p>
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      name="hasCoApplicant"
+                      checked={Boolean(formData.hasCoApplicant)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData((prev) => ({
+                          ...prev,
+                          hasCoApplicant: checked,
+                          ...(!checked
+                            ? {
+                                coApplicantAadharFront: null,
+                                coApplicantAadharBack: null,
+                                coApplicantPan: null,
+                                coApplicantMobile: "",
+                                coApplicantSelfie: null,
+                              }
+                            : {}),
+                        }));
+                      }}
+                      className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
+                    />
+                    <span className="text-sm font-semibold text-slate-800">Add Co-Applicant</span>
+                  </label>
+                </div>
+
+                {formData.hasCoApplicant && (
                   <div
-                    className="p-6 rounded-lg border-2"
+                    className="p-6 rounded-xl border-2"
                     style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="md:col-span-2 max-w-sm">
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          Co-applicant Mobile Number *
+                        </label>
+                        <div className="relative">
+                          <Phone
+                            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                            style={{ color: "var(--color-brand-primary)" }}
+                          />
+                          <input
+                            type="tel"
+                            maxLength={10}
+                            name="coApplicantMobile"
+                            value={formData.coApplicantMobile}
+                            onChange={handleInputChange}
+                            className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                            style={{
+                              borderColor: "var(--color-brand-primary)",
+                              backgroundColor: "white",
+                            }}
+                            placeholder="Enter 10-digit mobile number"
+                            required
+                          />
+                          {renderError("coApplicantMobile")}
+                        </div>
+                      </div>
+
                       <div>
                         <label
                           className="block text-sm font-medium mb-2"
@@ -1787,7 +1857,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                           accept=".pdf,.jpg,.jpeg,.png"
                           required
                         />
-                        {renderError('coApplicantAadharFront')}
+                        {renderError("coApplicantAadharFront")}
                         {renderPreviewLink("coApplicantAadharFront")}
                       </div>
                       <div>
@@ -1809,8 +1879,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                           accept=".pdf,.jpg,.jpeg,.png"
                           required
                         />
-
-                        {renderError('coApplicantAadharBack')}
+                        {renderError("coApplicantAadharBack")}
                         {renderPreviewLink("coApplicantAadharBack")}
                       </div>
                       <div>
@@ -1832,38 +1901,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                           accept=".pdf,.jpg,.jpeg,.png"
                           required
                         />
-
-                        {renderError('coApplicantPan')}
+                        {renderError("coApplicantPan")}
                         {renderPreviewLink("coApplicantPan")}
-                      </div>
-                      <div>
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Co-applicant Mobile Number *
-                        </label>
-                        <div className="relative">
-                          <Phone
-                            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                            style={{ color: "var(--color-brand-primary)" }}
-                          />
-                          <input
-                            type="tel"
-                            name="coApplicantMobile"
-                            value={formData.coApplicantMobile}
-                            onChange={handleInputChange}
-                            className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                            style={{
-                              borderColor: "var(--color-brand-primary)",
-                              backgroundColor: "white",
-                            }}
-                            placeholder="Enter co-applicant mobile number"
-                            required
-                          />
-
-                          {renderError('coApplicantMobile')}
-                        </div>
                       </div>
                       <div>
                         <label
@@ -1884,13 +1923,13 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                           accept=".jpg,.jpeg,.png"
                           required
                         />
-                        {renderError('coApplicantSelfie')}
+                        {renderError("coApplicantSelfie")}
                         {renderPreviewLink("coApplicantSelfie")}
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </section>
 
             {/* Address Information */}

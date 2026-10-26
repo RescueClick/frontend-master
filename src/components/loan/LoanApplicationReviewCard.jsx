@@ -78,6 +78,10 @@ export default function LoanApplicationReviewCard({
     { key: "companyIdCard", label: "Company ID" },
     { key: "salarySlip1", label: "Salary Slip 1" },
     { key: "bankStatement1", label: "Bank Statement 1" },
+    { key: "coApplicantAadharFront", label: "Co-App Aadhaar (Front)" },
+    { key: "coApplicantAadharBack", label: "Co-App Aadhaar (Back)" },
+    { key: "coApplicantPan", label: "Co-App PAN" },
+    { key: "coApplicantSelfie", label: "Co-App Photo" },
   ];
 
   const seenLabels = new Set();
@@ -248,6 +252,21 @@ export default function LoanApplicationReviewCard({
                 </span>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Co-Applicant Summary */}
+      {(formData.hasCoApplicant || formData.coApplicantMobile) && (
+        <div className="mt-4 p-4 rounded-lg bg-teal-50/50 border border-teal-100">
+          <div className="flex items-center gap-2 text-teal-800 font-semibold text-xs uppercase tracking-wider mb-2">
+            <Users className="w-4 h-4 text-teal-600" /> Co-Applicant Information
+          </div>
+          <div className="text-xs text-slate-700">
+            <span className="text-slate-500">Contact Number: </span>
+            <span className="font-semibold text-slate-800">
+              {safeString(formData.coApplicantMobile) || "—"}
+            </span>
           </div>
         </div>
       )}
