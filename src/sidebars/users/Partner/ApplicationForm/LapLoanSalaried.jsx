@@ -768,7 +768,8 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
         { file: formData.allotmentLetter, type: "ALLOTMENT_LETTER" },
       ];
 
-      const oversize = findOversizeInLoanDocsQueue(docsQueue);
+      const rawDocs = docsQueue.filter(({ file }) => (file instanceof File || file?.file instanceof File));
+      const oversize = findOversizeInLoanDocsQueue(rawDocs);
       if (oversize) {
         const msg = formatLoanDocOversizeError(oversize);
         setError(msg);
@@ -778,8 +779,9 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
       }
 
       docsQueue.forEach(({ file, type }) => {
-        if (file) {
-          formDataToSend.append("docs", file);
+        const rawFile = file instanceof File ? file : file?.file;
+        if (rawFile instanceof File) {
+          formDataToSend.append("docs", rawFile);
           formDataToSend.append("docTypes", type);
         }
       });
@@ -1064,7 +1066,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
                   </label>
                   <select
                     name="gender"
-                    value={formData.gender}
+                    value={formData.gender ? (formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1).toLowerCase()) : ""}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
                   >
@@ -1082,7 +1084,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
                   </label>
                   <select
                     name="maritalStatus"
-                    value={formData.maritalStatus}
+                    value={formData.maritalStatus ? (formData.maritalStatus.charAt(0).toUpperCase() + formData.maritalStatus.slice(1).toLowerCase()) : ""}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
                   >
@@ -1095,7 +1097,7 @@ export default function LapLoanSalaried({ embed = false, actorRole = "auto" } = 
                   {renderError("maritalStatus")}
                 </div>
 
-                {formData.maritalStatus === "Married" && (
+                {String(formData.maritalStatus || "").toLowerCase() === "married" && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Spouse Name

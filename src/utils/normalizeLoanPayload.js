@@ -71,7 +71,7 @@ export function buildCanonicalLoanPayload(formData = {}, loanType = "PERSONAL", 
     dateOfBirth,
     gender: formData.gender || "Male",
     maritalStatus: formData.maritalStatus || "Single",
-    spouseName: formData.maritalStatus === "Married" ? spouseName : "",
+    spouseName: String(formData.maritalStatus || "").toLowerCase() === "married" ? spouseName : "",
     currentAddress,
     currentAddressLandmark,
     currentAddressPinCode,
@@ -130,8 +130,26 @@ export function buildCanonicalLoanPayload(formData = {}, loanType = "PERSONAL", 
   }
 
   const coApplicantPhone = normalizePhone(
-    formData.coApplicantPhone || formData.coApplicantContact || formData.coApplicant?.phone
+    formData.coApplicantMobile ||
+    formData.coApplicantPhone ||
+    formData.coApplicantContact ||
+    formData.coApplicant?.phone ||
+    formData.coApplicant?.mobile
   );
+  const coApplicantName = String(
+    formData.coApplicantName || formData.coApplicant?.name || ""
+  ).trim();
+  const coApplicantRelation = String(
+    formData.coApplicantRelation || formData.coApplicant?.relation || ""
+  ).trim();
+
+  const coApplicantObj = coApplicantPhone
+    ? {
+        phone: coApplicantPhone,
+        ...(coApplicantName ? { name: coApplicantName } : {}),
+        ...(coApplicantRelation ? { relation: coApplicantRelation } : {}),
+      }
+    : undefined;
 
   return {
     loanType,
@@ -141,7 +159,7 @@ export function buildCanonicalLoanPayload(formData = {}, loanType = "PERSONAL", 
     customer,
     product,
     references,
-    coApplicant: coApplicantPhone ? { phone: coApplicantPhone } : undefined,
+    coApplicant: coApplicantObj,
     propertyType: formData.propertyType,
     propertyValue: formData.propertyValue ? Number(formData.propertyValue) : undefined,
     propertyAddress: formData.propertyAddress,

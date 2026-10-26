@@ -422,7 +422,8 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
 
   const fileLike = (v) =>
     v instanceof File ||
-    (v && typeof v === "object" && typeof v.size === "number");
+    (v && typeof v === "object" && (typeof v.size === "number" || v.isExistingDoc || v.uploaded || Boolean(v.url))) ||
+    (typeof v === "string" && v.length > 0);
 
   const zodFileRequired = (message) =>
     z.any().refine((v) => fileLike(v), { message: message || "This document is required." });
@@ -512,7 +513,7 @@ export default function BusinessLoan({ embed = false, actorRole = "auto" } = {})
       const selfieRes = zodFileRequired("Applicant photo is required.").safeParse(data.selfie);
       if (!selfieRes.success) errors.selfie = selfieRes.error.issues[0].message;
 
-      if (data.gender === "female") {
+      if (String(data.gender || "").toLowerCase() === "female") {
         const coaFrontRes = zodFileRequired("Co-applicant Aadhar Front is required.").safeParse(data.coApplicantAadharFront);
         if (!coaFrontRes.success) errors.coApplicantAadharFront = coaFrontRes.error.issues[0].message;
 
@@ -838,7 +839,7 @@ function validateForm(formData) {
   }
 
   // Co-applicant Information (only for female applicants)
-  if (formData.gender === "female") {
+  if (String(formData.gender || "").toLowerCase() === "female") {
     if (!formData.coApplicantAadharFront) errors.coApplicantAadharFront = "Aadhar Front is required.";
     if (!formData.coApplicantAadharBack) errors.coApplicantAadharBack = "Aadhar Back is required.";
     if (!formData.coApplicantPan) errors.coApplicantPan = "PAN  is required.";
@@ -1562,7 +1563,7 @@ const handleSubmit = async () => {
                   </label>
                   <select
                     name="gender"
-                    value={formData.gender}
+                    value={String(formData.gender || "").toLowerCase()}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
@@ -1595,7 +1596,7 @@ const handleSubmit = async () => {
                   </label>
                   <select
                     name="maritalStatus"
-                    value={formData.maritalStatus}
+                    value={String(formData.maritalStatus || "").toLowerCase()}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
@@ -1799,7 +1800,7 @@ const handleSubmit = async () => {
               </div>
 
               {/* Co-applicant Section (for female applicants) */}
-              {formData.gender === "female" && (
+              {String(formData.gender || "").toLowerCase() === "female" && (
                 <div className="pt-6 border-t border-slate-200 mt-6">
                   <h3
                     className="text-lg font-semibold mb-2 flex items-center gap-2"

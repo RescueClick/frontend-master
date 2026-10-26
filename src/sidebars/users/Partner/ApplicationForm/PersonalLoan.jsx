@@ -376,6 +376,9 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     v &&
     typeof v === "object" &&
     (v instanceof File ||
+      v.isExistingDoc ||
+      v.uploaded ||
+      Boolean(v.url) ||
       (typeof v.name === "string" &&
         typeof v.size === "number" &&
         typeof v.type === "string"));
@@ -1780,7 +1783,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     </label>
                     <select
                       name="gender"
-                      value={formData.gender}
+                      value={String(formData.gender || "").toLowerCase()}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
@@ -1827,7 +1830,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     </label>
                     <select
                       name="maritalStatus"
-                      value={formData.maritalStatus}
+                      value={String(formData.maritalStatus || "").toLowerCase()}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
@@ -1842,7 +1845,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     </select>
                     {renderError("maritalStatus")}
                   </div>
-                  {formData.maritalStatus === "married" && (
+                  {String(formData.maritalStatus || "").toLowerCase() === "married" && (
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"

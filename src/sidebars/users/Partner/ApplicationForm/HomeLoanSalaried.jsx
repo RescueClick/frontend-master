@@ -969,13 +969,21 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
       ];
 
       docsQueue.forEach(({ file, type }) => {
-        if (file) {
-          formDataToSend.append("docs", file);
+        const rawFile = file instanceof File ? file : file?.file;
+        if (rawFile instanceof File) {
+          formDataToSend.append("docs", rawFile);
           formDataToSend.append("docTypes", type);
         }
       });
 
-      if (!checkFileSize(docsQueue)) {
+      const pendingUploads = docsQueue
+        .map(({ file, type }) => ({
+          file: file instanceof File ? file : file?.file,
+          type,
+        }))
+        .filter(({ file }) => file instanceof File);
+
+      if (pendingUploads.length > 0 && !checkFileSize(pendingUploads)) {
         setLoading(false);
         return;
       }
@@ -1565,7 +1573,7 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                     </label>
                     <select
                       name="gender"
-                      value={formData.gender}
+                      value={String(formData.gender || "").toLowerCase()}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
@@ -1613,7 +1621,7 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
                     </label>
                     <select
                       name="maritalStatus"
-                      value={formData.maritalStatus}
+                      value={String(formData.maritalStatus || "").toLowerCase()}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
@@ -1629,7 +1637,7 @@ export default function HomeLoanSalaried({ embed = false, actorRole = "auto" } =
 
                     {renderError("maritalStatus")}
                   </div>
-                  {formData.maritalStatus === "married" && (
+                  {String(formData.maritalStatus || "").toLowerCase() === "married" && (
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"

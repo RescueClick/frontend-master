@@ -51,7 +51,7 @@ export function mapRmFormDataToLoanFields(payload = {}) {
     firstName: c.firstName || "",
     middleName: c.middleName || "",
     lastName: c.lastName || "",
-    gender: c.gender || "",
+    gender: c.gender ? (c.gender.charAt(0).toUpperCase() + c.gender.slice(1).toLowerCase()) : "",
     officialEmail: c.officialEmail || "",
     stabilityOfResidency: c.stabilityOfResidency || "",
     currentHouseStatus: c.currentAddressHouseStatus || "",
@@ -61,7 +61,7 @@ export function mapRmFormDataToLoanFields(payload = {}) {
     permanentStability: c.permanentAddressStability || "",
     currentAddressPinCode: c.currentAddressPinCode || "",
     permanentAddressPinCode: c.permanentAddressPinCode || "",
-    maritalStatus: c.maritalStatus || "",
+    maritalStatus: c.maritalStatus ? (c.maritalStatus.charAt(0).toUpperCase() + c.maritalStatus.slice(1).toLowerCase()) : "",
     wifeName: c.spouseName || "",
     motherName: c.mothersName || "",
     contactNo: c.phone || "",
@@ -103,6 +103,7 @@ export function mapRmFormDataToLoanFields(payload = {}) {
     salaryInHand: c.salaryInHand || emp.salaryInHand || "",
     coApplicantName: co.name || co.firstName || "",
     coApplicantPhone: co.phone || "",
+    coApplicantMobile: co.phone || "",
     coApplicantRelation: co.relation || "",
   };
 }
@@ -137,9 +138,69 @@ export function useRmLoanFormResume({ enabled, setFormData, setApplicationId }) 
         });
         if (cancelled) return;
         setApplicationId?.(data.id || applicationIdParam);
+
+        // Hydrate existing uploaded documents into form fields and upload flags
+        const docFields = {};
+        if (Array.isArray(data.docs) && data.docs.length > 0) {
+          const DOC_TYPE_TO_FIELD = {
+            AADHAR_FRONT: "aadharFront",
+            AADHAR_BACK: "aadharBack",
+            PAN: "panCard",
+            PHOTO: "passportPhoto",
+            SELFIE: "selfie",
+            COMPANY_ID_CARD: "companyIdCard",
+            SALARY_SLIP_1: "salarySlip1",
+            SALARY_SLIP_2: "salarySlip2",
+            SALARY_SLIP_3: "salarySlip3",
+            FORM_16_26AS: "form16_26as",
+            BANK_STATEMENT_1: "bankStatement1",
+            BANK_STATEMENT_2: "bankStatement2",
+            BANK_STATEMENT_3: "bankStatement3",
+            ALLOTMENT_LETTER: "allotmentLetter",
+            NEW_PROPERTY_PAYMENT_RECEIPTS: "newPropertyPaymentReceipts",
+            TITLE_DEEDS: "titleDeeds",
+            RESALE_PAYMENT_RECEIPTS: "resalePaymentReceipts",
+            AGREEMENT_COPY: "agreementCopy",
+            SHOP_ACT: "shopAct",
+            UDHYAM_AADHAR: "udhyamAadhar",
+            ITR: "itr",
+            GST_DOCUMENT: "gstDoc",
+            GST: "gstDoc",
+            SHOP_PHOTO: "shopPhoto",
+            BUSINESS_OTHER_DOCS: "businessOtherDocs",
+            OTHER_DOCS: "otherDocs",
+            ADDRESS_PROOF: "addressProof",
+            CO_APPLICANT_AADHAR_FRONT: "coApplicantAadharFront",
+            CO_APPLICANT_AADHAR_BACK: "coApplicantAadharBack",
+            CO_APPLICANT_PAN: "coApplicantPan",
+            CO_APPLICANT_SELFIE: "coApplicantSelfie",
+            CO_APPLICANT_SELFIE_OR_PHOTO: "coApplicantSelfie",
+            CO_APPLICANT_PASSPORT_PHOTO: "coApplicantSelfie",
+          };
+
+          for (const doc of data.docs) {
+            const fieldName = DOC_TYPE_TO_FIELD[doc.docType];
+            if (fieldName && doc.url) {
+              const docObj = {
+                name: `${fieldName}.jpg`,
+                url: doc.url,
+                preview: doc.url,
+                isExistingDoc: true,
+                uploaded: true,
+                size: 1024,
+                type: "image/jpeg",
+              };
+              docFields[fieldName] = docObj;
+              docFields[`${fieldName}_uploaded`] = true;
+              docFields[`${fieldName}_url`] = doc.url;
+            }
+          }
+        }
+
         setFormData?.((prev) => ({
           ...prev,
           ...mapRmFormDataToLoanFields(data),
+          ...docFields,
           customFieldResponses: data.customFieldResponses || prev.customFieldResponses || {},
         }));
         setResumeMeta({

@@ -465,7 +465,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     if (!data.motherName) errors.motherName = "Mother name is required.";
     if (!data.gender) errors.gender = "Gender is required.";
     if (!data.maritalStatus) errors.maritalStatus = "Marital status is required.";
-    if (data.maritalStatus === "Married" && !data.SpouseName) {
+    if (String(data.maritalStatus || "").toLowerCase() === "married" && !data.SpouseName) {
       errors.SpouseName = "Spouse name is required for married applicants.";
     }
 
@@ -537,7 +537,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     if (!data.propertyValue) errors.propertyValue = "Property estimated value is required.";
     if (!data.propertyAddress) errors.propertyAddress = "Property address is required.";
 
-    if (data.gender === "Female") {
+    if (String(data.gender || "").toLowerCase() === "female") {
       if (!data.coApplicantAadharFront) errors.coApplicantAadharFront = "Co-applicant Aadhar front is required.";
       if (!data.coApplicantAadharBack) errors.coApplicantAadharBack = "Co-applicant Aadhar back is required.";
       if (!data.coApplicantPan) errors.coApplicantPan = "Co-applicant PAN is required.";
@@ -689,7 +689,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           { name: formData.reference2Name, phone: formData.reference2Contact },
         ],
         coApplicant:
-          formData.gender === "Female"
+          String(formData.gender || "").toLowerCase() === "female"
             ? {
                 aadharFront: formData.coApplicantAadharFront,
                 aadharBack: formData.coApplicantAadharBack,
@@ -726,14 +726,15 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       if (formData.agreementCopy) docsQueue.push({ file: formData.agreementCopy, type: "AGREEMENT_COPY" });
       if (formData.allotmentLetter) docsQueue.push({ file: formData.allotmentLetter, type: "ALLOTMENT_LETTER" });
 
-      if (formData.gender === "Female") {
+      if (String(formData.gender || "").toLowerCase() === "female") {
         if (formData.coApplicantAadharFront) docsQueue.push({ file: formData.coApplicantAadharFront, type: "CO_APPLICANT_AADHAR_FRONT" });
         if (formData.coApplicantAadharBack) docsQueue.push({ file: formData.coApplicantAadharBack, type: "CO_APPLICANT_AADHAR_BACK" });
         if (formData.coApplicantPan) docsQueue.push({ file: formData.coApplicantPan, type: "CO_APPLICANT_PAN" });
         if (formData.coApplicantSelfie) docsQueue.push({ file: formData.coApplicantSelfie, type: "CO_APPLICANT_SELFIE" });
       }
 
-      const oversize = findOversizeInLoanDocsQueue(docsQueue);
+      const rawDocs = docsQueue.filter(({ file }) => (file instanceof File || file?.file instanceof File));
+      const oversize = findOversizeInLoanDocsQueue(rawDocs);
       if (oversize) {
         const msg = formatLoanDocOversizeError(oversize);
         setError(msg);
@@ -743,8 +744,9 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       }
 
       docsQueue.forEach(({ file, type }) => {
-        if (file) {
-          formDataToSend.append("docs", file);
+        const rawFile = file instanceof File ? file : file?.file;
+        if (rawFile instanceof File) {
+          formDataToSend.append("docs", rawFile);
           formDataToSend.append("docTypes", type);
         }
       });
@@ -1014,7 +1016,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                   </label>
                   <select
                     name="gender"
-                    value={formData.gender}
+                    value={formData.gender ? (formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1).toLowerCase()) : ""}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
                   >
@@ -1032,7 +1034,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                   </label>
                   <select
                     name="maritalStatus"
-                    value={formData.maritalStatus}
+                    value={formData.maritalStatus ? (formData.maritalStatus.charAt(0).toUpperCase() + formData.maritalStatus.slice(1).toLowerCase()) : ""}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
                   >
@@ -1045,7 +1047,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                   {renderError("maritalStatus")}
                 </div>
 
-                {formData.maritalStatus === "Married" && (
+                {String(formData.maritalStatus || "").toLowerCase() === "married" && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Spouse Name
@@ -1076,7 +1078,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                   {renderError("motherName")}
                 </div>
 
-                {formData.gender === "Female" && (
+                {String(formData.gender || "").toLowerCase() === "female" && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Co-Applicant Mobile (Female Applicant) *
@@ -1143,7 +1145,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                 </div>
               </div>
 
-              {formData.gender === "Female" && (
+              {String(formData.gender || "").toLowerCase() === "female" && (
                 <div className="pt-6 border-t border-slate-200">
                   <h3 className="text-base font-bold text-slate-900 mb-1">
                     Co-Applicant Documents (Female Applicant)

@@ -630,7 +630,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     if (!formData.gender) errors.gender = "Gender is required.";
     if (!formData.maritalStatus) errors.maritalStatus = "Marital status is required.";
     // Spouse name required if married
-    if (formData.maritalStatus === "married" && !formData.SpouseName) {
+    if (String(formData.maritalStatus || "").toLowerCase() === "married" && !formData.SpouseName) {
       errors.SpouseName = "Spouse name is required for married applicants.";
     }
 
@@ -746,7 +746,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
 
 
     // Female applicant requires co-applicant docs
-    if (formData.gender === "female") {
+    if (String(formData.gender || "").toLowerCase() === "female") {
       if (!formData.coApplicantAadharFront)
         errors.coApplicantAadharFront = "Co-applicant Aadhar front is required.";
       if (!formData.coApplicantAadharBack)
@@ -902,7 +902,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           },
         ],
         coApplicant:
-          formData.gender === "female"
+          String(formData.gender || "").toLowerCase() === "female"
             ? {
               aadharFront: formData.coApplicantAadharFront,
               aadharBack: formData.coApplicantAadharBack,
@@ -972,7 +972,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
         docsQueue.push({ file: formData.agreementCopy, type: "AGREEMENT_COPY" });
 
       // Co-applicant documents for female applicants
-      if (formData.gender === "female") {
+      if (String(formData.gender || "").toLowerCase() === "female") {
         if (formData.coApplicantAadharFront)
           docsQueue.push({
             file: formData.coApplicantAadharFront,
@@ -996,12 +996,21 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       }
 
       docsQueue.forEach(({ file, type }) => {
-        formDataToSend.append("docs", file);
-        formDataToSend.append("docTypes", type);
+        const rawFile = file instanceof File ? file : file?.file;
+        if (rawFile instanceof File) {
+          formDataToSend.append("docs", rawFile);
+          formDataToSend.append("docTypes", type);
+        }
       });
 
+      const pendingUploads = docsQueue
+        .map(({ file, type }) => ({
+          file: file instanceof File ? file : file?.file,
+          type,
+        }))
+        .filter(({ file }) => file instanceof File);
 
-      if (!checkFileSize(docsQueue)) {
+      if (pendingUploads.length > 0 && !checkFileSize(pendingUploads)) {
         console.log("File size check failed");
         setLoading(false);
         return;
@@ -1538,7 +1547,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                   </label>
                   <select
                     name="gender"
-                    value={formData.gender}
+                    value={String(formData.gender || "").toLowerCase()}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
@@ -1565,7 +1574,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                   </label>
                   <select
                     name="maritalStatus"
-                    value={formData.maritalStatus}
+                    value={String(formData.maritalStatus || "").toLowerCase()}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                     style={{
@@ -1672,7 +1681,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                 </div>
                 {/* Referral moved to end */}
                 {/* Wife Name (conditional for married) */}
-                {formData.maritalStatus === "married" && (
+                {String(formData.maritalStatus || "").toLowerCase() === "married" && (
                   <div>
                     <label
                       className="block text-sm font-medium mb-2"
@@ -1745,7 +1754,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
               </div>
 
               {/* Co-applicant Section (for female applicants) */}
-              {formData.gender === "female" && (
+              {String(formData.gender || "").toLowerCase() === "female" && (
                 <div className="pt-6 border-t border-slate-200 mt-6">
                   <h3
                     className="text-lg font-semibold mb-2 flex items-center gap-2"
