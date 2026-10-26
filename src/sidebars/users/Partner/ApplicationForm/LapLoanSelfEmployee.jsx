@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   User,
   Phone,
@@ -23,7 +23,7 @@ import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
 import {
@@ -35,7 +35,23 @@ import { canonicalPartnerReferralCode } from "../../../../config/branding";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
 import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofBlock";
-import LoanApplicationReviewCard from "../../../../components/loan/LoanApplicationReviewCard";
+import LoanReviewSummary, { LoanDocsProgress } from "../../../../components/loan/LoanReviewSummary";
+import LoanRequirementFields from "../../../../components/loan/LoanRequirementFields";
+import {
+  LOAN_FIELD_LABEL,
+  LOAN_PROFILE,
+  LOAN_SECTION,
+  LOAN_STABILITY_OPTIONS,
+  LOAN_STEP,
+  buildLoanDocChecklist,
+  docChecklistForStep,
+  LOAN_DOC_GROUP,
+  buildLoanReviewSections,
+  getLoanSteps,
+  resolveLoanNextStep,
+  LOAN_BACK_TO_REVIEW_LABEL,
+  LOAN_REVIEW_EDIT_HINT,
+} from "../../../../components/loan/loanFormSpec";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 import PublicLoanPartnerTrustBanner from "../../../../components/loan/PublicLoanPartnerTrustBanner";
 import ShareLoanModal from "../../../../components/loan/ShareLoanModal";
@@ -61,7 +77,16 @@ import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
 import {
   useRmLoanFormResume,
   rmCompleteLoanFormUrl,
+  partnerCompleteLoanFormUrl,
 } from "../../../../utils/rmLoanForm";
+import {
+  customerPasswordErrors,
+  dobError,
+  houseStatusOptionValue,
+  isMarriedStatus,
+  normalizeGenderForApi,
+  normalizeMaritalStatusForApi,
+} from "../../../../utils/normalizeLoanPayload";
 
 export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" } = {}) {
   const navigate = useNavigate();
@@ -162,7 +187,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     allotmentLetter: null,
 
     // Co-applicant
-    hasCoApplicant: false,
+    hasCoApplicant: true,
     coApplicantAadharFront: null,
     coApplicantAadharBack: null,
     coApplicantPan: null,
@@ -201,34 +226,121 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
   const [successMessage, setSuccessMessage] = useState("");
   const [savedApplication, setSavedApplication] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [editingFromReview, setEditingFromReview] = useState(false);
   const [maxStep, setMaxStep] = useState(0);
   const objectUrlsRef = useRef([]);
   const abortControllerRef = useRef(null);
 
+  const [searchParams] = useSearchParams();
+  const applicationIdQuery = searchParams.get("applicationId");
+  const isEditingExistingApp = Boolean(applicationIdQuery);
+  const showPasswordFields = !isRmMode && !isEditingExistingApp;
+
   const { resumeMeta, loadingResume, resumeError } = useRmLoanFormResume({
-    enabled: isRmMode,
+    enabled: isRmMode || (isPartnerLoggedIn && isEditingExistingApp),
     setFormData,
     setApplicationId,
+    preferPartner: isPartnerLoggedIn,
   });
   useEffect(() => {
     if (resumeError) setError(resumeError);
   }, [resumeError]);
 
-  const steps = [
-    "Personal & KYC",
-    "Address",
-    "Business & Loan",
-    "References",
-    "Review & Submit",
+  const steps = getLoanSteps({ profile: LOAN_PROFILE.BUSINESS, hasProperty: true });
+  const stepAnchorIds = [
+    "loan-personal-step",
+    "loan-address-step",
+    "loan-income-step",
+    "loan-references-step",
+    "loan-review-step",
   ];
 
-  const stepFirstFieldName = {
-    0: "firstName",
-    1: "currentAddress",
-    2: "loanAmount",
-    3: "reference1Name",
-    4: "password",
-  };
+  const stepFirstFieldName = [
+    "loanAmount",
+    "currentAddress",
+    "businessName",
+    "reference1Name",
+    showPasswordFields ? "password" : "partnerReferralCode",
+  ];
+
+  const stepFieldKeys = [
+    [
+      "loanAmount",
+      "loanPurpose",
+      "hasRunningLoan",
+      "monthlyEmiPaying",
+      "cibilScoreBand",
+      "hasBounce",
+      "bounceCount",
+      "firstName",
+      "middleName",
+      "lastName",
+      "phone",
+      "alternateContact",
+      "email",
+      "panNumber",
+      "panCard",
+      "dob",
+      "gender",
+      "maritalStatus",
+      "SpouseName",
+      "motherName",
+      "aadharFront",
+      "aadharBack",
+      "selfie",
+      "passportPhoto",
+      "otherDocs",
+      ...(formData.hasCoApplicant
+        ? [
+            "coApplicantMobile",
+            "coApplicantPan",
+            "coApplicantSelfie",
+            "coApplicantAadharFront",
+            "coApplicantAadharBack",
+          ]
+        : []),
+    ],
+    [
+      "currentAddress",
+      "currentAddressLandmark",
+      "currentAddressPincode",
+      "currentAddressOwnRented",
+      "currentAddressStability",
+      "addressProof",
+      "permanentAddress",
+      "permanentAddressLandmark",
+      "permanentAddressPincode",
+      "permanentAddressOwnRented",
+      "permanentAddressStability",
+    ],
+    [
+      "businessName",
+      "businessAddress",
+      "businessLandmark",
+      "shopAct",
+      "udhyamAadhar",
+      "shopPhoto",
+      "businessOtherDocs",
+      "businessVintage",
+      "annualTurnover",
+      "itr",
+      "gstNumber",
+      "gstDoc",
+      "propertyType",
+      "propertyValue",
+      "propertyAddress",
+      "titleDeeds",
+      "sanctionedPlan",
+      "propertyTaxReceipt",
+      "agreementCopy",
+      "allotmentLetter",
+      "bankStatementFile1",
+      "bankStatementFile2",
+      "bankStatementPassword",
+    ],
+    ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"],
+    showPasswordFields ? ["password", "confirmPassword"] : [],
+  ];
 
   useEffect(() => {
     return () => {
@@ -281,93 +393,14 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
   function validateLapSelfEmployedStep(stepIndex) {
     const fullErrors = validateForm(formData, sameAddress);
 
-    const stepFields = (() => {
-      if (stepIndex === 0) {
-        return [
-          "firstName",
-          "middleName",
-          "lastName",
-          "motherName",
-          "gender",
-          "maritalStatus",
-          "phone",
-          "email",
-          "dob",
-          "panNumber",
-          "SpouseName",
-          "hasRunningLoan",
-          "loanPurpose",
-          "monthlyEmiPaying",
-          "cibilScoreBand",
-          "aadharFront",
-          "aadharBack",
-          "panCard",
-          "selfie",
-          "passportPhoto",
-          ...(formData.hasCoApplicant
-            ? [
-                "coApplicantMobile",
-                "coApplicantAadharFront",
-                "coApplicantAadharBack",
-                "coApplicantPan",
-                "coApplicantSelfie",
-              ]
-            : []),
-        ];
-      }
-      if (stepIndex === 1) {
-        return [
-          "currentAddress",
-          "currentAddressStability",
-          "currentAddressLandmark",
-          "currentAddressOwnRented",
-          "currentAddressPincode",
-          "permanentAddress",
-          "permanentAddressStability",
-          "permanentAddressLandmark",
-          "permanentAddressOwnRented",
-          "permanentAddressPincode",
-          "addressProof",
-        ];
-      }
-      if (stepIndex === 2) {
-        return [
-          "loanAmount",
-          "businessName",
-          "businessAddress",
-          "businessVintage",
-          "annualTurnover",
-          "propertyType",
-          "propertyValue",
-          "propertyAddress",
-          "bankStatementFile1",
-          "shopPhoto",
-          "shopAct",
-          "udhyamAadhar",
-          "itr",
-        ];
-      }
-      if (stepIndex === 3) {
-        return [
-          "reference1Name",
-          "reference1Contact",
-          "reference2Name",
-          "reference2Contact",
-        ];
-      }
-      // Review step — password lives here (not on Personal)
-      if (stepIndex === 4) {
-        return ["password", "confirmPassword"];
-      }
-      return [];
-    })();
+    const stepFields = stepFieldKeys[stepIndex] || [];
 
     const errors = {};
     for (const key of stepFields) {
       if (fullErrors[key]) errors[key] = fullErrors[key];
     }
 
-    if (stepIndex === 0) {
+    if (stepIndex === LOAN_STEP.PERSONAL) {
       const rFirst = min3("First name must be at least 3 characters.").safeParse(formData.firstName);
       if (!rFirst.success) errors.firstName = rFirst.error.issues[0].message;
 
@@ -387,11 +420,13 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       if (!rPan.success) errors.panNumber = rPan.error.issues[0].message;
     }
 
-    if (stepIndex === 1) {
-      const rPin = pinSchema.safeParse(formData.currentAddressPincode);
+    if (stepIndex === LOAN_STEP.ADDRESS) {
+      const rPin = pinSchema.safeParse(String(formData.currentAddressPincode ?? ""));
       if (!rPin.success) errors.currentAddressPincode = rPin.error.issues[0].message;
-      const rPermPin = pinSchema.safeParse(formData.permanentAddressPincode);
-      if (!rPermPin.success) errors.permanentAddressPincode = rPermPin.error.issues[0].message;
+      if (!sameAddress) {
+        const rPermPin = pinSchema.safeParse(String(formData.permanentAddressPincode ?? ""));
+        if (!rPermPin.success) errors.permanentAddressPincode = rPermPin.error.issues[0].message;
+      }
     }
 
     return errors;
@@ -399,15 +434,21 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === "loanAmount"
-          ? value === ""
-            ? ""
-            : parseInt(value, 10)
-          : value,
-    }));
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [name]:
+          name === "loanAmount"
+            ? value === ""
+              ? ""
+              : parseInt(value, 10)
+            : value,
+      };
+      if (sameAddress && name.startsWith("currentAddress")) {
+        next[name.replace(/^currentAddress/, "permanentAddress")] = value;
+      }
+      return next;
+    });
 
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
@@ -480,8 +521,13 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     if (!data.motherName) errors.motherName = "Mother name is required.";
     if (!data.gender) errors.gender = "Gender is required.";
     if (!data.maritalStatus) errors.maritalStatus = "Marital status is required.";
-    if (String(data.maritalStatus || "").toLowerCase() === "married" && !data.SpouseName) {
+    if (isMarriedStatus(data.maritalStatus) && !String(data.SpouseName || "").trim()) {
       errors.SpouseName = "Spouse name is required for married applicants.";
+    }
+    const dobMessage = dobError(data.dob);
+    if (dobMessage) errors.dob = dobMessage;
+    if (showPasswordFields) {
+      Object.assign(errors, customerPasswordErrors(data));
     }
 
     if (!data.loanPurpose) {
@@ -497,6 +543,9 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     } else if (!/^\d{10}$/.test(data.phone)) {
       errors.phone = "Phone number must be 10 digits.";
     }
+    if (data.alternateContact && !/^\d{10}$/.test(String(data.alternateContact).trim())) {
+      errors.alternateContact = "Alternate number must be exactly 10 digits.";
+    }
 
     if (!data.email) {
       errors.email = "Email is required.";
@@ -511,7 +560,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     }
 
     if (!data.currentAddress) errors.currentAddress = "Current address is required.";
-    const pin = data.currentAddressPincode?.trim();
+    const pin = String(data.currentAddressPincode ?? "").trim();
     if (!pin) {
       errors.currentAddressPincode = "Current Address Pin is required.";
     } else if (!/^[1-9][0-9]{5}$/.test(pin)) {
@@ -519,10 +568,12 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     }
     if (!data.currentAddressOwnRented) errors.currentAddressOwnRented = "Ownership status is required.";
     if (!data.currentAddressStability) errors.currentAddressStability = "Stability is required.";
+    if (!String(data.currentAddressLandmark || "").trim()) errors.currentAddressLandmark = "Landmark is required.";
 
     if (!isSameAddress) {
       if (!data.permanentAddress) errors.permanentAddress = "Permanent address is required.";
-      const permanentPin = data.permanentAddressPincode?.trim();
+      if (!String(data.permanentAddressLandmark || "").trim()) errors.permanentAddressLandmark = "Landmark is required.";
+      const permanentPin = String(data.permanentAddressPincode ?? "").trim();
       if (!permanentPin) {
         errors.permanentAddressPincode = "Permanent Address Pin is required.";
       } else if (!/^[1-9][0-9]{5}$/.test(permanentPin)) {
@@ -544,12 +595,19 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
     // Business info
     if (!data.businessName) errors.businessName = "Business name is required.";
     if (!data.businessAddress) errors.businessAddress = "Business address is required.";
-    if (!data.businessVintage) errors.businessVintage = "Business vintage is required.";
-    if (!data.annualTurnover) errors.annualTurnover = "Annual Turnover is required.";
+    if (!(Number(data.businessVintage) > 0)) errors.businessVintage = "Business vintage must be greater than zero.";
+    if (!(Number(data.annualTurnover) > 0)) errors.annualTurnover = "Annual turnover must be greater than zero.";
+
+    // Business documents
+    if (!data.shopAct) errors.shopAct = "Shop Act / Gumasta License is required.";
+    if (!data.udhyamAadhar) errors.udhyamAadhar = "Udyam Aadhar is required.";
+    if (!data.itr) errors.itr = "ITR (last 3 years) is required.";
+    if (!data.shopPhoto) errors.shopPhoto = "Shop Photo is required.";
+    if (!data.bankStatementFile1) errors.bankStatementFile1 = "Bank Statement 1 is required.";
 
     // Collateral Property info
     if (!data.propertyType) errors.propertyType = "Property type is required.";
-    if (!data.propertyValue) errors.propertyValue = "Property estimated value is required.";
+    if (!(Number(data.propertyValue) > 0)) errors.propertyValue = "Property estimated value must be greater than zero.";
     if (!data.propertyAddress) errors.propertyAddress = "Property address is required.";
 
     if (data.hasCoApplicant) {
@@ -576,6 +634,8 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       errors.reference2Contact = "Reference 2 contact is required.";
     } else if (!/^\d{10}$/.test(data.reference2Contact)) {
       errors.reference2Contact = "Reference 2 contact must be exactly 10 digits.";
+    } else if (data.reference2Contact === data.reference1Contact) {
+      errors.reference2Contact = "Reference 2 contact cannot be the same as Reference 1.";
     }
 
     return errors;
@@ -594,10 +654,11 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       toast.error("Please fill in all required fields before proceeding.");
       return;
     }
+    setFieldErrors({});
     // Sync filled wizard fields to LEAD so RM sees progress
     const leavingStep = currentStep;
-    const next = currentStep + 1;
-    if (!isRmMode) {
+    const next = resolveLoanNextStep(currentStep, { editingFromReview });
+    if (!isRmMode && !isEditingExistingApp) {
       const leadProgress = persistLeadWizardProgress({
         applicationId,
         setApplicationId,
@@ -621,6 +682,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       }
     }
 
+    setEditingFromReview(false);
     setCurrentStep(next);
     if (next > maxStep) setMaxStep(next);
   };
@@ -643,6 +705,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       if (Object.keys(errors).length > 0) {
         setFieldErrors(errors);
         setValidationErrors(Object.values(errors));
+        setError(`Please fix the highlighted fields: ${Object.values(errors).join(" ")}`);
         setLoading(false);
         return;
       }
@@ -659,11 +722,13 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           email: formData.email,
           phone: formData.phone,
           alternateContact: formData.alternateContact,
-          gender: formData.gender,
+          alternatePhone: formData.alternateContact || undefined,
+          dateOfBirth: formData.dob,
+          gender: normalizeGenderForApi(formData.gender),
           motherName: formData.motherName,
-          maritalStatus: formData.maritalStatus,
-          spouseName: formData.SpouseName,
-          panNumber: formData.panNumber,
+          maritalStatus: normalizeMaritalStatusForApi(formData.maritalStatus),
+          spouseName: isMarriedStatus(formData.maritalStatus) ? formData.SpouseName : "",
+          panNumber: String(formData.panNumber || "").trim().toUpperCase(),
           loanAmount: formData.loanAmount ? Number(formData.loanAmount) : 0,
           currentAddress: formData.currentAddress,
           currentAddressPincode: formData.currentAddressPincode,
@@ -675,7 +740,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
           permanentAddressOwnRented: sameAddress ? formData.currentAddressOwnRented : formData.permanentAddressOwnRented,
           permanentAddressStability: sameAddress ? formData.currentAddressStability : formData.permanentAddressStability,
           permanentAddressLandmark: sameAddress ? formData.currentAddressLandmark : formData.permanentAddressLandmark,
-          password: formData.password,
+          password: formData.password || undefined,
           bankStatementPassword: formData.bankStatementPassword,
           hasRunningLoan: formData.hasRunningLoan,
           monthlyEmiPaying: formData.hasRunningLoan === "YES" ? Number(formData.monthlyEmiPaying) || 0 : 0,
@@ -721,6 +786,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       if (formData.aadharFront) docsQueue.push({ file: formData.aadharFront, type: "AADHAR_FRONT" });
       if (formData.aadharBack) docsQueue.push({ file: formData.aadharBack, type: "AADHAR_BACK" });
       if (formData.panCard) docsQueue.push({ file: formData.panCard, type: "PAN" });
+      if (formData.otherDocs) docsQueue.push({ file: formData.otherDocs, type: "OTHER_DOCS" });
       if (formData.addressProof) docsQueue.push({ file: formData.addressProof, type: "ADDRESS_PROOF" });
       if (formData.shopAct) docsQueue.push({ file: formData.shopAct, type: "SHOP_ACT" });
       if (formData.udhyamAadhar) docsQueue.push({ file: formData.udhyamAadhar, type: "UDHYAM_AADHAR" });
@@ -729,6 +795,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
       if (formData.shopPhoto) docsQueue.push({ file: formData.shopPhoto, type: "SHOP_PHOTO" });
       if (formData.bankStatementFile1) docsQueue.push({ file: formData.bankStatementFile1, type: "BANK_STATEMENT_1" });
       if (formData.bankStatementFile2) docsQueue.push({ file: formData.bankStatementFile2, type: "BANK_STATEMENT_2" });
+      if (formData.businessOtherDocs) docsQueue.push({ file: formData.businessOtherDocs, type: "BUSINESS_OTHER_DOCS" });
       if (formData.passportPhoto || formData.selfie) {
         docsQueue.push({ file: formData.passportPhoto || formData.selfie, type: "PHOTO" });
       }
@@ -791,6 +858,28 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
         return;
       }
 
+      if (isPartnerLoggedIn && isEditingExistingApp) {
+        const targetAppId = applicationIdQuery || applicationId;
+        abortControllerRef.current = new AbortController();
+        const response = await axios.post(
+          partnerCompleteLoanFormUrl(targetAppId),
+          formDataToSend,
+          {
+            headers: { Authorization: `Bearer ${partnerToken}` },
+            timeout: 120000,
+            maxContentLength: 100 * 1024 * 1024,
+            maxBodyLength: 100 * 1024 * 1024,
+            signal: abortControllerRef.current.signal,
+          }
+        );
+        const data = response.data;
+        setSavedApplication(data);
+        setSuccessMessage(data.message || "Application form updated successfully.");
+        toast.success(data.message || "Loan form updated successfully");
+        setTimeout(() => navigate("/partner/applications"), 1200);
+        return;
+      }
+
       const endpoint = isPartnerLoggedIn
         ? `${backendurl}/partner/create-applications`
         : `${backendurl}/partner/public/create-application`;
@@ -820,12 +909,75 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
 
   const stepErrorCounts = useMemo(() => {
     const counts = {};
-    for (let idx = 0; idx <= 3; idx += 1) {
+    for (let idx = 0; idx <= LOAN_STEP.REFERENCES; idx += 1) {
       const e = validateLapSelfEmployedStep(idx);
       counts[idx] = Object.keys(e).length;
     }
     return counts;
   }, [formData, sameAddress]);
+
+  const docChecklist = buildLoanDocChecklist(
+    [
+      { key: "panCard", label: "PAN Card", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "aadharFront", label: "Aadhaar Front", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "aadharBack", label: "Aadhaar Back", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "selfie", altKeys: ["passportPhoto"], label: "Applicant Photo", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "otherDocs", label: "Other Document", required: false, step: LOAN_STEP.PERSONAL },
+      ...(formData.hasCoApplicant
+        ? [
+            { key: "coApplicantPan", label: "Co-Applicant PAN", required: true, step: LOAN_STEP.PERSONAL },
+            { key: "coApplicantSelfie", label: "Co-Applicant Photo", required: true, step: LOAN_STEP.PERSONAL },
+            { key: "coApplicantAadharFront", label: "Co-Applicant Aadhaar Front", required: true, step: LOAN_STEP.PERSONAL },
+            { key: "coApplicantAadharBack", label: "Co-Applicant Aadhaar Back", required: true, step: LOAN_STEP.PERSONAL },
+          ]
+        : []),
+      { key: "addressProof", label: "Address Proof", required: true, step: LOAN_STEP.ADDRESS },
+      { key: "shopAct", label: "Shop Act / Gumasta License", required: true, step: LOAN_STEP.INCOME },
+      { key: "udhyamAadhar", label: "Udyam / MSME Certificate", required: true, step: LOAN_STEP.INCOME },
+      { key: "shopPhoto", label: "Shop / Office Photo", required: true, step: LOAN_STEP.INCOME },
+      { key: "businessOtherDocs", label: "Other Business Docs", required: false, step: LOAN_STEP.INCOME },
+      { key: "itr", label: "ITR (Last 3 Years)", required: true, step: LOAN_STEP.INCOME },
+      { key: "gstDoc", label: "GST Certificate", required: false, step: LOAN_STEP.INCOME },
+      { key: "titleDeeds", label: "Title Deeds / Sale Deed", required: false, step: LOAN_STEP.INCOME },
+      { key: "sanctionedPlan", label: "Sanctioned Plan", required: false, step: LOAN_STEP.INCOME },
+      { key: "propertyTaxReceipt", label: "Property Tax Receipt", required: false, step: LOAN_STEP.INCOME },
+      { key: "agreementCopy", label: "Agreement Copy", required: false, step: LOAN_STEP.INCOME },
+      { key: "allotmentLetter", label: "Allotment Letter", required: false, step: LOAN_STEP.INCOME },
+      { key: "bankStatementFile1", label: "Bank Statement 1", required: true, step: LOAN_STEP.INCOME },
+      { key: "bankStatementFile2", label: "Bank Statement 2", required: false, step: LOAN_STEP.INCOME },
+    ],
+    formData
+  );
+
+  const reviewSections = buildLoanReviewSections(formData, {
+    profile: LOAN_PROFILE.BUSINESS,
+    hasProperty: true,
+    hasCoApplicant: Boolean(formData.hasCoApplicant),
+    sameAddress,
+    loanTitle: "Loan Against Property (Self-Employed)",
+  });
+
+  const stabilityOptionsFor = (value) =>
+    value && !LOAN_STABILITY_OPTIONS.some((o) => o.value === value)
+      ? [{ label: value, value }, ...LOAN_STABILITY_OPTIONS]
+      : LOAN_STABILITY_OPTIONS;
+
+  const scrollToStep = (idx) => {
+    const stepId = stepAnchorIds[idx];
+    if (!stepId) return;
+    const el = document.getElementById(stepId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const goToStep = (idx) => {
+    setError("");
+    setFieldErrors({});
+    setValidationErrors([]);
+    setEditingFromReview(idx !== LOAN_STEP.REVIEW);
+    setCurrentStep(idx);
+    scrollToStep(idx);
+  };
 
   return (
     <div className={`w-full max-w-5xl mx-auto ${embed ? "p-0" : "p-4 sm:p-6"}`}>
@@ -903,224 +1055,134 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
 
         {/* Form Body */}
         <div className="p-6 sm:p-8 space-y-8">
-          {/* Step 0: Personal */}
-          {currentStep === 0 && (
-            <section className="space-y-6">
-              <LoanApplicantFinancialFields
-                formData={formData}
-                handleInputChange={handleInputChange}
-                renderError={renderError}
-                fieldErrors={fieldErrors}
-              />
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <User className="w-5 h-5 text-teal-600" />
-                Personal Information
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    placeholder="Enter first name"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("firstName")}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Middle Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="middleName"
-                    value={formData.middleName}
-                    onChange={handleInputChange}
-                    placeholder="Enter middle name"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("middleName")}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    placeholder="Enter last name"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("lastName")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Mobile Number *
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    maxLength={10}
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="10-digit mobile number"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("phone")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="applicant@email.com"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("email")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    name="dob"
-                    value={formData.dob}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    PAN Card Number *
-                  </label>
-                  <input
-                    type="text"
-                    name="panNumber"
-                    maxLength={10}
-                    value={formData.panNumber}
-                    onChange={(e) =>
-                      handleInputChange({
-                        target: { name: "panNumber", value: e.target.value.toUpperCase() },
-                      })
-                    }
-                    placeholder="ABCDE1234F"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm uppercase"
-                  />
-                  {renderError("panNumber")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Gender *
-                  </label>
-                  <select
-                    name="gender"
-                    value={formData.gender ? (formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1).toLowerCase()) : ""}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  {renderError("gender")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Marital Status *
-                  </label>
-                  <select
-                    name="maritalStatus"
-                    value={formData.maritalStatus ? (formData.maritalStatus.charAt(0).toUpperCase() + formData.maritalStatus.slice(1).toLowerCase()) : ""}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  >
-                    <option value="">Select Status</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                    <option value="Divorced">Divorced</option>
-                    <option value="Widowed">Widowed</option>
-                  </select>
-                  {renderError("maritalStatus")}
-                </div>
-
-                {String(formData.maritalStatus || "").toLowerCase() === "married" && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                      Spouse Name
-                    </label>
-                    <input
-                      type="text"
-                      name="SpouseName"
-                      value={formData.SpouseName}
-                      onChange={handleInputChange}
-                      placeholder="Spouse full name"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Mother's Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="motherName"
-                    value={formData.motherName}
-                    onChange={handleInputChange}
-                    placeholder="Mother's full name"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("motherName")}
-                </div>
-
+          {/* Step 0: Loan & Personal */}
+          <section id="loan-personal-step" hidden={currentStep !== LOAN_STEP.PERSONAL} className="space-y-6">
+            <LoanDocsProgress checklist={docChecklistForStep(docChecklist, LOAN_STEP.PERSONAL)} />
+            <LoanRequirementFields
+              formData={formData}
+              handleInputChange={handleInputChange}
+              renderError={renderError}
+            />
+            <LoanApplicantFinancialFields
+              formData={formData}
+              handleInputChange={handleInputChange}
+              renderError={renderError}
+              fieldErrors={fieldErrors}
+              showLoanPurpose={false}
+            />
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <User className="w-5 h-5 text-teal-600" />
+              {LOAN_SECTION.PERSONAL}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  First Name *
+                </label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  placeholder="Enter first name"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("firstName")}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Middle Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  name="middleName"
+                  value={formData.middleName}
+                  onChange={handleInputChange}
+                  placeholder="Enter middle name"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Last Name *
+                </label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  placeholder="Enter last name"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("lastName")}
               </div>
 
-              {/* KYC Documents */}
-              <div className="pt-6 border-t border-slate-200">
-                <h3 className="text-base font-bold text-slate-900 mb-1">
-                  Identity & KYC Documents
-                </h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  Upload applicant's primary identity verification documents
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DocumentUploadCard
-                    name="aadharFront"
-                    label="Aadhaar Front *"
-                    file={formData.aadharFront}
-                    required
-                    onChange={handleFileChange}
-                    onRemove={handleFileRemove}
-                    error={renderError("aadharFront")}
-                  />
-                  <DocumentUploadCard
-                    name="aadharBack"
-                    label="Aadhaar Back *"
-                    file={formData.aadharBack}
-                    required
-                    onChange={handleFileChange}
-                    onRemove={handleFileRemove}
-                    error={renderError("aadharBack")}
-                  />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Mobile Number *
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  maxLength={10}
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="10-digit mobile number"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("phone")}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Alternate Mobile (Optional)
+                </label>
+                <input
+                  type="tel"
+                  name="alternateContact"
+                  maxLength={10}
+                  value={formData.alternateContact || ""}
+                  onChange={handleInputChange}
+                  placeholder="10-digit mobile number"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("alternateContact")}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="applicant@email.com"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("email")}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  PAN Number *
+                </label>
+                <input
+                  type="text"
+                  name="panNumber"
+                  maxLength={10}
+                  value={formData.panNumber}
+                  onChange={(e) =>
+                    handleInputChange({
+                      target: { name: "panNumber", value: e.target.value.toUpperCase() },
+                    })
+                  }
+                  placeholder="ABCDE1234F"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm uppercase"
+                />
+                {renderError("panNumber")}
+                <div className="mt-3">
                   <DocumentUploadCard
                     name="panCard"
                     label="PAN Card *"
@@ -1130,689 +1192,892 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                     onRemove={handleFileRemove}
                     error={renderError("panCard")}
                   />
-                  <DocumentUploadCard
-                    name="selfie"
-                    label="Applicant Photo / Selfie *"
-                    file={formData.selfie}
-                    required
-                    onChange={handleFileChange}
-                    onRemove={handleFileRemove}
-                    error={renderError("selfie")}
-                  />
                 </div>
               </div>
 
-              {/* Co-Applicant Section */}
-              <div className="pt-6 border-t border-slate-200">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      Co-Applicant Details
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Add a co-applicant to strengthen the loan application (optional)
-                    </p>
-                  </div>
-                  <label className="flex items-center gap-2 cursor-pointer select-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
-                    <input
-                      type="checkbox"
-                      name="hasCoApplicant"
-                      checked={Boolean(formData.hasCoApplicant)}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setFormData((prev) => ({
-                          ...prev,
-                          hasCoApplicant: checked,
-                          ...(!checked
-                            ? {
-                                coApplicantAadharFront: null,
-                                coApplicantAadharBack: null,
-                                coApplicantPan: null,
-                                coApplicantMobile: "",
-                                coApplicantSelfie: null,
-                              }
-                            : {}),
-                        }));
-                      }}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
-                    />
-                    <span className="text-sm font-semibold text-slate-800">Add Co-Applicant</span>
-                  </label>
-                </div>
-
-                {formData.hasCoApplicant && (
-                  <div className="mt-4 p-5 rounded-xl border border-teal-200 bg-teal-50/20">
-                    <div className="mb-5 max-w-sm">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Co-Applicant Mobile Number *
-                      </label>
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        name="coApplicantMobile"
-                        value={formData.coApplicantMobile}
-                        onChange={handleInputChange}
-                        placeholder="Enter 10-digit mobile number"
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm bg-white"
-                      />
-                      {renderError("coApplicantMobile")}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <DocumentUploadCard
-                        name="coApplicantAadharFront"
-                        label="Co-Applicant Aadhaar Front *"
-                        file={formData.coApplicantAadharFront}
-                        required
-                        onChange={handleFileChange}
-                        onRemove={handleFileRemove}
-                        error={renderError("coApplicantAadharFront")}
-                      />
-                      <DocumentUploadCard
-                        name="coApplicantAadharBack"
-                        label="Co-Applicant Aadhaar Back *"
-                        file={formData.coApplicantAadharBack}
-                        required
-                        onChange={handleFileChange}
-                        onRemove={handleFileRemove}
-                        error={renderError("coApplicantAadharBack")}
-                      />
-                      <DocumentUploadCard
-                        name="coApplicantPan"
-                        label="Co-Applicant PAN Card *"
-                        file={formData.coApplicantPan}
-                        required
-                        onChange={handleFileChange}
-                        onRemove={handleFileRemove}
-                        error={renderError("coApplicantPan")}
-                      />
-                      <DocumentUploadCard
-                        name="coApplicantSelfie"
-                        label="Co-Applicant Photo / Selfie *"
-                        file={formData.coApplicantSelfie}
-                        required
-                        onChange={handleFileChange}
-                        onRemove={handleFileRemove}
-                        error={renderError("coApplicantSelfie")}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Step 1: Address */}
-          {currentStep === 1 && (
-            <section className="space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-teal-600" />
-                Current & Permanent Address
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Current Address *
-                  </label>
-                  <textarea
-                    name="currentAddress"
-                    rows="2"
-                    value={formData.currentAddress}
-                    onChange={handleInputChange}
-                    placeholder="Full residential address"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("currentAddress")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Current Landmark
-                  </label>
-                  <input
-                    type="text"
-                    name="currentAddressLandmark"
-                    value={formData.currentAddressLandmark}
-                    onChange={handleInputChange}
-                    placeholder="Nearby landmark"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Current Pincode *
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    name="currentAddressPincode"
-                    value={formData.currentAddressPincode}
-                    onChange={handleInputChange}
-                    placeholder="6-digit PIN code"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("currentAddressPincode")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    House Ownership Status *
-                  </label>
-                  <select
-                    name="currentAddressOwnRented"
-                    value={formData.currentAddressOwnRented}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  >
-                    <option value="">Select Status</option>
-                    <option value="Owned">Owned</option>
-                    <option value="Rented">Rented</option>
-                    <option value="Parental">Parental / Family Owned</option>
-                  </select>
-                  {renderError("currentAddressOwnRented")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Stability (Years) *
-                  </label>
-                  <input
-                    type="text"
-                    name="currentAddressStability"
-                    value={formData.currentAddressStability}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 4 Years"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("currentAddressStability")}
-                </div>
-
-                <div className="md:col-span-2 pt-4 border-t border-slate-200">
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-800">
-                    <input
-                      type="checkbox"
-                      checked={sameAddress}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setSameAddress(checked);
-                        if (checked) {
-                          setFormData((p) => ({
-                            ...p,
-                            permanentAddress: p.currentAddress,
-                            permanentAddressLandmark: p.currentAddressLandmark,
-                            permanentAddressPincode: p.currentAddressPincode,
-                            permanentAddressOwnRented: p.currentAddressOwnRented,
-                            permanentAddressStability: p.currentAddressStability,
-                          }));
-                        }
-                      }}
-                      className="w-4 h-4 text-teal-600 rounded"
-                    />
-                    Permanent Address is same as Current Address
-                  </label>
-                </div>
-
-                {!sameAddress && (
-                  <>
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Permanent Address *
-                      </label>
-                      <textarea
-                        name="permanentAddress"
-                        rows="2"
-                        value={formData.permanentAddress}
-                        onChange={handleInputChange}
-                        placeholder="Permanent residential address"
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                      />
-                      {renderError("permanentAddress")}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Permanent Pincode *
-                      </label>
-                      <input
-                        type="text"
-                        maxLength={6}
-                        name="permanentAddressPincode"
-                        value={formData.permanentAddressPincode}
-                        onChange={handleInputChange}
-                        placeholder="6-digit PIN code"
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                      />
-                      {renderError("permanentAddressPincode")}
-                    </div>
-                  </>
-                )}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Date of Birth *
+                </label>
+                <input
+                  type="date"
+                  name="dob"
+                  value={formData.dob}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("dob")}
               </div>
 
-              {/* Address Proof Document */}
-              <div className="pt-6 border-t border-slate-200">
-                <LoanAddressProofBlock
-                  stepLabel="2.2"
-                  file={formData.addressProof}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Gender *
+                </label>
+                <select
+                  name="gender"
+                  value={formData.gender ? (formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1).toLowerCase()) : ""}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+                {renderError("gender")}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Marital Status *
+                </label>
+                <select
+                  name="maritalStatus"
+                  value={formData.maritalStatus ? (formData.maritalStatus.charAt(0).toUpperCase() + formData.maritalStatus.slice(1).toLowerCase()) : ""}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                >
+                  <option value="">Select Status</option>
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Divorced">Divorced</option>
+                  <option value="Widowed">Widowed</option>
+                </select>
+                {renderError("maritalStatus")}
+              </div>
+
+              {isMarriedStatus(formData.maritalStatus) && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Spouse Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="SpouseName"
+                    value={formData.SpouseName}
+                    onChange={handleInputChange}
+                    placeholder="Spouse full name"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                  />
+                  {renderError("SpouseName")}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Mother's Name *
+                </label>
+                <input
+                  type="text"
+                  name="motherName"
+                  value={formData.motherName}
+                  onChange={handleInputChange}
+                  placeholder="Mother's full name"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("motherName")}
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-slate-200">
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                <Shield className="w-5 h-5 text-teal-600" />
+                {LOAN_DOC_GROUP.AADHAAR}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <DocumentUploadCard
+                  name="aadharFront"
+                  label="Aadhaar Front *"
+                  file={formData.aadharFront}
+                  required
                   onChange={handleFileChange}
-                  renderError={renderError}
+                  onRemove={handleFileRemove}
+                  error={renderError("aadharFront")}
+                />
+                <DocumentUploadCard
+                  name="aadharBack"
+                  label="Aadhaar Back *"
+                  file={formData.aadharBack}
+                  required
+                  onChange={handleFileChange}
+                  onRemove={handleFileRemove}
+                  error={renderError("aadharBack")}
                 />
               </div>
-            </section>
-          )}
+            </div>
 
-          {/* Step 2: Business, Loan & Collateral Property */}
-          {currentStep === 2 && (
-            <section className="space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Store className="w-5 h-5 text-teal-600" />
-                Business & Collateral Property Details
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+            <div className="pt-6 border-t border-slate-200">
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                <Camera className="w-5 h-5 text-teal-600" />
+                {LOAN_DOC_GROUP.PHOTO}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <DocumentUploadCard
+                  name="selfie"
+                  label="Applicant Photo *"
+                  file={formData.selfie}
+                  required
+                  onChange={handleFileChange}
+                  onRemove={handleFileRemove}
+                  error={renderError("selfie")}
+                />
+                <DocumentUploadCard
+                  name="otherDocs"
+                  label="Other Document (Optional)"
+                  file={formData.otherDocs}
+                  hint={OPTIONAL_EXTRA_DOC_CAPTION}
+                  onChange={handleFileChange}
+                  onRemove={handleFileRemove}
+                />
+              </div>
+            </div>
+
+            {formData.hasCoApplicant && (
+              <div className="pt-6 border-t border-slate-200">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-teal-600" />
+                  {LOAN_SECTION.CO_APPLICANT}
+                </h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Co-applicant details and KYC documents are mandatory for this loan.
+                </p>
+                <div className="max-w-sm">
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Requested Loan Amount (₹) *
+                    Co-Applicant Mobile *
                   </label>
                   <input
-                    type="number"
-                    name="loanAmount"
-                    value={formData.loanAmount}
+                    type="tel"
+                    maxLength={10}
+                    name="coApplicantMobile"
+                    value={formData.coApplicantMobile}
                     onChange={handleInputChange}
-                    placeholder="e.g. 5000000"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                    placeholder="Enter 10-digit mobile number"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm bg-white"
                   />
-                  {renderError("loanAmount")}
+                  {renderError("coApplicantMobile")}
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Business Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="businessName"
-                    value={formData.businessName}
-                    onChange={handleInputChange}
-                    placeholder="Enterprise / enterprise name"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("businessName")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Business Vintage (Years) *
-                  </label>
-                  <input
-                    type="number"
-                    name="businessVintage"
-                    value={formData.businessVintage}
-                    onChange={handleInputChange}
-                    placeholder="Years in business"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("businessVintage")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Annual Turnover (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    name="annualTurnover"
-                    value={formData.annualTurnover}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 4000000"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("annualTurnover")}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    GST Number (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    name="gstNumber"
-                    value={formData.gstNumber}
-                    onChange={handleInputChange}
-                    placeholder="GSTIN number"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Business Landmark
-                  </label>
-                  <input
-                    type="text"
-                    name="businessLandmark"
-                    value={formData.businessLandmark}
-                    onChange={handleInputChange}
-                    placeholder="Near market / landmark"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Business / Shop Address *
-                  </label>
-                  <textarea
-                    name="businessAddress"
-                    rows="2"
-                    value={formData.businessAddress}
-                    onChange={handleInputChange}
-                    placeholder="Full business office / shop address"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                  {renderError("businessAddress")}
-                </div>
-
-                {/* Collateral Property Details */}
-                <div className="md:col-span-2 pt-6 border-t border-slate-200">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <Building className="w-5 h-5 text-teal-600" />
-                    Pledged Property (Collateral) Information
+                <div className="mt-6">
+                  <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                    <Users className="w-5 h-5 text-teal-600" />
+                    {LOAN_DOC_GROUP.CO_APPLICANT}
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Property Type *
-                      </label>
-                      <select
-                        name="propertyType"
-                        value={formData.propertyType}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                      >
-                        <option value="RESIDENTIAL">Residential (Flat / House / Villa)</option>
-                        <option value="COMMERCIAL">Commercial (Shop / Office / Building)</option>
-                        <option value="INDUSTRIAL">Industrial (Factory / Warehouse / Shed)</option>
-                        <option value="PLOT">Residential / Commercial Plot</option>
-                      </select>
-                      {renderError("propertyType")}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Estimated Market Value (₹) *
-                      </label>
-                      <input
-                        type="number"
-                        name="propertyValue"
-                        value={formData.propertyValue}
-                        onChange={handleInputChange}
-                        placeholder="Estimated value in ₹"
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                      />
-                      {renderError("propertyValue")}
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Complete Property Address *
-                      </label>
-                      <textarea
-                        name="propertyAddress"
-                        rows="2"
-                        value={formData.propertyAddress}
-                        onChange={handleInputChange}
-                        placeholder="Address of property offered as collateral"
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                      />
-                      {renderError("propertyAddress")}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Business Documents */}
-                <div className="pt-6 border-t border-slate-200">
-                  <h3 className="text-base font-bold text-slate-900 mb-1">
-                    Business Documents
-                  </h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Upload business proof, registrations, bank statements, and tax returns
-                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <DocumentUploadCard
-                      name="shopAct"
-                      label="Shop Act / Gumasta License"
-                      file={formData.shopAct}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                    />
-                    <DocumentUploadCard
-                      name="udhyamAadhar"
-                      label="Udyam / MSME Certificate"
-                      file={formData.udhyamAadhar}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                    />
-                    <DocumentUploadCard
-                      name="itr"
-                      label="ITR (Last 3 Years)"
-                      hint="Upload all 3 years ITR in this one file (combined PDF preferred)"
-                      file={formData.itr}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                    />
-                    <DocumentUploadCard
-                      name="gstDoc"
-                      label="GST Certificate"
-                      file={formData.gstDoc}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                    />
-                    <DocumentUploadCard
-                      name="shopPhoto"
-                      label="Shop / Office Photo"
-                      file={formData.shopPhoto}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                    />
-                    <DocumentUploadCard
-                      name="bankStatementFile1"
-                      label="Bank Statement 1 (Current / Savings) *"
-                      file={formData.bankStatementFile1}
+                      name="coApplicantPan"
+                      label="Co-Applicant PAN Card *"
+                      file={formData.coApplicantPan}
                       required
                       onChange={handleFileChange}
                       onRemove={handleFileRemove}
-                      error={renderError("bankStatementFile1")}
-                    />
-                  </div>
-                </div>
-
-                {/* Collateral Property Documents */}
-                <div className="pt-6 border-t border-slate-200">
-                  <h3 className="text-base font-bold text-slate-900 mb-1">
-                    Collateral Property Documents
-                  </h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Upload documents related to the property pledged as collateral
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DocumentUploadCard
-                      name="titleDeeds"
-                      label="Title Deeds / Sale Deed / Conveyance"
-                      file={formData.titleDeeds}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
+                      error={renderError("coApplicantPan")}
                     />
                     <DocumentUploadCard
-                      name="sanctionedPlan"
-                      label="Sanctioned Map / Building Plan"
-                      file={formData.sanctionedPlan}
+                      name="coApplicantSelfie"
+                      label="Co-Applicant Photo / Selfie *"
+                      file={formData.coApplicantSelfie}
+                      required
                       onChange={handleFileChange}
                       onRemove={handleFileRemove}
+                      error={renderError("coApplicantSelfie")}
                     />
                     <DocumentUploadCard
-                      name="propertyTaxReceipt"
-                      label="Latest Property Tax Receipt / Utility Bill"
-                      file={formData.propertyTaxReceipt}
+                      name="coApplicantAadharFront"
+                      label="Co-Applicant Aadhaar Front *"
+                      file={formData.coApplicantAadharFront}
+                      required
                       onChange={handleFileChange}
                       onRemove={handleFileRemove}
+                      error={renderError("coApplicantAadharFront")}
                     />
                     <DocumentUploadCard
-                      name="agreementCopy"
-                      label="Prior Chain Documents / Agreement Copy"
-                      file={formData.agreementCopy}
+                      name="coApplicantAadharBack"
+                      label="Co-Applicant Aadhaar Back *"
+                      file={formData.coApplicantAadharBack}
+                      required
                       onChange={handleFileChange}
                       onRemove={handleFileRemove}
+                      error={renderError("coApplicantAadharBack")}
                     />
                   </div>
                 </div>
               </div>
-            </section>
-          )}
+            )}
+          </section>
+
+          {/* Step 1: Address */}
+          <section id="loan-address-step" hidden={currentStep !== LOAN_STEP.ADDRESS} className="space-y-6">
+            <LoanDocsProgress checklist={docChecklistForStep(docChecklist, LOAN_STEP.ADDRESS)} />
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-teal-600" />
+              {LOAN_SECTION.CURRENT_ADDRESS}
+            </h2>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Address (House / Flat / Area) *
+              </label>
+              <textarea
+                name="currentAddress"
+                rows="3"
+                value={formData.currentAddress}
+                onChange={handleInputChange}
+                placeholder="House / flat no, building, street, area"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm resize-none"
+              />
+              {renderError("currentAddress")}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Landmark *
+                </label>
+                <input
+                  type="text"
+                  name="currentAddressLandmark"
+                  value={formData.currentAddressLandmark ?? ""}
+                  onChange={handleInputChange}
+                  placeholder="Nearby landmark"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("currentAddressLandmark")}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  PIN Code *
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  name="currentAddressPincode"
+                  value={formData.currentAddressPincode ?? ""}
+                  onChange={handleInputChange}
+                  placeholder="6-digit PIN code"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("currentAddressPincode")}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  House Status *
+                </label>
+                <select
+                  name="currentAddressOwnRented"
+                  value={houseStatusOptionValue(formData.currentAddressOwnRented, ["Owned", "Rented", "Parental"])}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                >
+                  <option value="">Select status</option>
+                  <option value="Owned">Owned</option>
+                  <option value="Rented">Rented</option>
+                  <option value="Parental">Parental</option>
+                </select>
+                {renderError("currentAddressOwnRented")}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Years at this Address *
+                </label>
+                <select
+                  name="currentAddressStability"
+                  value={formData.currentAddressStability || ""}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                >
+                  <option value="">Select</option>
+                  {stabilityOptionsFor(formData.currentAddressStability).map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                {renderError("currentAddressStability")}
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <LoanAddressProofBlock
+                stepLabel=""
+                file={formData.addressProof}
+                onChange={handleFileChange}
+                onRemove={handleFileRemove}
+                renderError={renderError}
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="sameAddress"
+                checked={sameAddress}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setSameAddress(checked);
+                  if (checked) {
+                    setFormData((p) => ({
+                      ...p,
+                      permanentAddress: p.currentAddress,
+                      permanentAddressLandmark: p.currentAddressLandmark,
+                      permanentAddressPincode: p.currentAddressPincode,
+                      permanentAddressOwnRented: p.currentAddressOwnRented,
+                      permanentAddressStability: p.currentAddressStability,
+                    }));
+                  }
+                }}
+                className="w-4 h-4 text-teal-600 rounded"
+              />
+              <label htmlFor="sameAddress" className="text-sm font-semibold text-slate-800 cursor-pointer">
+                {LOAN_FIELD_LABEL.sameAddress}
+              </label>
+            </div>
+
+            {!sameAddress && (
+              <>
+                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-teal-600" />
+                  {LOAN_SECTION.PERMANENT_ADDRESS}
+                </h3>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Address (House / Flat / Area) *
+                  </label>
+                  <textarea
+                    name="permanentAddress"
+                    rows="3"
+                    value={formData.permanentAddress}
+                    onChange={handleInputChange}
+                    placeholder="House / flat no, building, street, area"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm resize-none"
+                  />
+                  {renderError("permanentAddress")}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Landmark *
+                    </label>
+                    <input
+                      type="text"
+                      name="permanentAddressLandmark"
+                      value={formData.permanentAddressLandmark ?? ""}
+                      onChange={handleInputChange}
+                      placeholder="Nearby landmark"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                    />
+                    {renderError("permanentAddressLandmark")}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      PIN Code *
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      name="permanentAddressPincode"
+                      value={formData.permanentAddressPincode ?? ""}
+                      onChange={handleInputChange}
+                      placeholder="6-digit PIN code"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                    />
+                    {renderError("permanentAddressPincode")}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      House Status *
+                    </label>
+                    <select
+                      name="permanentAddressOwnRented"
+                      value={houseStatusOptionValue(formData.permanentAddressOwnRented, ["Owned", "Rented", "Parental"])}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                    >
+                      <option value="">Select status</option>
+                      <option value="Owned">Owned</option>
+                      <option value="Rented">Rented</option>
+                      <option value="Parental">Parental</option>
+                    </select>
+                    {renderError("permanentAddressOwnRented")}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Years at this Address *
+                    </label>
+                    <select
+                      name="permanentAddressStability"
+                      value={formData.permanentAddressStability || ""}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                    >
+                      <option value="">Select</option>
+                      {stabilityOptionsFor(formData.permanentAddressStability).map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    {renderError("permanentAddressStability")}
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* Step 2: Business & Property */}
+          <section id="loan-income-step" hidden={currentStep !== LOAN_STEP.INCOME} className="space-y-6">
+            <LoanDocsProgress checklist={docChecklistForStep(docChecklist, LOAN_STEP.INCOME)} />
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Store className="w-5 h-5 text-teal-600" />
+              {LOAN_SECTION.BUSINESS}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Business Name *
+                </label>
+                <input
+                  type="text"
+                  name="businessName"
+                  value={formData.businessName}
+                  onChange={handleInputChange}
+                  placeholder="Enterprise / enterprise name"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("businessName")}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Business Address *
+                </label>
+                <textarea
+                  name="businessAddress"
+                  rows="2"
+                  value={formData.businessAddress}
+                  onChange={handleInputChange}
+                  placeholder="Full business office / shop address"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("businessAddress")}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Business Landmark (Optional)
+                </label>
+                <input
+                  type="text"
+                  name="businessLandmark"
+                  value={formData.businessLandmark}
+                  onChange={handleInputChange}
+                  placeholder="Near market / landmark"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                  <Store className="w-5 h-5 text-teal-600" />
+                  {LOAN_DOC_GROUP.BUSINESS_PROOF}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DocumentUploadCard
+                    name="shopAct"
+                    label="Shop Act / Gumasta License"
+                    file={formData.shopAct}
+                    required
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                    error={renderError("shopAct")}
+                  />
+                  <DocumentUploadCard
+                    name="udhyamAadhar"
+                    label="Udyam / MSME Certificate"
+                    file={formData.udhyamAadhar}
+                    required
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                    error={renderError("udhyamAadhar")}
+                  />
+                  <DocumentUploadCard
+                    name="shopPhoto"
+                    label="Shop / Office Photo"
+                    file={formData.shopPhoto}
+                    accept=".jpg,.jpeg,.png"
+                    required
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                    error={renderError("shopPhoto")}
+                  />
+                  <DocumentUploadCard
+                    name="businessOtherDocs"
+                    label="Other Business Docs"
+                    file={formData.businessOtherDocs}
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Years in Business *
+                </label>
+                <input
+                  type="number"
+                  name="businessVintage"
+                  value={formData.businessVintage}
+                  onChange={handleInputChange}
+                  placeholder="Years in business"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("businessVintage")}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Annual Turnover (₹) *
+                </label>
+                <input
+                  type="number"
+                  name="annualTurnover"
+                  value={formData.annualTurnover}
+                  onChange={handleInputChange}
+                  placeholder="e.g. 4000000"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                {renderError("annualTurnover")}
+                <div className="mt-3">
+                  <DocumentUploadCard
+                    name="itr"
+                    label="ITR (Last 3 Years)"
+                    hint="Upload all 3 years ITR in this one file (combined PDF preferred)"
+                    file={formData.itr}
+                    required
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                    error={renderError("itr")}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  GST Number (Optional)
+                </label>
+                <input
+                  type="text"
+                  name="gstNumber"
+                  value={formData.gstNumber}
+                  onChange={handleInputChange}
+                  placeholder="GSTIN number"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+                <div className="mt-3">
+                  <DocumentUploadCard
+                    name="gstDoc"
+                    label="GST Certificate"
+                    file={formData.gstDoc}
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Collateral Property Details */}
+            <div className="pt-6 border-t border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Building className="w-5 h-5 text-teal-600" />
+                {LOAN_SECTION.PROPERTY}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Property Type *
+                  </label>
+                  <select
+                    name="propertyType"
+                    value={formData.propertyType}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                  >
+                    <option value="RESIDENTIAL">Residential (Flat / House / Villa)</option>
+                    <option value="COMMERCIAL">Commercial (Shop / Office / Building)</option>
+                    <option value="INDUSTRIAL">Industrial (Factory / Warehouse / Shed)</option>
+                    <option value="PLOT">Residential / Commercial Plot</option>
+                  </select>
+                  {renderError("propertyType")}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Property Value (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    name="propertyValue"
+                    value={formData.propertyValue}
+                    onChange={handleInputChange}
+                    placeholder="Estimated value in ₹"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                  />
+                  {renderError("propertyValue")}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Property Address *
+                  </label>
+                  <textarea
+                    name="propertyAddress"
+                    rows="2"
+                    value={formData.propertyAddress}
+                    onChange={handleInputChange}
+                    placeholder="Address of property offered as collateral"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                  />
+                  {renderError("propertyAddress")}
+                </div>
+              </div>
+              <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                  <Home className="w-5 h-5 text-teal-600" />
+                  {LOAN_DOC_GROUP.PROPERTY}
+                </h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Upload documents related to the property pledged as collateral
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DocumentUploadCard
+                    name="titleDeeds"
+                    label="Title Deeds / Sale Deed / Conveyance"
+                    file={formData.titleDeeds}
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                  />
+                  <DocumentUploadCard
+                    name="sanctionedPlan"
+                    label="Sanctioned Map / Building Plan"
+                    file={formData.sanctionedPlan}
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                  />
+                  <DocumentUploadCard
+                    name="propertyTaxReceipt"
+                    label="Latest Property Tax Receipt / Utility Bill"
+                    file={formData.propertyTaxReceipt}
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                  />
+                  <DocumentUploadCard
+                    name="agreementCopy"
+                    label="Prior Chain Documents / Agreement Copy"
+                    file={formData.agreementCopy}
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                  />
+                  <DocumentUploadCard
+                    name="allotmentLetter"
+                    label="Allotment Letter"
+                    file={formData.allotmentLetter}
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-slate-200">
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                <Receipt className="w-5 h-5 text-teal-600" />
+                {LOAN_DOC_GROUP.BANK}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <DocumentUploadCard
+                  name="bankStatementFile1"
+                  label="Bank Statement 1 (Current / Savings) *"
+                  file={formData.bankStatementFile1}
+                  required
+                  onChange={handleFileChange}
+                  onRemove={handleFileRemove}
+                  error={renderError("bankStatementFile1")}
+                />
+                <DocumentUploadCard
+                  name="bankStatementFile2"
+                  label="Bank Statement 2 (Optional)"
+                  file={formData.bankStatementFile2}
+                  onChange={handleFileChange}
+                  onRemove={handleFileRemove}
+                />
+              </div>
+              <div className="mt-4 max-w-sm">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Bank Statement Password (Optional)
+                </label>
+                <input
+                  type="text"
+                  name="bankStatementPassword"
+                  value={formData.bankStatementPassword}
+                  onChange={handleInputChange}
+                  placeholder="Password (if protected)"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+            </div>
+          </section>
 
           {/* Step 3: References */}
-          {currentStep === 3 && (
-            <section className="space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Users className="w-5 h-5 text-teal-600" />
-                References
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                  <h3 className="font-bold text-sm text-slate-800 mb-3">Reference 1</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="reference1Name"
-                        value={formData.reference1Name}
-                        onChange={handleInputChange}
-                        placeholder="Reference full name"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
-                      />
-                      {renderError("reference1Name")}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Mobile Number *
-                      </label>
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        name="reference1Contact"
-                        value={formData.reference1Contact}
-                        onChange={handleInputChange}
-                        placeholder="10-digit mobile number"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
-                      />
-                      {renderError("reference1Contact")}
-                    </div>
+          <section id="loan-references-step" hidden={currentStep !== LOAN_STEP.REFERENCES} className="space-y-6">
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Users className="w-5 h-5 text-teal-600" />
+              References
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <h3 className="font-bold text-sm text-slate-800 mb-3">Reference 1</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="reference1Name"
+                      value={formData.reference1Name}
+                      onChange={handleInputChange}
+                      placeholder="Reference full name"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+                    />
+                    {renderError("reference1Name")}
                   </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                  <h3 className="font-bold text-sm text-slate-800 mb-3">Reference 2</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="reference2Name"
-                        value={formData.reference2Name}
-                        onChange={handleInputChange}
-                        placeholder="Reference full name"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
-                      />
-                      {renderError("reference2Name")}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Mobile Number *
-                      </label>
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        name="reference2Contact"
-                        value={formData.reference2Contact}
-                        onChange={handleInputChange}
-                        placeholder="10-digit mobile number"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
-                      />
-                      {renderError("reference2Contact")}
-                    </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Mobile Number *
+                    </label>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      name="reference1Contact"
+                      value={formData.reference1Contact}
+                      onChange={handleInputChange}
+                      placeholder="10-digit mobile number"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+                    />
+                    {renderError("reference1Contact")}
                   </div>
                 </div>
               </div>
-            </section>
-          )}
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <h3 className="font-bold text-sm text-slate-800 mb-3">Reference 2</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="reference2Name"
+                      value={formData.reference2Name}
+                      onChange={handleInputChange}
+                      placeholder="Reference full name"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+                    />
+                    {renderError("reference2Name")}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Mobile Number *
+                    </label>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      name="reference2Contact"
+                      value={formData.reference2Contact}
+                      onChange={handleInputChange}
+                      placeholder="10-digit mobile number"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+                    />
+                    {renderError("reference2Contact")}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* Step 4: Review & Submit */}
-          {currentStep === 4 && (
-            <section className="space-y-6">
-              <LoanApplicationReviewCard
-                formData={formData}
-                loanTitle="Loan Against Property (Self-Employed)"
-              />
+          <section id="loan-review-step" hidden={currentStep !== LOAN_STEP.REVIEW} className="space-y-6">
+            <LoanReviewSummary
+              sections={reviewSections}
+              docChecklist={docChecklist}
+              onEdit={goToStep}
+              editable={!loading}
+            />
 
-              {!isPartnerLoggedIn && (
-                <div className="pt-6 border-t border-slate-200">
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-4">
-                    <FileText className="w-5 h-5 text-teal-600" />
-                    Security & Account Setup
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Account Password *
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="password"
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          placeholder="Enter strong password"
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      {renderError("password")}
+            {(showPasswordFields || !isPartnerLoggedIn) && (
+              <div className="pt-6 border-t border-slate-200">
+                {showPasswordFields && (
+                <>
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-1">
+                  <FileText className="w-5 h-5 text-teal-600" />
+                  {LOAN_SECTION.ACCOUNT}
+                </h2>
+                <p className="text-xs text-slate-500 mb-4">
+                  Optional. Leave blank and a customer password will be generated automatically.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Account Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        placeholder="Enter strong password"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Confirm Password *
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showConfirmPassword ? "text" : "password"}
-                          name="confirmPassword"
-                          value={formData.confirmPassword}
-                          onChange={handleInputChange}
-                          placeholder="Repeat password"
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        >
-                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      {renderError("confirmPassword")}
-                    </div>
+                    {renderError("password")}
                   </div>
 
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        placeholder="Repeat password"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {renderError("confirmPassword")}
+                  </div>
+                </div>
+                </>
+                )}
+
+                {!isPartnerLoggedIn && (
                   <div className="mt-4">
                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Partner Referral Code (optional) - use {defaultReferralCode} if you don't have a partner code
@@ -1826,33 +2091,38 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 text-sm"
                     />
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            )}
 
-              {error && (
-                <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-                  {error}
-                </div>
-              )}
+            {error && (
+              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
 
-              {successMessage && (
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
-                  {successMessage}
-                  {savedApplication?.appNo && (
-                    <span className="block font-bold mt-1">Application No: {savedApplication.appNo}</span>
-                  )}
-                </div>
-              )}
-            </section>
-          )}
+            {successMessage && (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
+                {successMessage}
+                {savedApplication?.appNo && (
+                  <span className="block font-bold mt-1">Application No: {savedApplication.appNo}</span>
+                )}
+              </div>
+            )}
+          </section>
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200">
+          {editingFromReview && (
+            <p className="mt-6 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-800">
+              {LOAN_REVIEW_EDIT_HINT}
+            </p>
+          )}
+          <div className={`flex items-center pt-6 border-t border-slate-200 ${editingFromReview ? "justify-end" : "justify-between"}`}>
             <button
               type="button"
               onClick={handlePrevStep}
               disabled={currentStep === 0 || loading}
-              className="px-6 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 disabled:opacity-50"
+              className={`px-6 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 disabled:opacity-50 ${editingFromReview ? "hidden" : ""}`}
             >
               Previous
             </button>
@@ -1863,7 +2133,7 @@ export default function LapLoanSelfEmployee({ embed = false, actorRole = "auto" 
                 onClick={handleNextStep}
                 className="px-8 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm shadow-md transition"
               >
-                Next Step
+                {editingFromReview ? LOAN_BACK_TO_REVIEW_LABEL : "Next Step"}
               </button>
             ) : (
               <button

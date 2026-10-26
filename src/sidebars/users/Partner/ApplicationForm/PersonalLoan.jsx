@@ -33,7 +33,24 @@ import { canonicalPartnerReferralCode } from "../../../../config/branding";
 import LoanStepper from "../../../../components/loan/LoanStepper";
 import DocumentUploadCard from "../../../../components/loan/DocumentUploadCard";
 import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofBlock";
-import LoanApplicationReviewCard from "../../../../components/loan/LoanApplicationReviewCard";
+import LoanReviewSummary, { LoanDocsProgress } from "../../../../components/loan/LoanReviewSummary";
+import LoanRequirementFields from "../../../../components/loan/LoanRequirementFields";
+import {
+  LOAN_FIELD_LABEL,
+  LOAN_PROFILE,
+  LOAN_SECTION,
+  LOAN_STABILITY_OPTIONS,
+  LOAN_STEP,
+  LOAN_STEP_LAYOUT_VERSION,
+  buildLoanDocChecklist,
+  docChecklistForStep,
+  LOAN_DOC_GROUP,
+  buildLoanReviewSections,
+  getLoanSteps,
+  resolveLoanNextStep,
+  LOAN_BACK_TO_REVIEW_LABEL,
+  LOAN_REVIEW_EDIT_HINT,
+} from "../../../../components/loan/loanFormSpec";
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 import PublicLoanPartnerTrustBanner from "../../../../components/loan/PublicLoanPartnerTrustBanner";
 import ShareLoanModal from "../../../../components/loan/ShareLoanModal";
@@ -52,7 +69,7 @@ import { postLoanFormWithRetry } from "../../../../utils/loanSubmitRetry";
 import { OPTIONAL_EXTRA_DOC_CAPTION } from "../../../../utils/loanAddressProofCopy";
 import LoanApplicantFinancialFields from "../../../../components/loan/LoanApplicantFinancialFields";
 import {
-  personFinancialCustomerFields,
+  SALARY_RECEIPT_OPTIONS,
   validatePersonFinancialFields,
 } from "../../../../utils/personFinancial";
 import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
@@ -62,7 +79,13 @@ import {
   rmCompleteLoanFormUrl,
   partnerCompleteLoanFormUrl,
 } from "../../../../utils/rmLoanForm";
-import { buildCanonicalLoanPayload } from "../../../../utils/normalizeLoanPayload";
+import {
+  buildCanonicalLoanPayload,
+  customerPasswordErrors,
+  houseStatusOptionValue,
+  isMarriedStatus,
+  isValidPanFormat,
+} from "../../../../utils/normalizeLoanPayload";
 import {
   fetchLeadDocuments,
   buildHydratedDocFields,
@@ -235,6 +258,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     companyIdCard: "",
     selfie: "",
     contactNo: "",
+    alternateContact: "",
     email: "",
     dob: "",
     pan: "",
@@ -303,32 +327,27 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
   const applicationIdQuery = searchParams.get("applicationId");
   const isEditingExistingApp = Boolean(applicationIdQuery);
-  const isPasswordRequired = !isRmMode && !isEditingExistingApp;
+  const showPasswordFields = !isRmMode && !isEditingExistingApp;
 
   const { resumeMeta, loadingResume, resumeError } = useRmLoanFormResume({
     enabled: isRmMode || (isPartnerLoggedIn && isEditingExistingApp),
     setFormData,
     setApplicationId,
+    preferPartner: isPartnerLoggedIn,
   });
 
   useEffect(() => {
     if (resumeError) setError(resumeError);
   }, [resumeError]);
 
-  // Multi-step wizard state (5 steps with inline documents matching Partner App)
-  const steps = [
-    "Personal & KYC",
-    "Address",
-    "Loan & Employment",
-    "References",
-    "Review & Submit",
-  ];
+  const steps = getLoanSteps({ profile: LOAN_PROFILE.SALARIED });
   const [currentStep, setCurrentStep] = useState(0);
+  const [editingFromReview, setEditingFromReview] = useState(false);
   const [maxStep, setMaxStep] = useState(0);
   const stepAnchorIds = [
     "loan-personal-step",
     "loan-address-step",
-    "loan-loan-step",
+    "loan-income-step",
     "loan-references-step",
     "loan-review-step",
   ];
@@ -338,15 +357,15 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
   const stepFirstFieldName = useMemo(
     () => [
-      "firstName",
-      "currentAddress",
       "loanAmount",
+      "currentAddress",
+      "companyName",
       "reference1Name",
-      isPasswordRequired
+      showPasswordFields
         ? (isPartnerLoggedIn ? "password" : "partnerReferralCode")
         : "loanAmount",
     ],
-    [isPasswordRequired, isPartnerLoggedIn]
+    [showPasswordFields, isPartnerLoggedIn]
   );
 
   useEffect(() => {
@@ -413,6 +432,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
   // Load draft & restore uploaded documents state from localStorage
   useEffect(() => {
+    if (isEditingExistingApp) return;
     try {
       const raw = localStorage.getItem(loanDraftStorageKey);
       if (!raw) return;
@@ -440,12 +460,13 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
           setDocUploadStatus((prev) => ({ ...prev, ...initialStatuses }));
         }
       }
-      if (typeof parsed?.currentStep === "number") {
+      const sameLayout = parsed?.stepLayout === LOAN_STEP_LAYOUT_VERSION;
+      if (sameLayout && typeof parsed?.currentStep === "number") {
         setCurrentStep(
           Math.max(0, Math.min(parsed.currentStep, steps.length - 1))
         );
       }
-      if (typeof parsed?.maxStep === "number") {
+      if (sameLayout && typeof parsed?.maxStep === "number") {
         setMaxStep(Math.max(0, Math.min(parsed.maxStep, steps.length - 1)));
       }
     } catch (e) {
@@ -480,6 +501,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
   // Persist draft with throttling (including applicationId and uploaded doc descriptors)
   useEffect(() => {
+    if (isEditingExistingApp) return undefined;
     const t = setTimeout(() => {
       try {
         localStorage.setItem(
@@ -488,6 +510,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
             applicationId,
             currentStep,
             maxStep,
+            stepLayout: LOAN_STEP_LAYOUT_VERSION,
             formData: serializeDraftWithDocs(formData),
           })
         );
@@ -496,7 +519,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       }
     }, 600);
     return () => clearTimeout(t);
-  }, [formData, currentStep, maxStep, applicationId]);
+  }, [formData, currentStep, maxStep, applicationId, isEditingExistingApp]);
 
   // Cleanup function to cancel pending requests
   useEffect(() => {
@@ -575,11 +598,12 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     setFormData((prev) => ({
       ...prev,
       [name]: file,
+      [`${name}_uploaded`]: false,
     }));
 
     // Auto-create lead if applicationId is missing so background upload ALWAYS starts on select!
     let targetAppId = applicationId;
-    if (!targetAppId && !isRmMode) {
+    if (!targetAppId && !isRmMode && !isEditingExistingApp) {
       try {
         const leadRes = await captureLeadOnStep1Next({
           loanType: "PERSONAL",
@@ -739,22 +763,20 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
     // Personal fields
     if (!formData.firstName) errors.firstName = "First name is required.";
-    if (!formData.middleName) errors.middleName = "Middle name is required.";
     if (!formData.lastName) errors.lastName = "Last name is required.";
     if (!formData.motherName) errors.motherName = "Mother's name is required.";
-    if (!formData.pan) errors.pan = "PAN number is required.";
+    if (!formData.pan) {
+      errors.pan = "PAN number is required.";
+    } else if (!isValidPanFormat(formData.pan)) {
+      errors.pan = "Enter a valid PAN card number (e.g., ABCDE1234F).";
+    }
     if (!formData.gender) errors.gender = "Gender is required.";
     if (!formData.maritalStatus) errors.maritalStatus = "Marital status is required.";
-    if (isPasswordRequired) {
-      if (!formData.password) errors.password = "Password is required.";
-      if (!formData.confirmPassword) errors.confirmPassword = "Confirm Password is required.";
+    if (isMarriedStatus(formData.maritalStatus) && !String(formData.wifeName || "").trim()) {
+      errors.wifeName = "Spouse name is required for married applicants.";
     }
-    if (
-      formData.password &&
-      formData.confirmPassword &&
-      formData.password !== formData.confirmPassword
-    ) {
-      errors.confirmPassword = "Passwords do not match.";
+    if (showPasswordFields) {
+      Object.assign(errors, customerPasswordErrors(formData));
     }
 
     // Contact info
@@ -762,6 +784,9 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       errors.contactNo = "Contact number is required.";
     } else if (!/^\d{10}$/.test(formData.contactNo)) {
       errors.contactNo = "Contact number must be exactly 10 digits.";
+    }
+    if (formData.alternateContact && !/^\d{10}$/.test(formData.alternateContact)) {
+      errors.alternateContact = "Alternate number must be exactly 10 digits.";
     }
 
     if (!formData.email) {
@@ -782,11 +807,19 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     if (!formData.stabilityOfResidency) errors.stabilityOfResidency = "Stability of Residency is required.";
     if (!formData.currentHouseStatus) errors.currentHouseStatus = "Current House Status is required.";
     if (!formData.currentLandmark) errors.currentLandmark = "Landmark is required.";
-    if (!formData.currentAddressPinCode) errors.currentAddressPinCode = "Pin Code is required.";
+    if (!formData.currentAddressPinCode) {
+      errors.currentAddressPinCode = "Pin Code is required.";
+    } else if (!/^[1-9][0-9]{5}$/.test(String(formData.currentAddressPinCode).trim())) {
+      errors.currentAddressPinCode = "Enter a valid 6-digit PIN code.";
+    }
     if (!formData.permanentHouseStatus) errors.permanentHouseStatus = "Permanent House Status is required.";
     if (!formData.permanentLandmark) errors.permanentLandmark = "Landmark is required.";
     if (!formData.permanentStability) errors.permanentStability = "Stability is required.";
-    if (!formData.permanentAddressPinCode) errors.permanentAddressPinCode = "Pincode is required.";
+    if (!formData.permanentAddressPinCode) {
+      errors.permanentAddressPinCode = "Pincode is required.";
+    } else if (!/^[1-9][0-9]{5}$/.test(String(formData.permanentAddressPinCode).trim())) {
+      errors.permanentAddressPinCode = "Enter a valid 6-digit PIN code.";
+    }
 
 
     // Employment
@@ -822,6 +855,8 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
       errors.reference2Contact = "Reference 2 contact is required.";
     } else if (!/^\d{10}$/.test(formData.reference2Contact)) {
       errors.reference2Contact = "Reference 2 contact must be exactly 10 digits.";
+    } else if (formData.reference2Contact === formData.reference1Contact) {
+      errors.reference2Contact = "Reference 2 contact cannot be the same as Reference 1.";
     }
 
     // Loan
@@ -849,67 +884,131 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
   const stepFieldKeys = useMemo(
     () => [
-      // 0: Personal & KYC
       [
-        "firstName",
-        "middleName",
-        "lastName",
-        "motherName",
-        "pan",
-        "gender",
-        "maritalStatus",
-        "contactNo",
-        "email",
-        "dob",
+        "loanAmount",
+        "loanPurpose",
         "hasRunningLoan",
         "monthlyEmiPaying",
         "cibilScoreBand",
-        "loanPurpose",
+        "hasBounce",
+        "bounceCount",
+        "firstName",
+        "lastName",
+        "contactNo",
+        "alternateContact",
+        "email",
+        "pan",
+        "panCard",
+        "dob",
+        "gender",
+        "maritalStatus",
+        "wifeName",
+        "motherName",
         "aadharFront",
         "aadharBack",
-        "panCard",
         "passportPhoto",
         "selfie",
       ],
-      // 1: Address
       [
         "currentAddress",
-        "permanentAddress",
-        "stabilityOfResidency",
-        "currentHouseStatus",
         "currentLandmark",
         "currentAddressPinCode",
-        "permanentHouseStatus",
-        "permanentLandmark",
-        "permanentStability",
-        "permanentAddressPinCode",
+        "currentHouseStatus",
+        "stabilityOfResidency",
         "addressProof",
+        "permanentAddress",
+        "permanentLandmark",
+        "permanentAddressPinCode",
+        "permanentHouseStatus",
+        "permanentStability",
       ],
-      // 2: Loan & Employment
       [
-        "loanAmount",
         "companyName",
         "designation",
         "companyAddress",
-        "monthlySalary",
-        "totalExperience",
-        "currentExperience",
-        "salaryInHand",
         "companyIdCard",
+        "monthlySalary",
+        "salaryInHand",
         "salarySlip1",
         "salarySlip2",
         "salarySlip3",
         "form16_26as",
+        "totalExperience",
+        "currentExperience",
+        "officialEmail",
+        ...(dynamicProduct?.customFields || []).map((f) => f.fieldKey),
         "bankStatement1",
         "bankStatement2",
+        ...(dynamicProduct?.requiredDocuments || []).map((d) => d.docType),
       ],
-      // 3: References
       ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"],
-      // 4: Review & Submit
-      isPasswordRequired ? ["password", "confirmPassword"] : [],
+      showPasswordFields ? ["password", "confirmPassword"] : [],
     ],
-    [isPasswordRequired]
+    [showPasswordFields, dynamicProduct]
   );
+
+  const docChecklist = buildLoanDocChecklist(
+    [
+      { key: "panCard", label: "PAN Card", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "aadharFront", label: "Aadhaar Front", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "aadharBack", label: "Aadhaar Back", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "passportPhoto", altKeys: ["selfie"], label: "Applicant Photo", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "otherDocument", label: "Other Document", required: false, step: LOAN_STEP.PERSONAL },
+      { key: "addressProof", label: "Address Proof", required: true, step: LOAN_STEP.ADDRESS },
+      { key: "companyIdCard", label: "Company ID Card", required: true, step: LOAN_STEP.INCOME },
+      { key: "salarySlip1", label: "Salary Slip 1", required: true, step: LOAN_STEP.INCOME },
+      { key: "salarySlip2", label: "Salary Slip 2", required: true, step: LOAN_STEP.INCOME },
+      { key: "salarySlip3", label: "Salary Slip 3", required: true, step: LOAN_STEP.INCOME },
+      { key: "form16_26as", label: "Form 16 / 26AS", required: false, step: LOAN_STEP.INCOME },
+      { key: "bankStatement1", label: "Bank Statement 1", required: true, step: LOAN_STEP.INCOME },
+      { key: "bankStatement2", label: "Bank Statement 2", required: false, step: LOAN_STEP.INCOME },
+      ...(dynamicProduct?.requiredDocuments || []).map((d) => ({
+        key: d.docType,
+        label: d.label,
+        required: false,
+        step: LOAN_STEP.INCOME,
+      })),
+    ],
+    formData
+  );
+
+  const renderDocCard = (name, label, { required = false, accept = ".pdf,.jpg,.jpeg,.png", hint } = {}) => (
+    <DocumentUploadCard
+      key={name}
+      name={name}
+      label={label}
+      file={formData[name]}
+      accept={accept}
+      required={required}
+      hint={hint || loanDocumentFieldHint(name)}
+      onChange={handleFileChange}
+      onRemove={handleFileRemove}
+      error={renderError(name)}
+      uploadStatus={docUploadStatus[name] || (formData[`${name}_uploaded`] ? "uploaded" : "idle")}
+      uploadProgress={docUploadProgress[name] || 0}
+      onPreview={() => openDocumentPreview(formData[name])}
+    />
+  );
+
+  const reviewSections = buildLoanReviewSections(formData, {
+    profile: LOAN_PROFILE.SALARIED,
+    sameAddress,
+    loanTitle: dynamicLoanTitle,
+  });
+
+  const stabilityOptionsFor = (value) =>
+    value && !LOAN_STABILITY_OPTIONS.some((o) => o.value === value)
+      ? [{ label: value, value }, ...LOAN_STABILITY_OPTIONS]
+      : LOAN_STABILITY_OPTIONS;
+
+  const goToStep = (idx) => {
+    setError("");
+    setFieldErrors({});
+    setValidationErrors([]);
+    setEditingFromReview(idx !== LOAN_STEP.REVIEW);
+    setCurrentStep(idx);
+    scrollToStep(idx);
+  };
 
   const validateStep = (stepIdx) => {
     const errors = validateRegistrationForm(formData);
@@ -922,11 +1021,11 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
   const canSubmit = useMemo(
     () => Object.keys(validateRegistrationForm(formData)).length === 0,
-    [formData, isPasswordRequired]
+    [formData, showPasswordFields]
   );
   const stepErrorCounts = useMemo(
     () => steps.map((_, idx) => Object.keys(validateStep(idx)).length),
-    [formData, isPasswordRequired]
+    [formData, showPasswordFields]
   );
 
   const handleNext = async () => {
@@ -942,7 +1041,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
     }
 
     // New: Check if customer exists after Step 1 (Personal Info)
-    if (currentStep === 0 && isPartnerLoggedIn && !isRmMode) {
+    if (currentStep === 0 && isPartnerLoggedIn && !isRmMode && !isEditingExistingApp) {
       setIsCheckingExistence(true);
       try {
         const { data } = await axios.get(`${backendurl}/partner/check-customer`, {
@@ -969,9 +1068,12 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
     // Sync filled wizard fields to LEAD so RM sees progress (Personal → Documents)
     const leavingStep = currentStep;
-    const nextIdx = Math.min(currentStep + 1, steps.length - 1);
+    const nextIdx = Math.min(
+      resolveLoanNextStep(currentStep, { editingFromReview }),
+      steps.length - 1
+    );
 
-    if (!isRmMode) {
+    if (!isRmMode && !isEditingExistingApp) {
       const leadProgress = persistLeadWizardProgress({
         applicationId,
         setApplicationId,
@@ -999,6 +1101,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
     setFieldErrors({});
     setValidationErrors([]);
+    setEditingFromReview(false);
     setCurrentStep(nextIdx);
     setMaxStep((m) => Math.max(m, nextIdx));
     scrollToStep(nextIdx);
@@ -1170,8 +1273,8 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
         return;
       }
 
-      if (isPartnerLoggedIn && isEditingExistingApp && (applicationId || applicationIdQuery)) {
-        const targetAppId = applicationId || applicationIdQuery;
+      if (isPartnerLoggedIn && isEditingExistingApp) {
+        const targetAppId = applicationIdQuery || applicationId;
         abortControllerRef.current = new AbortController();
         const response = await axios.post(
           partnerCompleteLoanFormUrl(targetAppId),
@@ -1629,19 +1732,32 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
               />
 
               {/* Personal Information */}
-              <section id="loan-personal-step" hidden={currentStep !== 0}>
+              <section id="loan-personal-step" hidden={currentStep !== LOAN_STEP.PERSONAL}>
+                <LoanDocsProgress checklist={docChecklistForStep(docChecklist, LOAN_STEP.PERSONAL)} />
+                <LoanRequirementFields
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  onAmountChange={(digits) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      loanAmount: digits === "" ? "" : parseInt(digits, 10),
+                    }))
+                  }
+                  renderError={renderError}
+                />
                 <LoanApplicantFinancialFields
                   formData={formData}
                   handleInputChange={handleInputChange}
                   renderError={renderError}
                   fieldErrors={fieldErrors}
+                  showLoanPurpose={false}
                 />
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
                   <User className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Personal Information
+                  {LOAN_SECTION.PERSONAL}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* name */}
@@ -1672,7 +1788,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       className="block text-sm font-medium mb-2"
                       style={{ color: "#111827" }}
                     >
-                      Middle Name *
+                      Middle Name (Optional)
                     </label>
                     <input
                       type="text"
@@ -1685,9 +1801,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                         backgroundColor: "#F8FAFC",
                       }}
                       placeholder="Enter your middle name"
-                      required
                     />
-                    {renderError("middleName")}
                   </div>
                   <div>
                     <label
@@ -1717,7 +1831,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       className="block text-sm font-medium mb-2"
                       style={{ color: "#111827" }}
                     >
-                      Contact Number *
+                      Mobile Number *
                     </label>
                     <div className="relative">
                       <Phone
@@ -1745,7 +1859,34 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       className="block text-sm font-medium mb-2"
                       style={{ color: "#111827" }}
                     >
-                      Email ID *
+                      Alternate Mobile (Optional)
+                    </label>
+                    <div className="relative">
+                      <Phone
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                        style={{ color: "var(--color-brand-primary)" }}
+                      />
+                      <input
+                        type="tel"
+                        name="alternateContact"
+                        value={formData.alternateContact || ""}
+                        onChange={handleInputChange}
+                        className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{
+                          borderColor: "var(--color-brand-primary)",
+                          backgroundColor: "#F8FAFC",
+                        }}
+                        placeholder="Enter alternate contact number"
+                      />
+                    </div>
+                    {renderError("alternateContact")}
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Email *
                     </label>
                     <div className="relative">
                       <Mail
@@ -1773,7 +1914,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       className="block text-sm font-medium mb-2"
                       style={{ color: "#111827" }}
                     >
-                      PAN NO *
+                      PAN Number *
                     </label>
                     <div className="relative">
                       <input
@@ -1791,6 +1932,9 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       />
                     </div>
                     {renderError("pan")}
+                    <div className="mt-3">
+                      {renderDocCard("panCard", "Upload PAN Card", { required: true })}
+                    </div>
                   </div>
                   <div>
                     <label
@@ -1844,27 +1988,6 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     </select>
                     {renderError("gender")}
                   </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Official Email (Company)
-                    </label>
-                    <input
-                      type="email"
-                      name="officialEmail"
-                      value={formData.officialEmail}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      placeholder="Enter your official email"
-                      required
-                    />
-                  </div>
 
                   <div>
                     <label
@@ -1886,11 +2009,12 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       <option value="">Select Status</option>
                       <option value="single">Single</option>
                       <option value="married">Married</option>
-                      <option value="widow">Widow</option>
+                      <option value="divorced">Divorced</option>
+                      <option value="widowed">Widowed</option>
                     </select>
                     {renderError("maritalStatus")}
                   </div>
-                  {String(formData.maritalStatus || "").toLowerCase() === "married" && (
+                  {isMarriedStatus(formData.maritalStatus) && (
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"
@@ -1911,6 +2035,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                         placeholder="Enter spouse name"
                         required
                       />
+                      {renderError("wifeName")}
                     </div>
                   )}
                   <div>
@@ -1918,7 +2043,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       className="block text-sm font-medium mb-2"
                       style={{ color: "#111827" }}
                     >
-                      Mother Name *
+                      Mother's Name *
                     </label>
                     <input
                       type="text"
@@ -1936,191 +2061,143 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     {renderError("motherName")}
                   </div>
                 </div>
-
-                {/* Inline Identity & KYC Documents */}
                 <div className="pt-6 border-t border-slate-200 mt-6">
-                  <h3
-                    className="text-lg font-semibold mb-2 flex items-center gap-2"
-                    style={{ color: "#111827" }}
-                  >
-                    <FileText className="w-5 h-5 text-teal-600" />
-                    Identity & Core Documents
-                  </h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Attach PAN Card, Aadhaar Card (front & back), and passport photo.
-                  </p>
+                    <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                      <FileText className="w-5 h-5 text-teal-600" />
+                      {LOAN_DOC_GROUP.AADHAAR}
+                    </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {[
-                      { name: "aadharFront", label: "Aadhar Card (Front) *", required: true },
-                      { name: "aadharBack", label: "Aadhar Card (Back) *", required: true },
-                      { name: "panCard", label: "PAN Card *", required: true },
-                      {
-                        name: "passportPhoto",
-                        label: "Passport Photo *",
-                        required: true,
-                        accept: ".jpg,.jpeg,.png",
-                      },
-                      {
-                        name: "otherDocument",
-                        label: "Extra supporting file (optional)",
-                        required: false,
-                        hint: OPTIONAL_EXTRA_DOC_CAPTION,
-                      },
-                    ].map((doc) => (
-                      <DocumentUploadCard
-                        key={doc.name}
-                        name={doc.name}
-                        label={doc.label}
-                        file={formData[doc.name]}
-                        accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
-                        required={doc.required}
-                        hint={loanDocumentFieldHint(doc.name)}
-                        onChange={handleFileChange}
-                        onRemove={handleFileRemove}
-                        error={renderError(doc.name)}
-                        uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
-                        uploadProgress={docUploadProgress[doc.name] || 0}
-                        onPreview={() => openDocumentPreview(formData[doc.name])}
-                      />
-                    ))}
+                    {renderDocCard("aadharFront", "Aadhaar Card (Front)", { required: true })}
+                    {renderDocCard("aadharBack", "Aadhaar Card (Back)", { required: true })}
+                  </div>
+                </div>
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                    <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                      <FileText className="w-5 h-5 text-teal-600" />
+                      {LOAN_DOC_GROUP.PHOTO}
+                    </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {renderDocCard("passportPhoto", "Applicant Photo", { required: true, accept: ".jpg,.jpeg,.png" })}
+                    {renderDocCard("otherDocument", "Other Document (Optional)", { hint: OPTIONAL_EXTRA_DOC_CAPTION })}
                   </div>
                 </div>
               </section>
 
               {/* Address Information */}
-              <section id="loan-address-step" hidden={currentStep !== 1}>
+              <section id="loan-address-step" hidden={currentStep !== LOAN_STEP.ADDRESS}>
+                <LoanDocsProgress checklist={docChecklistForStep(docChecklist, LOAN_STEP.ADDRESS)} />
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
                 >
                   <MapPin className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Address Information
+                  {LOAN_SECTION.CURRENT_ADDRESS}
                 </h2>
                 <div className="space-y-6">
                   <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Current Address *
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      Address (House / Flat / Area) *
                     </label>
                     <textarea
                       name="currentAddress"
                       value={formData.currentAddress}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
                       rows="3"
-                      placeholder="Enter your current address"
+                      placeholder="House / flat no, building, street, area"
                       required
                     />
                     {renderError("currentAddress")}
                   </div>
-
-                  <div className="flex flex-wrap -mx-2">
-                    {/* Left Column */}
-                    <div className="w-full md:w-1/2 px-2">
-                      <div className="mb-4">
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Stability of Residency *
-                        </label>
-                        <input
-                          type="text"
-                          name="stabilityOfResidency"
-                          value={formData.stabilityOfResidency}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "#F8FAFC",
-                          }}
-                          placeholder="Enter stability of residency"
-                          required
-                        />
-                        {renderError("stabilityOfResidency")}
-                      </div>
-
-                      <div className="mb-4">
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Current House Status (Rented/Own) *
-                        </label>
-                        <select
-                          name="currentHouseStatus"
-                          value={formData.currentHouseStatus}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "#F8FAFC",
-                          }}
-                          required
-                        >
-
-                          <option value="">Select status</option>
-                          <option value="rented">Rented</option>
-                          <option value="own">Own</option>
-                        </select>
-                        {renderError("currentHouseStatus")}
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        Landmark *
+                      </label>
+                      <input
+                        type="text"
+                        name="currentLandmark"
+                        value={formData.currentLandmark ?? ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                        placeholder="Nearby landmark"
+                        required
+                      />
+                      {renderError("currentLandmark")}
                     </div>
-
-                    {/* Right Column */}
-                    <div className="w-full md:w-1/2 px-2">
-                      <div className="mb-4">
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Landmark (Current Address) *
-                        </label>
-                        <input
-                          type="text"
-                          name="currentLandmark"
-                          value={formData.currentLandmark}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "#F8FAFC",
-                          }}
-                          placeholder="Enter landmark for current address"
-                          required
-                        />
-                        {renderError("currentLandmark")}
-                      </div>
-
-                      <div className="mb-4">
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Pin code *
-                        </label>
-                        <input
-                          type="number"
-                          name="currentAddressPinCode"
-                          value={formData.currentAddressPinCode}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "#F8FAFC",
-                          }}
-                          placeholder="Enter pin code"
-                          required
-                        />
-                        {renderError("currentAddressPinCode")}
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        PIN Code *
+                      </label>
+                      <input
+                        type="text"
+                        name="currentAddressPinCode"
+                        value={formData.currentAddressPinCode ?? ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="6-digit PIN code"
+                        required
+                      />
+                      {renderError("currentAddressPinCode")}
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        House Status *
+                      </label>
+                      <select
+                        name="currentHouseStatus"
+                        value={houseStatusOptionValue(formData.currentHouseStatus, ["own", "rented", "parental"])}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                        required
+                      >
+                        <option value="">Select status</option>
+                        <option value="own">Owned</option>
+                        <option value="rented">Rented</option>
+                        <option value="parental">Parental</option>
+                      </select>
+                      {renderError("currentHouseStatus")}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        Years at this Address *
+                      </label>
+                      <select
+                        name="stabilityOfResidency"
+                        value={formData.stabilityOfResidency || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                        required
+                      >
+                        <option value="">Select</option>
+                        {stabilityOptionsFor(formData.stabilityOfResidency).map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {renderError("stabilityOfResidency")}
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <LoanAddressProofBlock
+                      stepLabel=""
+                      file={formData.addressProof}
+                      onChange={handleFileChange}
+                      onRemove={handleFileRemove}
+                      renderError={renderError}
+                      uploadStatus={docUploadStatus.addressProof || (formData.addressProof_uploaded ? "uploaded" : "idle")}
+                      uploadProgress={docUploadProgress.addressProof || 0}
+                      onPreview={() => openDocumentPreview(formData.addressProof)}
+                    />
                   </div>
 
                   <div className="flex items-center gap-3">
@@ -2132,212 +2209,125 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       className="w-5 h-5 rounded"
                       style={{ accentColor: "var(--color-brand-primary)" }}
                     />
-                    <label
-                      htmlFor="sameAddress"
-                      className="text-sm font-medium"
-                      style={{ color: "#111827" }}
-                    >
-                      Permanent address is same as current address
+                    <label htmlFor="sameAddress" className="text-sm font-medium" style={{ color: "#111827" }}>
+                      {LOAN_FIELD_LABEL.sameAddress}
                     </label>
                   </div>
+
+                  {!sameAddress && (
+                    <>
+                      <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: "#111827" }}>
+                        <MapPin className="w-5 h-5 text-teal-600" />
+                        {LOAN_SECTION.PERMANENT_ADDRESS}
+                      </h3>
                   <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Permanent Address *
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      Address (House / Flat / Area) *
                     </label>
                     <textarea
                       name="permanentAddress"
                       value={formData.permanentAddress}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
                       rows="3"
-                      placeholder="Enter your permanent address"
-                      disabled={sameAddress}
+                      placeholder="House / flat no, building, street, area"
                       required
                     />
                     {renderError("permanentAddress")}
                   </div>
-
-                  <div className="flex flex-wrap -mx-2">
-                    {/* Left Column */}
-                    <div className="w-full md:w-1/2 px-2">
-                      <div className="mb-4">
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Permanent House Status (Rented/Own) *
-                        </label>
-                        <select
-                          name="permanentHouseStatus"
-                          value={formData.permanentHouseStatus}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "#F8FAFC",
-                          }}
-                          disabled={sameAddress}
-                          required
-                        >
-
-                          <option value="">Select status</option>
-                          <option value="rented">Rented</option>
-                          <option value="own">Own</option>
-                        </select>
-                        {renderError("permanentHouseStatus")}
-                      </div>
-
-                      <div className="mb-4">
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Landmark (Permanent Address) *
-                        </label>
-                        <input
-                          type="text"
-                          name="permanentLandmark"
-                          value={formData.permanentLandmark}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "#F8FAFC",
-                          }}
-                          placeholder="Enter landmark for permanent address"
-                          disabled={sameAddress}
-                          required
-                        />
-                        {renderError("permanentLandmark")}
-                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        Landmark *
+                      </label>
+                      <input
+                        type="text"
+                        name="permanentLandmark"
+                        value={formData.permanentLandmark ?? ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                        placeholder="Nearby landmark"
+                        required
+                      />
+                      {renderError("permanentLandmark")}
                     </div>
-
-                    {/* Right Column */}
-                    <div className="w-full md:w-1/2 px-2">
-                      <div className="mb-4">
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Stability (Permanent Address) *
-                        </label>
-                        <input
-                          type="text"
-                          name="permanentStability"
-                          value={formData.permanentStability}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "#F8FAFC",
-                          }}
-                          placeholder="Enter stability for permanent address"
-                          disabled={sameAddress}
-                          required
-                        />
-                        {renderError("permanentStability")}
-                      </div>
-
-                      <div className="mb-4">
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Pin code *
-                        </label>
-                        <input
-                          type="number"
-                          name="permanentAddressPinCode"
-                          value={formData?.permanentAddressPinCode}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "#F8FAFC",
-                          }}
-                          placeholder="Enter pin code"
-                          disabled={sameAddress}
-                          required
-                        />
-                        {renderError("permanentAddressPinCode")}
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        PIN Code *
+                      </label>
+                      <input
+                        type="text"
+                        name="permanentAddressPinCode"
+                        value={formData.permanentAddressPinCode ?? ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="6-digit PIN code"
+                        required
+                      />
+                      {renderError("permanentAddressPinCode")}
                     </div>
-                  </div>
-                </div>
-
-                {/* Inline Address Proof */}
-                <div className="pt-6 border-t border-slate-200 mt-6">
-                  <LoanAddressProofBlock
-                    stepLabel="2.2"
-                    file={formData.addressProof}
-                    onChange={handleFileChange}
-                    onRemove={handleFileRemove}
-                    renderError={renderError}
-                    uploadStatus={docUploadStatus.addressProof || (formData.addressProof_uploaded ? "uploaded" : "idle")}
-                    uploadProgress={docUploadProgress.addressProof || 0}
-                    onPreview={() => openDocumentPreview(formData.addressProof)}
-                  />
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        House Status *
+                      </label>
+                      <select
+                        name="permanentHouseStatus"
+                        value={houseStatusOptionValue(formData.permanentHouseStatus, ["own", "rented", "parental"])}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                        required
+                      >
+                        <option value="">Select status</option>
+                        <option value="own">Owned</option>
+                        <option value="rented">Rented</option>
+                        <option value="parental">Parental</option>
+                      </select>
+                      {renderError("permanentHouseStatus")}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                        Years at this Address *
+                      </label>
+                      <select
+                        name="permanentStability"
+                        value={formData.permanentStability || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                        style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                        required
+                      >
+                        <option value="">Select</option>
+                        {stabilityOptionsFor(formData.permanentStability).map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {renderError("permanentStability")}
+                    </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </section>
 
-              <section id="loan-loan-step" hidden={currentStep !== 2}>
-                <h2
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Loan Amount Details
-                </h2>
-                <div className="space-y-6">
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: "#111827" }}
-                    >
-                      Requested Loan Amount (₹) *
-                    </label>
-                    <input
-                      type="number"
-                      name="loanAmount"
-                      value={formData?.loanAmount ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          loanAmount: val === "" ? "" : parseInt(val, 10), // ensures integer
-                        }));
-                      }}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      placeholder="Enter loan amount"
-                      min="0"
-                      required
-                    />
-
-
-                    {formData.loanAmount ? "" : renderError("loanAmount")}
-                  </div>
-                </div>
-
+              <section id="loan-income-step" hidden={currentStep !== LOAN_STEP.INCOME}>
+                <LoanDocsProgress checklist={docChecklistForStep(docChecklist, LOAN_STEP.INCOME)} />
                 {/* Employment Information */}
-                <div className="pt-6 border-t border-slate-200 mt-6">
-                  <h3
-                    className="text-lg font-semibold mb-4 flex items-center gap-2"
+                <div>
+                  <h2
+                    className="text-2xl font-semibold mb-6 flex items-center gap-3"
                     style={{ color: "#111827" }}
                   >
-                    <Building className="w-5 h-5 text-teal-600" />
-                    Employment Information
-                  </h3>
+                    <Building className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
+                    {LOAN_SECTION.EMPLOYMENT}
+                  </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label
@@ -2383,7 +2373,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     />
                     {renderError("designation")}
                   </div>
-                  <div>
+                  <div className="md:col-span-2">
                     <label
                       className="block text-sm font-medium mb-2"
                       style={{ color: "#111827" }}
@@ -2404,6 +2394,9 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       required
                     />
                     {renderError("companyAddress")}
+                  </div>
+                  <div className="md:col-span-2">
+                    {renderDocCard("companyIdCard", "Company ID Card", { required: true })}
                   </div>
                   <div>
                     <label
@@ -2433,7 +2426,42 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       className="block text-sm font-medium mb-2"
                       style={{ color: "#111827" }}
                     >
-                      Total Experience (in years) *
+                      Salary in Hand (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      name="salaryInHand"
+                      value={formData.salaryInHand}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      placeholder="Enter your salary in hand"
+                      min="0"
+                      required
+                    />
+                    {renderError("salaryInHand")}
+                  </div>
+                  <div className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                    <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                      <FileText className="w-5 h-5 text-teal-600" />
+                      {LOAN_DOC_GROUP.SALARY}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {renderDocCard("salarySlip1", "Salary Slip (Month 1)", { required: true, accept: ".pdf,application/pdf" })}
+                      {renderDocCard("salarySlip2", "Salary Slip (Month 2)", { required: true, accept: ".pdf,application/pdf" })}
+                      {renderDocCard("salarySlip3", "Salary Slip (Month 3)", { required: true, accept: ".pdf,application/pdf" })}
+                      {renderDocCard("form16_26as", "Form 16 / 26AS (Optional)")}
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Total Experience (Years) *
                     </label>
                     <div className="relative">
                       <Briefcase
@@ -2462,7 +2490,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       className="block text-sm font-medium mb-2"
                       style={{ color: "#111827" }}
                     >
-                      Current Experience (in years) *
+                      Current Company Experience (Years) *
                     </label>
                     <input
                       type="number"
@@ -2485,23 +2513,45 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                       className="block text-sm font-medium mb-2"
                       style={{ color: "#111827" }}
                     >
-                      Salary in Hand (₹) *
+                      Salary Receipt Mode (Optional)
                     </label>
-                    <input
-                      type="number"
-                      name="salaryInHand"
-                      value={formData.salaryInHand}
+                    <select
+                      name="salaryReceiptMode"
+                      value={formData.salaryReceiptMode || ""}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
                         borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
-                      placeholder="Enter your salary in hand"
-                      min="0"
-                      required
+                    >
+                      <option value="">Select salary receipt mode</option>
+                      {SALARY_RECEIPT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Official Email (Optional)
+                    </label>
+                    <input
+                      type="email"
+                      name="officialEmail"
+                      value={formData.officialEmail}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      placeholder="Enter your official email"
                     />
-                    {renderError("salaryInHand")}
                   </div>
                 </div>
               </div>
@@ -2592,45 +2642,6 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                   </div>
                 </div>
               )}
-
-                {/* Employment & Income Documents */}
-                <div className="pt-6 border-t border-slate-200 mt-6">
-                  <h3
-                    className="text-lg font-semibold mb-2 flex items-center gap-2"
-                    style={{ color: "#111827" }}
-                  >
-                    <Briefcase className="w-5 h-5 text-teal-600" />
-                    Employment & Income Documents
-                  </h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Company ID, salary slips, and Form 16 / 26AS (if applicable).
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {[
-                      { name: "companyIdCard", label: "Company ID Card", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
-                      { name: "salarySlip1", label: "Salary Slip 1", required: true, accept: ".pdf,application/pdf" },
-                      { name: "salarySlip2", label: "Salary Slip 2", required: true, accept: ".pdf,application/pdf" },
-                      { name: "salarySlip3", label: "Salary Slip 3", required: true, accept: ".pdf,application/pdf" },
-                      { name: "form16_26as", label: "Form 16 / 26AS", required: false, accept: ".pdf,.jpg,.jpeg,.png" },
-                    ].map((doc) => (
-                      <DocumentUploadCard
-                        key={doc.name}
-                        name={doc.name}
-                        label={doc.label}
-                        file={formData[doc.name]}
-                        accept={doc.accept}
-                        required={doc.required}
-                        hint={loanDocumentFieldHint(doc.name)}
-                        onChange={handleFileChange}
-                        onRemove={handleFileRemove}
-                        error={renderError(doc.name)}
-                        uploadStatus={docUploadStatus[doc.name] || (formData[`${doc.name}_uploaded`] ? "uploaded" : "idle")}
-                        uploadProgress={docUploadProgress[doc.name] || 0}
-                        onPreview={() => openDocumentPreview(formData[doc.name])}
-                      />
-                    ))}
-                  </div>
-                </div>
 
                 {/* Bank Details Section */}
                 <div className="pt-6 border-t border-slate-200 mt-6">
@@ -2730,8 +2741,9 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                 )}
               </section>
 
+
               {/* References */}
-              <section id="loan-references-step" hidden={currentStep !== 3}>
+              <section id="loan-references-step" hidden={currentStep !== LOAN_STEP.REFERENCES}>
                 <h2
                   className="text-2xl font-semibold mb-6 flex items-center gap-3"
                   style={{ color: "#111827" }}
@@ -2864,27 +2876,32 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
               </section>
 
               {/* Review & Password Section */}
-              <section id="loan-review-step" hidden={currentStep !== 4}>
-                <LoanApplicationReviewCard
-                  formData={formData}
-                  loanTitle={dynamicLoanTitle}
+              <section id="loan-review-step" hidden={currentStep !== LOAN_STEP.REVIEW}>
+                <LoanReviewSummary
+                  sections={reviewSections}
+                  docChecklist={docChecklist}
+                  onEdit={goToStep}
+                  editable={!loading}
                 />
 
-                {isPasswordRequired && (
+                {showPasswordFields && (
                   <div className="mt-8">
                     <h2
                       className="text-2xl font-semibold mb-6 flex items-center gap-3"
                       style={{ color: "#111827" }}
                     >
-                      Password Information
+                      {LOAN_SECTION.ACCOUNT}
                     </h2>
+                    <p className="text-sm text-slate-500 -mt-4 mb-4">
+                      Optional. Leave blank and a customer password will be generated automatically.
+                    </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label
                           className="block text-sm font-medium mb-2"
                           style={{ color: "#111827" }}
                         >
-                          Password *
+                          Password
                         </label>
                         <div className="relative">
                           <input
@@ -2897,8 +2914,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                               borderColor: "var(--color-brand-primary)",
                               backgroundColor: "white",
                             }}
-                            placeholder="Enter password"
-                            required
+                            placeholder="Enter password (min 6 characters)"
                           />
                           <button
                             type="button"
@@ -2924,7 +2940,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                           className="block text-sm font-medium mb-2"
                           style={{ color: "#111827" }}
                         >
-                          Confirm Password *
+                          Confirm Password
                         </label>
                         <div className="relative">
                           <input
@@ -2938,7 +2954,6 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                               backgroundColor: "white",
                             }}
                             placeholder="Re-enter password"
-                            required
                           />
                           <button
                             type="button"
@@ -2966,7 +2981,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
 
               {/* Partner Referral — public applicants only (e.g. from home); hidden in partner dashboard */}
               {!isPartnerLoggedIn && (
-                <section hidden={currentStep !== 4}>
+                <section hidden={currentStep !== LOAN_STEP.REVIEW}>
                   <h2
                     className="text-2xl font-semibold mb-6 flex items-center gap-3"
                     style={{ color: "#111827" }}
@@ -3025,7 +3040,13 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                 </div>
               )}
 
-              <div className="flex items-center justify-between gap-4">
+              {editingFromReview && (
+                <p className="mb-3 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-800">
+                  {LOAN_REVIEW_EDIT_HINT}
+                </p>
+              )}
+              <div className={`flex items-center gap-4 ${editingFromReview ? "justify-end" : "justify-between"}`}>
+                {!editingFromReview && (
                 <button
                   type="button"
                   onClick={handleBack}
@@ -3034,6 +3055,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                 >
                   Back
                 </button>
+                )}
 
                 {currentStep < steps.length - 1 ? (
                   <button
@@ -3043,7 +3065,7 @@ export default function PersonalLoan({ embed = false, actorRole = "auto" } = {})
                     style={{ backgroundColor: "var(--color-brand-primary)" }}
                     disabled={loading}
                   >
-                    Next
+                    {editingFromReview ? LOAN_BACK_TO_REVIEW_LABEL : "Next"}
                   </button>
                 ) : (
                   <button

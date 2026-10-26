@@ -26,6 +26,15 @@ import { sortNewestFirst } from "../../../utils/sortNewestFirst";
 import { loanTypeToTableShort } from "../../../utils/loanTypeShort";
 import { rmLoanFormPath } from "../../../utils/rmLoanForm";
 
+const LOAN_STEP_COUNT = 6;
+
+function leadStepText(progress) {
+  const index = Number(progress?.stepIndex);
+  const stepNo = Number.isFinite(index) ? Math.min(LOAN_STEP_COUNT, Math.max(1, index + 1)) : 1;
+  const name = progress?.stepLabel || "Loan & Personal";
+  return `Step ${stepNo} of ${LOAN_STEP_COUNT} · ${name}`;
+}
+
 const COLORS = {
   primary: "var(--color-brand-primary)",
   background: "#F8FAFC",
@@ -407,14 +416,7 @@ const Leads = () => {
             const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
             const isPartnerLead = lead.status === "LEAD" && lead.leadSource === "PARTNER";
             const partnerWaUrl = isPartnerLead ? buildPartnerWhatsAppUrl(lead) : null;
-            const progressLabel =
-              lead.status === "LEAD"
-                ? lead.formProgress?.reachedDocuments
-                  ? "Docs step"
-                  : lead.formProgress?.stepLabel
-                    ? lead.formProgress.stepLabel
-                    : "Personal"
-                : null;
+            const progressText = leadStepText(lead.formProgress);
 
             return (
               <div
@@ -432,12 +434,12 @@ const Leads = () => {
                       <p className="text-xs text-gray-400 mt-0.5">App No: {lead.appNo}</p>
                     </div>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold text-right leading-tight max-w-[150px] ${
                         statusStyle[activeStatus]?.badge || "bg-gray-100 text-gray-700"
                       }`}
                     >
                       {lead.status === "LEAD"
-                        ? `⚡ Lead · ${progressLabel}`
+                        ? `⚡ ${progressText}`
                         : lead.status}
                     </span>
                   </div>
@@ -459,16 +461,12 @@ const Leads = () => {
 
                     {/* Filled progress fields from partner form */}
                     <div className="pt-2 mt-2 border-t border-gray-200/60 space-y-1">
-                      {lead.formProgress?.stepLabel ? (
-                        <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center gap-2">
                           <span className="text-gray-500">Form progress:</span>
-                          <span className="font-semibold text-teal-700">
-                            {lead.formProgress.reachedDocuments
-                              ? "Reached Documents"
-                              : lead.formProgress.stepLabel}
+                          <span className="font-semibold text-teal-700 text-right">
+                            {progressText}
                           </span>
                         </div>
-                      ) : null}
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500 flex items-center gap-1">
                           <CreditCard className="w-3.5 h-3.5 text-gray-400" />

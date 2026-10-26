@@ -47,11 +47,14 @@ export default function DocumentUploadCard({
   const isUploaded = activeStatus === "uploaded";
   const isFailed = activeStatus === "failed";
 
+  const labelText = typeof label === "string" ? label.replace(/\s*\*\s*$/, "") : label;
+  const showRequiredMark = required || labelText !== label;
+
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <label className="block text-base font-medium mb-1.5" style={{ color: "#111827" }}>
-          {label} {required && <span className="text-red-500">*</span>}
+          {labelText} {showRequiredMark && <span className="text-red-500">*</span>}
         </label>
         {isUploaded && (
           <span className="text-xs font-medium text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">

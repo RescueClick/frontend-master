@@ -3,34 +3,40 @@ import { backendurl } from "../feature/urldata";
 
 /**
  * Mapping between backend docType and frontend loan form field keys.
+ * Salaried and self-employed forms use different keys for the same document,
+ * so one docType can hydrate several fields.
  */
 export const DOC_TYPE_TO_FIELD = {
   AADHAR_FRONT: "aadharFront",
   AADHAR_BACK: "aadharBack",
   PAN: "panCard",
-  PHOTO: "passportPhoto",
-  SELFIE: "selfie",
+  PHOTO: ["passportPhoto", "selfie"],
+  SELFIE: ["passportPhoto", "selfie"],
+  PHOTO_OR_SELFIE: ["passportPhoto", "selfie"],
   COMPANY_ID_CARD: "companyIdCard",
   SALARY_SLIP_1: "salarySlip1",
   SALARY_SLIP_2: "salarySlip2",
   SALARY_SLIP_3: "salarySlip3",
   FORM_16_26AS: "form16_26as",
-  BANK_STATEMENT_1: "bankStatement1",
-  BANK_STATEMENT_2: "bankStatement2",
+  BANK_STATEMENT_1: ["bankStatement1", "bankStatementFile1"],
+  BANK_STATEMENT_2: ["bankStatement2", "bankStatementFile2"],
   BANK_STATEMENT_3: "bankStatement3",
   ALLOTMENT_LETTER: "allotmentLetter",
   NEW_PROPERTY_PAYMENT_RECEIPTS: "newPropertyPaymentReceipts",
   TITLE_DEEDS: "titleDeeds",
   RESALE_PAYMENT_RECEIPTS: "resalePaymentReceipts",
   AGREEMENT_COPY: "agreementCopy",
+  SANCTIONED_PLAN: "sanctionedPlan",
+  PROPERTY_TAX_RECEIPT: "propertyTaxReceipt",
   SHOP_ACT: "shopAct",
-  UDHYAM_AADHAR: "udyamAadhar",
+  UDHYAM_AADHAR: "udhyamAadhar",
   ITR: "itr",
   GST_DOCUMENT: "gstDoc",
+  GST_DOC: "gstDoc",
   GST: "gstDoc",
   SHOP_PHOTO: "shopPhoto",
-  BUSINESS_OTHER_DOCS: "otherBusinessDoc",
-  OTHER_DOCS: "otherDocument",
+  BUSINESS_OTHER_DOCS: "businessOtherDocs",
+  OTHER_DOCS: ["otherDocs", "otherDocument"],
   ADDRESS_PROOF: "addressProof",
   LIGHT_BILL: "lightBill",
   UTILITY_BILL: "utilityBill",
@@ -39,7 +45,18 @@ export const DOC_TYPE_TO_FIELD = {
   CO_APPLICANT_AADHAR_BACK: "coApplicantAadharBack",
   CO_APPLICANT_PAN: "coApplicantPan",
   CO_APPLICANT_SELFIE: "coApplicantSelfie",
+  CO_APPLICANT_SELFIE_OR_PHOTO: "coApplicantSelfie",
+  CO_APPLICANT_PASSPORT_PHOTO: "coApplicantSelfie",
 };
+
+/** Form field keys hydrated by a backend docType (unknown types keep their own name, e.g. dynamic product docs). */
+export function fieldNamesForDocType(docType) {
+  const typeKey = String(docType || "").trim().toUpperCase();
+  if (!typeKey) return [];
+  const mapped = DOC_TYPE_TO_FIELD[typeKey];
+  if (!mapped) return [String(docType).trim()];
+  return Array.isArray(mapped) ? mapped : [mapped];
+}
 
 /**
  * Fetch documents stored on the server for an application/lead.
@@ -80,25 +97,26 @@ export function buildHydratedDocFields(docs = []) {
     const url = doc?.url;
     if (!url) continue;
 
-    const typeKey = (doc?.docType || "").toUpperCase();
-    const fieldName = DOC_TYPE_TO_FIELD[typeKey] || doc?.docType?.toLowerCase();
-    if (!fieldName) continue;
+    const fieldNames = fieldNamesForDocType(doc?.docType);
+    if (fieldNames.length === 0) continue;
 
     const isPdf = /\.pdf($|\?)/i.test(url);
-    const docObj = {
-      name: doc?.fileName || `${fieldName}.${isPdf ? "pdf" : "jpg"}`,
-      url,
-      preview: url,
-      type: isPdf ? "application/pdf" : "image/jpeg",
-      isExistingDoc: true,
-      uploaded: true,
-    };
+    for (const fieldName of fieldNames) {
+      const docObj = {
+        name: doc?.fileName || `${fieldName}.${isPdf ? "pdf" : "jpg"}`,
+        url,
+        preview: url,
+        type: isPdf ? "application/pdf" : "image/jpeg",
+        isExistingDoc: true,
+        uploaded: true,
+      };
 
-    fields[fieldName] = docObj;
-    fields[`${fieldName}_uploaded`] = true;
-    fields[`${fieldName}_url`] = url;
-    fields[`${fieldName}_name`] = docObj.name;
-    statuses[fieldName] = "uploaded";
+      fields[fieldName] = docObj;
+      fields[`${fieldName}_uploaded`] = true;
+      fields[`${fieldName}_url`] = url;
+      fields[`${fieldName}_name`] = docObj.name;
+      statuses[fieldName] = "uploaded";
+    }
   }
 
   return { fields, statuses };

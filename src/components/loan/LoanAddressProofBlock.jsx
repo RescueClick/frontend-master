@@ -1,11 +1,9 @@
 import React from "react";
 import { FileText } from "lucide-react";
 import { loanDocumentFieldHint } from "../../utils/loanDocumentUpload";
-import {
-  ADDRESS_PROOF_SECTION_LEAD,
-  ADDRESS_PROOF_SECTION_TITLE,
-} from "../../utils/loanAddressProofCopy";
+import { ADDRESS_PROOF_SECTION_LEAD } from "../../utils/loanAddressProofCopy";
 import DocumentUploadCard from "./DocumentUploadCard";
+import { LOAN_SECTION } from "./loanFormSpec";
 
 /**
  * Unified address proof UI: one file upload, accepted examples in copy, stored as ADDRESS_PROOF.
@@ -22,22 +20,22 @@ export default function LoanAddressProofBlock({
   uploadStatus = "idle",
   uploadProgress = 0,
 }) {
-  const heading = [stepLabel, ADDRESS_PROOF_SECTION_TITLE].filter(Boolean).join(" · ");
+  const heading = [stepLabel, LOAN_SECTION.DOCS_ADDRESS].filter(Boolean).join(" · ");
   return (
     <>
-      <h2 className="text-2xl font-semibold mb-4 flex items-center gap-3 text-gray-900">
-        <FileText className="w-6 h-6 text-teal-500" />
+      <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-gray-900">
+        <FileText className="w-5 h-5 text-teal-600" />
         {heading}
-      </h2>
+      </h3>
       <div
-        className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 leading-relaxed"
+        className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 leading-relaxed"
       >
         {ADDRESS_PROOF_SECTION_LEAD}
       </div>
       <div className="max-w-xl">
         <DocumentUploadCard
           name={inputName}
-          label="Upload your address proof"
+          label="Address Proof *"
           file={file}
           accept=".pdf,.jpg,.jpeg,.png"
           required={true}

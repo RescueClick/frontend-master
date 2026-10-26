@@ -13,6 +13,85 @@ export function normalizePhone(value) {
   return d.length > 10 ? d.slice(-10) : d.slice(0, 10);
 }
 
+export const PAN_FORMAT_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+export function isValidPanFormat(value) {
+  return PAN_FORMAT_REGEX.test(String(value || "").trim().toUpperCase());
+}
+
+/** Whole years since `dob` (YYYY-MM-DD), or null when empty / invalid. */
+export function ageFromDob(dob) {
+  if (!dob) return null;
+  const birth = new Date(dob);
+  if (Number.isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1;
+  return age;
+}
+
+/** Shared DOB rule: required, valid date, applicant at least 18. Returns an error message or "". */
+export function dobError(dob) {
+  if (!dob) return "Date of Birth is required.";
+  const age = ageFromDob(dob);
+  if (age === null) return "Enter a valid date of birth.";
+  if (age < 18) return "You must be at least 18 years old to proceed.";
+  return "";
+}
+
+export function isMarriedStatus(value) {
+  return String(value || "").trim().toLowerCase() === "married";
+}
+
+const GENDER_API_VALUES = { male: "Male", female: "Female", other: "Other" };
+
+const MARITAL_STATUS_API_VALUES = {
+  single: "Single",
+  married: "Married",
+  divorced: "Divorced",
+  widow: "Widowed",
+  widowed: "Widowed",
+};
+
+/** Backend enum: Male / Female / Other. */
+export function normalizeGenderForApi(value) {
+  const key = String(value || "").trim().toLowerCase();
+  return GENDER_API_VALUES[key] || "";
+}
+
+/** Backend enum: Single / Married / Divorced / Widowed. */
+export function normalizeMaritalStatusForApi(value) {
+  const key = String(value || "").trim().toLowerCase();
+  return MARITAL_STATUS_API_VALUES[key] || "";
+}
+
+function houseStatusKey(value) {
+  const v = String(value || "").trim().toLowerCase();
+  if (v.startsWith("own")) return "own";
+  if (v.startsWith("rent")) return "rented";
+  if (v.startsWith("parent")) return "parental";
+  return v;
+}
+
+/** Pick the select option matching a (possibly differently cased / worded) stored house status. */
+export function houseStatusOptionValue(value, optionValues = []) {
+  const key = houseStatusKey(value);
+  if (!key) return "";
+  return optionValues.find((opt) => houseStatusKey(opt) === key) || "";
+}
+
+/** Customer login password is optional (backend auto-generates); validate only when entered. */
+export function customerPasswordErrors(data = {}) {
+  const errors = {};
+  const password = String(data.password || "");
+  const confirmPassword = String(data.confirmPassword || "");
+  if (!password && !confirmPassword) return errors;
+  if (password.length < 6) errors.password = "Password must be at least 6 characters.";
+  if (password !== confirmPassword) errors.confirmPassword = "Passwords do not match.";
+  return errors;
+}
+
 /**
  * Standardize any Web loan form state into the canonical backend contract.
  * Automatically maps legacy UI field names (contactNo, dob, wifeName, pan, motherName, etc.)
@@ -69,9 +148,9 @@ export function buildCanonicalLoanPayload(formData = {}, loanType = "PERSONAL", 
     mothersName: String(formData.motherName || formData.mothersName || "").trim(),
     panNumber,
     dateOfBirth,
-    gender: formData.gender || "Male",
-    maritalStatus: formData.maritalStatus || "Single",
-    spouseName: String(formData.maritalStatus || "").toLowerCase() === "married" ? spouseName : "",
+    gender: normalizeGenderForApi(formData.gender) || "Male",
+    maritalStatus: normalizeMaritalStatusForApi(formData.maritalStatus) || "Single",
+    spouseName: isMarriedStatus(formData.maritalStatus) ? spouseName : "",
     currentAddress,
     currentAddressLandmark,
     currentAddressPinCode,

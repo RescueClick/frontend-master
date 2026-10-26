@@ -10,12 +10,12 @@ import {
   FileText,
   Building,
   Store,
-  Camera,
   Users,
   Receipt,
-  Shield,
   Home,
   X,
+  Eye,
+  EyeOff,
   Share2,
 } from "lucide-react";
 import axios from "axios";
@@ -23,7 +23,7 @@ import { loanAmountRangeError } from "../../../../utils/loanAmountRule";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getAuthData } from "../../../../utils/localStorage";
 import { backendurl } from "../../../../feature/urldata";
 import {
@@ -38,7 +38,24 @@ import LoanAddressProofBlock from "../../../../components/loan/LoanAddressProofB
 import DocumentPreviewModal from "../../../../components/loan/DocumentPreviewModal";
 import PublicLoanPartnerTrustBanner from "../../../../components/loan/PublicLoanPartnerTrustBanner";
 import ShareLoanModal from "../../../../components/loan/ShareLoanModal";
-import LoanApplicationReviewCard from "../../../../components/loan/LoanApplicationReviewCard";
+import LoanReviewSummary, { LoanDocsProgress } from "../../../../components/loan/LoanReviewSummary";
+import LoanRequirementFields from "../../../../components/loan/LoanRequirementFields";
+import {
+  LOAN_FIELD_LABEL,
+  LOAN_PROFILE,
+  LOAN_SECTION,
+  LOAN_STABILITY_OPTIONS,
+  LOAN_STEP,
+  buildLoanDocChecklist,
+  docChecklistForStep,
+  LOAN_DOC_GROUP,
+  buildLoanReviewSections,
+  getLoanSteps,
+  resolveLoanNextStep,
+  LOAN_BACK_TO_REVIEW_LABEL,
+  LOAN_REVIEW_EDIT_HINT,
+  LOAN_STEP_LAYOUT_VERSION,
+} from "../../../../components/loan/loanFormSpec";
 import {
   findOversizeInLoanDocsQueue,
   formatLoanDocOversizeError,
@@ -61,7 +78,16 @@ import { persistLeadWizardProgress } from "../../../../utils/saveLeadProgress";
 import {
   useRmLoanFormResume,
   rmCompleteLoanFormUrl,
+  partnerCompleteLoanFormUrl,
 } from "../../../../utils/rmLoanForm";
+import {
+  customerPasswordErrors,
+  dobError,
+  houseStatusOptionValue,
+  isMarriedStatus,
+  normalizeGenderForApi,
+  normalizeMaritalStatusForApi,
+} from "../../../../utils/normalizeLoanPayload";
 
 export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto" } = {}) {
   const navigate = useNavigate();
@@ -161,7 +187,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     selfie: null,
 
     // Co-applicant
-    hasCoApplicant: false,
+    hasCoApplicant: true,
     coApplicantAadharFront: null,
     coApplicantAadharBack: null,
     coApplicantPan: null,
@@ -205,12 +231,22 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
   const [docUploadProgress, setDocUploadProgress] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [isCheckingExistence, setIsCheckingExistence] = useState(false);
+  const [showPassword, setShowPassword] = useState({
+    password: false,
+    confirmPassword: false,
+  });
   const abortControllerRef = useRef(null);
 
+  const [searchParams] = useSearchParams();
+  const applicationIdQuery = searchParams.get("applicationId");
+  const isEditingExistingApp = Boolean(applicationIdQuery);
+  const showPasswordFields = !isRmMode && !isEditingExistingApp;
+
   const { resumeMeta, loadingResume, resumeError } = useRmLoanFormResume({
-    enabled: isRmMode,
+    enabled: isRmMode || (isPartnerLoggedIn && isEditingExistingApp),
     setFormData,
     setApplicationId,
+    preferPartner: isPartnerLoggedIn,
   });
   useEffect(() => {
     if (resumeError) setError(resumeError);
@@ -219,25 +255,20 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
   const loanDraftStorageKey = embed
     ? "dhansource.homeLoanSelfEmployeeDraft.embed.v1"
     : "dhansource.homeLoanSelfEmployeeDraft.v1";
-  const steps = [
-    "Personal & KYC",
-    "Address",
-    "Business & Loan",
-    "References",
-    "Review & Submit",
-  ];
+  const steps = getLoanSteps({ profile: LOAN_PROFILE.BUSINESS, hasProperty: true });
   const [currentStep, setCurrentStep] = useState(0);
+  const [editingFromReview, setEditingFromReview] = useState(false);
   const [maxStep, setMaxStep] = useState(0);
 
   const stepFirstFieldName = useMemo(
     () => [
-      "firstName",
-      "currentAddress",
       "loanAmount",
+      "currentAddress",
+      "businessName",
       "reference1Name",
-      isPartnerLoggedIn ? "reference2Contact" : "partnerReferralCode",
+      showPasswordFields ? "password" : isPartnerLoggedIn ? "reference2Contact" : "partnerReferralCode",
     ],
-    [isPartnerLoggedIn]
+    [isPartnerLoggedIn, showPasswordFields]
   );
 
   useEffect(() => {
@@ -265,12 +296,11 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
   }, [isPartnerLoggedIn]);
 
   const stepAnchorIds = [
-    "loan-selfe-step-personal",
-    "loan-selfe-step-address",
-    "loan-selfe-step-loan",
-    "loan-selfe-step-docs",
-    "loan-selfe-step-references",
-    "loan-selfe-step-review",
+    "loan-personal-step",
+    "loan-address-step",
+    "loan-income-step",
+    "loan-references-step",
+    "loan-review-step",
   ];
 
   // Cleanup function to cancel pending requests
@@ -295,17 +325,6 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
         : "";
     if (url) setdocumentModel(url);
   };
-  const renderPreviewLink = (fieldName) =>
-    formData[fieldName] ? (
-      <button
-        type="button"
-        className="mt-1 text-sm font-medium text-blue-600 underline"
-        onClick={() => openDocumentPreview(formData[fieldName])}
-      >
-        Preview selected file
-      </button>
-    ) : null;
-
   useEffect(() => {
     if (successMessage) toast.success(successMessage);
   }, [successMessage]);
@@ -324,15 +343,16 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
   };
 
   useEffect(() => {
+    if (isEditingExistingApp) return;
     try {
       const raw = localStorage.getItem(loanDraftStorageKey);
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed?.formData) setFormData((prev) => ({ ...prev, ...parsed.formData }));
-      if (typeof parsed?.currentStep === "number") {
+      if (parsed?.formData) setFormData((prev) => ({ ...prev, ...parsed.formData, hasCoApplicant: true }));
+      if (parsed?.stepLayout === LOAN_STEP_LAYOUT_VERSION && typeof parsed?.currentStep === "number") {
         setCurrentStep(Math.max(0, Math.min(parsed.currentStep, steps.length - 1)));
       }
-      if (typeof parsed?.maxStep === "number") {
+      if (parsed?.stepLayout === LOAN_STEP_LAYOUT_VERSION && typeof parsed?.maxStep === "number") {
         setMaxStep(Math.max(0, Math.min(parsed.maxStep, steps.length - 1)));
       }
     } catch (e) {
@@ -342,12 +362,14 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
   }, []);
 
   useEffect(() => {
+    if (isEditingExistingApp) return undefined;
     const t = setTimeout(() => {
       try {
         localStorage.setItem(
           loanDraftStorageKey,
           JSON.stringify({
             currentStep,
+            stepLayout: LOAN_STEP_LAYOUT_VERSION,
             maxStep,
             formData: serializeDraftFormData(formData),
           })
@@ -357,7 +379,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [currentStep, maxStep, formData]);
+  }, [currentStep, maxStep, formData, isEditingExistingApp]);
 
   const scrollToFirstError = (errorMap) => {
     const keys = Object.keys(errorMap || {});
@@ -385,78 +407,95 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     const fullErrors = validateForm(formData, sameAddress);
 
     const stepFields = (() => {
-      if (stepIndex === 0) {
+      if (stepIndex === LOAN_STEP.PERSONAL) {
         return [
+          "loanAmount",
+          "loanPurpose",
+          "hasRunningLoan",
+          "monthlyEmiPaying",
+          "cibilScoreBand",
+          "hasBounce",
+          "bounceCount",
           "firstName",
           "middleName",
           "lastName",
-          "motherName",
+          "phone",
+          "alternateContact",
+          "email",
+          "panNumber",
+          "panCard",
+          "dob",
           "gender",
           "maritalStatus",
-          "phone",
-          "email",
-          "dob",
-          "panNumber",
           "SpouseName",
-          "hasRunningLoan",
-          "loanPurpose",
-          "monthlyEmiPaying",
-          "cibilScoreBand",
+          "motherName",
           "aadharFront",
           "aadharBack",
-          "panCard",
           "selfie",
           "passportPhoto",
+          "otherDocs",
           ...(formData.hasCoApplicant
             ? [
                 "coApplicantMobile",
-                "coApplicantAadharFront",
-                "coApplicantAadharBack",
                 "coApplicantPan",
                 "coApplicantSelfie",
+                "coApplicantAadharFront",
+                "coApplicantAadharBack",
               ]
             : []),
         ];
       }
-      if (stepIndex === 1) {
+      if (stepIndex === LOAN_STEP.ADDRESS) {
         return [
           "currentAddress",
-          "stabilityOfResidency",
-          "currentLandmark",
-          "currentHouseStatus",
-          "currentAddressPinCode",
-          "permanentAddress",
-          "permanentStability",
-          "permanentLandmark",
-          "permanentHouseStatus",
-          "permanentAddressPinCode",
+          "currentAddressLandmark",
+          "currentAddressPincode",
+          "currentAddressOwnRented",
+          "currentAddressStability",
           "addressProof",
+          "permanentAddress",
+          "permanentAddressLandmark",
+          "permanentAddressPincode",
+          "permanentAddressOwnRented",
+          "permanentAddressStability",
         ];
       }
-      if (stepIndex === 2) {
+      if (stepIndex === LOAN_STEP.INCOME) {
         return [
-          "loanAmount",
           "businessName",
           "businessAddress",
+          "businessLandmark",
+          "shopAct",
+          "udhyamAadhar",
+          "shopPhoto",
+          "businessOtherDocs",
           "businessVintage",
           "annualTurnover",
+          "itr",
+          "gstNumber",
+          "gstDoc",
           "propertyType",
           "propertyValue",
           "propertyAddress",
+          "allotmentLetter",
+          "titleDeeds",
+          "newPropertyPaymentReceipts",
+          "resalePaymentReceipts",
+          "agreementCopy",
           "bankStatementFile1",
           "bankStatementFile2",
-          "shopPhoto",
-          "shopAct",
-          "udhyamAadhar",
-          "itr",
+          "bankStatementPassword",
         ];
       }
-      if (stepIndex === 3) {
+      if (stepIndex === LOAN_STEP.REFERENCES) {
         return ["reference1Name", "reference1Contact", "reference2Name", "reference2Contact"];
       }
       // Review step — password lives here
-      if (stepIndex === 4) {
-        return ["password", "confirmPassword"];
+      if (stepIndex === LOAN_STEP.REVIEW) {
+        return [
+          ...(showPasswordFields ? ["password", "confirmPassword"] : []),
+          ...(!isPartnerLoggedIn ? ["partnerReferralCode"] : []),
+        ];
       }
       return [];
     })();
@@ -467,7 +506,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     }
 
     // Zod overlays for fintech-level niceties
-    if (stepIndex === 0) {
+    if (stepIndex === LOAN_STEP.PERSONAL) {
       const rFirst = min3("First name must be at least 3 characters.").safeParse(formData.firstName);
       if (!rFirst.success) errors.firstName = rFirst.error.issues[0].message;
       const rLast = min3("Last name must be at least 3 characters.").safeParse(formData.lastName);
@@ -483,18 +522,102 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       if (!rPan.success) errors.panNumber = rPan.error.issues[0].message;
     }
 
-    if (stepIndex === 1) {
-      const rPin = pinSchema.safeParse(formData.currentAddressPinCode);
-      if (!rPin.success) errors.currentAddressPinCode = rPin.error.issues[0].message;
-      const rPermPin = pinSchema.safeParse(formData.permanentAddressPinCode);
-      if (!rPermPin.success) errors.permanentAddressPinCode = rPermPin.error.issues[0].message;
+    if (stepIndex === LOAN_STEP.ADDRESS) {
+      const rPin = pinSchema.safeParse(String(formData.currentAddressPincode ?? ""));
+      if (!rPin.success) errors.currentAddressPincode = rPin.error.issues[0].message;
+      if (!sameAddress) {
+        const rPermPin = pinSchema.safeParse(String(formData.permanentAddressPincode ?? ""));
+        if (!rPermPin.success) errors.permanentAddressPincode = rPermPin.error.issues[0].message;
+      }
     }
 
     return errors;
   }
   const stepErrorCounts = steps.map((_, idx) =>
-    idx <= 4 ? Object.keys(validateHomeLoanSelfEmployeeStep(idx)).length : 0
+    Object.keys(validateHomeLoanSelfEmployeeStep(idx)).length
   );
+
+  const docChecklist = buildLoanDocChecklist(
+    [
+      { key: "panCard", label: "PAN Card", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "selfie", altKeys: ["passportPhoto"], label: "Applicant Photo", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "aadharFront", label: "Aadhaar Front", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "aadharBack", label: "Aadhaar Back", required: true, step: LOAN_STEP.PERSONAL },
+      { key: "otherDocs", label: "Other Document", required: false, step: LOAN_STEP.PERSONAL },
+      { key: "addressProof", label: "Address Proof", required: true, step: LOAN_STEP.ADDRESS },
+      { key: "shopAct", label: "Shop Act / Gumasta License", required: true, step: LOAN_STEP.INCOME },
+      { key: "udhyamAadhar", label: "Udhyam Aadhar", required: true, step: LOAN_STEP.INCOME },
+      { key: "itr", label: "ITR (Last 3 Years)", required: true, step: LOAN_STEP.INCOME },
+      { key: "gstDoc", label: "GST Document", required: false, step: LOAN_STEP.INCOME },
+      { key: "shopPhoto", label: "Shop Photo", required: true, step: LOAN_STEP.INCOME },
+      { key: "businessOtherDocs", label: "Other Business Docs", required: false, step: LOAN_STEP.INCOME },
+      { key: "bankStatementFile1", label: "Bank Statement 1", required: true, step: LOAN_STEP.INCOME },
+      { key: "bankStatementFile2", label: "Bank Statement 2", required: false, step: LOAN_STEP.INCOME },
+      { key: "allotmentLetter", label: "Allotment Letter / Agreement Copy", required: false, step: LOAN_STEP.INCOME },
+      { key: "titleDeeds", label: "Title Deeds / Chain Documents", required: false, step: LOAN_STEP.INCOME },
+      { key: "newPropertyPaymentReceipts", label: "Property Payment Receipts", required: false, step: LOAN_STEP.INCOME },
+      { key: "resalePaymentReceipts", label: "Resale Payment Receipts", required: false, step: LOAN_STEP.INCOME },
+      { key: "agreementCopy", label: "Registered Agreement / Draft Agreement", required: false, step: LOAN_STEP.INCOME },
+      ...(formData.hasCoApplicant
+        ? [
+            { key: "coApplicantAadharFront", label: "Co-Applicant Aadhaar Front", required: true, step: LOAN_STEP.PERSONAL },
+            { key: "coApplicantAadharBack", label: "Co-Applicant Aadhaar Back", required: true, step: LOAN_STEP.PERSONAL },
+            { key: "coApplicantPan", label: "Co-Applicant PAN Card", required: true, step: LOAN_STEP.PERSONAL },
+            { key: "coApplicantSelfie", label: "Co-Applicant Selfie", required: true, step: LOAN_STEP.PERSONAL },
+          ]
+        : []),
+    ],
+    formData
+  );
+
+  const renderDocCard = (name, label, { required = false, accept = ".pdf,.jpg,.jpeg,.png", hint } = {}) => (
+    <DocumentUploadCard
+      key={name}
+      name={name}
+      label={label}
+      file={formData[name]}
+      accept={accept}
+      required={required}
+      hint={hint || loanDocumentFieldHint(name)}
+      onChange={handleFileChange}
+      onRemove={handleFileRemove}
+      error={renderError(name)}
+      uploadStatus={docUploadStatus[name] || (formData[`${name}_uploaded`] ? "uploaded" : "idle")}
+      uploadProgress={docUploadProgress[name] || 0}
+      onPreview={() => openDocumentPreview(formData[name])}
+    />
+  );
+
+  const reviewSections = buildLoanReviewSections(formData, {
+    profile: LOAN_PROFILE.BUSINESS,
+    hasProperty: true,
+    hasCoApplicant: Boolean(formData.hasCoApplicant),
+    sameAddress,
+    loanTitle: "Home Loan (Self-Employed)",
+  });
+
+  const stabilityOptionsFor = (value) =>
+    value && !LOAN_STABILITY_OPTIONS.some((o) => o.value === value)
+      ? [{ label: value, value }, ...LOAN_STABILITY_OPTIONS]
+      : LOAN_STABILITY_OPTIONS;
+
+  const scrollToStep = (idx) => {
+    requestAnimationFrame(() => {
+      const el = document.getElementById(stepAnchorIds[idx]);
+      if (el && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  };
+
+  const goToStep = (idx) => {
+    setError("");
+    setFieldErrors({});
+    setValidationErrors([]);
+    setEditingFromReview(idx !== LOAN_STEP.REVIEW);
+    setCurrentStep(idx);
+    scrollToStep(idx);
+  };
 
   // const handleInputChange = (e) => {
   //     const { name, value } = e.target;
@@ -508,15 +631,21 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
   const handleInputChange = (e) => {
     const { name, value } = e.target;
   
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === "loanAmount"
-          ? value === ""      // if empty, keep empty string
-            ? ""
-            : parseInt(value, 10)
-          : value,
-    }));
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [name]:
+          name === "loanAmount"
+            ? value === ""      // if empty, keep empty string
+              ? ""
+              : parseInt(value, 10)
+            : value,
+      };
+      if (sameAddress && name.startsWith("currentAddress")) {
+        next[name.replace(/^currentAddress/, "permanentAddress")] = value;
+      }
+      return next;
+    });
   
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
@@ -635,8 +764,13 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     if (!formData.gender) errors.gender = "Gender is required.";
     if (!formData.maritalStatus) errors.maritalStatus = "Marital status is required.";
     // Spouse name required if married
-    if (String(formData.maritalStatus || "").toLowerCase() === "married" && !formData.SpouseName) {
+    if (isMarriedStatus(formData.maritalStatus) && !String(formData.SpouseName || "").trim()) {
       errors.SpouseName = "Spouse name is required for married applicants.";
+    }
+    const dobMessage = dobError(formData.dob);
+    if (dobMessage) errors.dob = dobMessage;
+    if (showPasswordFields) {
+      Object.assign(errors, customerPasswordErrors(formData));
     }
 
     if (!formData.loanPurpose) {
@@ -653,6 +787,9 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     } else if (!/^\d{10}$/.test(formData.phone)) {
       errors.phone = "Phone number must be 10 digits.";
     }
+    if (formData.alternateContact && !/^\d{10}$/.test(String(formData.alternateContact).trim())) {
+      errors.alternateContact = "Alternate number must be exactly 10 digits.";
+    }
 
     if (!formData.email) {
       errors.email = "Email is required.";
@@ -663,7 +800,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
 
     if (!formData.panNumber) {
       errors.panNumber = "PAN Card Number is required";
-    } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber.toUpperCase())) {
+    } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(String(formData.panNumber).toUpperCase())) {
       errors.panNumber = "Enter a valid PAN Card number (e.g., ABCDE1234F)";
     }
 
@@ -675,7 +812,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
     // if (!formData.currentAddressPincode)
     //   errors.currentAddressPincode = "Pincode is required.";
 
-    const pin = formData.currentAddressPincode?.trim();
+    const pin = String(formData.currentAddressPincode ?? "").trim();
 
     if (!pin) {
       errors.currentAddressPincode = "Current Address Pin is required.";
@@ -688,16 +825,20 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       errors.currentAddressOwnRented = "Ownership status is required.";
     if (!formData.currentAddressStability)
       errors.currentAddressStability = "Stability is required.";
+    if (!String(formData.currentAddressLandmark || "").trim())
+      errors.currentAddressLandmark = "Landmark is required.";
 
     // Permanent address if not same
     if (!sameAddress) {
       if (!formData.permanentAddress)
         errors.permanentAddress = "Permanent address is required.";
+      if (!String(formData.permanentAddressLandmark || "").trim())
+        errors.permanentAddressLandmark = "Landmark is required.";
 
       // if (!formData.permanentAddressPincode)
       //   errors.permanentAddressPincode = "Pincode is required.";
 
-      const permanentPin = formData.permanentAddressPincode?.trim();
+      const permanentPin = String(formData.permanentAddressPincode ?? "").trim();
 
       if (!permanentPin) {
         errors.permanentAddressPincode = "Permanent Address Pin is required.";
@@ -736,16 +877,16 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       errors.businessName = "Business name is required.";
     if (!formData.businessAddress)
       errors.businessAddress = "Business address is required.";
-    if (!formData.businessVintage)
-      errors.businessVintage = "Business vintage is required.";
-    if (!formData.annualTurnover)
-      errors.annualTurnover = "Annual Turnover is required.";
+    if (!(Number(formData.businessVintage) > 0))
+      errors.businessVintage = "Business vintage must be greater than zero.";
+    if (!(Number(formData.annualTurnover) > 0))
+      errors.annualTurnover = "Annual turnover must be greater than zero.";
 
     // Property info
     if (!formData.propertyType)
       errors.propertyType = "Property type is required.";
-    if (!formData.propertyValue)
-      errors.propertyValue = "Property estimated value is required.";
+    if (!(Number(formData.propertyValue) > 0))
+      errors.propertyValue = "Property estimated value must be greater than zero.";
     if (!formData.propertyAddress)
       errors.propertyAddress = "Property address is required.";
 
@@ -839,6 +980,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       if (Object.keys(errors).length > 0) {
         console.log("Form validation failed, stopping submission");
         setFieldErrors(errors);
+        setValidationErrors(Object.values(errors));
+        setError("Please fix the highlighted fields to submit your application.");
         setLoading(false);
         return;
       }
@@ -855,12 +998,13 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           lastName: formData.lastName,
           email: formData.email,
           phone: formData.phone,
-          alternatePhone: formData.alternateContact,
-          gender: formData.gender,
+          alternatePhone: formData.alternateContact || undefined,
+          dateOfBirth: formData.dob,
+          gender: normalizeGenderForApi(formData.gender),
           motherName: formData.motherName,
-          maritalStatus: formData.maritalStatus,
-          SpouseName: formData.SpouseName,
-          panNumber: formData.panNumber,
+          maritalStatus: normalizeMaritalStatusForApi(formData.maritalStatus),
+          SpouseName: isMarriedStatus(formData.maritalStatus) ? formData.SpouseName : "",
+          panNumber: String(formData.panNumber || "").trim().toUpperCase(),
           loanAmount: formData.loanAmount ? Number(formData.loanAmount) : 0,
           currentAddress: formData.currentAddress,
           currentAddressPincode: formData.currentAddressPincode,
@@ -872,7 +1016,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
           permanentAddressOwnRented: sameAddress ? formData.currentAddressOwnRented : formData.permanentAddressOwnRented,
           permanentAddressStability: sameAddress ? formData.currentAddressStability : formData.permanentAddressStability,
           permanentAddressLandmark: sameAddress ? formData.currentAddressLandmark : formData.permanentAddressLandmark,
-          password: formData.password,
+          password: formData.password || undefined,
           bankStatementPassword: formData.bankStatementPassword,
           hasRunningLoan: formData.hasRunningLoan || "NO",
           monthlyEmiPaying: Number(formData.monthlyEmiPaying) || 0,
@@ -1047,6 +1191,28 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
         setSuccessMessage(data.message || "Application form completed successfully.");
         toast.success(data.message || "Loan form completed");
         setTimeout(() => navigate("/rm/leads"), 1200);
+        return;
+      }
+
+      if (isPartnerLoggedIn && isEditingExistingApp) {
+        const targetAppId = applicationIdQuery || applicationId;
+        abortControllerRef.current = new AbortController();
+        const response = await axios.post(
+          partnerCompleteLoanFormUrl(targetAppId),
+          formDataToSend,
+          {
+            headers: { Authorization: `Bearer ${partnerToken}` },
+            timeout: 120000,
+            maxContentLength: 100 * 1024 * 1024,
+            maxBodyLength: 100 * 1024 * 1024,
+            signal: abortControllerRef.current.signal,
+          }
+        );
+        const data = response.data;
+        setSavedApplication(data);
+        setSuccessMessage(data.message || "Application form updated successfully.");
+        toast.success(data.message || "Loan form updated successfully");
+        setTimeout(() => navigate("/partner/applications"), 1200);
         return;
       }
       
@@ -1253,7 +1419,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       selfie: null,
 
       // Co-applicant
-      hasCoApplicant: false,
+      hasCoApplicant: true,
       coApplicantAadharFront: null,
       coApplicantAadharBack: null,
       coApplicantPan: null,
@@ -1274,7 +1440,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
       annualTurnover: "",
       loanAmount: "",
     })
-    setCurrentStep(0);
+    setCurrentStep(LOAN_STEP.PERSONAL);
     setMaxStep(0);
     setFieldErrors({});
     setValidationErrors([]);
@@ -1408,20 +1574,33 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
               }}
             />
 
-            {/* Personal Information */}
-            <section id="loan-selfe-step-personal" hidden={currentStep !== 0}>
+            {/* Loan & Personal */}
+            <section id="loan-personal-step" hidden={currentStep !== LOAN_STEP.PERSONAL}>
+              <LoanDocsProgress checklist={docChecklistForStep(docChecklist, LOAN_STEP.PERSONAL)} />
+              <LoanRequirementFields
+                formData={formData}
+                handleInputChange={handleInputChange}
+                onAmountChange={(digits) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    loanAmount: digits === "" ? "" : parseInt(digits, 10),
+                  }))
+                }
+                renderError={renderError}
+              />
               <LoanApplicantFinancialFields
                 formData={formData}
                 handleInputChange={handleInputChange}
                 renderError={renderError}
                 fieldErrors={fieldErrors}
+                showLoanPurpose={false}
               />
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
                 <User className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Personal Information
+                {LOAN_SECTION.PERSONAL}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* First Name */}
@@ -1455,7 +1634,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     className="block text-sm font-medium mb-2"
                     style={{ color: "#111827" }}
                   >
-                    Middle Name
+                    Middle Name (Optional)
                   </label>
                   <input
                     type="text"
@@ -1494,29 +1673,93 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
 
                   {formData.lastName ? "" : renderError('lastName')}
                 </div>
-                {/* Mother Name */}
+                {/* Contact Number */}
                 <div>
                   <label
                     className="block text-sm font-medium mb-2"
                     style={{ color: "#111827" }}
                   >
-                    Mother Name *
+                    Mobile Number *
                   </label>
-                  <input
-                    type="text"
-                    name="motherName"
-                    value={formData.motherName}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    placeholder="Enter your mother's name"
-                    required
-                  />
+                  <div className="relative">
+                    <Phone
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                      style={{ color: "var(--color-brand-primary)" }}
+                    />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      placeholder="Enter your contact number"
+                      required
+                    />
 
-                  {formData.motherName ? "" : renderError('motherName')}
+                    {formData.phone ? "" : renderError('phone')}
+                  </div>
+                </div>
+                {/* Alternate Contact */}
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: "#111827" }}
+                  >
+                    Alternate Mobile (Optional)
+                  </label>
+                  <div className="relative">
+                    <Phone
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                      style={{ color: "var(--color-brand-primary)" }}
+                    />
+                    <input
+                      type="tel"
+                      name="alternateContact"
+                      value={formData.alternateContact}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      placeholder="Enter alternate contact number"
+                    />
+                  </div>
+                  {renderError("alternateContact")}
+                </div>
+                {/* Email ID */}
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: "#111827" }}
+                  >
+                    Email *
+                  </label>
+                  <div className="relative">
+                    <Mail
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                      style={{ color: "var(--color-brand-primary)" }}
+                    />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      placeholder="Enter your email address"
+                      required
+                    />
+
+                    {renderError("email")}
+                  </div>
                 </div>
                 {/* PAN Number */}
                 <div>
@@ -1541,6 +1784,37 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                   />
 
                   {renderError('panNumber')}
+                  <div className="mt-3">
+                    {renderDocCard("panCard", "Upload PAN Card", { required: true })}
+                  </div>
+                </div>
+                {/* Date of Birth */}
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: "#111827" }}
+                  >
+                    Date of Birth *
+                  </label>
+                  <div className="relative">
+                    <Calendar
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                      style={{ color: "var(--color-brand-primary)" }}
+                    />
+                    <input
+                      type="date"
+                      name="dob"
+                      value={formData.dob || ""}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      required
+                    />
+                  </div>
+                  {renderError("dob")}
                 </div>
                 {/* Gender */}
                 <div>
@@ -1591,102 +1865,14 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     <option value="">Select Status</option>
                     <option value="single">Single</option>
                     <option value="married">Married</option>
-                    <option value="other">Other</option>
+                    <option value="divorced">Divorced</option>
+                    <option value="widowed">Widowed</option>
                   </select>
 
                   {formData.maritalStatus ? "" : renderError('maritalStatus')}
                 </div>
-                {/* Password fields removed as not required here */}
-                {/* Contact Number */}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Contact Number *
-                  </label>
-                  <div className="relative">
-                    <Phone
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    />
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      placeholder="Enter your contact number"
-                      required
-                    />
-
-                    {formData.phone ? "" : renderError('phone')}
-                  </div>
-                </div>
-                {/* Alternate Contact */}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Alternate Contact
-                  </label>
-                  <div className="relative">
-                    <Phone
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    />
-                    <input
-                      type="tel"
-                      name="alternateContact"
-                      value={formData.alternateContact}
-                      onChange={handleInputChange}
-                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      placeholder="Enter alternate contact number"
-                    />
-                  </div>
-                </div>
-                {/* Email ID */}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Email ID *
-                  </label>
-                  <div className="relative">
-                    <Mail
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    />
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      placeholder="Enter your email address"
-                      required
-                    />
-
-                    {renderError("email")}
-                  </div>
-                </div>
-                {/* Referral moved to end */}
                 {/* Wife Name (conditional for married) */}
-                {String(formData.maritalStatus || "").toLowerCase() === "married" && (
+                {isMarriedStatus(formData.maritalStatus) && (
                   <div>
                     <label
                       className="block text-sm font-medium mb-2"
@@ -1712,53 +1898,53 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     {renderError('SpouseName')}
                   </div>
                 )}
-              </div>
+                {/* Mother Name */}
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: "#111827" }}
+                  >
+                    Mother's Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="motherName"
+                    value={formData.motherName}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                    style={{
+                      borderColor: "var(--color-brand-primary)",
+                      backgroundColor: "#F8FAFC",
+                    }}
+                    placeholder="Enter your mother's name"
+                    required
+                  />
 
-              {/* Personal Document Upload */}
+                  {formData.motherName ? "" : renderError('motherName')}
+                </div>
+              </div>
               <div className="pt-6 border-t border-slate-200 mt-6">
-                <h3
-                  className="text-lg font-semibold mb-2 flex items-center gap-2"
-                  style={{ color: "#111827" }}
-                >
+                <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
                   <FileText className="w-5 h-5 text-teal-600" />
-                  Personal Identity Documents
+                  {LOAN_DOC_GROUP.AADHAAR}
                 </h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  Upload in order: Aadhaar Front, Aadhaar Back, PAN, Applicant Photo.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {[
-                    { name: "aadharFront", label: "Aadhar Front *", required: true },
-                    { name: "aadharBack", label: "Aadhar Back *", required: true },
-                    {
-                      name: "otherDocs",
-                      label: "Extra supporting file (optional)",
-                      required: false,
-                      hint: OPTIONAL_EXTRA_DOC_CAPTION,
-                    },
-                    { name: "panCard", label: "PAN Card *", required: true },
-                    { name: "selfie", label: "Upload Selfie *", required: true, accept: ".jpg,.jpeg,.png" },
-                  ].map((doc) => (
-                    <DocumentUploadCard
-                      key={doc.name}
-                      name={doc.name}
-                      label={doc.label}
-                      file={formData[doc.name]}
-                      accept={doc.accept || ".pdf,.jpg,.jpeg,.png"}
-                      required={doc.required}
-                      hint={doc.hint ?? loanDocumentFieldHint(doc.name)}
-                      uploadStatus={docUploadStatus[doc.name]}
-                      uploadProgress={docUploadProgress[doc.name]}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError(doc.name)}
-                      onPreview={() => openDocumentPreview(formData[doc.name])}
-                    />
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {renderDocCard("aadharFront", "Aadhaar Card (Front)", { required: true })}
+                  {renderDocCard("aadharBack", "Aadhaar Card (Back)", { required: true })}
+                </div>
+              </div>
+              <div className="pt-6 border-t border-slate-200 mt-6">
+                <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                  <FileText className="w-5 h-5 text-teal-600" />
+                  {LOAN_DOC_GROUP.PHOTO}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {renderDocCard("selfie", "Applicant Photo", { required: true, accept: ".jpg,.jpeg,.png" })}
+                  {renderDocCard("otherDocs", "Other Document (Optional)", { hint: OPTIONAL_EXTRA_DOC_CAPTION })}
                 </div>
               </div>
 
-              {/* Co-applicant Section */}
+              {/* Co-Applicant */}
               <div className="pt-6 border-t border-slate-200 mt-6">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2">
@@ -1768,38 +1954,13 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                         className="text-lg font-semibold"
                         style={{ color: "#111827" }}
                       >
-                        Co-applicant Information
+                        {LOAN_SECTION.CO_APPLICANT}
                       </h3>
                       <p className="text-xs text-slate-500">
-                        Add a co-applicant to strengthen the loan application (optional)
+                        Co-applicant details are mandatory for this loan
                       </p>
                     </div>
                   </div>
-                  <label className="flex items-center gap-2.5 cursor-pointer select-none bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
-                    <input
-                      type="checkbox"
-                      name="hasCoApplicant"
-                      checked={Boolean(formData.hasCoApplicant)}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setFormData((prev) => ({
-                          ...prev,
-                          hasCoApplicant: checked,
-                          ...(!checked
-                            ? {
-                                coApplicantAadharFront: null,
-                                coApplicantAadharBack: null,
-                                coApplicantPan: null,
-                                coApplicantMobile: "",
-                                coApplicantSelfie: null,
-                              }
-                            : {}),
-                        }));
-                      }}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
-                    />
-                    <span className="text-sm font-semibold text-slate-800">Add Co-Applicant</span>
-                  </label>
                 </div>
 
                 {formData.hasCoApplicant && (
@@ -1813,7 +1974,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                           className="block text-sm font-medium mb-2"
                           style={{ color: "#111827" }}
                         >
-                          Co-applicant Mobile Number *
+                          Co-Applicant Mobile *
                         </label>
                         <div className="relative">
                           <Phone
@@ -1837,94 +1998,17 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                           {renderError("coApplicantMobile")}
                         </div>
                       </div>
-
-                      <div>
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Co-applicant Aadhar Front *
-                        </label>
-                        <input
-                          type="file"
-                          name="coApplicantAadharFront"
-                          onChange={handleFileChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "white",
-                          }}
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          required
-                        />
-                        {renderError("coApplicantAadharFront")}
-                        {renderPreviewLink("coApplicantAadharFront")}
-                      </div>
-                      <div>
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Co-applicant Aadhar Back *
-                        </label>
-                        <input
-                          type="file"
-                          name="coApplicantAadharBack"
-                          onChange={handleFileChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "white",
-                          }}
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          required
-                        />
-                        {renderError("coApplicantAadharBack")}
-                        {renderPreviewLink("coApplicantAadharBack")}
-                      </div>
-                      <div>
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Co-applicant PAN Card *
-                        </label>
-                        <input
-                          type="file"
-                          name="coApplicantPan"
-                          onChange={handleFileChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "white",
-                          }}
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          required
-                        />
-                        {renderError("coApplicantPan")}
-                        {renderPreviewLink("coApplicantPan")}
-                      </div>
-                      <div>
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "#111827" }}
-                        >
-                          Co-applicant Selfie *
-                        </label>
-                        <input
-                          type="file"
-                          name="coApplicantSelfie"
-                          onChange={handleFileChange}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                          style={{
-                            borderColor: "var(--color-brand-primary)",
-                            backgroundColor: "white",
-                          }}
-                          accept=".jpg,.jpeg,.png"
-                          required
-                        />
-                        {renderError("coApplicantSelfie")}
-                        {renderPreviewLink("coApplicantSelfie")}
+                    </div>
+                    <div className="pt-6 border-t border-slate-200 mt-6">
+                      <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                        <FileText className="w-5 h-5 text-teal-600" />
+                        {LOAN_DOC_GROUP.CO_APPLICANT}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {renderDocCard("coApplicantPan", "Co-Applicant PAN Card", { required: true })}
+                        {renderDocCard("coApplicantSelfie", "Co-Applicant Selfie", { required: true, accept: ".jpg,.jpeg,.png" })}
+                        {renderDocCard("coApplicantAadharFront", "Co-Applicant Aadhaar Front", { required: true })}
+                        {renderDocCard("coApplicantAadharBack", "Co-Applicant Aadhaar Back", { required: true })}
                       </div>
                     </div>
                   </div>
@@ -1932,147 +2016,123 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
               </div>
             </section>
 
-            {/* Address Information */}
-
-            <section id="loan-selfe-step-address" hidden={currentStep !== 1}>
+            {/* Address */}
+            <section id="loan-address-step" hidden={currentStep !== LOAN_STEP.ADDRESS}>
+              <LoanDocsProgress checklist={docChecklistForStep(docChecklist, LOAN_STEP.ADDRESS)} />
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
                 <MapPin className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Address Information
+                {LOAN_SECTION.CURRENT_ADDRESS}
               </h2>
               <div className="space-y-6">
-                {/* Current Address */}
-                <div
-                  className="p-6 rounded-lg border-2"
-                  style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
-                >
-                  <h3
-                    className="text-lg font-semibold mb-4"
-                    style={{ color: "#F59E0B" }}
-                  >
-                    Current Address
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Current Address *
-                      </label>
-                      <textarea
-                        name="currentAddress"
-                        value={formData.currentAddress}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        rows="3"
-                        placeholder="Enter your current address"
-                        required
-                      />
-
-                      {formData.currentAddress ? "" : renderError('currentAddress')}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Pincode *
-                      </label>
-                      <input
-                        type="text"
-                        name="currentAddressPincode"
-                        value={formData.currentAddressPincode}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="Enter pincode"
-                        required
-                      />
-
-                      {renderError('currentAddressPincode')}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Own/Rented *
-                      </label>
-                      <select
-                        name="currentAddressOwnRented"
-                        value={formData.currentAddressOwnRented}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        required
-                      >
-                        <option value="">Select</option>
-                        <option value="own">Own</option>
-                        <option value="rented">Rented</option>
-                      </select>
-
-                      {formData.currentAddressOwnRented ? "" : renderError('currentAddressOwnRented')}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Address Stability *
-                      </label>
-                      <input
-                        type="text"
-                        name="currentAddressStability"
-                        value={formData.currentAddressStability}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="e.g., 2 years"
-                        required
-                      />
-
-                      {formData.currentAddressStability ? "" : renderError('currentAddressStability')}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Landmark
-                      </label>
-                      <input
-                        type="text"
-                        name="currentAddressLandmark"
-                        value={formData.currentAddressLandmark}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="Enter nearby landmark"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                    Address (House / Flat / Area) *
+                  </label>
+                  <textarea
+                    name="currentAddress"
+                    value={formData.currentAddress}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
+                    style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                    rows="3"
+                    placeholder="House / flat no, building, street, area"
+                    required
+                  />
+                  {renderError("currentAddress")}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      Landmark *
+                    </label>
+                    <input
+                      type="text"
+                      name="currentAddressLandmark"
+                      value={formData.currentAddressLandmark ?? ""}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                      placeholder="Nearby landmark"
+                      required
+                    />
+                    {renderError("currentAddressLandmark")}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      PIN Code *
+                    </label>
+                    <input
+                      type="text"
+                      name="currentAddressPincode"
+                      value={formData.currentAddressPincode ?? ""}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="6-digit PIN code"
+                      required
+                    />
+                    {renderError("currentAddressPincode")}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      House Status *
+                    </label>
+                    <select
+                      name="currentAddressOwnRented"
+                      value={houseStatusOptionValue(formData.currentAddressOwnRented, ["own", "rented", "parental"])}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                      required
+                    >
+                      <option value="">Select status</option>
+                      <option value="own">Owned</option>
+                      <option value="rented">Rented</option>
+                      <option value="parental">Parental</option>
+                    </select>
+                    {renderError("currentAddressOwnRented")}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      Years at this Address *
+                    </label>
+                    <select
+                      name="currentAddressStability"
+                      value={formData.currentAddressStability || ""}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                      required
+                    >
+                      <option value="">Select</option>
+                      {stabilityOptionsFor(formData.currentAddressStability).map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    {renderError("currentAddressStability")}
                   </div>
                 </div>
 
-                {/* Same Address Checkbox */}
+                <div className="pt-2">
+                  <LoanAddressProofBlock
+                    stepLabel=""
+                    file={formData.addressProof}
+                    onChange={handleFileChange}
+                    onRemove={handleFileRemove}
+                    renderError={renderError}
+                    uploadStatus={docUploadStatus.addressProof}
+                    uploadProgress={docUploadProgress.addressProof}
+                    onPreview={() => openDocumentPreview(formData.addressProof)}
+                  />
+                </div>
+
                 <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
@@ -2082,214 +2142,126 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     className="w-5 h-5 rounded"
                     style={{ accentColor: "var(--color-brand-primary)" }}
                   />
-                  <label
-                    htmlFor="sameAddress"
-                    className="text-sm font-medium"
-                    style={{ color: "#111827" }}
-                  >
-                    Permanent address is same as current address
+                  <label htmlFor="sameAddress" className="text-sm font-medium" style={{ color: "#111827" }}>
+                    {LOAN_FIELD_LABEL.sameAddress}
                   </label>
                 </div>
 
-                {/* Permanent Address */}
-                <div
-                  className="p-6 rounded-lg border-2"
-                  style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
-                >
-                  <h3
-                    className="text-lg font-semibold mb-4"
-                    style={{ color: "#F59E0B" }}
-                  >
-                    Permanent Address
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Permanent Address *
-                      </label>
-                      <textarea
-                        name="permanentAddress"
-                        value={formData.permanentAddress}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        rows="3"
-                        placeholder="Enter your permanent address"
-                        disabled={sameAddress}
-                        required
-                      />
-
-                      {formData.permanentAddress ? "" : renderError('permanentAddress')}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Pincode *
-                      </label>
-                      <input
-                        type="text"
-                        name="permanentAddressPincode"
-                        value={formData.permanentAddressPincode}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="Enter pincode"
-                        disabled={sameAddress}
-                        required
-                      />
-
-                      {renderError('permanentAddressPincode')}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Own/Rented *
-                      </label>
-                      <select
-                        name="permanentAddressOwnRented"
-                        value={formData.permanentAddressOwnRented}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        disabled={sameAddress}
-                        required
-                      >
-                        <option value="">Select</option>
-                        <option value="own">Own</option>
-                        <option value="rented">Rented</option>
-                      </select>
-
-                      {formData.permanentAddressOwnRented ? "" : renderError('permanentAddressOwnRented')}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Address Stability *
-                      </label>
-                      <input
-                        type="text"
-                        name="permanentAddressStability"
-                        value={formData.permanentAddressStability}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="e.g., 5 years"
-                        disabled={sameAddress}
-                        required
-                      />
-
-                      {formData.permanentAddressStability ? "" : renderError('permanentAddressStability')}
-                    </div>
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "#111827" }}
-                      >
-                        Landmark
-                      </label>
-                      <input
-                        type="text"
-                        name="permanentAddressLandmark"
-                        value={formData.permanentAddressLandmark}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "white",
-                        }}
-                        placeholder="Enter nearby landmark"
-                        disabled={sameAddress}
-                      />
-                    </div>
-                  </div>
-                </div>
-                {/* Address proof — one upload */}
-                <div className="pt-6 border-t border-slate-200 mt-6">
-                  <LoanAddressProofBlock
-                    stepLabel="2.3"
-                    file={formData.addressProof}
-                    onChange={handleFileChange}
-                    renderError={renderError}
-                    onPreview={() => openDocumentPreview(formData.addressProof)}
+                {!sameAddress && (
+                  <>
+                    <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: "#111827" }}>
+                      <MapPin className="w-5 h-5 text-teal-600" />
+                      {LOAN_SECTION.PERMANENT_ADDRESS}
+                    </h3>
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                    Address (House / Flat / Area) *
+                  </label>
+                  <textarea
+                    name="permanentAddress"
+                    value={formData.permanentAddress}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
+                    style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                    rows="3"
+                    placeholder="House / flat no, building, street, area"
+                    required
                   />
+                  {renderError("permanentAddress")}
                 </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      Landmark *
+                    </label>
+                    <input
+                      type="text"
+                      name="permanentAddressLandmark"
+                      value={formData.permanentAddressLandmark ?? ""}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                      placeholder="Nearby landmark"
+                      required
+                    />
+                    {renderError("permanentAddressLandmark")}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      PIN Code *
+                    </label>
+                    <input
+                      type="text"
+                      name="permanentAddressPincode"
+                      value={formData.permanentAddressPincode ?? ""}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="6-digit PIN code"
+                      required
+                    />
+                    {renderError("permanentAddressPincode")}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      House Status *
+                    </label>
+                    <select
+                      name="permanentAddressOwnRented"
+                      value={houseStatusOptionValue(formData.permanentAddressOwnRented, ["own", "rented", "parental"])}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                      required
+                    >
+                      <option value="">Select status</option>
+                      <option value="own">Owned</option>
+                      <option value="rented">Rented</option>
+                      <option value="parental">Parental</option>
+                    </select>
+                    {renderError("permanentAddressOwnRented")}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      Years at this Address *
+                    </label>
+                    <select
+                      name="permanentAddressStability"
+                      value={formData.permanentAddressStability || ""}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#F8FAFC" }}
+                      required
+                    >
+                      <option value="">Select</option>
+                      {stabilityOptionsFor(formData.permanentAddressStability).map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    {renderError("permanentAddressStability")}
+                  </div>
+                    </div>
+                  </>
+                )}
               </div>
             </section>
 
-            {/* Business & Loan Information */}
-            <section id="loan-selfe-step-loan" hidden={currentStep !== 2}>
+            {/* Business & Property */}
+            <section id="loan-income-step" hidden={currentStep !== LOAN_STEP.INCOME}>
+              <LoanDocsProgress checklist={docChecklistForStep(docChecklist, LOAN_STEP.INCOME)} />
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
               >
-                <FileText className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                Loan Amount Details
+                <Store className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
+                {LOAN_SECTION.BUSINESS}
               </h2>
-              <div className="space-y-6 mb-8">
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Requested Loan Amount (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    name="loanAmount"
-                    value={formData?.loanAmount ?? ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFormData((prev) => ({
-                        ...prev,
-                        loanAmount: val === "" ? "" : parseInt(val, 10), // ensures integer
-                      }));
-                    }}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    placeholder="Enter loan amount"
-                    // min="0"
-                    required
-                  />
-
-                  {renderError('loanAmount')}
-                </div>
-              </div>
-
-              <div className="pt-6 border-t border-slate-200">
-                <h3
-                  className="text-2xl font-semibold mb-6 flex items-center gap-3"
-                  style={{ color: "#111827" }}
-                >
-                  <Store className="w-6 h-6" style={{ color: "var(--color-brand-primary)" }} />
-                  Business Information
-                </h3>
-              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+                <div className="md:col-span-2">
                   <label
                     className="block text-sm font-medium mb-2"
                     style={{ color: "#111827" }}
@@ -2316,29 +2288,6 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     />
                     {formData.businessName ? "" : renderError('businessName')}
                   </div>
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Business Vintage (in years) *
-                  </label>
-                  <input
-                    type="number"
-                    name="businessVintage"
-                    value={formData.businessVintage}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    placeholder="Enter business vintage in years"
-                    min="0"
-                    required
-                  />
-                  {formData.businessVintage ? "" : renderError('businessVintage')}
                 </div>
                 <div className="md:col-span-2">
                   <label
@@ -2368,7 +2317,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     className="block text-sm font-medium mb-2"
                     style={{ color: "#111827" }}
                   >
-                    Business Landmark
+                    Business Landmark (Optional)
                   </label>
                   <input
                     type="text"
@@ -2383,33 +2332,16 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     placeholder="Enter business landmark"
                   />
                 </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    GST Number{" "}
-                    <span className="text-sm font-normal opacity-70">
-                      (Optional)
-                    </span>
-                  </label>
-                  <div className="relative">
-                    <Receipt
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    />
-                    <input
-                      type="text"
-                      name="gstNumber"
-                      value={formData.gstNumber}
-                      onChange={handleInputChange}
-                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                      style={{
-                        borderColor: "var(--color-brand-primary)",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                      placeholder="Enter GST number (if applicable)"
-                    />
+                <div className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                  <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                    <FileText className="w-5 h-5 text-teal-600" />
+                    {LOAN_DOC_GROUP.BUSINESS_PROOF}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {renderDocCard("shopAct", "Shops and Establishment Act/Gumasta License", { required: true })}
+                    {renderDocCard("udhyamAadhar", "Udhyam Aadhar", { required: true })}
+                    {renderDocCard("shopPhoto", "Shop Photo", { required: true, accept: ".jpg,.jpeg,.png" })}
+                    {renderDocCard("businessOtherDocs", "Other Business Docs (Optional)")}
                   </div>
                 </div>
                 <div>
@@ -2417,7 +2349,30 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     className="block text-sm font-medium mb-2"
                     style={{ color: "#111827" }}
                   >
-                    Annual Turnover *
+                    Years in Business *
+                  </label>
+                  <input
+                    type="number"
+                    name="businessVintage"
+                    value={formData.businessVintage}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                    style={{
+                      borderColor: "var(--color-brand-primary)",
+                      backgroundColor: "#F8FAFC",
+                    }}
+                    placeholder="Enter business vintage in years"
+                    min="0"
+                    required
+                  />
+                  {formData.businessVintage ? "" : renderError('businessVintage')}
+                </div>
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: "#111827" }}
+                  >
+                    Annual Turnover (₹) *
                   </label>
                   <div className="relative">
                     <span
@@ -2442,360 +2397,174 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
 
                     {formData.annualTurnover ? " " : renderError('annualTurnover')}
                   </div>
-                </div>
-
-                <div className="mt-8 pt-6 border-t border-slate-200 col-span-full">
-                  <h3 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: "#111827" }}>
-                    <Home className="w-5 h-5 text-teal-600" />
-                    Property Details
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
-                        Property Type *
-                      </label>
-                      <select
-                        name="propertyType"
-                        value={formData.propertyType}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        required
-                      >
-                        <option value="NEW_PROPERTY">New Property / Under Construction / Builder</option>
-                        <option value="RESALE_PROPERTY">Resale Property</option>
-                      </select>
-                      {renderError("propertyType")}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
-                        Estimated Property Value (₹) *
-                      </label>
-                      <input
-                        type="number"
-                        name="propertyValue"
-                        value={formData.propertyValue}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        placeholder="e.g. 5000000"
-                        min="0"
-                        required
-                      />
-                      {renderError("propertyValue")}
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
-                        Complete Property Address *
-                      </label>
-                      <textarea
-                        name="propertyAddress"
-                        value={formData.propertyAddress}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
-                        style={{
-                          borderColor: "var(--color-brand-primary)",
-                          backgroundColor: "#F8FAFC",
-                        }}
-                        rows="2"
-                        placeholder="Enter the complete address of the property being purchased"
-                        required
-                      />
-                      {renderError("propertyAddress")}
-                    </div>
+                  <div className="mt-3">
+                    {renderDocCard("itr", "ITR (Last 3 Years)", {
+                      required: true,
+                      hint: `Upload all 3 years ITR in this one file (combined PDF preferred). ${loanDocumentFieldHint("itr")}`,
+                    })}
                   </div>
                 </div>
-              </div>
-
-              {/* Business Documents */}
-              <div className="pt-6 border-t border-slate-200 mt-6">
-                <h3
-                  className="text-lg font-semibold mb-2 flex items-center gap-2"
-                  style={{ color: "#111827" }}
-                >
-                  <Shield className="w-5 h-5 text-teal-600" />
-                  Business Documents
-                </h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Keep business registrations and tax files clear and readable.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label
                     className="block text-sm font-medium mb-2"
                     style={{ color: "#111827" }}
                   >
-                    Shops and Establishment Act/Gumasta License *
-                  </label>
-                  <input
-                    type="file"
-                    name="shopAct"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
-                  />
-                  {formData.shopAct ? " " : renderError('shopAct')}
-                  {renderPreviewLink("shopAct")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Udhyam Aadhar *
-                  </label>
-                  <input
-                    type="file"
-                    name="udhyamAadhar"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
-                  />
-                  {formData.udhyamAadhar ? "" : renderError('udhyamAadhar')}
-                  {renderPreviewLink("udhyamAadhar")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    ITR (Last 3 Years) *
-                  </label>
-                  <p className="text-xs text-slate-500 mb-2">
-                    Upload all 3 years ITR in this one file (combined PDF preferred)
-                  </p>
-                  <input
-                    type="file"
-                    name="itr"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
-                  />
-
-                  {formData.itr ? "" : renderError('itr')}
-                  {renderPreviewLink("itr")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    GST Document
-                  </label>
-                  <input
-                    type="file"
-                    name="gstDoc"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-                  {renderPreviewLink("gstDoc")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Shop Photo *
+                    GST Number (Optional)
                   </label>
                   <div className="relative">
-                    <Camera
+                    <Receipt
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
                       style={{ color: "var(--color-brand-primary)" }}
                     />
                     <input
-                      type="file"
-                      name="shopPhoto"
-                      onChange={handleFileChange}
-                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                      type="text"
+                      name="gstNumber"
+                      value={formData.gstNumber}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
                       style={{
                         borderColor: "var(--color-brand-primary)",
                         backgroundColor: "#F8FAFC",
                       }}
-                      accept=".jpg,.jpeg,.png"
-                      required
+                      placeholder="Enter GST number (if applicable)"
                     />
-
-                    {formData.shopPhoto ? "" : renderError('shopPhoto')}
-                  {renderPreviewLink("shopPhoto")}
+                  </div>
+                  <div className="mt-3">
+                    {renderDocCard("gstDoc", "GST Document (Optional)")}
                   </div>
                 </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Other Business Docs
-                  </label>
-                  <input
-                    type="file"
-                    name="businessOtherDocs"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-                  {renderPreviewLink("businessOtherDocs")}
-                </div>
-              </div>
               </div>
 
-              {/* Financial Documents */}
+              {/* Property Details */}
               <div className="pt-6 border-t border-slate-200 mt-6">
-                <h3
-                  className="text-lg font-semibold mb-2 flex items-center gap-2"
-                  style={{ color: "#111827" }}
-                >
-                  <FileText className="w-5 h-5 text-teal-600" />
-                  Bank Documents
-                </h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Bank Statement (File 1) *
-                  </label>
-                  <input
-                    type="file"
-                    name="bankStatementFile1"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,application/pdf"
-                    required
-                  />
-                  <p
-                    className="text-sm mt-2"
-                    style={{ color: "#111827", opacity: 0.7 }}
-                  >
-                    Upload last 12 months bank statement
-                  </p>
-
-                  {formData.bankStatementFile1 ? "" : renderError('bankStatementFile1')}
-                  {renderPreviewLink("bankStatementFile1")}
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Bank Statement (File 2)
-                  </label>
-                  <input
-                    type="file"
-                    name="bankStatementFile2"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    accept=".pdf,application/pdf"
-                  />
-                  {renderPreviewLink("bankStatementFile2")}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#111827" }}
-                  >
-                    Bank Statement Password (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    name="bankStatementPassword"
-                    value={formData.bankStatementPassword}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
-                    style={{
-                      borderColor: "var(--color-brand-primary)",
-                      backgroundColor: "#F8FAFC",
-                    }}
-                    placeholder="Password (if protected)"
-                  />
-                </div>
-              </div>
-              </div>
-
-              {/* Property Documents */}
-              <div className="pt-6 border-t border-slate-200 mt-6">
-                <h3
-                  className="text-lg font-semibold mb-2 flex items-center gap-2"
-                  style={{ color: "#111827" }}
-                >
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: "#111827" }}>
                   <Home className="w-5 h-5 text-teal-600" />
-                  Property Documents
+                  {LOAN_SECTION.PROPERTY}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      Property Type *
+                    </label>
+                    <select
+                      name="propertyType"
+                      value={formData.propertyType}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      required
+                    >
+                      <option value="NEW_PROPERTY">New Property / Under Construction / Builder</option>
+                      <option value="RESALE_PROPERTY">Resale Property</option>
+                    </select>
+                    {renderError("propertyType")}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      Property Value (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      name="propertyValue"
+                      value={formData.propertyValue}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      placeholder="e.g. 5000000"
+                      min="0"
+                      required
+                    />
+                    {renderError("propertyValue")}
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: "#111827" }}>
+                      Property Address *
+                    </label>
+                    <textarea
+                      name="propertyAddress"
+                      value={formData.propertyAddress}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors resize-none"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      rows="2"
+                      placeholder="Enter the complete address of the property being purchased"
+                      required
+                    />
+                    {renderError("propertyAddress")}
+                  </div>
+                </div>
+                <div className="pt-6 border-t border-slate-200 mt-6">
+                  <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: "#111827" }}>
+                    <FileText className="w-5 h-5 text-teal-600" />
+                    {LOAN_DOC_GROUP.PROPERTY}
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Upload allotment letter, sale deed / title deeds, payment receipts, or agreement copy.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {renderDocCard("allotmentLetter", "Allotment Letter / Agreement Copy")}
+                    {renderDocCard("titleDeeds", "Title Deeds / Chain Documents")}
+                    {renderDocCard("newPropertyPaymentReceipts", "Property Payment Receipts")}
+                    {renderDocCard("resalePaymentReceipts", "Resale Payment Receipts")}
+                    {renderDocCard("agreementCopy", "Registered Agreement / Draft Agreement")}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Statements */}
+              <div className="pt-6 border-t border-slate-200 mt-6">
+                <h3 className="text-base font-semibold mb-2 flex items-center gap-2" style={{ color: "#111827" }}>
+                  <FileText className="w-5 h-5 text-teal-600" />
+                  {LOAN_DOC_GROUP.BANK}
                 </h3>
                 <p className="text-xs text-slate-500 mb-4">
-                  Upload allotment letter, sale deed / title deeds, payment receipts, or agreement copy.
+                  Upload statements in sequence: Bank Statement 1, then Bank Statement 2.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    { name: "allotmentLetter", label: "Allotment Letter / Agreement Copy", required: false },
-                    { name: "titleDeeds", label: "Title Deeds / Chain Documents", required: false },
-                    { name: "newPropertyPaymentReceipts", label: "Property Payment Receipts", required: false },
-                    { name: "agreementCopy", label: "Registered Agreement / Draft Agreement", required: false },
-                  ].map((doc) => (
-                    <DocumentUploadCard
-                      key={doc.name}
-                      name={doc.name}
-                      label={doc.label}
-                      file={formData[doc.name]}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      required={doc.required}
-                      uploadStatus={docUploadStatus[doc.name]}
-                      uploadProgress={docUploadProgress[doc.name]}
-                      onChange={handleFileChange}
-                      onRemove={handleFileRemove}
-                      error={renderError(doc.name)}
-                      onPreview={() => openDocumentPreview(formData[doc.name])}
+                  {renderDocCard("bankStatementFile1", "Bank Statement 1", {
+                    required: true,
+                    accept: ".pdf,application/pdf",
+                    hint: `Upload last 12 months bank statement. ${loanDocumentFieldHint("bankStatementFile1")}`,
+                  })}
+                  {renderDocCard("bankStatementFile2", "Bank Statement 2 (Optional)", { accept: ".pdf,application/pdf" })}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: "#111827" }}
+                    >
+                      Bank Statement Password (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      name="bankStatementPassword"
+                      value={formData.bankStatementPassword}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                      style={{
+                        borderColor: "var(--color-brand-primary)",
+                        backgroundColor: "#F8FAFC",
+                      }}
+                      placeholder="Password (if protected)"
                     />
-                  ))}
+                  </div>
                 </div>
               </div>
             </section>
 
             {/* References */}
-            <section id="loan-selfe-step-references" hidden={currentStep !== 3}>
+            <section id="loan-references-step" hidden={currentStep !== LOAN_STEP.REFERENCES}>
               <h2
                 className="text-2xl font-semibold mb-6 flex items-center gap-3"
                 style={{ color: "#111827" }}
@@ -2937,12 +2706,73 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
               </div>
             </section>
 
-            {/* Step 4: Review & Submit */}
-            <section id="loan-selfe-step-review" hidden={currentStep !== 4}>
-              <LoanApplicationReviewCard
-                formData={formData}
-                loanTitle="Home Loan (Self-Employed)"
+            {/* Review & Submit */}
+            <section id="loan-review-step" hidden={currentStep !== LOAN_STEP.REVIEW}>
+              <LoanReviewSummary
+                sections={reviewSections}
+                docChecklist={docChecklist}
+                onEdit={goToStep}
+                editable={!loading}
               />
+              {showPasswordFields && (
+                <div className="mt-8 mb-8">
+                  <h2
+                    className="text-2xl font-semibold mb-2 flex items-center gap-3"
+                    style={{ color: "#111827" }}
+                  >
+                    {LOAN_SECTION.ACCOUNT}
+                  </h2>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Optional. Leave blank and a customer password will be generated automatically.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { name: "password", label: "Password", placeholder: "Enter password (min 6 characters)" },
+                      { name: "confirmPassword", label: "Confirm Password", placeholder: "Re-enter password" },
+                    ].map((field) => (
+                      <div key={field.name}>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "#111827" }}
+                        >
+                          {field.label}
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword[field.name] ? "text" : "password"}
+                            name={field.name}
+                            value={formData[field.name] || ""}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:border-opacity-50 transition-colors"
+                            style={{
+                              borderColor: "var(--color-brand-primary)",
+                              backgroundColor: "white",
+                            }}
+                            placeholder={field.placeholder}
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPassword((prev) => ({
+                                ...prev,
+                                [field.name]: !prev[field.name],
+                              }))
+                            }
+                            className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                          >
+                            {showPassword[field.name] ? (
+                              <EyeOff className="w-5 h-5" />
+                            ) : (
+                              <Eye className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                        {renderError(field.name)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {!isPartnerLoggedIn && (
                 <>
                   <h2
@@ -3003,11 +2833,16 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                 </div>
               )}
 
-              <div className="flex items-center justify-between gap-4">
+              {editingFromReview && (
+                <p className="mb-3 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-800">
+                  {LOAN_REVIEW_EDIT_HINT}
+                </p>
+              )}
+              <div className={`flex items-center gap-4 ${editingFromReview ? "justify-end" : "justify-between"}`}>
                 <button
                   type="button"
                   onClick={() => {
-                    if (currentStep === 0) return;
+                    if (currentStep === LOAN_STEP.PERSONAL) return;
                     setError("");
                     setFieldErrors({});
                     setValidationErrors([]);
@@ -3022,8 +2857,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                       if (first && typeof first.focus === "function") first.focus();
                     });
                   }}
-                  className="px-6 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
-                  disabled={loading || currentStep === 0}
+                  className={`px-6 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors ${editingFromReview ? "hidden" : ""}`}
+                  disabled={loading || currentStep === LOAN_STEP.PERSONAL}
                 >
                   Back
                 </button>
@@ -3044,7 +2879,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                       }
 
                       // New: Check if customer exists after Step 1 (Personal Info)
-                      if (currentStep === 0 && isPartnerLoggedIn && !isRmMode) {
+                      if (currentStep === LOAN_STEP.PERSONAL && isPartnerLoggedIn && !isRmMode && !isEditingExistingApp) {
                         setIsCheckingExistence(true);
                         try {
                           const { data } = await axios.get(`${backendurl}/partner/check-customer`, {
@@ -3069,8 +2904,8 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
 
                       // Sync filled wizard fields to LEAD so RM sees progress
                       const leavingStep = currentStep;
-                      const nextStep = currentStep + 1;
-                      if (!isRmMode) {
+                      const nextStep = resolveLoanNextStep(currentStep, { editingFromReview });
+                      if (!isRmMode && !isEditingExistingApp) {
                         const leadProgress = persistLeadWizardProgress({
                           applicationId,
                           setApplicationId,
@@ -3084,7 +2919,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                           partnerReferralCode: currentPartnerCode,
                           isRmMode,
                         }).catch((err) => console.warn("Lead progress sync non-fatal:", err));
-                        if (leavingStep === 0) {
+                        if (leavingStep === LOAN_STEP.PERSONAL) {
                           setIsCheckingExistence(true);
                           const result = await leadProgress;
                           setIsCheckingExistence(false);
@@ -3096,6 +2931,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                         }
                       }
 
+                      setEditingFromReview(false);
                       setCurrentStep(nextStep);
                       setMaxStep((m) => Math.max(m, nextStep));
                       setFieldErrors({});
@@ -3113,7 +2949,7 @@ export default function HomeLoanSelfEmployee({ embed = false, actorRole = "auto"
                     style={{ backgroundColor: "var(--color-brand-primary)" }}
                     disabled={loading}
                   >
-                    Next
+                    {editingFromReview ? LOAN_BACK_TO_REVIEW_LABEL : "Next"}
                   </button>
                 ) : (
                   <button

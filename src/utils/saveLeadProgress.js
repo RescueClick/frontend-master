@@ -13,6 +13,18 @@ function isDocumentsStep(label) {
   return String(label || "").toLowerCase().includes("document");
 }
 
+function isReviewStep(label) {
+  return String(label || "").toLowerCase().includes("review");
+}
+
+/** Step the RM card should show. A jump back to Review keeps the step the user just saved. */
+function reportedStep(steps, leavingStepIndex, nextStepIndex) {
+  const nextLabel = stepLabelOf(steps, nextStepIndex);
+  const jumpedToReview = nextStepIndex > leavingStepIndex + 1 && isReviewStep(nextLabel);
+  const index = jumpedToReview ? leavingStepIndex : nextStepIndex;
+  return { index, label: stepLabelOf(steps, index) };
+}
+
 /** Build address + identity customer fields from partner form state */
 function buildCustomerPatch(formData = {}) {
   return {
@@ -148,17 +160,18 @@ export async function persistLeadWizardProgress({
 
     const leavingLabel = stepLabelOf(steps, leavingStepIndex);
     const nextLabel = stepLabelOf(steps, nextStepIndex);
+    const reported = reportedStep(steps, leavingStepIndex, nextStepIndex);
     const reachedDocuments =
-      isDocumentsStep(nextLabel) || isDocumentsStep(leavingLabel);
+      isDocumentsStep(nextLabel) || isDocumentsStep(leavingLabel) || isDocumentsStep(reported.label);
 
     const employmentInfo = buildEmploymentInfo(formData);
     const businessInfo = buildBusinessInfo(formData);
     const propertyInfo = buildPropertyInfo(formData);
 
     const payload = {
-      stepIndex: nextStepIndex,
-      stepLabel: nextLabel,
-      maxStepIndex: Math.max(leavingStepIndex, nextStepIndex),
+      stepIndex: reported.index,
+      stepLabel: reported.label,
+      maxStepIndex: Math.max(leavingStepIndex, nextStepIndex, reported.index),
       reachedDocuments,
       customer: buildCustomerPatch(formData),
       hasRunningLoan: formData.hasRunningLoan || "NO",

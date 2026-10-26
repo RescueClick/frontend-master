@@ -2,15 +2,17 @@ import React from "react";
 import { BadgeCheck, CreditCard, Hash, IndianRupee, Target } from "lucide-react";
 import { LOAN_PURPOSE_OPTIONS } from "../../utils/captureLeadStep1";
 import { CIBIL_SCORE_OPTIONS } from "../../utils/personFinancial";
+import { LOAN_FIELD_LABEL, LOAN_SECTION, LOAN_SECTION_HINT } from "./loanFormSpec";
 
 /**
- * Short check shown above Personal Information.
- * Salary stays on the employment step, where it already was.
+ * Existing loans & credit block (running loan, EMI, CIBIL, bounces) for the Work & Income step.
+ * Set `showLoanPurpose={false}` when the form renders `LoanRequirementFields` in step 1.
  */
 export default function LoanApplicantFinancialFields({
   formData = {},
   handleInputChange,
   renderError,
+  showLoanPurpose = true,
 }) {
   const hasRunning =
     formData.hasRunningLoan === "YES" ||
@@ -19,14 +21,12 @@ export default function LoanApplicantFinancialFields({
 
   return (
     <div className="mb-8 rounded-2xl border border-teal-200 bg-teal-50/70 p-5 md:p-6">
-      <h2 className="text-lg font-semibold text-gray-900">Before personal details</h2>
-      <p className="text-sm text-gray-600 mt-1 mb-5">
-        Existing loan, monthly EMI, CIBIL score, and bounce.
-      </p>
+      <h2 className="text-lg font-semibold text-gray-900">{LOAN_SECTION.CREDIT}</h2>
+      <p className="text-sm text-gray-600 mt-1 mb-5">{LOAN_SECTION_HINT.CREDIT}</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-2 text-gray-900">
-            Do you have any existing / running loans? *
+            {LOAN_FIELD_LABEL.hasRunningLoan} *
           </label>
           <div className="relative">
             <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-600 pointer-events-none" />
@@ -37,8 +37,8 @@ export default function LoanApplicantFinancialFields({
               className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none bg-white border-teal-500"
               required
             >
-              <option value="NO">No (0 Active Loans)</option>
-              <option value="YES">Yes (Currently Paying EMI)</option>
+              <option value="NO">No</option>
+              <option value="YES">Yes</option>
             </select>
           </div>
           {renderError?.("hasRunningLoan")}
@@ -47,7 +47,7 @@ export default function LoanApplicantFinancialFields({
         {hasRunning ? (
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-900">
-              Monthly EMI currently paying (₹) *
+              {LOAN_FIELD_LABEL.monthlyEmiPaying} *
             </label>
             <div className="relative">
               <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-600" />
@@ -68,7 +68,7 @@ export default function LoanApplicantFinancialFields({
 
         <div>
           <label className="block text-sm font-medium mb-2 text-gray-900">
-            CIBIL score *
+            {LOAN_FIELD_LABEL.cibilScoreBand} *
           </label>
           <div className="relative">
             <BadgeCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-600 pointer-events-none" />
@@ -92,7 +92,7 @@ export default function LoanApplicantFinancialFields({
 
         <div>
           <label className="block text-sm font-medium mb-2 text-gray-900">
-            Any bounce? *
+            {LOAN_FIELD_LABEL.hasBounce} *
           </label>
           <div className="relative">
             <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-600 pointer-events-none" />
@@ -113,7 +113,7 @@ export default function LoanApplicantFinancialFields({
         {formData.hasBounce === "YES" ? (
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-900">
-              How many? *
+              {LOAN_FIELD_LABEL.bounceCount} *
             </label>
             <div className="relative">
               <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-600" />
@@ -134,9 +134,10 @@ export default function LoanApplicantFinancialFields({
           </div>
         ) : null}
 
+        {showLoanPurpose ? (
         <div>
           <label className="block text-sm font-medium mb-2 text-gray-900">
-            Purpose of Taking Loan *
+            {LOAN_FIELD_LABEL.loanPurpose} *
           </label>
           <div className="relative">
             <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-600 pointer-events-none" />
@@ -157,6 +158,7 @@ export default function LoanApplicantFinancialFields({
           </div>
           {renderError?.("loanPurpose")}
         </div>
+        ) : null}
       </div>
     </div>
   );

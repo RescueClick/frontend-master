@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { backendurl } from "../feature/urldata";
 import { getAuthData } from "./localStorage";
+import { buildHydratedDocFields } from "./rehydrateLeadDocuments";
 
 export const RM_LOAN_FORM_PATH = {
   PERSONAL: "/rm/personal-loan",
@@ -36,8 +37,19 @@ function toDateInputValue(value) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function textValue(value) {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+function capitalizeWord(value) {
+  const s = textValue(value).trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
+}
+
 /**
  * Map GET /rm/applications/:id/form-data into loan form field keys.
+ * Returns both key schemes: salaried forms (contactNo, pan, currentHouseStatus…)
+ * and self-employed forms (phone, panNumber, currentAddressOwnRented…).
  */
 export function mapRmFormDataToLoanFields(payload = {}) {
   const c = payload.customer || {};
@@ -46,30 +58,51 @@ export function mapRmFormDataToLoanFields(payload = {}) {
   const prop = payload.propertyInfo || {};
   const refs = Array.isArray(payload.references) ? payload.references : [];
   const co = payload.coApplicant || {};
+  const fin = payload.financialDetails || {};
+
+  const phone = textValue(c.phone);
+  const panNumber = textValue(c.panNumber);
+  const spouseName = textValue(c.spouseName);
+  const currentPin = textValue(c.currentAddressPinCode || c.currentAddressPincode);
+  const permanentPin = textValue(c.permanentAddressPinCode || c.permanentAddressPincode);
+  const currentLandmark = textValue(c.currentAddressLandmark);
+  const permanentLandmark = textValue(c.permanentAddressLandmark);
 
   return {
     firstName: c.firstName || "",
     middleName: c.middleName || "",
     lastName: c.lastName || "",
-    gender: c.gender ? (c.gender.charAt(0).toUpperCase() + c.gender.slice(1).toLowerCase()) : "",
+    gender: capitalizeWord(c.gender),
     officialEmail: c.officialEmail || "",
-    stabilityOfResidency: c.stabilityOfResidency || "",
-    currentHouseStatus: c.currentAddressHouseStatus || "",
-    currentLandmark: c.currentAddressLandmark || "",
-    permanentHouseStatus: c.permanentAddressHouseStatus || "",
-    permanentLandmark: c.permanentAddressLandmark || "",
-    permanentStability: c.permanentAddressStability || "",
-    currentAddressPinCode: c.currentAddressPinCode || "",
-    permanentAddressPinCode: c.permanentAddressPinCode || "",
-    maritalStatus: c.maritalStatus ? (c.maritalStatus.charAt(0).toUpperCase() + c.maritalStatus.slice(1).toLowerCase()) : "",
-    wifeName: c.spouseName || "",
-    motherName: c.mothersName || "",
-    contactNo: c.phone || "",
+    stabilityOfResidency: textValue(c.stabilityOfResidency || c.currentAddressStability),
+    currentHouseStatus: textValue(c.currentAddressHouseStatus || c.currentAddressOwnRented),
+    currentLandmark,
+    permanentHouseStatus: textValue(c.permanentAddressHouseStatus || c.permanentAddressOwnRented),
+    permanentLandmark,
+    permanentStability: textValue(c.permanentAddressStability),
+    currentAddressPinCode: currentPin,
+    permanentAddressPinCode: permanentPin,
+    maritalStatus: capitalizeWord(c.maritalStatus),
+    wifeName: spouseName,
+    SpouseName: spouseName,
+    motherName: c.mothersName || c.motherName || "",
+    contactNo: phone,
+    phone,
+    alternateContact: textValue(c.alternatePhone),
     email: c.email || "",
     dob: toDateInputValue(c.dateOfBirth),
-    pan: c.panNumber || "",
+    pan: panNumber,
+    panNumber,
     currentAddress: c.currentAddress || "",
     permanentAddress: c.permanentAddress || "",
+    currentAddressPincode: currentPin,
+    currentAddressOwnRented: textValue(c.currentAddressOwnRented || c.currentAddressHouseStatus),
+    currentAddressStability: textValue(c.currentAddressStability || c.stabilityOfResidency),
+    currentAddressLandmark: currentLandmark,
+    permanentAddressPincode: permanentPin,
+    permanentAddressOwnRented: textValue(c.permanentAddressOwnRented || c.permanentAddressHouseStatus),
+    permanentAddressStability: textValue(c.permanentAddressStability),
+    permanentAddressLandmark: permanentLandmark,
     companyName: emp.companyName || "",
     designation: emp.designation || "",
     companyAddress: emp.companyAddress || "",
@@ -84,27 +117,28 @@ export function mapRmFormDataToLoanFields(payload = {}) {
     annualTurnover: biz.annualTurnoverInINR || biz.annualTurnover || "",
     annualTurnoverInINR: biz.annualTurnoverInINR || biz.annualTurnover || "",
     yearsInBusiness: biz.yearsInBusiness || biz.businessVintage || "",
-    propertyType: prop.propertyType || "",
+    ...(prop.propertyType ? { propertyType: prop.propertyType } : {}),
     propertyValue: prop.propertyValue ?? "",
     propertyAddress: prop.propertyAddress || "",
     reference1Name: refs[0]?.name || "",
     reference1Contact: refs[0]?.phone || "",
     reference2Name: refs[1]?.name || "",
     reference2Contact: refs[1]?.phone || "",
-    loanAmount: c.loanAmount ?? "",
+    loanAmount: c.loanAmount || payload.requestedAmount || "",
     bankStatementPassword: c.bankStatementPassword || "",
-    hasRunningLoan: c.hasRunningLoan || "NO",
-    monthlyEmiPaying: c.monthlyEmiPaying ?? "",
-    loanPurpose: c.loanPurpose || "",
-    salaryReceiptMode: c.salaryReceiptMode || "",
-    cibilScoreBand: c.cibilScoreBand || "",
-    hasBounce: c.hasBounce || "NO",
-    bounceCount: c.bounceCount ?? "",
+    hasRunningLoan: c.hasRunningLoan || payload.hasRunningLoan || fin.hasRunningLoan || "NO",
+    monthlyEmiPaying: c.monthlyEmiPaying ?? payload.monthlyEmiPaying ?? "",
+    loanPurpose: c.loanPurpose || payload.loanPurpose || fin.loanPurpose || "",
+    salaryReceiptMode: c.salaryReceiptMode || payload.salaryReceiptMode || fin.salaryReceiptMode || "",
+    cibilScoreBand: c.cibilScoreBand || payload.cibilScoreBand || fin.cibilScoreBand || "",
+    hasBounce: c.hasBounce || payload.hasBounce || fin.hasBounce || "NO",
+    bounceCount: c.bounceCount ?? payload.bounceCount ?? "",
     salaryInHand: c.salaryInHand || emp.salaryInHand || "",
     coApplicantName: co.name || co.firstName || "",
     coApplicantPhone: co.phone || "",
     coApplicantMobile: co.phone || "",
     coApplicantRelation: co.relation || "",
+    ...(co.phone ? { hasCoApplicant: true } : {}),
   };
 }
 
@@ -112,7 +146,7 @@ export function partnerCompleteLoanFormUrl(applicationId) {
   return `${backendurl}/partner/applications/${applicationId}/complete-form`;
 }
 
-export function useRmLoanFormResume({ enabled, setFormData, setApplicationId }) {
+export function useRmLoanFormResume({ enabled, setFormData, setApplicationId, preferPartner = false }) {
   const [searchParams] = useSearchParams();
   const applicationIdParam = searchParams.get("applicationId");
   const [resumeMeta, setResumeMeta] = useState(null);
@@ -128,10 +162,11 @@ export function useRmLoanFormResume({ enabled, setFormData, setApplicationId }) 
       setResumeError("");
       try {
         const { rmToken, partnerToken } = getAuthData();
-        const token = rmToken || partnerToken;
-        const endpoint = rmToken
-          ? `${backendurl}/rm/applications/${applicationIdParam}/form-data`
-          : `${backendurl}/partner/applications/${applicationIdParam}/form-data`;
+        const usePartner = Boolean(partnerToken) && (preferPartner || !rmToken);
+        const token = usePartner ? partnerToken : rmToken;
+        const endpoint = usePartner
+          ? `${backendurl}/partner/applications/${applicationIdParam}/form-data`
+          : `${backendurl}/rm/applications/${applicationIdParam}/form-data`;
 
         const { data } = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
@@ -140,62 +175,9 @@ export function useRmLoanFormResume({ enabled, setFormData, setApplicationId }) 
         setApplicationId?.(data.id || applicationIdParam);
 
         // Hydrate existing uploaded documents into form fields and upload flags
-        const docFields = {};
-        if (Array.isArray(data.docs) && data.docs.length > 0) {
-          const DOC_TYPE_TO_FIELD = {
-            AADHAR_FRONT: "aadharFront",
-            AADHAR_BACK: "aadharBack",
-            PAN: "panCard",
-            PHOTO: "passportPhoto",
-            SELFIE: "selfie",
-            COMPANY_ID_CARD: "companyIdCard",
-            SALARY_SLIP_1: "salarySlip1",
-            SALARY_SLIP_2: "salarySlip2",
-            SALARY_SLIP_3: "salarySlip3",
-            FORM_16_26AS: "form16_26as",
-            BANK_STATEMENT_1: "bankStatement1",
-            BANK_STATEMENT_2: "bankStatement2",
-            BANK_STATEMENT_3: "bankStatement3",
-            ALLOTMENT_LETTER: "allotmentLetter",
-            NEW_PROPERTY_PAYMENT_RECEIPTS: "newPropertyPaymentReceipts",
-            TITLE_DEEDS: "titleDeeds",
-            RESALE_PAYMENT_RECEIPTS: "resalePaymentReceipts",
-            AGREEMENT_COPY: "agreementCopy",
-            SHOP_ACT: "shopAct",
-            UDHYAM_AADHAR: "udhyamAadhar",
-            ITR: "itr",
-            GST_DOCUMENT: "gstDoc",
-            GST: "gstDoc",
-            SHOP_PHOTO: "shopPhoto",
-            BUSINESS_OTHER_DOCS: "businessOtherDocs",
-            OTHER_DOCS: "otherDocs",
-            ADDRESS_PROOF: "addressProof",
-            CO_APPLICANT_AADHAR_FRONT: "coApplicantAadharFront",
-            CO_APPLICANT_AADHAR_BACK: "coApplicantAadharBack",
-            CO_APPLICANT_PAN: "coApplicantPan",
-            CO_APPLICANT_SELFIE: "coApplicantSelfie",
-            CO_APPLICANT_SELFIE_OR_PHOTO: "coApplicantSelfie",
-            CO_APPLICANT_PASSPORT_PHOTO: "coApplicantSelfie",
-          };
-
-          for (const doc of data.docs) {
-            const fieldName = DOC_TYPE_TO_FIELD[doc.docType];
-            if (fieldName && doc.url) {
-              const docObj = {
-                name: `${fieldName}.jpg`,
-                url: doc.url,
-                preview: doc.url,
-                isExistingDoc: true,
-                uploaded: true,
-                size: 1024,
-                type: "image/jpeg",
-              };
-              docFields[fieldName] = docObj;
-              docFields[`${fieldName}_uploaded`] = true;
-              docFields[`${fieldName}_url`] = doc.url;
-            }
-          }
-        }
+        const docFields = Array.isArray(data.docs)
+          ? buildHydratedDocFields(data.docs).fields
+          : {};
 
         setFormData?.((prev) => ({
           ...prev,
@@ -226,7 +208,7 @@ export function useRmLoanFormResume({ enabled, setFormData, setApplicationId }) 
     return () => {
       cancelled = true;
     };
-  }, [enabled, applicationIdParam, setFormData, setApplicationId]);
+  }, [enabled, applicationIdParam, setFormData, setApplicationId, preferPartner]);
 
   return {
     resumeApplicationId: applicationIdParam,
