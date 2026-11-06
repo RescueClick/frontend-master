@@ -14,6 +14,7 @@ import {
   FileX2,
   TrendingUp,
   TrendingDown,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
@@ -321,15 +322,75 @@ const RsmFollowUps = () => {
             </div>
           </div>
 
+          {/* Quick Filter Pills */}
+          <div className="flex items-center gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-slate-100 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap mr-1">
+              Quick Filter:
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setPerformance("");
+                setStatusFilter("");
+              }}
+              className={`px-2.5 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+                !performance && !statusFilter
+                  ? "bg-slate-800 text-white"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              All ({summary?.total ?? rows.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPerformance(performance === "working" ? "" : "working")}
+              className={`px-2.5 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5 ${
+                performance === "working"
+                  ? "bg-teal-700 text-white"
+                  : "bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200/60"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${performance === "working" ? "bg-white" : "bg-teal-500"}`} />
+              Working RMs ({summary?.working ?? 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPerformance(performance === "non_working" ? "" : "non_working")}
+              className={`px-2.5 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5 ${
+                performance === "non_working"
+                  ? "bg-rose-700 text-white"
+                  : "bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${performance === "non_working" ? "bg-white" : "bg-rose-500"}`} />
+              Non-Working RMs ({summary?.nonWorking ?? 0})
+            </button>
+          </div>
+
           {/* Collapsible Dropdowns */}
           <div
             className={`mt-3 pt-3 border-t border-slate-100 ${
               showFilters ? "block" : "hidden sm:block"
             }`}
           >
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+              <div className="relative">
+                <select
+                  className="w-full appearance-none border border-slate-200 rounded-xl px-2.5 py-2 pr-8 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white font-medium text-slate-700 cursor-pointer"
+                  value={performance}
+                  onChange={(e) => setPerformance(e.target.value)}
+                >
+                  <option value="">All performance</option>
+                  <option value="working">Working RMs</option>
+                  <option value="non_working">Non-working RMs</option>
+                  <option value="filled">Partners filled</option>
+                  <option value="not_filled">Partners not filled</option>
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 pointer-events-none" />
+              </div>
+
               <select
-                className="border border-slate-200 rounded-xl px-2.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
+                className="border border-slate-200 rounded-xl px-2.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white cursor-pointer"
                 value={year}
                 onChange={(e) => {
                   setYear(e.target.value);
@@ -344,7 +405,7 @@ const RsmFollowUps = () => {
               </select>
 
               <select
-                className="border border-slate-200 rounded-xl px-2.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
+                className="border border-slate-200 rounded-xl px-2.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white cursor-pointer"
                 value={month}
                 onChange={(e) => {
                   setMonth(e.target.value);
@@ -370,7 +431,7 @@ const RsmFollowUps = () => {
 
               <div className="relative">
                 <select
-                  className="w-full appearance-none border border-slate-200 rounded-xl px-2.5 py-2 pr-8 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
+                  className="w-full appearance-none border border-slate-200 rounded-xl px-2.5 py-2 pr-8 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white cursor-pointer"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >

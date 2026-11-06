@@ -77,7 +77,9 @@ const FollowUp = () => {
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [performance, setPerformance] = useState(""); // "" | working | non_working | filled | not_filled
+  const [performance, setPerformance] = useState(""); // "" | working | non_working | filled | not_filled | more_info
+  const [docFilter, setDocFilter] = useState(""); // "" | pending | complete
+  const [sortBy, setSortBy] = useState("id_desc");
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -101,10 +103,8 @@ const FollowUp = () => {
       if (year) f.year = year;
       if (month) f.month = month;
     }
-    if (statusFilter) f.status = statusFilter;
-    if (performance) f.performance = performance;
     return f;
-  }, [year, month, date, statusFilter, performance]);
+  }, [year, month, date]);
 
   useEffect(() => {
     dispatch(fetchPartnersWithFollowUp(apiFilters));
@@ -200,28 +200,75 @@ const FollowUp = () => {
     setShowModal(false);
   };
 
-  const filteredFollowUps = followUps.filter((followUp) => {
-    const q = searchTerm.toLowerCase();
-    return (
-      !q ||
-      followUp.partnerName?.toLowerCase().includes(q) ||
-      String(followUp.employeeId || "")
-        .toLowerCase()
-        .includes(q) ||
-      String(followUp.partnerContact || "").includes(searchTerm)
-    );
-  });
+  const filteredFollowUps = useMemo(() => {
+    return followUps.filter((followUp) => {
+      // 1. Search term filter
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const matches =
+          followUp.partnerName?.toLowerCase().includes(q) ||
+          String(followUp.employeeId || "").toLowerCase().includes(q) ||
+          String(followUp.partnerContact || "").includes(searchTerm);
+        if (!matches) return false;
+      }
+
+      // 2. Performance filter
+      if (performance === "working") {
+        if (followUp.performance !== "working" && !followUp.hasFilledForm) return false;
+      } else if (performance === "non_working") {
+        if (followUp.performance === "working" || followUp.hasFilledForm) return false;
+      } else if (performance === "filled") {
+        if (!followUp.hasFilledForm && followUp.applicationCount <= 0) return false;
+      } else if (performance === "not_filled") {
+        if (followUp.hasFilledForm || followUp.applicationCount > 0) return false;
+      } else if (performance === "more_info") {
+        if (!followUp.moreInfoRequired) return false;
+      }
+
+      // 3. Pending Docs filter
+      if (docFilter === "pending") {
+        if (!followUp.moreInfoRequired && (followUp.pendingDocsCount || 0) <= 0) return false;
+      } else if (docFilter === "complete") {
+        if (followUp.moreInfoRequired || (followUp.pendingDocsCount || 0) > 0) return false;
+      }
+
+      // 4. Call status filter
+      if (statusFilter) {
+        if (statusFilter === "N/A") {
+          if (followUp.status && followUp.status !== "N/A") return false;
+        } else {
+          if (followUp.status !== statusFilter) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [followUps, searchTerm, performance, docFilter, statusFilter]);
 
   const sortedFilteredFollowUps = useMemo(() => {
-    return [...filteredFollowUps].sort((a, b) => {
-      const codeA = String(a.employeeId || "").trim();
-      const codeB = String(b.employeeId || "").trim();
-      if (codeA && codeB) {
-        return codeB.localeCompare(codeA, undefined, { numeric: true });
-      }
-      return 0;
-    });
-  }, [filteredFollowUps]);
+    const list = [...filteredFollowUps];
+    switch (sortBy) {
+      case "id_asc":
+        return list.sort((a, b) =>
+          String(a.employeeId || "").localeCompare(String(b.employeeId || ""), undefined, { numeric: true })
+        );
+      case "loans_desc":
+        return list.sort((a, b) => (Number(b.applicationCount) || 0) - (Number(a.applicationCount) || 0));
+      case "loans_asc":
+        return list.sort((a, b) => (Number(a.applicationCount) || 0) - (Number(b.applicationCount) || 0));
+      case "name_asc":
+        return list.sort((a, b) => String(a.partnerName || "").localeCompare(String(b.partnerName || "")));
+      case "name_desc":
+        return list.sort((a, b) => String(b.partnerName || "").localeCompare(String(a.partnerName || "")));
+      case "last_call_desc":
+        return list.sort((a, b) => new Date(b.lastCall || 0) - new Date(a.lastCall || 0));
+      case "id_desc":
+      default:
+        return list.sort((a, b) =>
+          String(b.employeeId || "").localeCompare(String(a.employeeId || ""), undefined, { numeric: true })
+        );
+    }
+  }, [filteredFollowUps, sortBy]);
 
   // Pagination (10 data rows per page)
   const [currentPage, setCurrentPage] = useState(1);
@@ -229,7 +276,7 @@ const FollowUp = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, year, month, date, statusFilter, performance]);
+  }, [searchTerm, year, month, date, statusFilter, performance, docFilter, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(sortedFilteredFollowUps.length / ITEMS_PER_PAGE));
   const paginatedFollowUps = useMemo(() => {
@@ -244,6 +291,12 @@ const FollowUp = () => {
     summary?.filledPartners ??
     summary?.filled ??
     followUps.filter((f) => f.hasFilledForm).length;
+  const partnersNotFilled =
+    summary?.notFilled ??
+    followUps.filter((f) => !f.hasFilledForm).length;
+  const partnersMoreInfo =
+    summary?.moreInfoRequired ??
+    followUps.filter((f) => f.moreInfoRequired).length;
 
   const cards = [
     {
@@ -251,6 +304,11 @@ const FollowUp = () => {
       value: summary?.total ?? followUps.length,
       icon: Users,
       tone: "bg-slate-50 text-slate-800 border-slate-200",
+      onClick: () => {
+        setPerformance("");
+        setDocFilter("");
+      },
+      active: !performance && !docFilter,
     },
     {
       // Same scope as Manage Loans — total applications, not partners
@@ -259,13 +317,11 @@ const FollowUp = () => {
       icon: FileCheck2,
       tone: "bg-emerald-50 text-emerald-800 border-emerald-200",
       onClick: () => setPerformance(performance === "filled" ? "" : "filled"),
-      active: performance === "filled" || performance === "working",
+      active: performance === "filled",
     },
     {
       label: "Not filled yet",
-      value:
-        summary?.notFilled ??
-        followUps.filter((f) => !f.hasFilledForm).length,
+      value: partnersNotFilled,
       icon: FileX2,
       tone: "bg-amber-50 text-amber-900 border-amber-200",
       onClick: () =>
@@ -282,11 +338,11 @@ const FollowUp = () => {
     },
     {
       label: "More info needed",
-      value:
-        summary?.moreInfoRequired ??
-        followUps.filter((f) => f.moreInfoRequired).length,
+      value: partnersMoreInfo,
       icon: FileX2,
       tone: "bg-orange-50 text-orange-900 border-orange-200",
+      onClick: () => setPerformance(performance === "more_info" ? "" : "more_info"),
+      active: performance === "more_info",
     },
   ];
 
@@ -299,6 +355,7 @@ const FollowUp = () => {
         "Apps",
         "Filled",
         "Performance",
+        "Pending Docs",
         "Call Status",
         "Remarks",
         "Last Call",
@@ -309,7 +366,10 @@ const FollowUp = () => {
         r.partnerContact,
         r.applicationCount,
         r.hasFilledForm ? "Yes" : "No",
-        r.performance,
+        r.performance === "working" ? "Working" : "Non-Working",
+        r.moreInfoRequired
+          ? `${r.appsNeedingMoreInfoCount} apps (${r.pendingDocsCount} docs)`
+          : "Complete",
         r.status,
         r.remarks,
         r.lastCall || "",
@@ -324,12 +384,20 @@ const FollowUp = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `rm-partner-followups.csv`;
+    a.download = `rm-partner-followups-${performance || "all"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const activeFiltersCount = [year, month, date, statusFilter, performance].filter(Boolean).length;
+  const activeFiltersCount = [
+    year,
+    month,
+    date,
+    statusFilter,
+    performance,
+    docFilter,
+    searchTerm,
+  ].filter(Boolean).length;
 
   return (
     <div className="min-h-screen bg-slate-50 p-1 sm:p-4 md:p-6">
@@ -431,16 +499,124 @@ const FollowUp = () => {
             </div>
           </div>
 
+          {/* Quick Filter Pills (1-click access for Working / Non-Working / More Info) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-slate-100 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap mr-1">
+              Quick Filter:
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setPerformance("");
+                setDocFilter("");
+                setStatusFilter("");
+              }}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+                !performance && !docFilter && !statusFilter
+                  ? "bg-slate-800 text-white shadow-xs"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              All ({summary?.total ?? followUps.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPerformance(performance === "working" ? "" : "working")}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5 ${
+                performance === "working"
+                  ? "bg-teal-700 text-white shadow-xs"
+                  : "bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200/60"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${performance === "working" ? "bg-white" : "bg-teal-500"}`} />
+              Working ({partnersFilled})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPerformance(performance === "non_working" ? "" : "non_working")}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5 ${
+                performance === "non_working"
+                  ? "bg-rose-700 text-white shadow-xs"
+                  : "bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${performance === "non_working" ? "bg-white" : "bg-rose-500"}`} />
+              Non-Working ({partnersNotFilled})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPerformance(performance === "more_info" ? "" : "more_info")}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5 ${
+                performance === "more_info"
+                  ? "bg-orange-700 text-white shadow-xs"
+                  : "bg-orange-50 text-orange-800 hover:bg-orange-100 border border-orange-200/60"
+              }`}
+            >
+              <FileX2 className="w-3 h-3" />
+              More Info Needed ({partnersMoreInfo})
+            </button>
+          </div>
+
           {/* Filter options (expandable on mobile, always visible on desktop) */}
           <div className={`${showFilters ? "block" : "hidden md:block"} mt-3 pt-3 border-t border-slate-100`}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+              {/* 1. Performance Filter Dropdown */}
+              <div className="relative">
+                <select
+                  value={performance}
+                  onChange={(e) => setPerformance(e.target.value)}
+                  className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white font-medium text-slate-700 cursor-pointer"
+                >
+                  <option value="">All Performance</option>
+                  <option value="working">Working Partners</option>
+                  <option value="non_working">Non-Working Partners</option>
+                  <option value="filled">Filled Loan Form</option>
+                  <option value="not_filled">Not Filled Yet</option>
+                  <option value="more_info">More Info Needed</option>
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+              </div>
+
+              {/* 2. Pending Docs / Info Status Filter Dropdown */}
+              <div className="relative">
+                <select
+                  value={docFilter}
+                  onChange={(e) => setDocFilter(e.target.value)}
+                  className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white font-medium text-slate-700 cursor-pointer"
+                >
+                  <option value="">All Doc Status</option>
+                  <option value="pending">Pending Docs / Needs Info</option>
+                  <option value="complete">Docs Complete</option>
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+              </div>
+
+              {/* 3. Call Status Filter Dropdown */}
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white font-medium text-slate-700 cursor-pointer"
+                >
+                  <option value="">All Call Status</option>
+                  <option value="N/A">Not contacted</option>
+                  {FOLLOW_UP_STATUS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <Filter className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+              </div>
+
+              {/* 4. Year Filter */}
               <select
                 value={year}
                 onChange={(e) => {
                   setYear(e.target.value);
                   setDate("");
                 }}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white font-medium text-slate-700 cursor-pointer"
               >
                 {YEARS.map((y) => (
                   <option key={y.value || "all"} value={y.value}>
@@ -449,13 +625,14 @@ const FollowUp = () => {
                 ))}
               </select>
 
+              {/* 5. Month Filter */}
               <select
                 value={month}
                 onChange={(e) => {
                   setMonth(e.target.value);
                   setDate("");
                 }}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white font-medium text-slate-700 cursor-pointer"
               >
                 {MONTHS.map((m) => (
                   <option key={m.value || "all"} value={m.value}>
@@ -464,59 +641,78 @@ const FollowUp = () => {
                 ))}
               </select>
 
+              {/* 6. Date Picker */}
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white font-medium text-slate-700"
                 />
-              </div>
-
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2.5 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                >
-                  <option value="">All call status</option>
-                  <option value="N/A">Not contacted</option>
-                  {FOLLOW_UP_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
               </div>
             </div>
 
+            {/* Bottom Controls Row: Reset, Active filter count, Sort & Record count */}
             <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100 flex-wrap">
-              <button
-                type="button"
-                onClick={() => {
-                  setYear("");
-                  setMonth("");
-                  setDate("");
-                  setStatusFilter("");
-                  setPerformance("");
-                  setSearchTerm("");
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Reset filters
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setYear("");
+                    setMonth("");
+                    setDate("");
+                    setStatusFilter("");
+                    setPerformance("");
+                    setDocFilter("");
+                    setSearchTerm("");
+                    setSortBy("id_desc");
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reset filters
+                </button>
 
-              <button
-                type="button"
-                onClick={exportCsv}
-                className="sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export CSV
-              </button>
+                {activeFiltersCount > 0 && (
+                  <span className="text-xs text-teal-700 font-semibold bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200/60">
+                    {activeFiltersCount} filter{activeFiltersCount > 1 ? "s" : ""} active
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Sort By Dropdown */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-500 font-medium">Sort:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="border border-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white text-slate-700 font-medium cursor-pointer"
+                  >
+                    <option value="id_desc">Partner ID (Newest first)</option>
+                    <option value="id_asc">Partner ID (Oldest first)</option>
+                    <option value="loans_desc">Total Loans (High to Low)</option>
+                    <option value="loans_asc">Total Loans (Low to High)</option>
+                    <option value="name_asc">Partner Name (A to Z)</option>
+                    <option value="name_desc">Partner Name (Z to A)</option>
+                    <option value="last_call_desc">Last Call (Recent first)</option>
+                  </select>
+                </div>
+
+                <span className="text-xs text-slate-500 font-medium">
+                  Showing <strong className="text-slate-800">{sortedFilteredFollowUps.length}</strong> of {followUps.length} partners
+                </span>
+
+                <button
+                  type="button"
+                  onClick={exportCsv}
+                  className="sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </button>
+              </div>
             </div>
           </div>
         </div>
