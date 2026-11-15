@@ -1,6 +1,6 @@
 import "./App.css";
-import { lazy, Suspense, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { lazy, Suspense, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { getAuthData } from "./utils/localStorage";
 import { getSessionDashboardBasePath } from "./utils/sessionDashboardPath";
@@ -20,6 +20,19 @@ import axios from "axios";
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isFirstRender = useRef(true);
+
+  // Track SPA route changes with Meta Pixel
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (typeof window !== "undefined" && typeof window.fbq === "function") {
+      window.fbq("track", "PageView");
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     // Add global axios interceptor for 401 errors
