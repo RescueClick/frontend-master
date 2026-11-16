@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Search,
   Target,
+  PhoneCall,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -121,6 +122,7 @@ const RsmSidebar = () => {
     { name: "Applications", icon: FileText, path: `${basePath}/applications` },
     { name: "Leads & Pipeline", icon: LineChart, path: `${basePath}/leads` },
     { name: "Follow Up", icon: CalendarCheck, path: `${basePath}/follow-ups` },
+    { name: "Call Logs & Targets", icon: PhoneCall, path: `${basePath}/call-logs` },
     { name: "Banks", icon: Building2, path: `${basePath}/banks`, highlight: true },
     { name: "Find Bank RM", icon: Search, path: `${basePath}/find-bank-rm` },
     { name: "Settings", icon: Settings, path: `${basePath}/settings` },

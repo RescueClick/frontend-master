@@ -31,6 +31,7 @@ import {
 } from "../../../utils/followUpStatusConfig";
 import TableLoader from "../../../components/shared/TableLoader";
 import toast from "react-hot-toast";
+import CustomerFollowUpTab from "./CustomerFollowUpTab";
 
 const MONTHS = [
   { value: "", label: "All months" },
@@ -82,6 +83,7 @@ const FollowUp = () => {
   const [sortBy, setSortBy] = useState("id_desc");
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [followUpHubTab, setFollowUpHubTab] = useState("partner"); // 'partner' | 'customer'
 
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -407,13 +409,15 @@ const FollowUp = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
             <div>
               <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-                Partner Follow-up
+                {followUpHubTab === "partner" ? "Partner Follow-up" : "Customer Follow-up & Leads"}
               </h1>
               <p className="text-slate-600 mt-0.5 text-xs sm:text-sm">
-                Track who filled loan forms and call working vs non-working partners.
+                {followUpHubTab === "partner"
+                  ? "Track who filled loan forms and call working vs non-working partners."
+                  : "Track Meta leads, in-house direct customers, form progress, and call customers."}
               </p>
             </div>
-            {period?.label ? (
+            {followUpHubTab === "partner" && period?.label ? (
               <span className="self-start sm:self-auto inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">
                 Period: {period.label}
               </span>
@@ -421,8 +425,40 @@ const FollowUp = () => {
           </div>
         </div>
 
-        {/* Summary Stat Cards */}
-        <div className="flex overflow-x-auto gap-2 pb-1 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-3 mb-3 sm:mb-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* Dual Tab Switcher */}
+        <div className="flex border-b border-slate-200 gap-2 mb-2">
+          <button
+            type="button"
+            onClick={() => setFollowUpHubTab("partner")}
+            className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
+              followUpHubTab === "partner"
+                ? "border-teal-600 text-teal-800"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <Users size={16} />
+            Partner Follow-up ({summary?.total ?? followUps.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFollowUpHubTab("customer")}
+            className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
+              followUpHubTab === "customer"
+                ? "border-teal-600 text-teal-800"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <FileCheck2 size={16} />
+            Customer Follow-up & Leads
+          </button>
+        </div>
+
+        {followUpHubTab === "customer" ? (
+          <CustomerFollowUpTab />
+        ) : (
+          <>
+            {/* Summary Stat Cards */}
+            <div className="flex overflow-x-auto gap-2 pb-1 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-3 mb-3 sm:mb-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {cards.map((c) => {
             const Icon = c.icon;
             return (
@@ -1128,6 +1164,8 @@ const FollowUp = () => {
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
 
       {/* Follow-up Record Modal */}

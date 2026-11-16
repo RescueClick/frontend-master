@@ -65,7 +65,14 @@ export default function AdminCallLogs() {
 
   const getAdminToken = () => {
     const auth = getAuthData();
-    return auth.superAdminToken || auth.adminToken || "";
+    return (
+      auth.superAdminToken ||
+      auth.adminToken ||
+      auth.rsmToken ||
+      auth.asmToken ||
+      auth.rmToken ||
+      ""
+    );
   };
 
   const fetchOverview = async () => {

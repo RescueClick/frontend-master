@@ -430,6 +430,8 @@ const AppRoutes = () => {
         <Route path="withdrawals" element={<Navigate to="/rsm/payouts" replace />} />
         <Route path="leads" element={<HierarchyLeads />} />
         <Route path="follow-ups" element={<AsmFollowUps />} />
+        <Route path="call-logs" element={<AdminCallLogs />} />
+        <Route path="meta-leads" element={<MetaLeadAuditorPage />} />
         <Route path="find-bank-rm" element={<AdminFindBankRm />} />
         <Route path="partner-targets" element={<Navigate to="/rsm/incentives" replace />} />
         <Route path="targets" element={<SalesTargets mode="RSM" />} />
@@ -454,6 +456,8 @@ const AppRoutes = () => {
         <Route path="analytics" element={<RsmAnalytics />} />
         <Route path="leads" element={<HierarchyLeads />} />
         <Route path="follow-ups" element={<RsmFollowUps />} />
+        <Route path="call-logs" element={<AdminCallLogs />} />
+        <Route path="meta-leads" element={<MetaLeadAuditorPage />} />
         <Route path="banks" element={<Banks />} />
         <Route path="find-bank-rm" element={<AsmFindBankRm />} />
         <Route path="targets" element={<SalesTargets mode="ASM" />} />
@@ -494,6 +498,7 @@ const AppRoutes = () => {
         <Route path="Active-partners" element={<ActivePartner/>} />
         <Route path="Revenue-generated" element={<RevenueGenerated/>} />
         <Route path="Follow-up" element={<FollowUp/>}/>
+        <Route path="call-logs" element={<AdminCallLogs />} />
         <Route path="personal-loan" element={<PersonalLoan actorRole="rm" />} />
         <Route path="bussiness-loan" element={<BusinessLoan actorRole="rm" />} />
         <Route path="home-loan" element={<HomeLoan />} />

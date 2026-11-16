@@ -21,6 +21,7 @@ import {
   QrCode,
   UserPlus,
   Target,
+  PhoneCall,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -117,6 +118,7 @@ export default function RmSidebar() {
     { name: "Assign QR", icon: QrCode, path: "/rm/qr-assign", highlight: true },
     { name: "Manage Loans", icon: Users, path: "/rm/customers" },
     { name: "Follow Up", icon: CalendarCheck, path: "/rm/Follow-up" },
+    { name: "Call Tracking", icon: PhoneCall, path: "/rm/call-logs" },
     { name: "Leads & Pipeline", icon: LineChart, path: "/rm/leads" },
     { name: "Settings", icon: Settings, path: "/rm/settings" },
   ];
