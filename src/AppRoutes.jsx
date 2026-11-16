@@ -431,7 +431,7 @@ const AppRoutes = () => {
         <Route path="done-incentive" element={<Navigate to="/rsm/incentives" replace state={{ defaultTab: "paid" }} />} />
         <Route path="withdrawals" element={<Navigate to="/rsm/payouts" replace />} />
         <Route path="leads" element={<HierarchyLeads />} />
-        <Route path="follow-ups" element={<AsmFollowUps />} />
+        <Route path="follow-ups" element={<AdminCallLogs defaultTab="team-followup" />} />
         <Route path="call-logs" element={<AdminCallLogs />} />
         <Route path="meta-leads" element={<MetaLeadAuditorPage />} />
         <Route path="find-bank-rm" element={<AdminFindBankRm />} />
@@ -458,7 +458,7 @@ const AppRoutes = () => {
         <Route path="applications/view" element={<RsmApplicationView />} />
         <Route path="analytics" element={<RsmAnalytics />} />
         <Route path="leads" element={<HierarchyLeads />} />
-        <Route path="follow-ups" element={<RsmFollowUps />} />
+        <Route path="follow-ups" element={<AdminCallLogs defaultTab="team-followup" />} />
         <Route path="call-logs" element={<AdminCallLogs />} />
         <Route path="meta-leads" element={<MetaLeadAuditorPage />} />
         <Route path="banks" element={<Banks />} />

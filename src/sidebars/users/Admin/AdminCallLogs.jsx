@@ -24,6 +24,7 @@ import {
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 import AppAntTable from "../../../components/shared/AppAntTable";
+import AsmFollowUps from "../ASM/AsmFollowUps";
 
 function formatDuration(seconds = 0) {
   const sec = parseInt(seconds, 10) || 0;
@@ -34,8 +35,17 @@ function formatDuration(seconds = 0) {
   return `${m}m ${s}s`;
 }
 
-export default function AdminCallLogs() {
-  const [activeTab, setActiveTab] = useState("overview"); // 'overview' | 'logs'
+export default function AdminCallLogs({ defaultTab = "" }) {
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      if (defaultTab) return defaultTab;
+      if (typeof window !== "undefined") {
+        const p = new URLSearchParams(window.location.search);
+        if (p.get("tab")) return p.get("tab");
+      }
+    } catch (_) {}
+    return "overview";
+  }); // 'overview' | 'team-followup' | 'logs'
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   // Overview state
@@ -293,11 +303,11 @@ export default function AdminCallLogs() {
               <PhoneCall size={20} />
             </div>
             <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-              RM Daily Calling Sheets & Real Call Verification
+              Calling & Follow-Up Hub
             </h1>
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            Track whether RMs are calling their assigned partners and customer leads, monitor daily call targets, talk time, and real verified call logs.
+            Track RM calling targets, assigned lead sheets, manager follow-ups, and verified talk-time in one unified hub.
           </p>
         </div>
 
@@ -324,32 +334,45 @@ export default function AdminCallLogs() {
         </div>
       </div>
 
-      {/* Main Tabs: Overview vs Live Logs */}
-      <div className="flex border-b border-slate-200">
+      {/* Main Tabs: Targets vs Team Follow-up vs Live Logs */}
+      <div className="flex border-b border-slate-200 gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setActiveTab("overview")}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
+          className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
             activeTab === "overview"
               ? "border-emerald-600 text-emerald-800"
               : "border-transparent text-slate-500 hover:text-slate-700"
           }`}
         >
           <Target size={16} />
-          RM Daily Targets & Assigned Calling Sheets
+          RM Daily Targets & Calling Sheets
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("team-followup")}
+          className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+            activeTab === "team-followup"
+              ? "border-emerald-600 text-emerald-800"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <Users size={16} />
+          Team Manager Follow-ups
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("logs")}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
+          className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
             activeTab === "logs"
               ? "border-emerald-600 text-emerald-800"
               : "border-transparent text-slate-500 hover:text-slate-700"
           }`}
         >
           <PhoneCall size={16} />
-          Live Call Logs & Verification (Incoming & Outgoing)
+          Live Call Logs & Verification
         </button>
       </div>
 
@@ -487,7 +510,14 @@ export default function AdminCallLogs() {
         </div>
       )}
 
-      {/* TAB 2: Live Call Logs & Verification */}
+      {/* TAB 2: Team Manager Follow-ups */}
+      {activeTab === "team-followup" && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-2 sm:p-4 shadow-sm">
+          <AsmFollowUps />
+        </div>
+      )}
+
+      {/* TAB 3: Live Call Logs & Verification */}
       {activeTab === "logs" && (
         <div className="space-y-6">
           {/* Stat Cards */}
