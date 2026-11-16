@@ -14,6 +14,8 @@ import {
   RefreshCw,
   Phone,
   Filter,
+  UserPlus,
+  Send,
 } from "lucide-react";
 import { backendurl } from "../../feature/urldata";
 import { getAuthData } from "../../utils/localStorage";
@@ -69,6 +71,17 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
   const [tracePhone, setTracePhone] = useState("");
   const [traceResult, setTraceResult] = useState(null);
   const [loadingTrace, setLoadingTrace] = useState(false);
+
+  // Assign to RM State
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [rmsList, setRmsList] = useState([]);
+  const [loadingRms, setLoadingRms] = useState(false);
+  const [assignRmId, setAssignRmId] = useState("");
+  const [assignLeadSlice, setAssignLeadSlice] = useState("fresh"); // 'fresh' | 'noLoan' | 'partners' | 'filtered'
+  const [assignDailyTarget, setAssignDailyTarget] = useState(25);
+  const [assignSheetName, setAssignSheetName] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const [assignSuccessMsg, setAssignSuccessMsg] = useState("");
 
   const getAdminToken = () => {
     const auth = getAuthData();
@@ -144,6 +157,92 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
       alert(err.response?.data?.message || "Failed to trace phone number");
     } finally {
       setLoadingTrace(false);
+    }
+  };
+
+  const openAssignModal = async () => {
+    setShowAssignModal(true);
+    setAssignSuccessMsg("");
+    setAssignSheetName(fileName ? `Calling Sheet - ${fileName.replace(/\.csv$/i, "")}` : "Meta Calling Sheet");
+    if (rmsList.length === 0) {
+      setLoadingRms(true);
+      try {
+        const token = getAdminToken();
+        const res = await axios.get(`${backendurl}/calls/assignments/admin-overview`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data?.success && res.data.rms) {
+          setRmsList(res.data.rms);
+          if (res.data.rms.length > 0) setAssignRmId(res.data.rms[0].rmId);
+        }
+      } catch (err) {
+        console.error("Failed to fetch RMs:", err);
+      } finally {
+        setLoadingRms(false);
+      }
+    }
+  };
+
+  const handleAssignToRm = async (e) => {
+    e.preventDefault();
+    if (!assignRmId) {
+      alert("Please select an RM");
+      return;
+    }
+
+    let contactsToAssign = [];
+    let assignmentType = "CUSTOMER";
+
+    if (assignLeadSlice === "fresh") {
+      contactsToAssign = (result?.rows || []).filter((r) => r.systemStatus === "FRESH_LEAD");
+    } else if (assignLeadSlice === "noLoan") {
+      contactsToAssign = (result?.rows || []).filter((r) => r.systemStatus === "CUSTOMER_NO_LOAN");
+    } else if (assignLeadSlice === "partners") {
+      contactsToAssign = (result?.rows || []).filter((r) => r.systemStatus === "EXISTING_PARTNER");
+      assignmentType = "PARTNER";
+    } else {
+      contactsToAssign = filteredRows;
+    }
+
+    if (!contactsToAssign.length) {
+      alert("No contacts found in selected group to assign.");
+      return;
+    }
+
+    setAssigning(true);
+    try {
+      const token = getAdminToken();
+      const res = await axios.post(
+        `${backendurl}/calls/assignments/create`,
+        {
+          rmId: assignRmId,
+          assignmentType,
+          sheetName: assignSheetName || "Meta Calling Sheet",
+          dailyTarget: parseInt(assignDailyTarget, 10) || 25,
+          contacts: contactsToAssign.map((r) => ({
+            name: r.name,
+            phone: r.phone,
+            city: r.city,
+            loanType: r.metaLoanType || r.loanInfo?.loanType,
+            leadSource: fileName || "Meta Ads",
+            partnerId: r.partnerInfo?.partnerId,
+            customerId: r.customerInfo?.customerId,
+          })),
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data?.success) {
+        setAssignSuccessMsg(`✅ ${res.data.message}! The sheet is now active in the RM App and Call Tracker.`);
+        setTimeout(() => {
+          setShowAssignModal(false);
+          setAssignSuccessMsg("");
+        }, 2200);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to assign leads to RM");
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -578,6 +677,16 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
 
               <button
                 type="button"
+                onClick={openAssignModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-sm"
+                title="Assign leads to an RM with a daily calling target"
+              >
+                <UserPlus size={13} />
+                Assign to RM Sheet
+              </button>
+
+              <button
+                type="button"
                 onClick={downloadFullAuditedCsv}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm"
                 title="Download full audited sheet with original Meta campaign columns + DhanSource audit columns"
@@ -726,6 +835,132 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {/* Assign Leads to RM Calling Sheet Modal */}
+      {showAssignModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <UserPlus className="text-purple-600" size={20} />
+                <h3 className="font-bold text-slate-900 text-base">Assign Calling Sheet to RM</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAssignModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignToRm} className="p-6 space-y-4">
+              {assignSuccessMsg ? (
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold text-center">
+                  {assignSuccessMsg}
+                </div>
+              ) : (
+                <>
+                  {/* Select RM */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Select Relationship Manager (RM):
+                    </label>
+                    {loadingRms ? (
+                      <div className="text-xs text-slate-400">Loading RMs...</div>
+                    ) : (
+                      <select
+                        value={assignRmId}
+                        onChange={(e) => setAssignRmId(e.target.value)}
+                        className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                        required
+                      >
+                        {rmsList.map((rm) => (
+                          <option key={rm.rmId} value={rm.rmId}>
+                            {rm.rmName} ({rm.employeeId || rm.phone})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Which Group of Leads */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Which Contacts to Assign:
+                    </label>
+                    <select
+                      value={assignLeadSlice}
+                      onChange={(e) => setAssignLeadSlice(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-medium"
+                    >
+                      <option value="fresh">
+                        🔵 Fresh Leads Only ({result?.freshLeads || 0} leads - Recommended)
+                      </option>
+                      <option value="noLoan">
+                        🟠 Registered Customers (No Loan) ({result?.existingCustomersNoLoan || 0} leads)
+                      </option>
+                      <option value="partners">
+                        🟢 Existing Partners ({result?.existingPartners || 0} partners)
+                      </option>
+                      <option value="filtered">
+                        All Filtered Leads in Current View ({filteredRows.length} contacts)
+                      </option>
+                    </select>
+                  </div>
+
+                  {/* Daily Target */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Daily Call Target:
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="200"
+                        value={assignDailyTarget}
+                        onChange={(e) => setAssignDailyTarget(e.target.value)}
+                        className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Sheet Name:
+                      </label>
+                      <input
+                        type="text"
+                        value={assignSheetName}
+                        onChange={(e) => setAssignSheetName(e.target.value)}
+                        className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setShowAssignModal(false)}
+                      className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={assigning}
+                      className="px-5 py-2 text-xs font-bold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition shadow-md shadow-purple-500/20 flex items-center gap-1.5 disabled:opacity-60"
+                    >
+                      <Send size={13} />
+                      {assigning ? "Assigning..." : "Assign Sheet to RM"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </form>
           </div>
         </div>
       )}
