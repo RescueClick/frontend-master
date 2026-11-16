@@ -46,6 +46,8 @@ const AddRMPage = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    rmType: "CUSTOMER", // 'CUSTOMER' | 'PARTNER' | 'HYBRID'
+    branchName: "",
     rsmId: "", // Selected Reporting RSM (sync anchor)
     personalAsm: null, // Personal Loan ASM
     businessAsm: null, // Business Loan ASM
@@ -498,6 +500,8 @@ const AddRMPage = () => {
       dob: formData.dob,
       email: formData.email.trim(),
       password: formData.password,
+      rmType: formData.rmType || "HYBRID",
+      branchName: formData.branchName ? formData.branchName.trim() : formData.region ? `${formData.region} Branch` : "Head Office",
       rsmId: typeof effRsmId === "object" ? effRsmId?._id : effRsmId,
       personalAsmId: formData.personalAsm?._id,
       businessAsmId: formData.businessAsm?._id,
@@ -526,6 +530,8 @@ const AddRMPage = () => {
         email: "",
         password: "",
         confirmPassword: "",
+        rmType: "CUSTOMER",
+        branchName: "",
         rsmId: "",
         personalAsm: null,
         businessAsm: null,
@@ -815,6 +821,104 @@ const AddRMPage = () => {
                     <AlertCircle className="w-4 h-4 mr-1" /> {errors.region}
                   </p>
                 )}
+              </div>
+
+              {/* RM Specialization & Desk Type */}
+              <div className="md:col-span-2 pt-4 border-t border-gray-100">
+                <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-4 sm:p-5 border border-teal-200/80 mb-4">
+                  <h3 className="text-sm font-bold text-teal-900 uppercase tracking-wide flex items-center gap-2 mb-1">
+                    <Briefcase className="w-4 h-4 text-teal-700" />
+                    RM Desk Role & Specialization
+                  </h3>
+                  <p className="text-xs text-teal-700 mb-3">
+                    Choose whether this RM handles high-speed Customer Meta Ads leads or B2B Partner / DSA Channel relations:
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <label
+                      className={`cursor-pointer rounded-xl p-3 border-2 transition-all flex flex-col justify-between ${
+                        formData.rmType === "CUSTOMER"
+                          ? "border-teal-600 bg-white shadow-sm ring-2 ring-teal-500/20"
+                          : "border-teal-200/60 bg-white/60 hover:bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-teal-900">📞 Customer RM</span>
+                        <input
+                          type="radio"
+                          name="rmType"
+                          value="CUSTOMER"
+                          checked={formData.rmType === "CUSTOMER"}
+                          onChange={handleInputChange}
+                          className="text-teal-600 focus:ring-teal-500"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        Inbound Telesales desk for Meta Ads & direct customer loan form follow-ups.
+                      </p>
+                    </label>
+
+                    <label
+                      className={`cursor-pointer rounded-xl p-3 border-2 transition-all flex flex-col justify-between ${
+                        formData.rmType === "PARTNER"
+                          ? "border-teal-600 bg-white shadow-sm ring-2 ring-teal-500/20"
+                          : "border-teal-200/60 bg-white/60 hover:bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-teal-900">🤝 Partner RM</span>
+                        <input
+                          type="radio"
+                          name="rmType"
+                          value="PARTNER"
+                          checked={formData.rmType === "PARTNER"}
+                          onChange={handleInputChange}
+                          className="text-teal-600 focus:ring-teal-500"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        B2B Channel sales desk for CAs, DSAs, and offline partner onboarding & QR inventory.
+                      </p>
+                    </label>
+
+                    <label
+                      className={`cursor-pointer rounded-xl p-3 border-2 transition-all flex flex-col justify-between ${
+                        formData.rmType === "HYBRID"
+                          ? "border-teal-600 bg-white shadow-sm ring-2 ring-teal-500/20"
+                          : "border-teal-200/60 bg-white/60 hover:bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-teal-900">🔄 Hybrid RM</span>
+                        <input
+                          type="radio"
+                          name="rmType"
+                          value="HYBRID"
+                          checked={formData.rmType === "HYBRID"}
+                          onChange={handleInputChange}
+                          className="text-teal-600 focus:ring-teal-500"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        Dual role managing both customer leads and partner accounts (for smaller branches).
+                      </p>
+                    </label>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-teal-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <label className="text-xs font-semibold text-teal-900 shrink-0">
+                      Branch / Franchise Location:
+                    </label>
+                    <input
+                      type="text"
+                      name="branchName"
+                      value={formData.branchName}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Head Office, Pune Franchise, Nashik Branch"
+                      className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-teal-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* --- Hierarchy Selection Section (Full Width) --- */}

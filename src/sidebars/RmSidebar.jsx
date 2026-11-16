@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, useMemo, Suspense } from "react";
 import {
   Users,
   UserCheck,
@@ -109,19 +109,50 @@ export default function RmSidebar() {
     }
   };
 
-  // Sidebar navigation items with icons and routes
-  const sidebarItems = [
-    { name: "Dashboard", icon: LayoutGrid, path: "/rm/dashboard" },
-    { name: "My Targets", icon: Target, path: "/rm/targets" },
-    { name: "My Partners", icon: UserCheck, path: "/rm/partners" },
-    { name: "Add Partner", icon: UserPlus, path: "/rm/add-partner", highlight: true },
-    { name: "Assign QR", icon: QrCode, path: "/rm/qr-assign", highlight: true },
-    { name: "Manage Loans", icon: Users, path: "/rm/customers" },
-    { name: "Follow Up", icon: CalendarCheck, path: "/rm/Follow-up" },
-    { name: "Call Tracking", icon: PhoneCall, path: "/rm/call-logs" },
-    { name: "Leads & Pipeline", icon: LineChart, path: "/rm/leads" },
-    { name: "Settings", icon: Settings, path: "/rm/settings" },
-  ];
+  const activeRmUser = data || fallbackUser;
+  const rmType = activeRmUser?.rmType || "HYBRID";
+  const isCustomerDesk = rmType === "CUSTOMER";
+  const isPartnerDesk = rmType === "PARTNER";
+
+  // Sidebar navigation items tailored by RM desk type
+  const sidebarItems = useMemo(() => {
+    if (isCustomerDesk) {
+      return [
+        { name: "Dashboard", icon: LayoutGrid, path: "/rm/dashboard" },
+        { name: "Customer Follow-up", icon: CalendarCheck, path: "/rm/Follow-up", highlight: true },
+        { name: "Calling Sheet", icon: PhoneCall, path: "/rm/call-logs", highlight: true },
+        { name: "Manage Loans", icon: Users, path: "/rm/customers" },
+        { name: "Leads & Pipeline", icon: LineChart, path: "/rm/leads" },
+        { name: "My Targets", icon: Target, path: "/rm/targets" },
+        { name: "Settings", icon: Settings, path: "/rm/settings" },
+      ];
+    }
+    if (isPartnerDesk) {
+      return [
+        { name: "Dashboard", icon: LayoutGrid, path: "/rm/dashboard" },
+        { name: "My Targets", icon: Target, path: "/rm/targets" },
+        { name: "My Partners", icon: UserCheck, path: "/rm/partners" },
+        { name: "Add Partner", icon: UserPlus, path: "/rm/add-partner", highlight: true },
+        { name: "Assign QR", icon: QrCode, path: "/rm/qr-assign", highlight: true },
+        { name: "Partner Follow-up", icon: CalendarCheck, path: "/rm/Follow-up" },
+        { name: "Call Tracking", icon: PhoneCall, path: "/rm/call-logs" },
+        { name: "Manage Loans", icon: Users, path: "/rm/customers" },
+        { name: "Settings", icon: Settings, path: "/rm/settings" },
+      ];
+    }
+    return [
+      { name: "Dashboard", icon: LayoutGrid, path: "/rm/dashboard" },
+      { name: "My Targets", icon: Target, path: "/rm/targets" },
+      { name: "My Partners", icon: UserCheck, path: "/rm/partners" },
+      { name: "Add Partner", icon: UserPlus, path: "/rm/add-partner", highlight: true },
+      { name: "Assign QR", icon: QrCode, path: "/rm/qr-assign", highlight: true },
+      { name: "Manage Loans", icon: Users, path: "/rm/customers" },
+      { name: "Follow Up", icon: CalendarCheck, path: "/rm/Follow-up" },
+      { name: "Call Tracking", icon: PhoneCall, path: "/rm/call-logs" },
+      { name: "Leads & Pipeline", icon: LineChart, path: "/rm/leads" },
+      { name: "Settings", icon: Settings, path: "/rm/settings" },
+    ];
+  }, [isCustomerDesk, isPartnerDesk]);
 
 
 
@@ -236,9 +267,21 @@ export default function RmSidebar() {
               >
                 <Menu size={20} className="text-gray-600" />
               </button>
-              <h1 className="text-base sm:text-xl font-semibold text-gray-800 truncate">
-                RM Dashboard
-              </h1>
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="text-base sm:text-xl font-semibold text-gray-800 truncate">
+                  {isCustomerDesk ? "Customer Telesales Desk" : isPartnerDesk ? "Channel Partner Desk" : "RM Dashboard"}
+                </h1>
+                {isCustomerDesk && (
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    📞 Customer Inbound
+                  </span>
+                )}
+                {isPartnerDesk && (
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                    🤝 Channel Network
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">

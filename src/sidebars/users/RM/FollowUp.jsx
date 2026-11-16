@@ -83,7 +83,17 @@ const FollowUp = () => {
   const [sortBy, setSortBy] = useState("id_desc");
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [followUpHubTab, setFollowUpHubTab] = useState("partner"); // 'partner' | 'customer'
+  const [followUpHubTab, setFollowUpHubTab] = useState(() => {
+    try {
+      const auth = getAuthData();
+      if (auth?.rmUser?.rmType === "CUSTOMER") return "customer";
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("tab") === "customer") return "customer";
+      }
+    } catch (_) {}
+    return "partner";
+  }); // 'partner' | 'customer'
 
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);

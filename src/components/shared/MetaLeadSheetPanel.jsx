@@ -877,11 +877,20 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
                         className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                         required
                       >
-                        {rmsList.map((rm) => (
-                          <option key={rm.rmId} value={rm.rmId}>
-                            {rm.rmName} ({rm.employeeId || rm.phone})
-                          </option>
-                        ))}
+                        {rmsList.map((rm) => {
+                          const deskLabel =
+                            rm.rmType === "CUSTOMER"
+                              ? "📞 [Customer RM - Inbound Leads]"
+                              : rm.rmType === "PARTNER"
+                              ? "🤝 [Partner RM - Channel/DSA]"
+                              : "🔄 [Hybrid RM]";
+                          const branch = rm.branchName ? ` • ${rm.branchName}` : "";
+                          return (
+                            <option key={rm.rmId} value={rm.rmId}>
+                              {deskLabel} {rm.rmName} ({rm.employeeId || rm.phone}){branch}
+                            </option>
+                          );
+                        })}
                       </select>
                     )}
                   </div>

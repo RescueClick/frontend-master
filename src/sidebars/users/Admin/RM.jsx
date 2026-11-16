@@ -343,12 +343,45 @@ loginAsUser(userId, navigate);
       title: "User Name",
       key: "name",
       render: (_, rm) => (
-        <span className="text-sm font-medium text-gray-900">
-          {rm.firstName} {rm.lastName}
-        </span>
+        <div>
+          <span className="text-sm font-medium text-gray-900">
+            {rm.firstName} {rm.lastName}
+          </span>
+          {rm.branchName && (
+            <span className="block text-[11px] text-gray-500 font-normal">
+              📍 {rm.branchName}
+            </span>
+          )}
+        </div>
       ),
     },
     { title: "User ID", dataIndex: "employeeId", key: "eid" },
+    {
+      title: "Desk Specialization",
+      key: "rmType",
+      render: (_, rm) => {
+        const type = rm.rmType || "HYBRID";
+        if (type === "CUSTOMER") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              📞 Customer Desk
+            </span>
+          );
+        }
+        if (type === "PARTNER") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              🤝 Channel Desk
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+            🔄 Hybrid Desk
+          </span>
+        );
+      },
+    },
     {
       title: "Assigned ASMs",
       key: "asms",
