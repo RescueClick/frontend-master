@@ -414,8 +414,10 @@ const AppRoutes = () => {
         <Route path="dashboard" element={<AsmDashboard />} />
         <Route path="chat" element={<ChatDashboard currentRole="RSM" />} />
         <Route path="asms" element={<AsmRSM />} />
+        <Route path="add-asm" element={<AddASMPage />} />
         <Route path="rsms" element={<AsmRSM />} />
         <Route path="rms" element={<AsmRM />} /> 
+        <Route path="add-rm" element={<AddRMPage />} /> 
         <Route path="applications" element={<Applications />} />
         <Route path="applications/view" element={<RsmApplicationView />} />
         <Route path="partners" element={<AsmPartners />} />
@@ -449,6 +451,7 @@ const AppRoutes = () => {
         <Route path="dashboard" element={<RsmDashboard />} />
         <Route path="chat" element={<ChatDashboard currentRole="ASM" />} />
         <Route path="rms" element={<RsmRMs />} />
+        <Route path="add-rm" element={<AddRMPage />} />
         <Route path="partners" element={<RsmPartners />} />
         <Route path="move-partners" element={<AsmMovePartners />} />
         <Route path="applications" element={<RsmApplications />} />

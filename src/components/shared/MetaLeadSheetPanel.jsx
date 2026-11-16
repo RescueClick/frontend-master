@@ -85,7 +85,13 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
 
   const getAdminToken = () => {
     const auth = getAuthData();
-    return auth.superAdminToken || auth.adminToken || "";
+    return (
+      auth.superAdminToken ||
+      auth.adminToken ||
+      auth.rsmToken ||
+      auth.asmToken ||
+      ""
+    );
   };
 
   const fetchHistory = async () => {

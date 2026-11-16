@@ -24,6 +24,7 @@ import {
   Search,
   Target,
   PhoneCall,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -134,6 +135,7 @@ const AsmSiderbar = () => {
     { name: "Incentives", icon: Award, path: `${basePath}/incentives`, highlight: true },
     { name: "Follow Up", icon: CalendarCheck, path: `${basePath}/follow-ups` },
     { name: "Call Logs & Targets", icon: PhoneCall, path: `${basePath}/call-logs` },
+    { name: "Upload Leads (CSV)", icon: FileSpreadsheet, path: `${basePath}/meta-leads` },
     { name: "Find Bank RM", icon: Search, path: `${basePath}/find-bank-rm` },
     { name: "Settings", icon: Settings, path: `${basePath}/settings` },
   ];

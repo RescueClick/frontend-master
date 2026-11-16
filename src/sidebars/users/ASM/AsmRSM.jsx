@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Download, X, Edit2 } from "lucide-react";
+import { Search, Download, X, Edit2, UserPlus } from "lucide-react";
 import { fetchRsmList, activateRSM, asmDeactivateRsm, deleteRsmAsm } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -664,6 +664,14 @@ export default function AsmRSM() {
               <option value="BUSINESS">Business Loan ASM</option>
               <option value="HOME_LAP">Home & LAP Loan ASM</option>
             </select>
+            <button
+              type="button"
+              onClick={() => navigate("/rsm/add-asm")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 transition"
+            >
+              <UserPlus size={16} />
+              Add ASM
+            </button>
             <button
               type="button"
               onClick={handleExport}

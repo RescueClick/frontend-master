@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, User, Mail, Phone, Calendar, Users, Download } from "lucide-react";
+import { Search, User, Mail, Phone, Calendar, Users, Download, UserPlus } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
@@ -306,6 +306,14 @@ export default function RsmRMs() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <button
+              type="button"
+              onClick={() => navigate(location.pathname.startsWith("/rsm") ? "/rsm/add-rm" : "/asm/add-rm")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 transition"
+            >
+              <UserPlus size={16} />
+              Add RM
+            </button>
             <button
               type="button"
               onClick={handleExport}
