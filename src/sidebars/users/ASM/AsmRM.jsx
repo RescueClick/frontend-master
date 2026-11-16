@@ -8,7 +8,7 @@ import {
   deleteRmAsm,
 } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import axios from "axios"
 import { backendurl } from "../../../feature/urldata";
@@ -32,6 +32,7 @@ const colors = {
 
 export default function AsmRM() {
   const navigate = useNavigate();
+  const location = useLocation();
 
 
   const [rmToActivate, setRmToActivate] = useState(null);
@@ -388,7 +389,7 @@ loginAsUser(userId, navigate);
             </div>
             <button
               type="button"
-              onClick={() => navigate("/rsm/add-rm")}
+              onClick={() => navigate(location.pathname.startsWith("/asm") ? "/asm/add-rm" : location.pathname.startsWith("/rsm") ? "/rsm/add-rm" : "/admin/add-rm-page")}
               className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 transition"
             >
               <UserPlus size={16} />

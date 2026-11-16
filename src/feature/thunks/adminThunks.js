@@ -208,13 +208,14 @@ export const createAsm = createAsyncThunk(
   "admin/createAsm",
   async (asmData, { rejectWithValue, dispatch }) => {
     try {
-      const { adminToken } = getAuthData();
+      const auth = getAuthData();
+      const token = auth.adminToken || auth.rsmToken || auth.asmToken;
       const response = await axios.post(
         `${backendurl}/admin/create-asm`,
         asmData,
         {
           headers: {
-            Authorization: `Bearer ${adminToken}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }
@@ -260,13 +261,14 @@ export const createRm = createAsyncThunk(
   "admin/createRm",
   async (rmData, { rejectWithValue, dispatch }) => {
     try {
-      const { adminToken } = getAuthData();
+      const auth = getAuthData();
+      const token = auth.adminToken || auth.rsmToken || auth.asmToken;
       const response = await axios.post(
         `${backendurl}/admin/create-rm`,
         rmData,
         {
           headers: {
-            Authorization: `Bearer ${adminToken}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }

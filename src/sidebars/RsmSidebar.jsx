@@ -111,13 +111,18 @@ const RsmSidebar = () => {
   };
 
   // Sidebar navigation items with icons and routes
-  // Hierarchy: RSM manages ASMs (/rsm/asms); ASM manages RMs (/asm/rms)
+  // Hierarchy: RSM manages ASMs (/rsm/asms) & RMs (/rsm/rms); ASM manages RMs (/asm/rms)
   const basePath = location.pathname.startsWith("/rsm") ? "/rsm" : "/asm";
-  const subordinateLabel = basePath === "/rsm" ? "My ASMs" : "My RMs";
-  const subordinatePath = basePath === "/rsm" ? `${basePath}/asms` : `${basePath}/rms`;
+  const isRsm = basePath === "/rsm";
+
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid, path: `${basePath}/dashboard` },
-    { name: subordinateLabel, icon: Users, path: subordinatePath },
+    ...(isRsm
+      ? [
+          { name: "ASMs", icon: Users, path: `${basePath}/asms` },
+          { name: "RMs", icon: UserCheck, path: `${basePath}/rms` },
+        ]
+      : [{ name: "RMs", icon: Users, path: `${basePath}/rms` }]),
     { name: "Targets", icon: Target, path: `${basePath}/targets`, highlight: true },
     { name: "Partners", icon: UserCheck, path: `${basePath}/partners` },
     { name: "Applications", icon: FileText, path: `${basePath}/applications` },

@@ -570,6 +570,59 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
         </div>
       )}
 
+      {/* Smart Loading State: File Uploading & Contact Pipeline Processing */}
+      {loading && (
+        <div className="mt-6 rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50/60 to-white p-6 shadow-xs animate-in fade-in duration-200">
+          <div className="flex flex-col items-center text-center max-w-lg mx-auto">
+            {/* Animated Pulse Rings & Icon */}
+            <div className="relative mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-600">
+                <RefreshCw size={28} className="animate-spin text-blue-600" />
+              </div>
+              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-blue-500"></span>
+              </span>
+            </div>
+
+            <h3 className="text-base font-bold text-slate-900">
+              Auditing Leads & Fetching Contact Pipeline...
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-md">
+              Uploading <strong className="text-slate-700">{fileName || "CSV Sheet"}</strong> and cross-referencing contact phone numbers against database records.
+            </p>
+
+            {/* Simulated Animated Progress Bar */}
+            <div className="w-full mt-5">
+              <div className="h-2 w-full bg-blue-100 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full animate-pulse w-3/4"></div>
+              </div>
+            </div>
+
+            {/* Smart Pipeline Steps */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full mt-5 text-left text-xs">
+              <div className="p-3 rounded-xl bg-white border border-blue-100/80 shadow-2xs flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                <span className="text-slate-700 font-medium">1. Parse CSV Sheet</span>
+              </div>
+              <div className="p-3 rounded-xl bg-white border border-blue-100/80 shadow-2xs flex items-center gap-2">
+                <RefreshCw size={16} className="text-blue-500 animate-spin shrink-0" />
+                <span className="text-slate-800 font-semibold">2. Match Contacts</span>
+              </div>
+              <div className="p-3 rounded-xl bg-white border border-slate-100 text-slate-400 flex items-center gap-2">
+                <Clock size={16} className="shrink-0" />
+                <span>3. Build Lead Pool</span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-1.5 text-[11px] text-blue-600 font-medium bg-blue-100/50 px-3 py-1 rounded-full">
+              <Sparkles size={13} />
+              <span>Smart deduplication in progress • Please do not refresh</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Results View */}
       {result && open && (
         <div className="mt-6 space-y-5 animate-in fade-in duration-200">

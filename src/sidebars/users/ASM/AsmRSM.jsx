@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Download, X, Edit2, UserPlus } from "lucide-react";
 import { fetchRsmList, activateRSM, asmDeactivateRsm, deleteRsmAsm } from "../../../feature/thunks/asmThunks";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { formatNumber } from "../../../utils/designSystem";
 import { getAuthData, saveAuthData } from "../../../utils/localStorage";
 import axios from "axios";
@@ -25,6 +25,7 @@ const colors = {
 
 export default function AsmRSM() {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -666,7 +667,7 @@ export default function AsmRSM() {
             </select>
             <button
               type="button"
-              onClick={() => navigate("/rsm/add-asm")}
+              onClick={() => navigate(location.pathname.startsWith("/rsm") ? "/rsm/add-asm" : location.pathname.startsWith("/asm") ? "/asm/add-asm" : "/admin/add-asm-page")}
               className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 transition"
             >
               <UserPlus size={16} />
