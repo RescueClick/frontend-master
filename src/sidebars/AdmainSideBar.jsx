@@ -26,6 +26,8 @@ import {
   QrCode,
   Target,
   Layers,
+  PhoneCall,
+  Filter,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -128,6 +130,7 @@ const AdminSideBar = () => {
     { name: "RSM", icon: Users, path: "/admin/rsm" },
     { name: "ASM", icon: Users, path: "/admin/asm" },
     { name: "RM", icon: Users, path: "/admin/rm" },
+    { name: "Call Logs", icon: PhoneCall, path: "/admin/call-logs", highlight: true },
     { name: "Targets", icon: Target, path: "/admin/target", highlight: true },
 
     // New partners under admin (verify + assign RM) — separate quick-access entry
@@ -135,6 +138,7 @@ const AdminSideBar = () => {
     // All verified partners directory (Move Partners is inside Partner page header)
     { name: "Partner", icon: UserCheck, path: "/admin/partner" },
     { name: "Customer", icon: Users, path: "/admin/customer" },
+    { name: "Meta Lead Auditor", icon: Filter, path: "/admin/meta-leads", highlight: true },
 
     // Finance & Operations (Consolidated hubs)
     { name: "Payout & Incentives", icon: IndianRupee, path: "/admin/payout-incentives", highlight: true },

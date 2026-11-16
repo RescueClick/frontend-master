@@ -19,7 +19,9 @@ import {
   AlertCircle,
   Search,
   Users,
+  Filter,
 } from "lucide-react";
+import MetaLeadSheetPanel from "../../../components/shared/MetaLeadSheetPanel";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { getAuthData } from "../../../utils/localStorage";
@@ -82,6 +84,7 @@ export default function AdminLeads() {
   const [day, setDay] = useState(initialPeriod.day);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showMetaPanel, setShowMetaPanel] = useState(false);
 
   // Follow-up modal state
   const [selectedLead, setSelectedLead] = useState(null);
@@ -276,6 +279,14 @@ export default function AdminLeads() {
             Total Leads: {leads.filter((l) => l.status === "LEAD").length}
           </span>
           <button
+            type="button"
+            onClick={() => setShowMetaPanel((prev) => !prev)}
+            className="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow transition-all flex items-center gap-1.5"
+          >
+            <Filter size={15} />
+            {showMetaPanel ? "Hide Meta Auditor" : "Audit Meta CSV"}
+          </button>
+          <button
             onClick={fetchLeads}
             className="px-4 py-2 text-sm font-semibold rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow transition-all"
           >
@@ -283,6 +294,12 @@ export default function AdminLeads() {
           </button>
         </div>
       </div>
+
+      {showMetaPanel && (
+        <div className="mb-6">
+          <MetaLeadSheetPanel defaultOpen={true} embedded={true} />
+        </div>
+      )}
 
       {/* Search Bar */}
       <div className="mb-6 flex flex-col sm:flex-row gap-3 max-w-2xl">

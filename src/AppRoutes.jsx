@@ -78,6 +78,8 @@ import AdminPartnerLevels from "./sidebars/users/Admin/AdminPartnerLevels";
 import RewardsAndLevelsHub from "./sidebars/users/Admin/RewardsAndLevelsHub";
 import PayoutAndIncentivesHub from "./sidebars/users/Admin/PayoutAndIncentivesHub";
 import AdminLoanProducts from "./sidebars/users/Admin/AdminLoanProducts";
+import MetaLeadAuditorPage from "./sidebars/users/Admin/MetaLeadAuditorPage";
+import AdminCallLogs from "./sidebars/users/Admin/AdminCallLogs";
 
 // Import ASM user pages
 import AsmDashboard from "./sidebars/users/ASM/Dashboard";
@@ -373,6 +375,8 @@ const AppRoutes = () => {
         <Route path="partner-targets" element={<Navigate to="/admin/incentives" replace />} />
         <Route path="banks" element={<AdiminBanks />} />
         <Route path="loan-products" element={<AdminLoanProducts />} />
+        <Route path="meta-leads" element={<MetaLeadAuditorPage />} />
+        <Route path="call-logs" element={<AdminCallLogs />} />
         <Route path="find-bank-rm" element={<AdminFindBankRm />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="Analytics" element={<Analytics />} />
