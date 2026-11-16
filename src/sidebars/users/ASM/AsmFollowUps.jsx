@@ -27,6 +27,8 @@ import {
   recordAsmRmFollowUp,
   fetchRsmFollowUps,
   recordRsmFollowUp,
+  fetchAsmFollowUps,
+  recordAsmFollowUp,
 } from "../../../feature/thunks/asmThunks";
 import toast from "react-hot-toast";
 import { sortNewestFirst } from "../../../utils/sortNewestFirst";
@@ -65,9 +67,10 @@ const getWhatsAppUrl = (phone, name = "") => {
 const AsmFollowUps = () => {
   const dispatch = useDispatch();
   const rmState = useSelector((state) => state.asm.rmFollowUps || {});
+  const asmState = useSelector((state) => state.asm.asmFollowUps || {});
   const rsmState = useSelector((state) => state.asm.followUps || {});
 
-  const [tab, setTab] = useState("rm"); // rm | rsm
+  const [tab, setTab] = useState("rm"); // rm | asm | rsm
   const [year, setYear] = useState("");
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
@@ -94,13 +97,15 @@ const AsmFollowUps = () => {
 
   useEffect(() => {
     if (tab === "rm") dispatch(fetchAsmRmFollowUps(apiFilters));
+    else if (tab === "asm") dispatch(fetchAsmFollowUps(apiFilters));
     else dispatch(fetchRsmFollowUps(apiFilters));
   }, [dispatch, apiFilters, tab]);
 
-  const loading = tab === "rm" ? rmState.loading : rsmState.loading;
-  const summary = tab === "rm" ? rmState.summary : rsmState.summary;
-  const period = tab === "rm" ? rmState.period : rsmState.period;
-  const raw = tab === "rm" ? rmState.data : rsmState.data;
+  const activeState = tab === "rm" ? rmState : tab === "asm" ? asmState : rsmState;
+  const loading = activeState.loading;
+  const summary = activeState.summary;
+  const period = activeState.period;
+  const raw = activeState.data;
 
   const rows = (Array.isArray(raw) ? raw : []).map((item) => {
     if (tab === "rm") {
@@ -120,6 +125,22 @@ const AsmFollowUps = () => {
         lastCall: item.lastCall || item.followUp?.lastCallFormatted || "",
         remarksText: item.remarks || item.followUp?.remarks || "",
         targetType: "rm",
+      };
+    }
+    if (tab === "asm") {
+      return {
+        id: item.asm?.id,
+        name: item.asm?.name || "",
+        employeeId: item.asm?.employeeId || "",
+        phone: item.asm?.phone || "",
+        asmType: item.asm?.asmType || "ASM",
+        region: item.asm?.region || "—",
+        rsmName: item.asm?.rsmName || "—",
+        rmCount: item.asm?.rmCount || 0,
+        callStatus: item.status || item.followUp?.status || "N/A",
+        lastCall: item.lastCall || item.followUp?.lastCallFormatted || "",
+        remarksText: item.remarks || item.followUp?.remarks || "",
+        targetType: "asm",
       };
     }
     return {
@@ -184,6 +205,10 @@ const AsmFollowUps = () => {
             askLeadProgress: true,
           })
         ).unwrap();
+      } else if (selected.targetType === "asm") {
+        await dispatch(
+          recordAsmFollowUp({ asmId: selected.id, status, remarks })
+        ).unwrap();
       } else {
         await dispatch(
           recordRsmFollowUp({ rsmId: selected.id, status, remarks })
@@ -192,6 +217,7 @@ const AsmFollowUps = () => {
       toast.success("Follow-up recorded");
       setShowModal(false);
       if (tab === "rm") dispatch(fetchAsmRmFollowUps(apiFilters));
+      else if (tab === "asm") dispatch(fetchAsmFollowUps(apiFilters));
       else dispatch(fetchRsmFollowUps(apiFilters));
     } catch (e) {
       toast.error(e || "Failed to record follow-up");
@@ -202,10 +228,14 @@ const AsmFollowUps = () => {
     const header =
       tab === "rm"
         ? ["RM", "ID", "Phone", "Partners", "Filled", "Not filled", "Apps", "Performance", "Status", "Last call", "Remarks"]
+        : tab === "asm"
+        ? ["ASM", "ID", "Phone", "Specialization", "Region", "Reporting RSM", "RMs under ASM", "Status", "Last call", "Remarks"]
         : ["RSM", "ID", "Phone", "Status", "Last call", "Remarks"];
     const body = sorted.map((r) =>
       tab === "rm"
         ? [r.name, r.employeeId, r.phone, r.partnerCount, r.partnersFilled, r.partnersNotFilled, r.applicationCount, r.performance, r.callStatus, r.lastCall, r.remarksText]
+        : tab === "asm"
+        ? [r.name, r.employeeId, r.phone, r.asmType, r.region, r.rsmName, r.rmCount, r.callStatus, r.lastCall, r.remarksText]
         : [r.name, r.employeeId, r.phone, r.callStatus, r.lastCall, r.remarksText]
     );
     const csv = [header, ...body]
@@ -215,7 +245,7 @@ const AsmFollowUps = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = tab === "rm" ? "asm-rm-followups.csv" : "asm-rsm-followups.csv";
+    a.download = tab === "rm" ? "rm-followups.csv" : tab === "asm" ? "asm-followups.csv" : "rsm-followups.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -237,7 +267,7 @@ const AsmFollowUps = () => {
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Follow-up</h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                ASM → RM performance follow-ups and RSM calls. Filter by month / year / date.
+                Track performance and calls for RMs, ASMs, and RSMs. Filter by month / year / date.
               </p>
             </div>
             {period?.label ? (
@@ -260,6 +290,17 @@ const AsmFollowUps = () => {
             }`}
           >
             RM follow-ups
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("asm")}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition active:scale-95 ${
+              tab === "asm"
+                ? "bg-teal-600 text-white border-teal-600 shadow-sm"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            ASM follow-ups
           </button>
           <button
             type="button"
@@ -306,6 +347,32 @@ const AsmFollowUps = () => {
           </div>
         )}
 
+        {/* ASM Summary Cards */}
+        {tab === "asm" && (
+          <div className="flex overflow-x-auto gap-2 pb-1 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-3 mb-3 sm:mb-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {[
+              { label: "Total ASMs", value: summary?.total ?? rows.length, icon: Users, tone: "bg-slate-50 text-slate-800 border-slate-200" },
+              { label: "Connected", value: rows.filter((r) => r.callStatus === "Connected").length, icon: FileCheck2, tone: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+              { label: "Not contacted", value: rows.filter((r) => r.callStatus === "N/A").length, icon: FileX2, tone: "bg-amber-50 text-amber-900 border-amber-200" },
+              { label: "Pending / Callback", value: rows.filter((r) => ["Call Back", "Pending", "Not Reachable", "Switched Off"].includes(r.callStatus)).length, icon: TrendingDown, tone: "bg-rose-50 text-rose-900 border-rose-200" },
+            ].map((c) => {
+              const Icon = c.icon;
+              return (
+                <div
+                  key={c.label}
+                  className={`min-w-[130px] sm:min-w-0 rounded-xl border p-2.5 sm:p-4 text-left ${c.tone}`}
+                >
+                  <div className="flex items-center justify-between mb-1 sm:mb-2">
+                    <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide opacity-80 truncate">{c.label}</span>
+                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-70 shrink-0 ml-1" />
+                  </div>
+                  <p className="text-lg sm:text-2xl font-bold">{c.value}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Search & Filters */}
         <div className="bg-white rounded-2xl p-3 sm:p-4 md:p-5 mb-4 sm:mb-6 border border-slate-200 shadow-sm">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -313,7 +380,7 @@ const AsmFollowUps = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
               <input
                 className="w-full pl-9 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-                placeholder={tab === "rm" ? "Search RM name, ID, phone..." : "Search RSM name, ID, phone..."}
+                placeholder={tab === "rm" ? "Search RM name, ID, phone..." : tab === "asm" ? "Search ASM name, ID, phone..." : "Search RSM name, ID, phone..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -462,6 +529,11 @@ const AsmFollowUps = () => {
                         <h4 className="font-bold text-slate-900 text-sm leading-snug truncate">
                           {row.name || "Unnamed"}
                         </h4>
+                        {row.targetType === "asm" && (
+                          <div className="text-[11px] font-medium text-slate-500 truncate">
+                            {row.asmType} • {row.region} {row.rmCount ? `(${row.rmCount} RMs)` : ""}
+                          </div>
+                        )}
                         {cleanPhone ? (
                           <a
                             href={`tel:${cleanPhone}`}
@@ -556,22 +628,25 @@ const AsmFollowUps = () => {
             <table className="w-full min-w-[900px]">
               <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 uppercase text-[11px] font-bold tracking-wider">
                 <tr>
-                  <th className="px-4 py-3.5 text-left">{tab === "rm" ? "RM" : "RSM"}</th>
+                  <th className="px-4 py-3.5 text-left">{tab === "rm" ? "RM" : tab === "asm" ? "ASM" : "RSM"}</th>
                   <th className="px-3 py-3.5 text-left">ID</th>
                   <th className="px-3 py-3.5 text-left">Contact</th>
                   {tab === "rm" && <th className="px-3 py-3.5 text-left">Partners filled / not</th>}
                   {tab === "rm" && <th className="px-3 py-3.5 text-left">Total loans</th>}
                   {tab === "rm" && <th className="px-3 py-3.5 text-left">Open leads</th>}
                   {tab === "rm" && <th className="px-3 py-3.5 text-left">Performance</th>}
+                  {tab === "asm" && <th className="px-3 py-3.5 text-left">Specialization / Region</th>}
+                  {tab === "asm" && <th className="px-3 py-3.5 text-left">Reporting RSM</th>}
+                  {tab === "asm" && <th className="px-3 py-3.5 text-left">Team Size</th>}
                   <th className="px-3 py-3.5 text-left">Call status</th>
                   <th className="px-3 py-3.5 text-left">Last call</th>
                   <th className="px-4 py-3.5 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {loading ? <TableLoader colSpan={tab === "rm" ? 10 : 6} label="Loading…" /> : null}
+                {loading ? <TableLoader colSpan={tab === "rm" ? 10 : tab === "asm" ? 8 : 6} label="Loading…" /> : null}
                 {!loading && sorted.length === 0 ? (
-                  <tr><td colSpan={tab === "rm" ? 10 : 6} className="px-4 py-12 text-center text-slate-500 text-sm">No records match filters.</td></tr>
+                  <tr><td colSpan={tab === "rm" ? 10 : tab === "asm" ? 8 : 6} className="px-4 py-12 text-center text-slate-500 text-sm">No records match filters.</td></tr>
                 ) : null}
                 {!loading && paginatedRows.map((row, idx) => {
                   const style = getFollowUpStatusStyle(row.callStatus);
@@ -643,6 +718,25 @@ const AsmFollowUps = () => {
                               Non-working
                             </span>
                           )}
+                        </td>
+                      )}
+                      {tab === "asm" && (
+                        <td className="px-3 py-3 text-xs whitespace-nowrap">
+                          <span className="font-semibold text-slate-800">{row.asmType}</span>
+                          <span className="text-slate-400"> • </span>
+                          <span className="text-slate-600">{row.region}</span>
+                        </td>
+                      )}
+                      {tab === "asm" && (
+                        <td className="px-3 py-3 text-xs text-slate-700 whitespace-nowrap">
+                          {row.rsmName}
+                        </td>
+                      )}
+                      {tab === "asm" && (
+                        <td className="px-3 py-3 text-xs whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
+                            {row.rmCount} RMs
+                          </span>
                         </td>
                       )}
                       <td className="px-3 py-3 text-sm whitespace-nowrap">

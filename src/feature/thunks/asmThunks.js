@@ -559,13 +559,14 @@ export const recordRsmFollowUp = createAsyncThunk(
   "asm/recordRsmFollowUp",
   async ({ rsmId, status, remarks }, { rejectWithValue }) => {
     try {
-      const { asmToken } = getAuthData();
+      const auth = getAuthData();
+      const token = auth.adminToken || auth.rsmToken || auth.asmToken;
       const response = await axios.post(
         `${backendurl}/asm/rsm/${rsmId}/follow-up`,
         { status, remarks },
         {
           headers: {
-            Authorization: `Bearer ${asmToken}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }
@@ -584,7 +585,8 @@ export const fetchRsmFollowUps = createAsyncThunk(
   "asm/fetchRsmFollowUps",
   async (filters = {}, { rejectWithValue }) => {
     try {
-      const { asmToken } = getAuthData();
+      const auth = getAuthData();
+      const token = auth.adminToken || auth.rsmToken || auth.asmToken;
       const params = {};
       if (filters.year) params.year = filters.year;
       if (filters.month) params.month = filters.month;
@@ -593,7 +595,7 @@ export const fetchRsmFollowUps = createAsyncThunk(
 
       const response = await axios.get(`${backendurl}/asm/rsms/follow-ups`, {
         headers: {
-          Authorization: `Bearer ${asmToken}`,
+          Authorization: `Bearer ${token}`,
         },
         params,
       });
@@ -612,18 +614,79 @@ export const fetchRsmFollowUps = createAsyncThunk(
   }
 );
 
+// Record ASM Follow-up (Admin or RSM role)
+export const recordAsmFollowUp = createAsyncThunk(
+  "asm/recordAsmFollowUp",
+  async ({ asmId, status, remarks }, { rejectWithValue }) => {
+    try {
+      const auth = getAuthData();
+      const token = auth.adminToken || auth.rsmToken || auth.asmToken;
+      const response = await axios.post(
+        `${backendurl}/asm/asm/${asmId}/follow-up`,
+        { status, remarks },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return unwrapApiData(response.data);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to record follow-up"
+      );
+    }
+  }
+);
+
+// Fetch ASM Follow-ups (Admin or RSM role)
+export const fetchAsmFollowUps = createAsyncThunk(
+  "asm/fetchAsmFollowUps",
+  async (filters = {}, { rejectWithValue }) => {
+    try {
+      const auth = getAuthData();
+      const token = auth.adminToken || auth.rsmToken || auth.asmToken;
+      const params = {};
+      if (filters.year) params.year = filters.year;
+      if (filters.month) params.month = filters.month;
+      if (filters.date) params.date = filters.date;
+      if (filters.status) params.status = filters.status;
+
+      const response = await axios.get(`${backendurl}/asm/asms/follow-ups`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params,
+      });
+      const body = response.data || {};
+      const items = Array.isArray(body) ? body : body.items || body.data || [];
+      return {
+        items,
+        summary: body.summary || null,
+        period: body.period || null,
+      };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch ASM follow-ups"
+      );
+    }
+  }
+);
+
 // Record RM Follow-up (ASM → RM)
 export const recordAsmRmFollowUp = createAsyncThunk(
   "asm/recordAsmRmFollowUp",
   async ({ rmId, status, remarks, askLeadProgress = true }, { rejectWithValue }) => {
     try {
-      const { asmToken } = getAuthData();
+      const auth = getAuthData();
+      const token = auth.adminToken || auth.rsmToken || auth.asmToken;
       const response = await axios.post(
         `${backendurl}/asm/rm/${rmId}/follow-up`,
         { status, remarks, askLeadProgress },
         {
           headers: {
-            Authorization: `Bearer ${asmToken}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }
@@ -642,7 +705,8 @@ export const fetchAsmRmFollowUps = createAsyncThunk(
   "asm/fetchAsmRmFollowUps",
   async (filters = {}, { rejectWithValue }) => {
     try {
-      const { asmToken } = getAuthData();
+      const auth = getAuthData();
+      const token = auth.adminToken || auth.rsmToken || auth.asmToken;
       const params = {};
       if (filters.year) params.year = filters.year;
       if (filters.month) params.month = filters.month;
@@ -652,7 +716,7 @@ export const fetchAsmRmFollowUps = createAsyncThunk(
 
       const response = await axios.get(`${backendurl}/asm/rms/follow-ups`, {
         headers: {
-          Authorization: `Bearer ${asmToken}`,
+          Authorization: `Bearer ${token}`,
         },
         params,
       });

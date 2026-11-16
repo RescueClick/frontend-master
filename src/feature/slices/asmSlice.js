@@ -19,6 +19,8 @@ import {
   recordRsmFollowUp,
   fetchAsmRmFollowUps,
   recordAsmRmFollowUp,
+  fetchAsmFollowUps,
+  recordAsmFollowUp,
   fetchAsmCustomersPayOutPending,
   fetchAsmCustomersPayOutDone,
   fetchAsmCustomerPartnersPayout,
@@ -130,6 +132,14 @@ const initialState = {
     period: null,
   },
   rmFollowUps: {
+    loading: false,
+    error: null,
+    success: false,
+    data: [],
+    summary: null,
+    period: null,
+  },
+  asmFollowUps: {
     loading: false,
     error: null,
     success: false,
@@ -749,6 +759,36 @@ const asmSlice = createSlice({
         state.rmFollowUps.period = null;
       })
       .addCase(recordAsmRmFollowUp.fulfilled, (state) => {
+        // Refresh follow-ups after recording
+      })
+
+      // ASM Follow-ups
+      .addCase(fetchAsmFollowUps.pending, (state) => {
+        state.asmFollowUps.loading = true;
+        state.asmFollowUps.error = null;
+      })
+      .addCase(fetchAsmFollowUps.fulfilled, (state, action) => {
+        state.asmFollowUps.loading = false;
+        const payload = action.payload;
+        if (Array.isArray(payload)) {
+          state.asmFollowUps.data = payload;
+          state.asmFollowUps.summary = null;
+          state.asmFollowUps.period = null;
+        } else {
+          state.asmFollowUps.data = payload?.items || [];
+          state.asmFollowUps.summary = payload?.summary || null;
+          state.asmFollowUps.period = payload?.period || null;
+        }
+        state.asmFollowUps.success = true;
+      })
+      .addCase(fetchAsmFollowUps.rejected, (state, action) => {
+        state.asmFollowUps.loading = false;
+        state.asmFollowUps.error = action.payload;
+        state.asmFollowUps.data = [];
+        state.asmFollowUps.summary = null;
+        state.asmFollowUps.period = null;
+      })
+      .addCase(recordAsmFollowUp.fulfilled, (state) => {
         // Refresh follow-ups after recording
       })
 
