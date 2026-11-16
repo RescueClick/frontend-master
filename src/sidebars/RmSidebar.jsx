@@ -119,8 +119,7 @@ export default function RmSidebar() {
     if (isCustomerDesk) {
       return [
         { name: "Dashboard", icon: LayoutGrid, path: "/rm/dashboard" },
-        { name: "Customer Follow-up", icon: CalendarCheck, path: "/rm/Follow-up", highlight: true },
-        { name: "Calling Sheet", icon: PhoneCall, path: "/rm/call-logs", highlight: true },
+        { name: "Calling & Follow-Up", icon: PhoneCall, path: "/rm/Follow-up", highlight: true },
         { name: "Manage Loans", icon: Users, path: "/rm/customers" },
         { name: "Leads & Pipeline", icon: LineChart, path: "/rm/leads" },
         { name: "My Targets", icon: Target, path: "/rm/targets" },
@@ -134,8 +133,7 @@ export default function RmSidebar() {
         { name: "My Partners", icon: UserCheck, path: "/rm/partners" },
         { name: "Add Partner", icon: UserPlus, path: "/rm/add-partner", highlight: true },
         { name: "Assign QR", icon: QrCode, path: "/rm/qr-assign", highlight: true },
-        { name: "Partner Follow-up", icon: CalendarCheck, path: "/rm/Follow-up" },
-        { name: "Call Tracking", icon: PhoneCall, path: "/rm/call-logs" },
+        { name: "Calling & Follow-Up", icon: PhoneCall, path: "/rm/Follow-up", highlight: true },
         { name: "Manage Loans", icon: Users, path: "/rm/customers" },
         { name: "Settings", icon: Settings, path: "/rm/settings" },
       ];
@@ -147,8 +145,7 @@ export default function RmSidebar() {
       { name: "Add Partner", icon: UserPlus, path: "/rm/add-partner", highlight: true },
       { name: "Assign QR", icon: QrCode, path: "/rm/qr-assign", highlight: true },
       { name: "Manage Loans", icon: Users, path: "/rm/customers" },
-      { name: "Follow Up", icon: CalendarCheck, path: "/rm/Follow-up" },
-      { name: "Call Tracking", icon: PhoneCall, path: "/rm/call-logs" },
+      { name: "Calling & Follow-Up", icon: PhoneCall, path: "/rm/Follow-up", highlight: true },
       { name: "Leads & Pipeline", icon: LineChart, path: "/rm/leads" },
       { name: "Settings", icon: Settings, path: "/rm/settings" },
     ];

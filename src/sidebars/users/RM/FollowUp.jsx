@@ -32,6 +32,7 @@ import {
 import TableLoader from "../../../components/shared/TableLoader";
 import toast from "react-hot-toast";
 import CustomerFollowUpTab from "./CustomerFollowUpTab";
+import AdminCallLogs from "../Admin/AdminCallLogs";
 
 const MONTHS = [
   { value: "", label: "All months" },
@@ -418,13 +419,18 @@ const FollowUp = () => {
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
             <div>
-              <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-                {followUpHubTab === "partner" ? "Partner Follow-up" : "Customer Follow-up & Leads"}
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2 flex-wrap">
+                <span>Calling & Follow-Up Hub</span>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                  {followUpHubTab === "customer"
+                    ? "Customer Inbound Desk"
+                    : followUpHubTab === "partner"
+                    ? "Channel Partner Desk"
+                    : "Call Logs & Targets"}
+                </span>
               </h1>
               <p className="text-slate-600 mt-0.5 text-xs sm:text-sm">
-                {followUpHubTab === "partner"
-                  ? "Track who filled loan forms and call working vs non-working partners."
-                  : "Track Meta leads, in-house direct customers, form progress, and call customers."}
+                Unified workspace for calling sheets, daily targets, loan form progress, and verified talk-time.
               </p>
             </div>
             {followUpHubTab === "partner" && period?.label ? (
@@ -435,12 +441,24 @@ const FollowUp = () => {
           </div>
         </div>
 
-        {/* Dual Tab Switcher */}
-        <div className="flex border-b border-slate-200 gap-2 mb-2">
+        {/* 3-in-1 Hub Tab Switcher */}
+        <div className="flex border-b border-slate-200 gap-1 sm:gap-2 mb-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={() => setFollowUpHubTab("customer")}
+            className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+              followUpHubTab === "customer"
+                ? "border-teal-600 text-teal-800"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <FileCheck2 size={16} />
+            Customer Leads & Calling
+          </button>
           <button
             type="button"
             onClick={() => setFollowUpHubTab("partner")}
-            className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
+            className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
               followUpHubTab === "partner"
                 ? "border-teal-600 text-teal-800"
                 : "border-transparent text-slate-500 hover:text-slate-700"
@@ -451,20 +469,22 @@ const FollowUp = () => {
           </button>
           <button
             type="button"
-            onClick={() => setFollowUpHubTab("customer")}
-            className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
-              followUpHubTab === "customer"
+            onClick={() => setFollowUpHubTab("call-logs")}
+            className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+              followUpHubTab === "call-logs"
                 ? "border-teal-600 text-teal-800"
                 : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
-            <FileCheck2 size={16} />
-            Customer Follow-up & Leads
+            <PhoneCall size={16} />
+            Live Call Logs & Daily Targets
           </button>
         </div>
 
         {followUpHubTab === "customer" ? (
           <CustomerFollowUpTab />
+        ) : followUpHubTab === "call-logs" ? (
+          <AdminCallLogs />
         ) : (
           <>
             {/* Summary Stat Cards */}
