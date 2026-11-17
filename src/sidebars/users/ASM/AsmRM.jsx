@@ -238,6 +238,26 @@ loginAsUser(userId, navigate);
     });
   };
 
+  const handleUpdateDesk = async (rmId, newType) => {
+    try {
+      const { asmToken, rsmToken, adminToken } = getAuthData() || {};
+      const token = asmToken || rsmToken || adminToken;
+      if (!token) {
+        toast.error("Not authenticated");
+        return;
+      }
+      const res = await axios.patch(
+        `${backendurl}/rsm/update-rm-specialization/${rmId}`,
+        { rmType: newType },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(res.data?.message || `RM desk updated to ${newType}`);
+      dispatch(fetchRmList());
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update RM desk");
+    }
+  };
+
   const asmRmColumns = [
     {
       title: "User name",
@@ -249,6 +269,33 @@ loginAsUser(userId, navigate);
       ),
     },
     { title: "User ID", dataIndex: "employeeId", key: "employeeId" },
+    {
+      title: "Desk Specialization",
+      key: "rmType",
+      render: (_, rm) => {
+        const type = rm.rmType || "HYBRID";
+        return (
+          <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
+            <select
+              value={type}
+              onChange={(e) => handleUpdateDesk(rm._id, e.target.value)}
+              className={`text-xs font-bold px-3 py-1.5 rounded-full border cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition shadow-2xs ${
+                type === "CUSTOMER"
+                  ? "bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100"
+                  : type === "PARTNER"
+                  ? "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                  : "bg-teal-50 text-teal-700 border-teal-300 hover:bg-teal-100"
+              }`}
+              title="Click to change RM desk category"
+            >
+              <option value="CUSTOMER">📞 Customer Desk (B2C)</option>
+              <option value="PARTNER">🤝 Partner Desk (B2B)</option>
+              <option value="HYBRID">🔄 Hybrid Desk (Dual)</option>
+            </select>
+          </div>
+        );
+      },
+    },
     {
       title: "Assigned ASMs",
       key: "asms",

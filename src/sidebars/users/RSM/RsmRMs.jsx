@@ -201,6 +201,26 @@ export default function RsmRMs() {
     });
   };
 
+  const handleUpdateDesk = async (rmId, newType) => {
+    try {
+      const { rsmToken, adminToken } = getAuthData() || {};
+      const token = rsmToken || adminToken;
+      if (!token) {
+        toast.error("Not authenticated");
+        return;
+      }
+      const res = await axios.patch(
+        `${backendurl}/rsm/update-rm-specialization/${rmId}`,
+        { rmType: newType },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(res.data?.message || `RM desk updated to ${newType}`);
+      dispatch(fetchRsmRms());
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update RM desk");
+    }
+  };
+
   const rsmRmColumns = [
     {
       title: "User name",
@@ -212,6 +232,76 @@ export default function RsmRMs() {
       ),
     },
     { title: "User ID", dataIndex: "employeeId", key: "employeeId" },
+    {
+      title: "Desk Specialization",
+      key: "rmType",
+      render: (_, rm) => {
+        const type = rm.rmType || "HYBRID";
+        return (
+          <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
+            <select
+              value={type}
+              onChange={(e) => handleUpdateDesk(rm._id, e.target.value)}
+              className={`text-xs font-bold px-3 py-1.5 rounded-full border cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition shadow-2xs ${
+                type === "CUSTOMER"
+                  ? "bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100"
+                  : type === "PARTNER"
+                  ? "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                  : "bg-teal-50 text-teal-700 border-teal-300 hover:bg-teal-100"
+              }`}
+              title="RSM: Click to change RM desk category"
+            >
+              <option value="CUSTOMER">📞 Customer Desk (B2C)</option>
+              <option value="PARTNER">🤝 Partner Desk (B2B)</option>
+              <option value="HYBRID">🔄 Hybrid Desk (Dual)</option>
+            </select>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Assigned ASMs",
+      key: "asms",
+      render: (_, rm) => {
+        const plName =
+          rm.personalAsmName ||
+          (rm.personalAsmId?.firstName
+            ? `${rm.personalAsmId.firstName} ${rm.personalAsmId.lastName || ""}`.trim()
+            : null) ||
+          rm.personalRsmName ||
+          "—";
+
+        const blName =
+          rm.businessAsmName ||
+          (rm.businessAsmId?.firstName
+            ? `${rm.businessAsmId.firstName} ${rm.businessAsmId.lastName || ""}`.trim()
+            : null) ||
+          rm.businessRsmName ||
+          "—";
+
+        const hlName =
+          rm.homeLapAsmName ||
+          (rm.homeLapAsmId?.firstName
+            ? `${rm.homeLapAsmId.firstName} ${rm.homeLapAsmId.lastName || ""}`.trim()
+            : null) ||
+          rm.homeLapRsmName ||
+          "—";
+
+        return (
+          <div className="text-xs space-y-0.5">
+            <div className="text-slate-700">
+              <span className="font-semibold text-blue-700">PL:</span> {plName}
+            </div>
+            <div className="text-slate-700">
+              <span className="font-semibold text-purple-700">BL:</span> {blName}
+            </div>
+            <div className="text-slate-700">
+              <span className="font-semibold text-emerald-700">HL/LAP:</span> {hlName}
+            </div>
+          </div>
+        );
+      },
+    },
     {
       title: "Contact",
       key: "phone",

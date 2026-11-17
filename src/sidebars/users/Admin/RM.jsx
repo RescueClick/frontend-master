@@ -338,6 +338,26 @@ loginAsUser(userId, navigate);
     }
   };
 
+  const handleUpdateDesk = async (rmId, newType) => {
+    try {
+      const { adminToken, superAdminToken } = getAuthData() || {};
+      const token = adminToken || superAdminToken;
+      if (!token) {
+        toast.error("Not authenticated as admin");
+        return;
+      }
+      const res = await axios.patch(
+        `${backendurl}/admin/update-rm-specialization/${rmId}`,
+        { rmType: newType },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(res.data?.message || `RM desk updated to ${newType}`);
+      dispatch(fetchRMs(token));
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update RM desk");
+    }
+  };
+
   const rmColumns = [
     {
       title: "User Name",
@@ -361,24 +381,25 @@ loginAsUser(userId, navigate);
       key: "rmType",
       render: (_, rm) => {
         const type = rm.rmType || "HYBRID";
-        if (type === "CUSTOMER") {
-          return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              📞 Customer Desk
-            </span>
-          );
-        }
-        if (type === "PARTNER") {
-          return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              🤝 Channel Desk
-            </span>
-          );
-        }
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-            🔄 Hybrid Desk
-          </span>
+          <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
+            <select
+              value={type}
+              onChange={(e) => handleUpdateDesk(rm._id, e.target.value)}
+              className={`text-xs font-bold px-3 py-1.5 rounded-full border cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition shadow-2xs ${
+                type === "CUSTOMER"
+                  ? "bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100"
+                  : type === "PARTNER"
+                  ? "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                  : "bg-teal-50 text-teal-700 border-teal-300 hover:bg-teal-100"
+              }`}
+              title="Click to change RM desk specialization"
+            >
+              <option value="CUSTOMER">📞 Customer Desk (B2C)</option>
+              <option value="PARTNER">🤝 Partner Desk (B2B)</option>
+              <option value="HYBRID">🔄 Hybrid Desk (Dual)</option>
+            </select>
+          </div>
         );
       },
     },
