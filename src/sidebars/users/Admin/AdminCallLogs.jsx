@@ -860,60 +860,25 @@ export default function AdminCallLogs({ defaultTab = "" }) {
             </div>
           </div>
 
-          {/* Bottom Section: Active Sheet Telecaller Launchpad (Clean, High-Productivity) */}
-          <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-teal-950 rounded-3xl p-5 sm:p-6 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-5 border border-emerald-500/20">
-            <div className="space-y-1.5 text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-                <FileSpreadsheet size={13} />
-                Calling Sheet Hub
+          {/* Bottom Section: Today's Live Call Activity Table */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <PhoneCall size={18} className="text-emerald-600" />
+                  Today's Live Call Activity &amp; Verification
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Verified calls and duration logged for today ({date})
+                </p>
               </div>
-              <h3 className="text-base sm:text-lg font-extrabold tracking-tight text-white">
-                Assigned Calling Sheet &amp; Direct Dialing Center
-              </h3>
-              <p className="text-xs text-slate-300 max-w-xl">
-                Open your full telecaller workspace to dial assigned leads directly via 1-click Call or WhatsApp, record talk time, and update client outcomes in real-time.
-              </p>
-            </div>
-
-            <div className="shrink-0 w-full md:w-auto">
-              <button
-                type="button"
-                onClick={() => {
-                  if (displayRms.length > 0) {
-                    viewRmSheetDetails(displayRms[0].rmId, displayRms[0].rmName);
-                  }
-                }}
-                className="w-full md:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs sm:text-sm tracking-wide shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <PhoneCall size={16} />
-                Open Calling Sheet (All Leads)
-                <ArrowRight size={15} />
-              </button>
-            </div>
-          </div>
-
-          {/* Collapsible Call History Accordion (Hidden by default to eliminate screen duplicate list) */}
-          <details className="group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs transition-all">
-            <summary className="px-5 py-3.5 flex items-center justify-between cursor-pointer font-bold text-slate-800 hover:bg-slate-50 transition select-none text-xs sm:text-sm">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
-                  <History size={14} />
-                </div>
-                <div>
-                  <span className="font-extrabold text-slate-900">Today's Call History Log</span>
-                  <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                    {logs.length} call{logs.length === 1 ? "" : "s"} logged
-                  </span>
-                </div>
-              </div>
-              <span className="text-xs font-bold text-slate-400 group-open:rotate-180 transition-transform duration-200">
-                ▼
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                {logs.length} call{logs.length === 1 ? "" : "s"} logged
               </span>
-            </summary>
-            <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/40">
-              {renderLogsTable()}
             </div>
-          </details>
+
+            {renderLogsTable()}
+          </div>
         </div>
       ) : (
         <>
