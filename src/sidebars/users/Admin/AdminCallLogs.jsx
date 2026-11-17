@@ -833,54 +833,243 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         </div>
       </div>
 
-      {/* ================= RM VIEW: ALL-IN-ONE UNIFIED WORKSPACE ================= */}
+      {/* ================= RM VIEW: CLEAN, MODERN, ZERO-DUPLICATION WORKSPACE ================= */}
       {isRm ? (
         <div className="space-y-6">
-          {/* Top Row: Left is Personal Target Card (5 cols), Right is 4 Stat Cards (7 cols) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-            {/* Left: RM Personal Calling Target */}
-            <div className="lg:col-span-5 flex flex-col">
-              {loadingOverview ? (
-                <div className="h-full min-h-[220px] bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center justify-center text-center shadow-xs">
-                  <RefreshCw size={24} className="animate-spin text-emerald-600 mb-2" />
-                  <p className="text-xs font-semibold text-slate-600">Loading your calling target...</p>
-                </div>
-              ) : displayRms.length === 0 ? (
-                <div className="h-full min-h-[220px] bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center justify-center text-center shadow-xs">
-                  <Target size={28} className="text-slate-400 mb-2" />
-                  <p className="text-sm font-bold text-slate-800">No Target Assigned for Today</p>
-                  <p className="text-xs text-slate-500 mt-1">Check with your RSM / ASM to assign lead sheets.</p>
-                </div>
-              ) : (
-                displayRms.map((rm) => renderRmCard(rm))
-              )}
+          {loadingOverview ? (
+            <div className="h-48 bg-white rounded-3xl border border-slate-200 p-8 flex flex-col items-center justify-center text-center shadow-xs">
+              <RefreshCw size={26} className="animate-spin text-emerald-600 mb-2" />
+              <p className="text-sm font-semibold text-slate-700">Loading your calling workspace...</p>
             </div>
-
-            {/* Right: 4 Interactive KPI Stat Cards */}
-            <div className="lg:col-span-7 flex flex-col justify-between">
-              {renderStatCards()}
+          ) : displayRms.length === 0 ? (
+            <div className="h-48 bg-white rounded-3xl border border-slate-200 p-8 flex flex-col items-center justify-center text-center shadow-xs">
+              <Target size={32} className="text-slate-400 mb-2" />
+              <p className="text-base font-bold text-slate-800">No Calling Target Assigned for Today</p>
+              <p className="text-xs text-slate-500 mt-1">Please ask your RSM / ASM to assign lead sheets for today ({date}).</p>
             </div>
-          </div>
+          ) : (() => {
+            const rm = displayRms[0];
+            const targetCalls = rm.customerCallsTarget || rm.partnerCallsTarget || 25;
+            const callsDone = rm.customerCallsDone || rm.partnerCallsDone || rm.outgoingCount || 0;
+            const callsConnected = rm.customerCallsConnected || rm.partnerCallsConnected || 0;
+            const progressPct = targetCalls > 0 ? Math.min(100, Math.round((callsDone / targetCalls) * 100)) : 0;
+            const pendingCalls = Math.max(0, targetCalls - callsDone);
+            const verifiedDuration = rm.totalTalkTimeMinutes || 0;
 
-          {/* Bottom Section: Today's Live Call Activity Table */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <PhoneCall size={18} className="text-emerald-600" />
-                  Today's Live Call Activity &amp; Verification
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Verified calls and duration logged for today ({date})
-                </p>
+            return (
+              <div className="space-y-6">
+                {/* 1. Main Unified Executive Calling Card (No Duplicate Cards/Values!) */}
+                <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+                  {/* Top Header of Card */}
+                  <div className="p-5 sm:p-7 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-5 bg-gradient-to-r from-slate-50/70 via-white to-emerald-50/30">
+                    <div className="flex items-center gap-3.5">
+                      <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white flex items-center justify-center font-black text-base shadow-md shadow-slate-900/20 shrink-0">
+                        {rm.rmName ? rm.rmName[0].toUpperCase() : "R"}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                            {rm.rmName}
+                          </h2>
+                          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                            {rm.employeeId || rm.phone}
+                          </span>
+                          <span
+                            className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                              rm.rmType === "CUSTOMER"
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : rm.rmType === "PARTNER"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-purple-50 text-purple-700 border-purple-200"
+                            }`}
+                          >
+                            {rm.rmType === "CUSTOMER"
+                              ? rm.loanSpecialization === "PL_LAP"
+                                ? "Customer Desk • PL+LAP"
+                                : "Customer Desk"
+                              : rm.rmType === "PARTNER"
+                              ? "Partner Desk"
+                              : "Hybrid Desk"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Assigned Daily Calling Target • Active Sheet Workspace
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Single Big Primary Action Button */}
+                    <div className="shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => viewRmSheetDetails(rm.rmId, rm.rmName)}
+                        className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-sm tracking-wide shadow-md shadow-emerald-700/25 hover:shadow-lg hover:shadow-emerald-700/35 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 cursor-pointer"
+                      >
+                        <PhoneCall size={18} />
+                        Open Calling Sheet &amp; Start Dialing
+                        <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Unified Non-Duplicative Metrics Grid (5 Clean Cards) */}
+                  <div className="p-5 sm:p-7 space-y-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+                      {/* Metric 1: Daily Target */}
+                      <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            Daily Target
+                          </span>
+                          <Target size={16} className="text-slate-400" />
+                        </div>
+                        <div className="mt-2">
+                          <div className="text-2xl font-black text-slate-900">{targetCalls}</div>
+                          <div className="text-[11px] text-slate-500 font-medium mt-0.5">Assigned for {date}</div>
+                        </div>
+                      </div>
+
+                      {/* Metric 2: Calls Made */}
+                      <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-200/70 flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">
+                            Calls Made
+                          </span>
+                          <PhoneOutgoing size={16} className="text-blue-600" />
+                        </div>
+                        <div className="mt-2">
+                          <div className="text-2xl font-black text-blue-900">{callsDone}</div>
+                          <div className="text-[11px] text-blue-600 font-medium mt-0.5">
+                            {rm.outgoingCount || callsDone} Outgoing • {rm.incomingCount || 0} Incoming
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Metric 3: Connected */}
+                      <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-200/70 flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
+                            Connected
+                          </span>
+                          <CheckCircle2 size={16} className="text-emerald-600" />
+                        </div>
+                        <div className="mt-2">
+                          <div className="text-2xl font-black text-emerald-900">{callsConnected}</div>
+                          <div className="text-[11px] text-emerald-600 font-medium mt-0.5">
+                            Spoke with Customer / Partner
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Metric 4: Verified Talk Time */}
+                      <div className="bg-purple-50/50 rounded-2xl p-4 border border-purple-200/70 flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider">
+                            Talk Time
+                          </span>
+                          <Clock size={16} className="text-purple-600" />
+                        </div>
+                        <div className="mt-2">
+                          <div className="text-2xl font-black text-purple-900">{verifiedDuration} min</div>
+                          <div className="text-[11px] text-purple-600 font-medium mt-0.5">
+                            Real verified duration
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Metric 5: Pending to Dial */}
+                      <div className="bg-amber-50/50 rounded-2xl p-4 border border-amber-200/70 flex flex-col justify-between col-span-2 sm:col-span-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">
+                            Pending to Call
+                          </span>
+                          <AlertCircle size={16} className="text-amber-600" />
+                        </div>
+                        <div className="mt-2">
+                          <div className="text-2xl font-black text-amber-900">{pendingCalls}</div>
+                          <div className="text-[11px] text-amber-700 font-medium mt-0.5">
+                            Remaining today
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar Line */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                        <span>Target Completion Progress</span>
+                        <span className="font-mono text-emerald-700 font-extrabold">{callsDone} / {targetCalls} ({progressPct}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+                        <div
+                          className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500 shadow-xs"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Today's Recent Call Activity Feed (Clean, Minimal, Non-Duplicative) */}
+                <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h3 className="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                        <History size={17} className="text-emerald-600" />
+                        Today's Logged Call Activity
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Verified audio recordings and logged calls for {date}
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                      {logs.length} call{logs.length === 1 ? "" : "s"} logged
+                    </span>
+                  </div>
+
+                  {logs.length === 0 ? (
+                    <div className="py-8 text-center text-slate-400 text-xs">
+                      No calls logged yet today. Click <strong>"Open Calling Sheet &amp; Start Dialing"</strong> above to begin!
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {logs.slice(0, 5).map((log) => (
+                        <div key={log._id} className="py-3 flex items-center justify-between gap-3 text-xs">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 font-bold flex items-center justify-center shrink-0">
+                              {log.targetName ? log.targetName[0].toUpperCase() : "C"}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900">{log.targetName || log.targetPhone}</div>
+                              <div className="text-[11px] font-mono text-slate-400">{log.targetPhone}</div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-end">
+                            <span className="font-mono text-xs font-bold text-slate-700">
+                              {formatDuration(log.durationSeconds)}
+                            </span>
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] ${
+                                log.isVerifiedRealCall
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : "bg-amber-50 text-amber-700 border border-amber-200"
+                              }`}
+                            >
+                              {log.isVerifiedRealCall ? "✅ Real Call" : "⚠️ Ringing / 0s"}
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
+                              {new Date(log.callStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
-                {logs.length} call{logs.length === 1 ? "" : "s"} logged
-              </span>
-            </div>
-
-            {renderLogsTable()}
-          </div>
+            );
+          })()}
         </div>
       ) : (
         <>
