@@ -74,8 +74,22 @@ export default function AdminCallLogs({ defaultTab = "" }) {
   const [verifiedFilter, setVerifiedFilter] = useState("all");
   const [contactType, setContactType] = useState("all");
 
+  const pathname = typeof window !== "undefined" ? window.location.pathname.toLowerCase() : "";
+  const isRm = pathname.startsWith("/rm");
+  const isAsm = pathname.startsWith("/asm");
+  const isRsm = pathname.startsWith("/rsm");
+
   const getAdminToken = () => {
     const auth = getAuthData();
+    if (isRm) {
+      return auth.rmToken || auth.token || "";
+    }
+    if (isAsm) {
+      return auth.asmToken || auth.rawAsmToken || auth.adminToken || "";
+    }
+    if (isRsm) {
+      return auth.rsmToken || auth.rawRsmToken || auth.adminToken || "";
+    }
     return (
       auth.superAdminToken ||
       auth.adminToken ||
@@ -86,11 +100,25 @@ export default function AdminCallLogs({ defaultTab = "" }) {
     );
   };
 
+  const displayRms = useMemo(() => {
+    if (!isRm) return overviewList;
+    const auth = getAuthData();
+    const myId = auth?.rmUser?._id || auth?.rmUser?.id;
+    if (!myId) return overviewList.slice(0, 1);
+    const mine = overviewList.filter((r) => String(r.rmId) === String(myId));
+    return mine.length > 0 ? mine : overviewList.slice(0, 1);
+  }, [isRm, overviewList]);
+
   const fetchOverview = async () => {
     setLoadingOverview(true);
     try {
       const token = getAdminToken();
-      const res = await axios.get(`${backendurl}/calls/assignments/admin-overview?date=${date}`, {
+      const auth = getAuthData();
+      const myId = isRm ? (auth?.rmUser?._id || auth?.rmUser?.id) : "";
+      const url = myId
+        ? `${backendurl}/calls/assignments/admin-overview?date=${date}&rmId=${myId}`
+        : `${backendurl}/calls/assignments/admin-overview?date=${date}`;
+      const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success) {
@@ -115,6 +143,11 @@ export default function AdminCallLogs({ defaultTab = "" }) {
       if (contactType !== "all") params.append("contactType", contactType);
       params.append("startDate", date);
       params.append("endDate", date);
+      if (isRm) {
+        const auth = getAuthData();
+        const myId = auth?.rmUser?._id || auth?.rmUser?.id;
+        if (myId) params.append("rmId", myId);
+      }
 
       const res = await axios.get(`${backendurl}/calls/admin-logs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -154,6 +187,12 @@ export default function AdminCallLogs({ defaultTab = "" }) {
       setLoadingSheetDetails(false);
     }
   };
+
+  useEffect(() => {
+    if (isRm && (activeTab === "sheets" || activeTab === "team-followup")) {
+      setActiveTab("overview");
+    }
+  }, [isRm, activeTab]);
 
   useEffect(() => {
     if (activeTab === "overview") {
@@ -304,11 +343,13 @@ export default function AdminCallLogs({ defaultTab = "" }) {
               <PhoneCall size={20} />
             </div>
             <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-              Calling & Follow-Up Hub
+              {isRm ? "My Calling & Follow-Up Hub" : "Calling & Follow-Up Hub"}
             </h1>
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            Track RM calling targets, assigned lead sheets, manager follow-ups, and verified talk-time in one unified hub.
+            {isRm
+              ? "Track your assigned daily calling target, calling sheets, and verified talk-time."
+              : "Track RM calling targets, assigned lead sheets, manager follow-ups, and verified talk-time in one unified hub."}
           </p>
         </div>
 
@@ -347,34 +388,38 @@ export default function AdminCallLogs({ defaultTab = "" }) {
           }`}
         >
           <Target size={16} />
-          RM Daily Targets &amp; Calling Sheets
+          {isRm ? "My Daily Calling Target" : "RM Daily Targets & Calling Sheets"}
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("sheets")}
-          className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
-            activeTab === "sheets"
-              ? "border-emerald-600 text-emerald-800"
-              : "border-transparent text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          <FileSpreadsheet size={16} />
-          Upload &amp; Assign Sheets (Meta / Bulk)
-        </button>
+        {!isRm && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("sheets")}
+            className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === "sheets"
+                ? "border-emerald-600 text-emerald-800"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <FileSpreadsheet size={16} />
+            Upload &amp; Assign Sheets (Meta / Bulk)
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("team-followup")}
-          className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
-            activeTab === "team-followup"
-              ? "border-emerald-600 text-emerald-800"
-              : "border-transparent text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          <Users size={16} />
-          Team Manager Follow-ups
-        </button>
+        {!isRm && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("team-followup")}
+            className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === "team-followup"
+                ? "border-emerald-600 text-emerald-800"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <Users size={16} />
+            Team Manager Follow-ups
+          </button>
+        )}
 
         <button
           type="button"
@@ -386,7 +431,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
           }`}
         >
           <PhoneCall size={16} />
-          Live Call Logs & Verification
+          {isRm ? "My Live Call Logs" : "Live Call Logs & Verification"}
         </button>
       </div>
 
@@ -394,8 +439,8 @@ export default function AdminCallLogs({ defaultTab = "" }) {
       {activeTab === "overview" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>Showing RM calling target progress for date: <strong>{date}</strong></span>
-            <span>Total RMs active: <strong>{overviewList.length}</strong></span>
+            <span>Showing {isRm ? "my" : "RM"} calling target progress for date: <strong>{date}</strong></span>
+            {!isRm && <span>Total RMs active: <strong>{overviewList.length}</strong></span>}
           </div>
 
           {loadingOverview ? (
@@ -404,27 +449,31 @@ export default function AdminCallLogs({ defaultTab = "" }) {
               <p className="text-sm font-semibold text-slate-700">Loading RM Daily Targets &amp; Calling Performance...</p>
               <p className="text-xs text-slate-400 mt-1">Fetching live call logs and assigned sheet progress for {date}</p>
             </div>
-          ) : overviewList.length === 0 ? (
+          ) : displayRms.length === 0 ? (
             <div className="py-14 px-6 text-center bg-white rounded-2xl border border-slate-200/80 shadow-xs max-w-xl mx-auto">
               <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/60 flex items-center justify-center mx-auto mb-4">
                 <Target size={28} />
               </div>
               <h3 className="text-base font-bold text-slate-900">
-                No Calling Targets Assigned for {date}
+                {isRm ? "No Calling Targets Assigned to You for Today" : `No Calling Targets Assigned for ${date}`}
               </h3>
               <p className="text-xs md:text-sm text-slate-500 mt-1.5 max-w-md mx-auto leading-relaxed">
-                RMs haven't been assigned calling sheets for today yet. You can upload leads or partner sheets and allocate daily calling targets in 1 click.
+                {isRm
+                  ? "You don't have assigned calling sheets for today yet. Please check with your RSM / ASM."
+                  : "RMs haven't been assigned calling sheets for today yet. You can upload leads or partner sheets and allocate daily calling targets in 1 click."}
               </p>
 
               <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("sheets")}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all cursor-pointer"
-                >
-                  <FileSpreadsheet size={16} />
-                  Upload &amp; Assign Calling Sheet Now
-                </button>
+                {!isRm && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("sheets")}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    <FileSpreadsheet size={16} />
+                    Upload &amp; Assign Calling Sheet Now
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -438,7 +487,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {overviewList.map((rm) => (
+              {displayRms.map((rm) => (
                 <div
                   key={rm.rmId}
                   className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
@@ -571,15 +620,15 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         </div>
       )}
 
-      {/* TAB 2: Upload & Assign Leads Sheets (Meta / Bulk CSV) */}
-      {activeTab === "sheets" && (
+      {/* TAB 2: Upload & Assign Leads Sheets (Meta / Bulk CSV) - Managers Only */}
+      {activeTab === "sheets" && !isRm && (
         <div className="space-y-4">
           <MetaLeadSheetPanel defaultOpen={true} embedded={true} />
         </div>
       )}
 
-      {/* TAB 2: Team Manager Follow-ups */}
-      {activeTab === "team-followup" && (
+      {/* TAB 2: Team Manager Follow-ups - Managers Only */}
+      {activeTab === "team-followup" && !isRm && (
         <div className="bg-white rounded-2xl border border-slate-200 p-2 sm:p-4 shadow-sm">
           <AsmFollowUps />
         </div>
