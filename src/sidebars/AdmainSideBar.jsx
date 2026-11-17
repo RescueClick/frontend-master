@@ -28,6 +28,8 @@ import {
   Layers,
   PhoneCall,
   Filter,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Profile from "./users/userProfile/Profile";
@@ -122,16 +124,19 @@ const AdminSideBar = () => {
     }
   };
 
-  // Grouped and organized sidebar navigation sections
+  // Grouped and organized sidebar navigation sections with accordion support
   const sidebarSections = [
     {
-      label: "Main",
-      items: [
-        { name: "Dashboard", icon: LayoutGrid, path: "/admin/dashboard" },
-      ],
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutGrid,
+      path: "/admin/dashboard",
+      isDirect: true,
     },
     {
+      id: "hierarchy",
       label: "Staff & Hierarchy",
+      icon: Users,
       items: [
         { name: "RSM", icon: Users, path: "/admin/rsm" },
         { name: "ASM", icon: Users, path: "/admin/asm" },
@@ -139,14 +144,18 @@ const AdminSideBar = () => {
       ],
     },
     {
+      id: "calling",
       label: "Calling & Performance",
+      icon: PhoneCall,
       items: [
         { name: "Calling & Follow-Up Hub", icon: PhoneCall, path: "/admin/call-logs", highlight: true },
         { name: "Targets", icon: Target, path: "/admin/target", highlight: true },
       ],
     },
     {
+      id: "network",
       label: "Network & Clients",
+      icon: UserCheck,
       items: [
         { name: "Admin Partner", icon: FileCheck, path: "/admin/rm-partner", highlight: true },
         { name: "Partner", icon: UserCheck, path: "/admin/partner" },
@@ -154,14 +163,18 @@ const AdminSideBar = () => {
       ],
     },
     {
+      id: "finance",
       label: "Finance & Operations",
+      icon: IndianRupee,
       items: [
         { name: "Payout & Incentives", icon: IndianRupee, path: "/admin/payout-incentives", highlight: true },
         { name: "Rewards & Levels", icon: Gift, path: "/admin/rewards-levels", highlight: true },
       ],
     },
     {
+      id: "growth",
       label: "Growth & Tools",
+      icon: Sparkles,
       items: [
         { name: "Public loan referral", icon: Link2, path: "/admin/public-loan-referral", highlight: true },
         { name: "QR Stickers", icon: QrCode, path: "/admin/qr-inventory", highlight: true },
@@ -169,7 +182,9 @@ const AdminSideBar = () => {
       ],
     },
     {
+      id: "banking",
       label: "Banking & Credit",
+      icon: Building2,
       items: [
         { name: "Loan Products", icon: Layers, path: "/admin/loan-products", highlight: true },
         { name: "Add Bank", icon: Building2, path: "/admin/banks", highlight: true },
@@ -178,12 +193,78 @@ const AdminSideBar = () => {
       ],
     },
     {
-      label: "System",
-      items: [
-        { name: "Settings", icon: Settings, path: "/admin/settings" },
-      ],
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+      path: "/admin/settings",
+      isDirect: true,
     },
   ];
+
+  const isItemActive = (item) => {
+    if (!item?.path) return false;
+    if (location.pathname === item.path) return true;
+    if (item.path === "/admin/call-logs") {
+      return location.pathname === "/admin/call-logs" || location.pathname === "/admin/meta-leads";
+    }
+    if (item.path === "/admin/payout-incentives" || item.path === "/admin/payout") {
+      return (
+        location.pathname === "/admin/payout" ||
+        location.pathname === "/admin/incentives" ||
+        location.pathname === "/admin/payout-incentives" ||
+        location.pathname.startsWith("/admin/pending-payout") ||
+        location.pathname.startsWith("/admin/done-payout")
+      );
+    }
+    if (item.path === "/admin/rewards-levels" || item.path === "/admin/referral-rewards") {
+      return (
+        location.pathname === "/admin/referral-rewards" ||
+        location.pathname === "/admin/partner-levels" ||
+        location.pathname === "/admin/rewards-levels"
+      );
+    }
+    if (item.path === "/admin/banner" || item.path === "/admin/referral-banners") {
+      return (
+        location.pathname === "/admin/banner" ||
+        location.pathname === "/admin/referral-banners"
+      );
+    }
+    return false;
+  };
+
+  const [openSections, setOpenSections] = useState(() => {
+    const initial = {};
+    sidebarSections.forEach((section) => {
+      if (!section.isDirect && section.items?.some((item) => isItemActive(item))) {
+        initial[section.id] = true;
+      }
+    });
+    if (Object.keys(initial).length === 0) {
+      initial["hierarchy"] = true;
+    }
+    return initial;
+  });
+
+  // Auto-expand section containing active path
+  useEffect(() => {
+    sidebarSections.forEach((section) => {
+      if (!section.isDirect && section.items?.some((item) => isItemActive(item))) {
+        setOpenSections((prev) => ({ ...prev, [section.id]: true }));
+      }
+    });
+  }, [location.pathname]);
+
+  const toggleSection = (id) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const getSectionBadgeCount = (section) => {
+    if (section.isDirect) return getBadgeCount(section.label);
+    return section.items?.reduce((acc, item) => acc + getBadgeCount(item.name), 0) || 0;
+  };
 
 
   // Logout function for admin
@@ -233,94 +314,162 @@ const AdminSideBar = () => {
 
         {/* Navigation */}
         <nav
-          className={`mt-4 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-4 ${
+          className={`mt-3 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-4 space-y-1.5 ${
             sidebarOpen ? "px-3" : "px-2"
           }`}
         >
-          {sidebarSections.map((section, sIdx) => (
-            <div key={sIdx} className="mb-2">
-              {sidebarOpen ? (
-                <div className="px-3 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 select-none">
-                  {section.label}
-                </div>
-              ) : (
-                sIdx > 0 && <div className="my-2 border-t border-slate-100" />
-              )}
-              {section.items.map((item, index) => {
-                const active =
-                  location.pathname === item.path ||
-                  (item.path === "/admin/call-logs" && (
-                    location.pathname === "/admin/call-logs" ||
-                    location.pathname === "/admin/meta-leads"
-                  )) ||
-                  ((item.path === "/admin/payout-incentives" || item.path === "/admin/payout") && (
-                    location.pathname === "/admin/payout" ||
-                    location.pathname === "/admin/incentives" ||
-                    location.pathname === "/admin/payout-incentives" ||
-                    location.pathname.startsWith("/admin/pending-payout") ||
-                    location.pathname.startsWith("/admin/done-payout")
-                  )) ||
-                  ((item.path === "/admin/rewards-levels" || item.path === "/admin/referral-rewards") && (
-                    location.pathname === "/admin/referral-rewards" ||
-                    location.pathname === "/admin/partner-levels" ||
-                    location.pathname === "/admin/rewards-levels"
-                  )) ||
-                  ((item.path === "/admin/banner" || item.path === "/admin/referral-banners") && (
-                    location.pathname === "/admin/banner" ||
-                    location.pathname === "/admin/referral-banners"
-                  ));
-                const isHighlight = item.highlight;
-                const count = getBadgeCount(item.name);
-
-                const baseClasses = isHighlight
-                  ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
-
-                const activeClasses = isHighlight
-                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
-                  : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md";
-
-                return (
-                  <Link
-                    key={index}
-                    to={item.path}
-                    title={item.name}
-                    className={`w-full flex items-center mb-1.5 rounded-xl transition-all duration-200 ${
-                      sidebarOpen ? "space-x-3 px-3 py-2.5" : "justify-center px-2 py-2.5"
-                    } ${active ? activeClasses : baseClasses}`}
-                  >
-                    <div className="relative flex items-center">
-                      <item.icon
-                        size={20}
-                        className={`shrink-0 ${active ? "text-white" : ""}`}
-                      />
-                      {!sidebarOpen && count > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+          {sidebarSections.map((section) => {
+            // DIRECT 1-CLICK LINK (e.g. Dashboard, Settings)
+            if (section.isDirect) {
+              const active = location.pathname === section.path;
+              const count = getBadgeCount(section.label);
+              return (
+                <Link
+                  key={section.id}
+                  to={section.path}
+                  title={section.label}
+                  className={`w-full flex items-center rounded-xl transition-all duration-200 ${
+                    sidebarOpen ? "space-x-3 px-3 py-2.5" : "justify-center px-2 py-2.5"
+                  } ${
+                    active
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md font-bold"
+                      : "text-slate-700 hover:bg-slate-100 font-medium"
+                  }`}
+                >
+                  <div className="relative flex items-center">
+                    <section.icon size={20} className={`shrink-0 ${active ? "text-white" : ""}`} />
+                    {!sidebarOpen && count > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                    )}
+                  </div>
+                  {sidebarOpen && (
+                    <div className="flex-1 flex items-center justify-between min-w-0">
+                      <span className="text-sm truncate">{section.label}</span>
+                      {count > 0 && (
+                        <span
+                          className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            active ? "bg-white text-teal-600" : "bg-rose-500 text-white"
+                          }`}
+                        >
+                          {count}
+                        </span>
                       )}
                     </div>
-                    {sidebarOpen && (
-                      <div className="flex-1 flex items-center justify-between min-w-0">
-                        <span className="text-sm font-medium truncate min-w-0">
-                          {item.name}
-                        </span>
-                        {count > 0 && (
-                          <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            active 
-                              ? "bg-white text-teal-600" 
-                              : isHighlight 
-                                ? "bg-amber-500 text-white shadow-sm" 
-                                : "bg-rose-500 text-white shadow-sm"
-                          }`}>
-                            {count}
-                          </span>
-                        )}
-                      </div>
+                  )}
+                </Link>
+              );
+            }
+
+            // COLLAPSIBLE ACCORDION MODULE
+            const isOpen = !!openSections[section.id];
+            const hasActiveChild = section.items?.some((item) => isItemActive(item));
+            const sectionBadgeCount = getSectionBadgeCount(section);
+
+            // Collapsed sidebar (desktop icon-only mode)
+            if (!sidebarOpen) {
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => {
+                    setSidebarOpen(true);
+                    setOpenSections((prev) => ({ ...prev, [section.id]: true }));
+                  }}
+                  title={section.label}
+                  className={`w-full flex items-center justify-center py-2.5 rounded-xl transition-all duration-200 relative ${
+                    hasActiveChild
+                      ? "bg-teal-50 text-teal-700 border border-teal-200 shadow-2xs"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <section.icon size={20} />
+                  {sectionBadgeCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                  )}
+                </button>
+              );
+            }
+
+            // Expanded sidebar (standard full drawer mode)
+            return (
+              <div key={section.id} className="rounded-xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 select-none ${
+                    hasActiveChild
+                      ? "bg-teal-50/80 text-teal-900 border border-teal-200/80 font-black"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    <section.icon
+                      size={18}
+                      className={hasActiveChild ? "text-teal-600 shrink-0" : "text-slate-500 shrink-0"}
+                    />
+                    <span className="text-xs uppercase tracking-wide truncate">
+                      {section.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    {sectionBadgeCount > 0 && (
+                      <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                        {sectionBadgeCount}
+                      </span>
                     )}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+                    {isOpen ? (
+                      <ChevronDown size={14} className="text-slate-400" />
+                    ) : (
+                      <ChevronRight size={14} className="text-slate-400" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Sub-items */}
+                {isOpen && (
+                  <div className="mt-1 ml-3.5 pl-2.5 border-l-2 border-teal-100 space-y-1 py-0.5">
+                    {section.items.map((item, idx) => {
+                      const active = isItemActive(item);
+                      const isHighlight = item.highlight;
+                      const count = getBadgeCount(item.name);
+
+                      return (
+                        <Link
+                          key={idx}
+                          to={item.path}
+                          title={item.name}
+                          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                            active
+                              ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xs font-bold"
+                              : isHighlight
+                              ? "text-amber-800 hover:bg-amber-50"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2 min-w-0">
+                            <item.icon
+                              size={14}
+                              className={`shrink-0 ${active ? "text-white" : isHighlight ? "text-amber-600" : "text-slate-400"}`}
+                            />
+                            <span className="truncate">{item.name}</span>
+                          </div>
+                          {count > 0 && (
+                            <span
+                              className={`ml-1 text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                                active ? "bg-white text-teal-700" : "bg-rose-500 text-white"
+                              }`}
+                            >
+                              {count}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
       </aside>
 
