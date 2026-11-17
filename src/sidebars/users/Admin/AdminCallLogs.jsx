@@ -460,7 +460,11 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 : "bg-purple-50 text-purple-700 border border-purple-200"
                             }`}>
-                              {rm.rmType === "CUSTOMER" ? "Customer Desk" : rm.rmType === "PARTNER" ? "Partner Desk" : "Hybrid Desk"}
+                              {rm.rmType === "CUSTOMER"
+                                ? (rm.loanSpecialization === "PL_LAP" ? "Customer Desk • PL+LAP" : "Customer Desk")
+                                : rm.rmType === "PARTNER"
+                                ? "Partner Desk"
+                                : "Hybrid Desk"}
                             </span>
                           </div>
                           <span className="text-[11px] font-mono text-slate-500">{rm.employeeId || rm.phone}</span>

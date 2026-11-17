@@ -52,6 +52,7 @@ const AddRMPage = () => {
     password: "",
     confirmPassword: "",
     rmType: "CUSTOMER", // 'CUSTOMER' | 'PARTNER' | 'HYBRID'
+    customerLoanPower: "PL_LAP", // 'PL_LAP' | 'ALL' (For Customer RM)
     branchName: "",
     rsmId: currentRsm?._id || "", // Selected Reporting RSM (sync anchor)
     personalAsm: null, // Personal Loan ASM
@@ -405,19 +406,22 @@ const AddRMPage = () => {
     if (!formData.rsmId) {
       newErrors.rsmId = "Please select a Reporting RSM";
     }
+    const isCustomerPlLap = formData.rmType === "CUSTOMER" && formData.customerLoanPower === "PL_LAP";
+
     if (!isRsm) {
       if (!formData.personalAsm) {
         newErrors.personalAsm = "Please assign a Personal Loan ASM";
       }
-      if (!formData.businessAsm) {
-        newErrors.businessAsm = "Please assign a Business Loan ASM";
-      }
       if (!formData.homeLapAsm) {
         newErrors.homeLapAsm = "Please assign a Home & LAP Loan ASM";
       }
+      // Business Loan ASM is required ONLY if NOT PL_LAP Customer Desk
+      if (!isCustomerPlLap && !formData.businessAsm) {
+        newErrors.businessAsm = "Please assign a Business Loan ASM";
+      }
     }
 
-    // Uniqueness validation (distinct individuals)
+    // Uniqueness validation (distinct individuals among selected ASMs)
     if (
       formData.personalAsm &&
       formData.businessAsm &&
@@ -440,16 +444,16 @@ const AddRMPage = () => {
       newErrors.homeLapAsm = "Business and Home & LAP ASM must be different individuals";
     }
 
-    // Verify all 3 report to the same parent RSM
+    // Verify all selected ASMs report to the same parent RSM
     const parentRsms = [
       getAsmParentRsmId(formData.personalAsm),
-      getAsmParentRsmId(formData.businessAsm),
+      formData.businessAsm ? getAsmParentRsmId(formData.businessAsm) : null,
       getAsmParentRsmId(formData.homeLapAsm),
     ].filter(Boolean);
 
     const uniqueRsms = new Set(parentRsms.map(String));
     if (uniqueRsms.size > 1) {
-      newErrors.homeLapAsm = "All 3 ASMs must report to the same Regional Sales Manager (RSM)";
+      newErrors.homeLapAsm = "Assigned ASMs must report to the same Regional Sales Manager (RSM)";
     }
 
     if (formData?.dob && getAgeFromDOB(formData?.dob) < 18) {
@@ -519,16 +523,17 @@ const AddRMPage = () => {
       email: formData.email.trim(),
       password: formData.password,
       rmType: formData.rmType || "HYBRID",
+      loanSpecialization: formData.rmType === "CUSTOMER" ? (formData.customerLoanPower || "PL_LAP") : "ALL",
       branchName: formData.branchName ? formData.branchName.trim() : formData.region ? `${formData.region} Branch` : "Head Office",
       rsmId: typeof effRsmId === "object" ? effRsmId?._id : effRsmId,
       personalAsmId: formData.personalAsm?._id,
-      businessAsmId: formData.businessAsm?._id,
+      businessAsmId: formData.businessAsm?._id || null,
       homeLapAsmId: formData.homeLapAsm?._id,
       // Legacy aliases for backward compatibility with backend routes
       personalRsmId: formData.personalAsm?._id,
-      businessRsmId: formData.businessAsm?._id,
+      businessRsmId: formData.businessAsm?._id || null,
       homeLapRsmId: formData.homeLapAsm?._id,
-      businessHomeRsmId: formData.businessAsm?._id,
+      businessHomeRsmId: formData.businessAsm?._id || null,
       token,
     };
 
@@ -549,6 +554,7 @@ const AddRMPage = () => {
         password: "",
         confirmPassword: "",
         rmType: "CUSTOMER",
+        customerLoanPower: "PL_LAP",
         branchName: "",
         rsmId: "",
         personalAsm: null,
@@ -936,6 +942,75 @@ const AddRMPage = () => {
                       className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-teal-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
+
+                  {/* Customer Desk Loan Power Selector */}
+                  {formData.rmType === "CUSTOMER" && (
+                    <div className="mt-4 pt-3.5 border-t border-teal-200/60 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-1.5">
+                          ⚡ Customer Desk Loan Power:
+                        </span>
+                        <span className="text-[11px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-semibold">
+                          Specialized Product Scope
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label
+                          className={`cursor-pointer rounded-xl p-3 border-2 transition-all flex items-start gap-2.5 ${
+                            formData.customerLoanPower === "PL_LAP"
+                              ? "border-teal-600 bg-white shadow-sm ring-2 ring-teal-500/20"
+                              : "border-teal-200/60 bg-white/60 hover:bg-white"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="customerLoanPower"
+                            value="PL_LAP"
+                            checked={formData.customerLoanPower === "PL_LAP"}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, customerLoanPower: e.target.value }))}
+                            className="mt-0.5 text-teal-600 focus:ring-teal-500"
+                          />
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                              <span>⚡ PL &amp; LAP Dual Power</span>
+                              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
+                                Recommended
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 mt-0.5 leading-tight">
+                              Can handle both Personal Loans &amp; Home/LAP Loans. Reports to Personal ASM &amp; Home/LAP ASM.
+                            </p>
+                          </div>
+                        </label>
+
+                        <label
+                          className={`cursor-pointer rounded-xl p-3 border-2 transition-all flex items-start gap-2.5 ${
+                            formData.customerLoanPower === "ALL"
+                              ? "border-teal-600 bg-white shadow-sm ring-2 ring-teal-500/20"
+                              : "border-teal-200/60 bg-white/60 hover:bg-white"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="customerLoanPower"
+                            value="ALL"
+                            checked={formData.customerLoanPower === "ALL"}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, customerLoanPower: e.target.value }))}
+                            className="mt-0.5 text-teal-600 focus:ring-teal-500"
+                          />
+                          <div>
+                            <div className="text-xs font-bold text-slate-900">
+                              🌐 All Products (PL + BL + Home/LAP)
+                            </div>
+                            <p className="text-[11px] text-slate-600 mt-0.5 leading-tight">
+                              Full power across all three categories (requires all 3 ASMs assigned).
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1033,15 +1108,25 @@ const AddRMPage = () => {
                   </div>
 
                   {/* Slot 2: Business Loan ASM */}
-                  <div className="p-4 rounded-xl border border-purple-100 bg-purple-50/30">
+                  <div className={`p-4 rounded-xl border transition-all ${
+                    formData.rmType === "CUSTOMER" && formData.customerLoanPower === "PL_LAP"
+                      ? "border-slate-200 bg-slate-50/70 opacity-90"
+                      : "border-purple-100 bg-purple-50/30"
+                  }`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">
                         Business Loans
                       </span>
-                      <Briefcase className="w-3.5 h-3.5 text-purple-500" />
+                      {formData.rmType === "CUSTOMER" && formData.customerLoanPower === "PL_LAP" ? (
+                        <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded font-semibold">
+                          Optional
+                        </span>
+                      ) : (
+                        <Briefcase className="w-3.5 h-3.5 text-purple-500" />
+                      )}
                     </div>
                     <label className="block text-sm font-semibold text-gray-800 mb-2">
-                      Business Loan ASM *
+                      Business Loan ASM {formData.rmType === "CUSTOMER" && formData.customerLoanPower === "PL_LAP" ? "(Optional)" : "*"}
                     </label>
                     <button
                       type="button"
@@ -1066,7 +1151,9 @@ const AddRMPage = () => {
                         </div>
                       ) : (
                         <span className="text-xs text-purple-600 font-medium">
-                          + Select Business ASM
+                          {formData.rmType === "CUSTOMER" && formData.customerLoanPower === "PL_LAP"
+                            ? "+ Select Business ASM (Optional)"
+                            : "+ Select Business ASM"}
                         </span>
                       )}
                     </button>
