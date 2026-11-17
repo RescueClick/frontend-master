@@ -148,7 +148,6 @@ const AsmSiderbar = () => {
       icon: PhoneCall,
       items: [
         { name: "Calling & Follow-Up", icon: PhoneCall, path: `${basePath}/call-logs`, highlight: true },
-        { name: "Upload Leads (CSV)", icon: FileSpreadsheet, path: `${basePath}/meta-leads` },
         { name: "Targets", icon: Target, path: `${basePath}/targets`, highlight: true },
       ],
     },
