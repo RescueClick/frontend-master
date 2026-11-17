@@ -109,8 +109,8 @@ class SocketManager {
     this.socket = io(socketUrl, {
       auth: { token },
       path: "/socket.io",
-      // Polling first is more reliable across nginx / local; then upgrades
-      transports: ["polling", "websocket"],
+      // Prefer pure websocket first to prevent CORS polling blocks when testing across origins
+      transports: ["websocket", "polling"],
       upgrade: true,
       reconnection: true,
       reconnectionDelay: 500,

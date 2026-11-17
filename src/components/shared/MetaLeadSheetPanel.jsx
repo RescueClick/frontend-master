@@ -173,6 +173,36 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
     }
   };
 
+  const filteredRows = useMemo(() => {
+    const rows = result?.rows || [];
+    let list = rows;
+
+    if (activeFilter === "fresh") {
+      list = rows.filter((r) => r.systemStatus === "FRESH_LEAD");
+    } else if (activeFilter === "noLoan") {
+      list = rows.filter((r) => r.systemStatus === "CUSTOMER_NO_LOAN");
+    } else if (activeFilter === "partners") {
+      list = rows.filter((r) => r.systemStatus === "EXISTING_PARTNER");
+    } else if (activeFilter === "loanFilled") {
+      list = rows.filter((r) => r.systemStatus === "CUSTOMER_LOAN_FILLED");
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (r) =>
+          r.name?.toLowerCase().includes(q) ||
+          r.phone?.includes(q) ||
+          r.city?.toLowerCase().includes(q) ||
+          r.email?.toLowerCase().includes(q) ||
+          r.partnerInfo?.employeeId?.toLowerCase().includes(q) ||
+          r.loanInfo?.appNo?.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [result, activeFilter, searchQuery]);
+
   const availablePool = useMemo(() => {
     if (assignLeadSlice === "fresh") {
       return (result?.rows || []).filter((r) => r.systemStatus === "FRESH_LEAD");
@@ -428,36 +458,6 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
       setLoading(false);
     }
   };
-
-  const filteredRows = useMemo(() => {
-    const rows = result?.rows || [];
-    let list = rows;
-
-    if (activeFilter === "fresh") {
-      list = rows.filter((r) => r.systemStatus === "FRESH_LEAD");
-    } else if (activeFilter === "noLoan") {
-      list = rows.filter((r) => r.systemStatus === "CUSTOMER_NO_LOAN");
-    } else if (activeFilter === "partners") {
-      list = rows.filter((r) => r.systemStatus === "EXISTING_PARTNER");
-    } else if (activeFilter === "loanFilled") {
-      list = rows.filter((r) => r.systemStatus === "CUSTOMER_LOAN_FILLED");
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (r) =>
-          r.name?.toLowerCase().includes(q) ||
-          r.phone?.includes(q) ||
-          r.city?.toLowerCase().includes(q) ||
-          r.email?.toLowerCase().includes(q) ||
-          r.partnerInfo?.employeeId?.toLowerCase().includes(q) ||
-          r.loanInfo?.appNo?.toLowerCase().includes(q)
-      );
-    }
-
-    return list;
-  }, [result, activeFilter, searchQuery]);
 
   // 1-Click Export Handlers
   const downloadFreshLeads = () => {
