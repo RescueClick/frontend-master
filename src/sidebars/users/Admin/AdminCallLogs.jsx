@@ -399,10 +399,42 @@ export default function AdminCallLogs({ defaultTab = "" }) {
           </div>
 
           {loadingOverview ? (
-            <div className="py-16 text-center text-slate-400">Loading daily targets and calling performance...</div>
+            <div className="py-20 text-center bg-white rounded-2xl border border-slate-200/80 p-8 shadow-xs">
+              <RefreshCw size={28} className="animate-spin text-emerald-600 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-slate-700">Loading RM Daily Targets &amp; Calling Performance...</p>
+              <p className="text-xs text-slate-400 mt-1">Fetching live call logs and assigned sheet progress for {date}</p>
+            </div>
           ) : overviewList.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
-              No RM performance records found for this date.
+            <div className="py-14 px-6 text-center bg-white rounded-2xl border border-slate-200/80 shadow-xs max-w-xl mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/60 flex items-center justify-center mx-auto mb-4">
+                <Target size={28} />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">
+                No Calling Targets Assigned for {date}
+              </h3>
+              <p className="text-xs md:text-sm text-slate-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+                RMs haven't been assigned calling sheets for today yet. You can upload leads or partner sheets and allocate daily calling targets in 1 click.
+              </p>
+
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("sheets")}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all cursor-pointer"
+                >
+                  <FileSpreadsheet size={16} />
+                  Upload &amp; Assign Calling Sheet Now
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("logs")}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 shadow-xs transition-all cursor-pointer"
+                >
+                  <PhoneCall size={16} />
+                  View Live Call Logs
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -419,7 +451,18 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                           {rm.rmName ? rm.rmName[0].toUpperCase() : "R"}
                         </div>
                         <div>
-                          <h3 className="font-bold text-slate-900 text-sm">{rm.rmName}</h3>
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-bold text-slate-900 text-sm">{rm.rmName}</h3>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                              rm.rmType === "CUSTOMER"
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : rm.rmType === "PARTNER"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-purple-50 text-purple-700 border border-purple-200"
+                            }`}>
+                              {rm.rmType === "CUSTOMER" ? "Customer Desk" : rm.rmType === "PARTNER" ? "Partner Desk" : "Hybrid Desk"}
+                            </span>
+                          </div>
                           <span className="text-[11px] font-mono text-slate-500">{rm.employeeId || rm.phone}</span>
                         </div>
                       </div>
@@ -541,27 +584,63 @@ export default function AdminCallLogs({ defaultTab = "" }) {
       {/* TAB 3: Live Call Logs & Verification */}
       {activeTab === "logs" && (
         <div className="space-y-6">
-          {/* Stat Cards */}
+          {/* 4 Interactive Stat Cards (Click to Filter) */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-5 shadow-xs">
+            <div
+              onClick={() => {
+                setCallType("all");
+                setVerifiedFilter("all");
+              }}
+              role="button"
+              tabIndex={0}
+              className={`rounded-2xl p-5 shadow-xs cursor-pointer transition-all duration-150 transform hover:-translate-y-0.5 select-none ${
+                callType === "all" && verifiedFilter === "all"
+                  ? "border-2 border-blue-600 bg-blue-50/80 shadow-md ring-2 ring-blue-500/20"
+                  : "border border-blue-200 bg-gradient-to-br from-blue-50/50 to-white hover:border-blue-400"
+              }`}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">Total Calls</span>
                 <PhoneCall size={18} className="text-blue-600" />
               </div>
               <div className="mt-3 text-3xl font-black text-blue-900">{stats.totalCalls}</div>
-              <div className="mt-1 text-xs text-blue-700 font-medium">Logged on {date}</div>
+              <div className="mt-1 flex items-center justify-between text-xs text-blue-700 font-medium">
+                <span>Logged on {date}</span>
+                {callType === "all" && verifiedFilter === "all" && (
+                  <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded font-bold">All</span>
+                )}
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-xs">
+            <div
+              onClick={() => {
+                setVerifiedFilter("verified");
+                setCallType("all");
+              }}
+              role="button"
+              tabIndex={0}
+              className={`rounded-2xl p-5 shadow-xs cursor-pointer transition-all duration-150 transform hover:-translate-y-0.5 select-none ${
+                verifiedFilter === "verified"
+                  ? "border-2 border-emerald-600 bg-emerald-50/80 shadow-md ring-2 ring-emerald-500/20"
+                  : "border border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-white hover:border-emerald-400"
+              }`}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Verified Real Calls</span>
                 <ShieldCheck size={18} className="text-emerald-600" />
               </div>
               <div className="mt-3 text-3xl font-black text-emerald-900">{stats.verifiedCalls}</div>
-              <div className="mt-1 text-xs text-emerald-700 font-medium">Duration &gt; 0s (baat hui)</div>
+              <div className="mt-1 flex items-center justify-between text-xs text-emerald-700 font-medium">
+                <span>Duration &gt; 0s (baat hui)</span>
+                {verifiedFilter === "verified" && (
+                  <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold">Active</span>
+                )}
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-white p-5 shadow-xs">
+            <div
+              className="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50/50 to-white p-5 shadow-xs select-none"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-purple-800 uppercase tracking-wider">Total Talk Time</span>
                 <Clock size={18} className="text-purple-600" />
@@ -570,13 +649,30 @@ export default function AdminCallLogs({ defaultTab = "" }) {
               <div className="mt-1 text-xs text-purple-700 font-medium">Combined talking time</div>
             </div>
 
-            <div className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-white p-5 shadow-xs">
+            <div
+              onClick={() => {
+                setCallType("MISSED");
+                setVerifiedFilter("all");
+              }}
+              role="button"
+              tabIndex={0}
+              className={`rounded-2xl p-5 shadow-xs cursor-pointer transition-all duration-150 transform hover:-translate-y-0.5 select-none ${
+                callType === "MISSED"
+                  ? "border-2 border-red-600 bg-red-50/80 shadow-md ring-2 ring-red-500/20"
+                  : "border border-red-200 bg-gradient-to-br from-red-50/50 to-white hover:border-red-400"
+              }`}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-red-800 uppercase tracking-wider">Missed Calls</span>
                 <PhoneMissed size={18} className="text-red-600" />
               </div>
               <div className="mt-3 text-3xl font-black text-red-900">{stats.missedCalls}</div>
-              <div className="mt-1 text-xs text-red-700 font-medium">Partner missed calls</div>
+              <div className="mt-1 flex items-center justify-between text-xs text-red-700 font-medium">
+                <span>Partner missed calls</span>
+                {callType === "MISSED" && (
+                  <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.2 rounded font-bold">Active</span>
+                )}
+              </div>
             </div>
           </div>
 
