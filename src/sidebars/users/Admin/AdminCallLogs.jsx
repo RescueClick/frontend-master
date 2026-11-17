@@ -195,12 +195,15 @@ export default function AdminCallLogs({ defaultTab = "" }) {
   }, [isRm, activeTab]);
 
   useEffect(() => {
-    if (activeTab === "overview") {
+    if (isRm) {
       fetchOverview();
-    } else {
+      fetchLogs();
+    } else if (activeTab === "overview") {
+      fetchOverview();
+    } else if (activeTab === "logs") {
       fetchLogs();
     }
-  }, [activeTab, date, callType, verifiedFilter, contactType]);
+  }, [isRm, activeTab, date, callType, verifiedFilter, contactType]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -333,6 +336,317 @@ export default function AdminCallLogs({ defaultTab = "" }) {
     },
   ];
 
+  const renderStatCards = () => (
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 h-full">
+      <div
+        onClick={() => {
+          setCallType("all");
+          setVerifiedFilter("all");
+        }}
+        role="button"
+        tabIndex={0}
+        className={`rounded-2xl p-4 sm:p-5 shadow-xs cursor-pointer transition-all duration-150 transform hover:-translate-y-0.5 select-none flex flex-col justify-between ${
+          callType === "all" && verifiedFilter === "all"
+            ? "border-2 border-blue-600 bg-blue-50/80 shadow-md ring-2 ring-blue-500/20"
+            : "border border-blue-200 bg-gradient-to-br from-blue-50/50 to-white hover:border-blue-400"
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">Total Calls</span>
+          <PhoneCall size={18} className="text-blue-600" />
+        </div>
+        <div className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-black text-blue-900">{stats.totalCalls}</div>
+        <div className="mt-1 flex items-center justify-between text-xs text-blue-700 font-medium">
+          <span>Logged on {date}</span>
+          {callType === "all" && verifiedFilter === "all" && (
+            <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded font-bold">All</span>
+          )}
+        </div>
+      </div>
+
+      <div
+        onClick={() => {
+          setVerifiedFilter("verified");
+          setCallType("all");
+        }}
+        role="button"
+        tabIndex={0}
+        className={`rounded-2xl p-4 sm:p-5 shadow-xs cursor-pointer transition-all duration-150 transform hover:-translate-y-0.5 select-none flex flex-col justify-between ${
+          verifiedFilter === "verified"
+            ? "border-2 border-emerald-600 bg-emerald-50/80 shadow-md ring-2 ring-emerald-500/20"
+            : "border border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-white hover:border-emerald-400"
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Verified Real</span>
+          <ShieldCheck size={18} className="text-emerald-600" />
+        </div>
+        <div className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-black text-emerald-900">{stats.verifiedCalls}</div>
+        <div className="mt-1 flex items-center justify-between text-xs text-emerald-700 font-medium">
+          <span>Duration &gt; 0s (baat hui)</span>
+          {verifiedFilter === "verified" && (
+            <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold">Active</span>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50/50 to-white p-4 sm:p-5 shadow-xs select-none flex flex-col justify-between">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-purple-800 uppercase tracking-wider">Total Talk Time</span>
+          <Clock size={18} className="text-purple-600" />
+        </div>
+        <div className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-black text-purple-900">{stats.totalDurationMinutes} min</div>
+        <div className="mt-1 text-xs text-purple-700 font-medium">Combined talking time</div>
+      </div>
+
+      <div
+        onClick={() => {
+          setCallType("MISSED");
+          setVerifiedFilter("all");
+        }}
+        role="button"
+        tabIndex={0}
+        className={`rounded-2xl p-4 sm:p-5 shadow-xs cursor-pointer transition-all duration-150 transform hover:-translate-y-0.5 select-none flex flex-col justify-between ${
+          callType === "MISSED"
+            ? "border-2 border-red-600 bg-red-50/80 shadow-md ring-2 ring-red-500/20"
+            : "border border-red-200 bg-gradient-to-br from-red-50/50 to-white hover:border-red-400"
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-red-800 uppercase tracking-wider">Missed Calls</span>
+          <PhoneMissed size={18} className="text-red-600" />
+        </div>
+        <div className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-black text-red-900">{stats.missedCalls}</div>
+        <div className="mt-1 flex items-center justify-between text-xs text-red-700 font-medium">
+          <span>Unanswered / Missed</span>
+          {callType === "MISSED" && (
+            <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.2 rounded font-bold">Active</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRmCard = (rm) => (
+    <div
+      key={rm.rmId}
+      className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between h-full"
+    >
+      <div>
+        {/* RM Info Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
+              {rm.rmName ? rm.rmName[0].toUpperCase() : "R"}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="font-bold text-slate-900 text-sm">{rm.rmName}</h3>
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                    rm.rmType === "CUSTOMER"
+                      ? "bg-blue-50 text-blue-700 border border-blue-200"
+                      : rm.rmType === "PARTNER"
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-purple-50 text-purple-700 border border-purple-200"
+                  }`}
+                >
+                  {rm.rmType === "CUSTOMER"
+                    ? rm.loanSpecialization === "PL_LAP"
+                      ? "Customer Desk • PL+LAP"
+                      : "Customer Desk"
+                    : rm.rmType === "PARTNER"
+                    ? "Partner Desk"
+                    : "Hybrid Desk"}
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-slate-500">{rm.employeeId || rm.phone}</span>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span
+              className={`inline-flex items-center text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                rm.overallPercentage >= 80
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : rm.overallPercentage >= 40
+                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {rm.overallPercentage}% Target
+            </span>
+          </div>
+        </div>
+
+        {/* Progress Bars for Both Workflows */}
+        <div className="mt-4 space-y-3.5">
+          {/* Workflow 1: Partner Calls (Only if partner desk or has target) */}
+          {(rm.rmType !== "CUSTOMER" || rm.partnerCallsTarget > 0) && (
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-semibold text-slate-700 flex items-center gap-1">
+                  <Users size={13} className="text-emerald-600" />
+                  Partner Calls (Target: {rm.partnerCallsTarget || "—"})
+                </span>
+                <span className="font-mono font-bold text-slate-800">
+                  {rm.partnerCallsDone} / {rm.partnerCallsTarget || 0}
+                </span>
+              </div>
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${
+                      rm.partnerCallsTarget > 0
+                        ? Math.min(100, (rm.partnerCallsDone / rm.partnerCallsTarget) * 100)
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+              <div className="mt-0.5 text-[11px] text-slate-400">
+                {rm.partnerCallsConnected} calls connected
+              </div>
+            </div>
+          )}
+
+          {/* Workflow 2: Customer Leads */}
+          <div>
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="font-semibold text-slate-700 flex items-center gap-1">
+                <Target size={13} className="text-blue-600" />
+                Customer Calls (Target: {rm.customerCallsTarget || "—"})
+              </span>
+              <span className="font-mono font-bold text-slate-800">
+                {rm.customerCallsDone} / {rm.customerCallsTarget || 0}
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-blue-500 h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${
+                    rm.customerCallsTarget > 0
+                      ? Math.min(100, (rm.customerCallsDone / rm.customerCallsTarget) * 100)
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+            <div className="mt-0.5 text-[11px] text-slate-400">
+              {rm.customerCallsConnected} calls connected
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Call Metrics Breakdown */}
+        <div className="mt-4 grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-center text-xs border border-slate-100">
+          <div>
+            <div className="text-[10px] text-slate-400 font-semibold uppercase">Talk Time</div>
+            <div className="font-black text-slate-800 mt-0.5">{rm.totalTalkTimeMinutes} min</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-slate-400 font-semibold uppercase">Outgoing</div>
+            <div className="font-black text-blue-700 mt-0.5">📞 {rm.outgoingCount}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-slate-400 font-semibold uppercase">Incoming</div>
+            <div className="font-black text-emerald-700 mt-0.5">📥 {rm.incomingCount}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-slate-100">
+        <button
+          type="button"
+          onClick={() => viewRmSheetDetails(rm.rmId, rm.rmName)}
+          className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.99]"
+        >
+          <FileSpreadsheet size={15} />
+          View Assigned Sheet &amp; Call Status
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderLogsTable = () => (
+    <div className="space-y-4">
+      {/* Filter Toolbar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search contact, phone, RM..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-3 py-1.5 text-xs md:text-sm rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 w-52 md:w-64"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition"
+          >
+            Search
+          </button>
+        </form>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={callType}
+            onChange={(e) => setCallType(e.target.value)}
+            className="px-3 py-1.5 text-xs font-medium rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none"
+          >
+            <option value="all">All Directions</option>
+            <option value="OUTGOING">Outgoing (Dialed)</option>
+            <option value="INCOMING">Incoming (Inbound)</option>
+            <option value="MISSED">Missed Calls</option>
+          </select>
+
+          <select
+            value={verifiedFilter}
+            onChange={(e) => setVerifiedFilter(e.target.value)}
+            className="px-3 py-1.5 text-xs font-medium rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none"
+          >
+            <option value="all">All Verifications</option>
+            <option value="verified">✅ Verified Real Calls (&gt;0s)</option>
+            <option value="unverified">⚠️ 0s / Unanswered</option>
+          </select>
+
+          <select
+            value={contactType}
+            onChange={(e) => setContactType(e.target.value)}
+            className="px-3 py-1.5 text-xs font-medium rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none"
+          >
+            <option value="all">All Contacts</option>
+            <option value="customer">Customers Only</option>
+            <option value="partner">Partners Only</option>
+          </select>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <AppAntTable
+          rowKey="_id"
+          columns={logColumns}
+          dataSource={logs}
+          loading={loadingLogs}
+          pagination={{ pageSize: 20, showSizeChanger: true }}
+          locale={{ emptyText: "No call logs found for the selected filters" }}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Header */}
@@ -367,7 +681,16 @@ export default function AdminCallLogs({ defaultTab = "" }) {
 
           <button
             type="button"
-            onClick={activeTab === "overview" ? fetchOverview : fetchLogs}
+            onClick={() => {
+              if (isRm) {
+                fetchOverview();
+                fetchLogs();
+              } else if (activeTab === "overview") {
+                fetchOverview();
+              } else {
+                fetchLogs();
+              }
+            }}
             className="inline-flex items-center gap-2 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 shadow-xs transition active:scale-95"
           >
             <RefreshCw size={14} className={loadingOverview || loadingLogs ? "animate-spin" : ""} />
@@ -376,8 +699,59 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         </div>
       </div>
 
-      {/* Main Tabs: Targets vs Team Follow-up vs Live Logs */}
-      <div className="flex border-b border-slate-200 gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* ================= RM VIEW: ALL-IN-ONE UNIFIED WORKSPACE ================= */}
+      {isRm ? (
+        <div className="space-y-6">
+          {/* Top Row: Left is Personal Target Card (5 cols), Right is 4 Stat Cards (7 cols) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            {/* Left: RM Personal Calling Target */}
+            <div className="lg:col-span-5 flex flex-col">
+              {loadingOverview ? (
+                <div className="h-full min-h-[220px] bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center justify-center text-center shadow-xs">
+                  <RefreshCw size={24} className="animate-spin text-emerald-600 mb-2" />
+                  <p className="text-xs font-semibold text-slate-600">Loading your calling target...</p>
+                </div>
+              ) : displayRms.length === 0 ? (
+                <div className="h-full min-h-[220px] bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center justify-center text-center shadow-xs">
+                  <Target size={28} className="text-slate-400 mb-2" />
+                  <p className="text-sm font-bold text-slate-800">No Target Assigned for Today</p>
+                  <p className="text-xs text-slate-500 mt-1">Check with your RSM / ASM to assign lead sheets.</p>
+                </div>
+              ) : (
+                displayRms.map((rm) => renderRmCard(rm))
+              )}
+            </div>
+
+            {/* Right: 4 Interactive KPI Stat Cards */}
+            <div className="lg:col-span-7 flex flex-col justify-between">
+              {renderStatCards()}
+            </div>
+          </div>
+
+          {/* Bottom Section: Live Call Logs Table */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <PhoneCall size={18} className="text-emerald-600" />
+                  Today's Live Call Logs &amp; Verification
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Verified calls and duration logged for today ({date})
+                </p>
+              </div>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                {logs.length} call{logs.length === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            {renderLogsTable()}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Main Tabs: Targets vs Team Follow-up vs Live Logs */}
+          <div className="flex border-b border-slate-200 gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setActiveTab("overview")}
@@ -802,6 +1176,8 @@ export default function AdminCallLogs({ defaultTab = "" }) {
             />
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Modal: View Assigned Sheet & Contact Calling Status for RM */}
