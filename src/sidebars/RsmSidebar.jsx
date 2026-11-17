@@ -115,23 +115,53 @@ const RsmSidebar = () => {
   const basePath = location.pathname.startsWith("/rsm") ? "/rsm" : "/asm";
   const isRsm = basePath === "/rsm";
 
-  const sidebarItems = [
-    { name: "Dashboard", icon: LayoutGrid, path: `${basePath}/dashboard` },
-    ...(isRsm
-      ? [
-          { name: "ASMs", icon: Users, path: `${basePath}/asms` },
-          { name: "RMs", icon: UserCheck, path: `${basePath}/rms` },
-        ]
-      : [{ name: "RMs", icon: Users, path: `${basePath}/rms` }]),
-    { name: "Targets", icon: Target, path: `${basePath}/targets`, highlight: true },
-    { name: "Partners", icon: UserCheck, path: `${basePath}/partners` },
-    { name: "Applications", icon: FileText, path: `${basePath}/applications` },
-    { name: "Leads & Pipeline", icon: LineChart, path: `${basePath}/leads` },
-    { name: "Calling & Follow-Up", icon: PhoneCall, path: `${basePath}/call-logs`, highlight: true },
-    { name: "Upload Leads (CSV)", icon: FileSpreadsheet, path: `${basePath}/meta-leads` },
-    { name: "Banks", icon: Building2, path: `${basePath}/banks`, highlight: true },
-    { name: "Find Bank RM", icon: Search, path: `${basePath}/find-bank-rm` },
-    { name: "Settings", icon: Settings, path: `${basePath}/settings` },
+  const sidebarSections = [
+    {
+      label: "Main",
+      items: [
+        { name: "Dashboard", icon: LayoutGrid, path: `${basePath}/dashboard` },
+      ],
+    },
+    {
+      label: "Team Hierarchy",
+      items: [
+        ...(isRsm
+          ? [
+              { name: "ASMs", icon: Users, path: `${basePath}/asms` },
+              { name: "RMs", icon: UserCheck, path: `${basePath}/rms` },
+            ]
+          : [{ name: "RMs", icon: Users, path: `${basePath}/rms` }]),
+      ],
+    },
+    {
+      label: "Calling & Follow-ups",
+      items: [
+        { name: "Calling & Follow-Up", icon: PhoneCall, path: `${basePath}/call-logs`, highlight: true },
+        { name: "Upload Leads (CSV)", icon: FileSpreadsheet, path: `${basePath}/meta-leads` },
+        { name: "Leads & Pipeline", icon: LineChart, path: `${basePath}/leads` },
+      ],
+    },
+    {
+      label: "Business & Loans",
+      items: [
+        { name: "Applications", icon: FileText, path: `${basePath}/applications` },
+        { name: "Partners", icon: UserCheck, path: `${basePath}/partners` },
+        { name: "Targets", icon: Target, path: `${basePath}/targets`, highlight: true },
+      ],
+    },
+    {
+      label: "Banking",
+      items: [
+        { name: "Banks", icon: Building2, path: `${basePath}/banks`, highlight: true },
+        { name: "Find Bank RM", icon: Search, path: `${basePath}/find-bank-rm` },
+      ],
+    },
+    {
+      label: "System",
+      items: [
+        { name: "Settings", icon: Settings, path: `${basePath}/settings` },
+      ],
+    },
   ];
 
   // Logout function
@@ -181,59 +211,70 @@ const RsmSidebar = () => {
 
         {/* Navigation */}
         <nav className="mt-4 md:mt-6 flex-1 overflow-y-auto px-3">
-          {sidebarItems.map((item, index) => {
-            const active = location.pathname === item.path;
-            const isHighlight = item.highlight;
-            const count = getBadgeCount(item.name);
-
-            const baseClasses = isHighlight
-              ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
-              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
-
-            const activeClasses = isHighlight
-              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
-              : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md";
-
-            return (
-              <Link
-                key={index}
-                to={item.path}
-                onClick={() => {
-                  if (typeof window !== "undefined" && window.innerWidth < 768) {
-                    setSidebarOpen(false);
-                  }
-                }}
-                className={`w-full flex items-center mb-2 rounded-xl transition-all duration-200 ${
-                  sidebarOpen ? "space-x-3 px-4 py-3" : "justify-center px-2 py-3"
-                } ${active ? activeClasses : baseClasses}`}
-              >
-                <div className="relative flex items-center">
-                  <item.icon size={22} className={active ? "text-white" : ""} />
-                  {!sidebarOpen && count > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
-                  )}
+          {sidebarSections.map((section, sIdx) => (
+            <div key={sIdx} className="mb-2">
+              {sidebarOpen ? (
+                <div className="px-3 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 select-none">
+                  {section.label}
                 </div>
-                {sidebarOpen && (
-                  <div className="flex-1 flex items-center justify-between min-w-0">
-                    <span className="text-sm font-medium truncate">
-                      {item.name}
-                    </span>
-                    {count > 0 && (
-                      <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        active 
-                          ? "bg-white text-teal-600" 
-                          : isHighlight 
-                            ? "bg-amber-500 text-white shadow-sm" 
-                            : "bg-rose-500 text-white shadow-sm"
-                      }`}>
-                        {count}
-                      </span>
+              ) : (
+                sIdx > 0 && <div className="my-2 border-t border-slate-100" />
+              )}
+              {section.items.map((item, index) => {
+                const active = location.pathname === item.path;
+                const isHighlight = item.highlight;
+                const count = getBadgeCount(item.name);
+
+                const baseClasses = isHighlight
+                  ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+
+                const activeClasses = isHighlight
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md";
+
+                return (
+                  <Link
+                    key={index}
+                    to={item.path}
+                    onClick={() => {
+                      if (typeof window !== "undefined" && window.innerWidth < 768) {
+                        setSidebarOpen(false);
+                      }
+                    }}
+                    className={`w-full flex items-center mb-1.5 rounded-xl transition-all duration-200 ${
+                      sidebarOpen ? "space-x-3 px-3.5 py-2.5" : "justify-center px-2 py-2.5"
+                    } ${active ? activeClasses : baseClasses}`}
+                  >
+                    <div className="relative flex items-center">
+                      <item.icon size={20} className={active ? "text-white" : ""} />
+                      {!sidebarOpen && count > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                      )}
+                    </div>
+                    {sidebarOpen && (
+                      <div className="flex-1 flex items-center justify-between min-w-0">
+                        <span className="text-sm font-medium truncate">
+                          {item.name}
+                        </span>
+                        {count > 0 && (
+                          <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            active 
+                              ? "bg-white text-teal-600" 
+                              : isHighlight 
+                                ? "bg-amber-500 text-white shadow-sm" 
+                                : "bg-rose-500 text-white shadow-sm"
+                          }`}>
+                            {count}
+                          </span>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </aside>
 

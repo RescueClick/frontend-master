@@ -122,41 +122,67 @@ const AdminSideBar = () => {
     }
   };
 
-  // Sorted and organized sidebar navigation items
-  const sidebarItems = [
-    { name: "Dashboard", icon: LayoutGrid, path: "/admin/dashboard" },
-
-    // Hierarchy Staff
-    { name: "RSM", icon: Users, path: "/admin/rsm" },
-    { name: "ASM", icon: Users, path: "/admin/asm" },
-    { name: "RM", icon: Users, path: "/admin/rm" },
-    { name: "Call Logs", icon: PhoneCall, path: "/admin/call-logs", highlight: true },
-    { name: "Targets", icon: Target, path: "/admin/target", highlight: true },
-
-    // New partners under admin (verify + assign RM) — separate quick-access entry
-    { name: "Admin Partner", icon: FileCheck, path: "/admin/rm-partner", highlight: true },
-    // All verified partners directory (Move Partners is inside Partner page header)
-    { name: "Partner", icon: UserCheck, path: "/admin/partner" },
-    { name: "Customer", icon: Users, path: "/admin/customer" },
-    { name: "Meta Lead Auditor", icon: Filter, path: "/admin/meta-leads", highlight: true },
-
-    // Finance & Operations (Consolidated hubs)
-    { name: "Payout & Incentives", icon: IndianRupee, path: "/admin/payout-incentives", highlight: true },
-    { name: "Rewards & Levels", icon: Gift, path: "/admin/rewards-levels", highlight: true },
-
-    // Referrals & Banners
-    { name: "Public loan referral", icon: Link2, path: "/admin/public-loan-referral", highlight: true },
-    { name: "QR Stickers", icon: QrCode, path: "/admin/qr-inventory", highlight: true },
-    { name: "Banners", icon: Sparkles, path: "/admin/banner", highlight: true },
-
-    // Banking & Compliance
-    { name: "Loan Products", icon: Layers, path: "/admin/loan-products", highlight: true },
-    { name: "Add Bank", icon: Building2, path: "/admin/banks", highlight: true },
-    { name: "Find Bank RM", icon: Search, path: "/admin/find-bank-rm" },
-    { name: "CIBIL Audit", icon: Shield, path: "/admin/cibil-audit", highlight: true },
-
-    // Settings
-    { name: "Settings", icon: Settings, path: "/admin/settings" },
+  // Grouped and organized sidebar navigation sections
+  const sidebarSections = [
+    {
+      label: "Main",
+      items: [
+        { name: "Dashboard", icon: LayoutGrid, path: "/admin/dashboard" },
+      ],
+    },
+    {
+      label: "Staff & Hierarchy",
+      items: [
+        { name: "RSM", icon: Users, path: "/admin/rsm" },
+        { name: "ASM", icon: Users, path: "/admin/asm" },
+        { name: "RM", icon: Users, path: "/admin/rm" },
+      ],
+    },
+    {
+      label: "Calling & Performance",
+      items: [
+        { name: "Calling & Follow-Up Hub", icon: PhoneCall, path: "/admin/call-logs", highlight: true },
+        { name: "Targets", icon: Target, path: "/admin/target", highlight: true },
+      ],
+    },
+    {
+      label: "Network & Clients",
+      items: [
+        { name: "Admin Partner", icon: FileCheck, path: "/admin/rm-partner", highlight: true },
+        { name: "Partner", icon: UserCheck, path: "/admin/partner" },
+        { name: "Customer", icon: Users, path: "/admin/customer" },
+      ],
+    },
+    {
+      label: "Finance & Operations",
+      items: [
+        { name: "Payout & Incentives", icon: IndianRupee, path: "/admin/payout-incentives", highlight: true },
+        { name: "Rewards & Levels", icon: Gift, path: "/admin/rewards-levels", highlight: true },
+      ],
+    },
+    {
+      label: "Growth & Tools",
+      items: [
+        { name: "Public loan referral", icon: Link2, path: "/admin/public-loan-referral", highlight: true },
+        { name: "QR Stickers", icon: QrCode, path: "/admin/qr-inventory", highlight: true },
+        { name: "Banners", icon: Sparkles, path: "/admin/banner", highlight: true },
+      ],
+    },
+    {
+      label: "Banking & Credit",
+      items: [
+        { name: "Loan Products", icon: Layers, path: "/admin/loan-products", highlight: true },
+        { name: "Add Bank", icon: Building2, path: "/admin/banks", highlight: true },
+        { name: "Find Bank RM", icon: Search, path: "/admin/find-bank-rm" },
+        { name: "CIBIL Audit", icon: Shield, path: "/admin/cibil-audit", highlight: true },
+      ],
+    },
+    {
+      label: "System",
+      items: [
+        { name: "Settings", icon: Settings, path: "/admin/settings" },
+      ],
+    },
   ];
 
 
@@ -211,75 +237,90 @@ const AdminSideBar = () => {
             sidebarOpen ? "px-3" : "px-2"
           }`}
         >
-          {sidebarItems.map((item, index) => {
-            const active =
-              location.pathname === item.path ||
-              ((item.path === "/admin/payout-incentives" || item.path === "/admin/payout") && (
-                location.pathname === "/admin/payout" ||
-                location.pathname === "/admin/incentives" ||
-                location.pathname === "/admin/payout-incentives" ||
-                location.pathname.startsWith("/admin/pending-payout") ||
-                location.pathname.startsWith("/admin/done-payout")
-              )) ||
-              ((item.path === "/admin/rewards-levels" || item.path === "/admin/referral-rewards") && (
-                location.pathname === "/admin/referral-rewards" ||
-                location.pathname === "/admin/partner-levels" ||
-                location.pathname === "/admin/rewards-levels"
-              )) ||
-              ((item.path === "/admin/banner" || item.path === "/admin/referral-banners") && (
-                location.pathname === "/admin/banner" ||
-                location.pathname === "/admin/referral-banners"
-              ));
-            const isHighlight = item.highlight;
-            const count = getBadgeCount(item.name);
-
-            const baseClasses = isHighlight
-              ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
-              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
-
-            const activeClasses = isHighlight
-              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
-              : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md";
-
-            return (
-              <Link
-                key={index}
-                to={item.path}
-                title={item.name}
-                className={`w-full flex items-center mb-2 rounded-xl transition-all duration-200 ${
-                  sidebarOpen ? "space-x-3 px-3 py-3" : "justify-center px-2 py-3"
-                } ${active ? activeClasses : baseClasses}`}
-              >
-                <div className="relative flex items-center">
-                  <item.icon
-                    size={22}
-                    className={`shrink-0 ${active ? "text-white" : ""}`}
-                  />
-                  {!sidebarOpen && count > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
-                  )}
+          {sidebarSections.map((section, sIdx) => (
+            <div key={sIdx} className="mb-2">
+              {sidebarOpen ? (
+                <div className="px-3 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 select-none">
+                  {section.label}
                 </div>
-                {sidebarOpen && (
-                  <div className="flex-1 flex items-center justify-between min-w-0">
-                    <span className="text-sm font-medium truncate min-w-0">
-                      {item.name}
-                    </span>
-                    {count > 0 && (
-                      <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        active 
-                          ? "bg-white text-teal-600" 
-                          : isHighlight 
-                            ? "bg-amber-500 text-white shadow-sm" 
-                            : "bg-rose-500 text-white shadow-sm"
-                      }`}>
-                        {count}
-                      </span>
+              ) : (
+                sIdx > 0 && <div className="my-2 border-t border-slate-100" />
+              )}
+              {section.items.map((item, index) => {
+                const active =
+                  location.pathname === item.path ||
+                  (item.path === "/admin/call-logs" && (
+                    location.pathname === "/admin/call-logs" ||
+                    location.pathname === "/admin/meta-leads"
+                  )) ||
+                  ((item.path === "/admin/payout-incentives" || item.path === "/admin/payout") && (
+                    location.pathname === "/admin/payout" ||
+                    location.pathname === "/admin/incentives" ||
+                    location.pathname === "/admin/payout-incentives" ||
+                    location.pathname.startsWith("/admin/pending-payout") ||
+                    location.pathname.startsWith("/admin/done-payout")
+                  )) ||
+                  ((item.path === "/admin/rewards-levels" || item.path === "/admin/referral-rewards") && (
+                    location.pathname === "/admin/referral-rewards" ||
+                    location.pathname === "/admin/partner-levels" ||
+                    location.pathname === "/admin/rewards-levels"
+                  )) ||
+                  ((item.path === "/admin/banner" || item.path === "/admin/referral-banners") && (
+                    location.pathname === "/admin/banner" ||
+                    location.pathname === "/admin/referral-banners"
+                  ));
+                const isHighlight = item.highlight;
+                const count = getBadgeCount(item.name);
+
+                const baseClasses = isHighlight
+                  ? "text-amber-700 hover:bg-amber-50 hover:text-amber-900"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+
+                const activeClasses = isHighlight
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md";
+
+                return (
+                  <Link
+                    key={index}
+                    to={item.path}
+                    title={item.name}
+                    className={`w-full flex items-center mb-1.5 rounded-xl transition-all duration-200 ${
+                      sidebarOpen ? "space-x-3 px-3 py-2.5" : "justify-center px-2 py-2.5"
+                    } ${active ? activeClasses : baseClasses}`}
+                  >
+                    <div className="relative flex items-center">
+                      <item.icon
+                        size={20}
+                        className={`shrink-0 ${active ? "text-white" : ""}`}
+                      />
+                      {!sidebarOpen && count > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                      )}
+                    </div>
+                    {sidebarOpen && (
+                      <div className="flex-1 flex items-center justify-between min-w-0">
+                        <span className="text-sm font-medium truncate min-w-0">
+                          {item.name}
+                        </span>
+                        {count > 0 && (
+                          <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            active 
+                              ? "bg-white text-teal-600" 
+                              : isHighlight 
+                                ? "bg-amber-500 text-white shadow-sm" 
+                                : "bg-rose-500 text-white shadow-sm"
+                          }`}>
+                            {count}
+                          </span>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </aside>
 

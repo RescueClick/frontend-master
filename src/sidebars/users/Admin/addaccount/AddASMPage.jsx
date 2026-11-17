@@ -16,7 +16,7 @@ import {
   Briefcase,
   Users,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData } from "../../../../utils/localStorage";
 import { createAsm, fetchRSMs } from "../../../../feature/thunks/adminThunks";
@@ -24,7 +24,12 @@ import { INDIAN_STATES } from "../../../../utils/indianStates";
 
 const AddASMPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
+
+  const auth = getAuthData() || {};
+  const currentRsm = auth.rsmUser || (auth.rsmToken && !auth.adminToken ? auth.user : null);
+  const isRsm = location.pathname.startsWith("/rsm") || !!(auth.rsmUser || (auth.rsmToken && !auth.adminToken));
 
   const { loading } = useSelector((state) => state.admin.createAsmAdmin || { loading: false });
   const rsms = useSelector((state) => state.admin.rsm?.data || []);
@@ -35,10 +40,10 @@ const AddASMPage = () => {
     phone: "",
     email: "",
     dob: "",
-    region: "",
+    region: currentRsm?.region || "",
     password: "",
     confirmPassword: "",
-    rsmId: "",
+    rsmId: currentRsm?._id || "",
     asmType: "",
   });
 
@@ -72,11 +77,21 @@ const AddASMPage = () => {
   });
 
   useEffect(() => {
-    const { adminToken } = getAuthData() || {};
-    if (adminToken) {
-      dispatch(fetchRSMs(adminToken));
+    const token = auth.adminToken || auth.rsmToken || auth.asmToken;
+    if (token) {
+      dispatch(fetchRSMs(token));
     }
   }, [dispatch]);
+
+  useEffect(() => {
+    if (isRsm && currentRsm?._id && !formData.rsmId) {
+      setFormData((prev) => ({
+        ...prev,
+        rsmId: currentRsm._id,
+        region: prev.region || currentRsm.region || "",
+      }));
+    }
+  }, [isRsm, currentRsm]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -194,8 +209,8 @@ const AddASMPage = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    const { adminToken } = getAuthData();
-    if (!adminToken) {
+    const token = auth.adminToken || auth.rsmToken || auth.asmToken;
+    if (!token) {
       setIsSuccess(false);
       setMessage("Not authenticated. Please log in again.");
       setShowModal(true);
@@ -212,9 +227,9 @@ const AddASMPage = () => {
           dob: formData.dob,
           region: formData.region.trim(),
           password: formData.password,
-          rsmId: formData.rsmId,
+          rsmId: formData.rsmId || currentRsm?._id,
           asmType: formData.asmType,
-          token: adminToken,
+          token,
         })
       ).unwrap();
 
@@ -228,10 +243,10 @@ const AddASMPage = () => {
         phone: "",
         email: "",
         dob: "",
-        region: "",
+        region: currentRsm?.region || "",
         password: "",
         confirmPassword: "",
-        rsmId: "",
+        rsmId: currentRsm?._id || "",
         asmType: "",
       });
     } catch (err) {
@@ -315,7 +330,7 @@ const AddASMPage = () => {
                   {isSuccess && (
                     <button
                       type="button"
-                      onClick={() => navigate("/admin/asm")}
+                      onClick={() => navigate(isRsm ? "/rsm/asms" : "/admin/asm")}
                       className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-all"
                     >
                       View ASM List
@@ -325,7 +340,7 @@ const AddASMPage = () => {
                     type="button"
                     onClick={() => {
                       setShowModal(false);
-                      if (isSuccess) navigate("/admin/asm");
+                      if (isSuccess) navigate(isRsm ? "/rsm/asms" : "/admin/asm");
                     }}
                     className="px-6 py-2.5 rounded-lg text-white font-medium transition-all duration-200"
                     style={{ backgroundColor: colors.primary }}
@@ -349,19 +364,26 @@ const AddASMPage = () => {
                 </label>
                 <div className="relative">
                   <Users className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-                  <select
-                    name="rsmId"
-                    value={formData.rsmId}
-                    onChange={handleInputChange}
-                    className={`${inputClassName("rsmId")} pl-10`}
-                  >
-                    <option value="">Select Reporting RSM</option>
-                    {(Array.isArray(rsms) ? rsms : []).map((rsm) => (
-                      <option key={rsm._id} value={rsm._id}>
-                        {rsm.firstName} {rsm.lastName} ({rsm.employeeId || rsm.rsmCode || "RSM"}) {rsm.region ? `• ${rsm.region}` : ""}
-                      </option>
-                    ))}
-                  </select>
+                  {isRsm ? (
+                    <div className="w-full px-4 py-3 pl-10 border border-teal-200 bg-teal-50/60 rounded-lg text-sm font-semibold text-teal-900 flex items-center justify-between">
+                      <span>{currentRsm?.firstName} {currentRsm?.lastName} (You - Direct Reporting)</span>
+                      <span className="text-[10px] bg-teal-200 text-teal-800 px-2 py-0.5 rounded-full font-bold">Current RSM</span>
+                    </div>
+                  ) : (
+                    <select
+                      name="rsmId"
+                      value={formData.rsmId}
+                      onChange={handleInputChange}
+                      className={`${inputClassName("rsmId")} pl-10`}
+                    >
+                      <option value="">Select Reporting RSM</option>
+                      {(Array.isArray(rsms) ? rsms : []).map((rsm) => (
+                        <option key={rsm._id} value={rsm._id}>
+                          {rsm.firstName} {rsm.lastName} ({rsm.employeeId || rsm.rsmCode || "RSM"}) {rsm.region ? `• ${rsm.region}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 {errors.rsmId && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">

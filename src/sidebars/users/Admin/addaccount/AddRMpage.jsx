@@ -20,7 +20,7 @@ import {
   Briefcase,
   ShieldCheck,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAuthData } from "../../../../utils/localStorage";
 import { createRm, fetchRSMs, fetchAsms } from "../../../../feature/thunks/adminThunks";
@@ -29,7 +29,12 @@ import { INDIAN_STATES } from "../../../../utils/indianStates";
 
 const AddRMPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
+
+  const auth = getAuthData() || {};
+  const isRsm = location.pathname.startsWith("/rsm") || !!(auth.rsmUser || (auth.rsmToken && !auth.adminToken));
+  const currentRsm = auth.rsmUser || (isRsm ? auth.user : null);
 
   const { loading, error } = useSelector((state) => state.admin.createRmAdmin || {});
   const rsmList = useSelector((state) => state.admin.rsm?.data || []);
@@ -42,13 +47,13 @@ const AddRMPage = () => {
     lastName: "",
     phone: "",
     dob: "",
-    region: "",
+    region: currentRsm?.region || "",
     email: "",
     password: "",
     confirmPassword: "",
     rmType: "CUSTOMER", // 'CUSTOMER' | 'PARTNER' | 'HYBRID'
     branchName: "",
-    rsmId: "", // Selected Reporting RSM (sync anchor)
+    rsmId: currentRsm?._id || "", // Selected Reporting RSM (sync anchor)
     personalAsm: null, // Personal Loan ASM
     businessAsm: null, // Business Loan ASM
     homeLapAsm: null, // Home & LAP Loan ASM
@@ -91,12 +96,22 @@ const AddRMPage = () => {
 
   // Load managers list when component mounts
   useEffect(() => {
-    const { adminToken } = getAuthData() || {};
-    if (adminToken) {
-      dispatch(fetchRSMs(adminToken));
-      dispatch(fetchAsms(adminToken));
+    const token = auth.adminToken || auth.rsmToken || auth.asmToken;
+    if (token) {
+      dispatch(fetchRSMs(token));
+      dispatch(fetchAsms(token));
     }
   }, [dispatch]);
+
+  useEffect(() => {
+    if (isRsm && currentRsm?._id && !formData.rsmId) {
+      setFormData((prev) => ({
+        ...prev,
+        rsmId: currentRsm._id,
+        region: prev.region || currentRsm.region || "",
+      }));
+    }
+  }, [isRsm, currentRsm]);
 
   // Clean active RSM list
   const activeRsms = useMemo(() => {
@@ -390,14 +405,16 @@ const AddRMPage = () => {
     if (!formData.rsmId) {
       newErrors.rsmId = "Please select a Reporting RSM";
     }
-    if (!formData.personalAsm) {
-      newErrors.personalAsm = "Please assign a Personal Loan ASM";
-    }
-    if (!formData.businessAsm) {
-      newErrors.businessAsm = "Please assign a Business Loan ASM";
-    }
-    if (!formData.homeLapAsm) {
-      newErrors.homeLapAsm = "Please assign a Home & LAP Loan ASM";
+    if (!isRsm) {
+      if (!formData.personalAsm) {
+        newErrors.personalAsm = "Please assign a Personal Loan ASM";
+      }
+      if (!formData.businessAsm) {
+        newErrors.businessAsm = "Please assign a Business Loan ASM";
+      }
+      if (!formData.homeLapAsm) {
+        newErrors.homeLapAsm = "Please assign a Home & LAP Loan ASM";
+      }
     }
 
     // Uniqueness validation (distinct individuals)
@@ -476,8 +493,8 @@ const AddRMPage = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    const { adminToken } = getAuthData() || {};
-    if (!adminToken) {
+    const token = auth.adminToken || auth.rsmToken || auth.asmToken;
+    if (!token) {
       setIsSuccess(false);
       setMessage("Unauthorized. Please log in again.");
       setShowModal(true);
@@ -489,6 +506,7 @@ const AddRMPage = () => {
 
     const effRsmId =
       formData.rsmId ||
+      currentRsm?._id ||
       getAsmParentRsmId(formData.personalAsm) ||
       getAsmParentRsmId(formData.businessAsm);
 
@@ -511,7 +529,7 @@ const AddRMPage = () => {
       businessRsmId: formData.businessAsm?._id,
       homeLapRsmId: formData.homeLapAsm?._id,
       businessHomeRsmId: formData.businessAsm?._id,
-      token: adminToken,
+      token,
     };
 
     try {
@@ -559,12 +577,12 @@ const AddRMPage = () => {
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <button
-              onClick={() => navigate("/admin/dashboard")}
+              onClick={() => navigate(isRsm ? "/rsm/rms" : "/admin/dashboard")}
               className="flex items-center text-gray-600 hover:text-gray-800 transition-colors mr-4"
               type="button"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Dashboard
+              {isRsm ? "Back to RMs" : "Back to Dashboard"}
             </button>
           </div>
           <h1 className="text-3xl font-bold" style={{ color: colors.text }}>
@@ -583,7 +601,7 @@ const AddRMPage = () => {
                 <button
                   onClick={() => {
                     setShowModal(false);
-                    if (isSuccess) navigate("/admin/rm");
+                    if (isSuccess) navigate(isRsm ? "/rsm/rms" : "/admin/rm");
                   }}
                   className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                   type="button"
@@ -616,7 +634,7 @@ const AddRMPage = () => {
                   {isSuccess && (
                     <button
                       type="button"
-                      onClick={() => navigate("/admin/rm")}
+                      onClick={() => navigate(isRsm ? "/rsm/rms" : "/admin/rm")}
                       className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-all"
                     >
                       View RM List
@@ -626,7 +644,7 @@ const AddRMPage = () => {
                     type="button"
                     onClick={() => {
                       setShowModal(false);
-                      if (isSuccess) navigate("/admin/rm");
+                      if (isSuccess) navigate(isRsm ? "/rsm/rms" : "/admin/rm");
                     }}
                     className="px-6 py-2.5 rounded-lg text-white font-medium transition-all duration-200"
                     style={{ backgroundColor: colors.primary }}
@@ -937,18 +955,25 @@ const AddRMPage = () => {
                   </label>
                   <div className="relative">
                     <Users className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-                    <select
-                      value={formData.rsmId}
-                      onChange={(e) => handleRsmSelectChange(e.target.value)}
-                      className={`${inputClassName("rsmId")} pl-10`}
-                    >
-                      <option value="">-- Choose Reporting RSM --</option>
-                      {activeRsms.map((r) => (
-                        <option key={r._id} value={r._id}>
-                          {r.firstName} {r.lastName} ({r.employeeId || r.rsmCode || "RSM"}) {r.region ? `• ${r.region}` : ""}
-                        </option>
-                      ))}
-                    </select>
+                    {isRsm ? (
+                      <div className="w-full px-4 py-3 pl-10 border border-teal-200 bg-teal-50/60 rounded-lg text-sm font-semibold text-teal-900 flex items-center justify-between">
+                        <span>{currentRsm?.firstName} {currentRsm?.lastName} (You - Direct Reporting)</span>
+                        <span className="text-[10px] bg-teal-200 text-teal-800 px-2 py-0.5 rounded-full font-bold">Current RSM</span>
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.rsmId}
+                        onChange={(e) => handleRsmSelectChange(e.target.value)}
+                        className={`${inputClassName("rsmId")} pl-10`}
+                      >
+                        <option value="">-- Choose Reporting RSM --</option>
+                        {activeRsms.map((r) => (
+                          <option key={r._id} value={r._id}>
+                            {r.firstName} {r.lastName} ({r.employeeId || r.rsmCode || "RSM"}) {r.region ? `• ${r.region}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   {errors.rsmId && (
                     <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -956,7 +981,7 @@ const AddRMPage = () => {
                     </p>
                   )}
                   <p className="mt-1 text-xs text-gray-500">
-                    Choosing an RSM dynamically syncs the 3 specialized ASM pickers below
+                    {isRsm ? "New RM will directly report under your regional command" : "Choosing an RSM dynamically syncs the 3 specialized ASM pickers below"}
                   </p>
                 </div>
 

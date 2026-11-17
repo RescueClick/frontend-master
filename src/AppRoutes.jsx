@@ -450,6 +450,8 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<RsmDashboard />} />
         <Route path="chat" element={<ChatDashboard currentRole="ASM" />} />
+        <Route path="asms" element={<AsmRSM />} />
+        <Route path="add-asm" element={<AddASMPage />} />
         <Route path="rms" element={<RsmRMs />} />
         <Route path="add-rm" element={<AddRMPage />} />
         <Route path="partners" element={<RsmPartners />} />

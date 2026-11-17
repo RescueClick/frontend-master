@@ -25,6 +25,7 @@ import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 import AppAntTable from "../../../components/shared/AppAntTable";
 import AsmFollowUps from "../ASM/AsmFollowUps";
+import MetaLeadSheetPanel from "../../../components/shared/MetaLeadSheetPanel";
 
 function formatDuration(seconds = 0) {
   const sec = parseInt(seconds, 10) || 0;
@@ -346,7 +347,20 @@ export default function AdminCallLogs({ defaultTab = "" }) {
           }`}
         >
           <Target size={16} />
-          RM Daily Targets & Calling Sheets
+          RM Daily Targets &amp; Calling Sheets
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("sheets")}
+          className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+            activeTab === "sheets"
+              ? "border-emerald-600 text-emerald-800"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <FileSpreadsheet size={16} />
+          Upload &amp; Assign Sheets (Meta / Bulk)
         </button>
 
         <button
@@ -507,6 +521,13 @@ export default function AdminCallLogs({ defaultTab = "" }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB 2: Upload & Assign Leads Sheets (Meta / Bulk CSV) */}
+      {activeTab === "sheets" && (
+        <div className="space-y-4">
+          <MetaLeadSheetPanel defaultOpen={true} embedded={true} />
         </div>
       )}
 
