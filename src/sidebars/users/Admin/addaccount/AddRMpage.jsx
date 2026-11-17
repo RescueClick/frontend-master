@@ -533,7 +533,7 @@ const AddRMPage = () => {
       personalRsmId: formData.personalAsm?._id,
       businessRsmId: formData.businessAsm?._id || null,
       homeLapRsmId: formData.homeLapAsm?._id,
-      businessHomeRsmId: formData.businessAsm?._id || null,
+      businessHomeRsmId: null,
       token,
     };
 
