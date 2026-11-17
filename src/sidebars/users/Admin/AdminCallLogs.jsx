@@ -20,7 +20,16 @@ import {
   FileSpreadsheet,
   ArrowRight,
   TrendingUp,
+  Phone,
+  MapPin,
+  MessageSquare,
+  Check,
+  Edit3,
+  AlertCircle,
+  X,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+import toast from "react-hot-toast";
 import { backendurl } from "../../../feature/urldata";
 import { getAuthData } from "../../../utils/localStorage";
 import AppAntTable from "../../../components/shared/AppAntTable";
@@ -54,6 +63,12 @@ export default function AdminCallLogs({ defaultTab = "" }) {
   const [loadingOverview, setLoadingOverview] = useState(false);
   const [selectedRmSheet, setSelectedRmSheet] = useState(null);
   const [loadingSheetDetails, setLoadingSheetDetails] = useState(false);
+  const [sheetSearch, setSheetSearch] = useState("");
+  const [sheetStatusFilter, setSheetStatusFilter] = useState("ALL");
+  const [editingContact, setEditingContact] = useState(null); // { assignmentId, contact }
+  const [updateStatusVal, setUpdateStatusVal] = useState("CONNECTED");
+  const [updateNotesVal, setUpdateNotesVal] = useState("");
+  const [savingContactStatus, setSavingContactStatus] = useState(false);
 
   // Live logs state
   const [logs, setLogs] = useState([]);
@@ -180,11 +195,127 @@ export default function AdminCallLogs({ defaultTab = "" }) {
           rmId,
           sheets: res.data.sheets || [],
         });
+        setSheetSearch("");
+        setSheetStatusFilter("ALL");
       }
     } catch (err) {
       alert("Failed to load sheet details for this RM");
     } finally {
       setLoadingSheetDetails(false);
+    }
+  };
+
+  const getWhatsAppUrl = (phone, name = "") => {
+    const clean = String(phone || "").replace(/\D/g, "").slice(-10);
+    if (!clean) return null;
+    const msg = name
+      ? `Hello ${name}, this is DhanSource Capital. Regarding your loan inquiry.`
+      : `Hello, this is DhanSource Capital. Regarding your loan inquiry.`;
+    return `https://wa.me/91${clean}?text=${encodeURIComponent(msg)}`;
+  };
+
+  const getLoanTypeBadge = (loanType) => {
+    const lt = String(loanType || "").toUpperCase();
+    if (lt.includes("PERSONAL") || lt === "PL") {
+      return { label: "Personal Loan", tone: "bg-blue-50 text-blue-700 border-blue-200" };
+    }
+    if (lt.includes("HOME") || lt === "HL") {
+      return { label: "Home Loan", tone: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    }
+    if (lt.includes("LAP") || lt.includes("PROPERTY")) {
+      return { label: "LAP / Mortgage", tone: "bg-purple-50 text-purple-700 border-purple-200" };
+    }
+    if (lt.includes("BUSINESS") || lt === "BL") {
+      return { label: "Business Loan", tone: "bg-amber-50 text-amber-700 border-amber-200" };
+    }
+    return { label: loanType || "General Lead", tone: "bg-slate-100 text-slate-700 border-slate-200" };
+  };
+
+  const getCallingStatusBadge = (status) => {
+    const s = String(status || "").toUpperCase();
+    if (s === "CONNECTED") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <CheckCircle2 size={12} className="text-emerald-600" /> Connected
+        </span>
+      );
+    }
+    if (s === "UNANSWERED" || s === "RINGING") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-amber-50 text-amber-700 border border-amber-200">
+          <PhoneMissed size={12} className="text-amber-600" /> Unanswered
+        </span>
+      );
+    }
+    if (s === "CALL_BACK" || s.includes("CALLBACK")) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-rose-50 text-rose-700 border border-rose-200">
+          <Clock size={12} className="text-rose-600" /> Call Back
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium text-xs bg-slate-100 text-slate-600 border border-slate-200">
+        <Clock size={12} className="text-slate-400" /> Pending Call
+      </span>
+    );
+  };
+
+  const openEditContactModal = (assignmentId, contact) => {
+    setEditingContact({ assignmentId, contact });
+    setUpdateStatusVal(contact.status || "CONNECTED");
+    setUpdateNotesVal(contact.notes || "");
+  };
+
+  const handleUpdateContactStatus = async () => {
+    if (!editingContact) return;
+    setSavingContactStatus(true);
+    try {
+      const token = getAdminToken();
+      const res = await axios.patch(
+        `${backendurl}/calls/assignments/contact-status`,
+        {
+          assignmentId: editingContact.assignmentId,
+          contactPhone: editingContact.contact.phone,
+          status: updateStatusVal,
+          notes: updateNotesVal,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data?.success) {
+        toast.success("Contact status updated!");
+        setSelectedRmSheet((prev) => {
+          if (!prev) return prev;
+          const updatedSheets = prev.sheets.map((sheet) => {
+            if (sheet._id !== editingContact.assignmentId) return sheet;
+            const updatedContacts = sheet.contacts.map((c) =>
+              c.phone === editingContact.contact.phone
+                ? { ...c, status: updateStatusVal, notes: updateNotesVal }
+                : c
+            );
+            const called = updatedContacts.filter((c) => c.status !== "PENDING").length;
+            const connected = updatedContacts.filter((c) => c.status === "CONNECTED").length;
+            return {
+              ...sheet,
+              contacts: updatedContacts,
+              stats: {
+                ...sheet.stats,
+                called,
+                connected,
+                pending: updatedContacts.length - called,
+              },
+            };
+          });
+          return { ...prev, sheets: updatedSheets };
+        });
+        setEditingContact(null);
+        fetchOverview();
+      }
+    } catch (err) {
+      console.error("Failed to update contact status:", err);
+      toast.error(err.response?.data?.message || "Failed to update status");
+    } finally {
+      setSavingContactStatus(false);
     }
   };
 
@@ -1180,101 +1311,436 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         </>
       )}
 
-      {/* Modal: View Assigned Sheet & Contact Calling Status for RM */}
+      {/* ================= MODAL: BEAUTIFULLY REDESIGNED CALLING SHEET & LEADS MANAGER ================= */}
       {selectedRmSheet && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">
-                  Assigned Calling Sheet: {selectedRmSheet.rmName}
-                </h3>
-                <p className="text-xs text-slate-500">Date: {date}</p>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Top Header */}
+            <div className="px-5 sm:px-7 py-4 sm:py-5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-600/20">
+                  <FileSpreadsheet size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">
+                      Assigned Calling Sheet • {selectedRmSheet.rmName}
+                    </h3>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      📅 {date}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Click Call / WhatsApp to dial leads directly and update verified call outcomes.
+                  </p>
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={() => setSelectedRmSheet(null)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200"
+                className="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100 transition active:scale-95 cursor-pointer"
+                title="Close"
               >
-                ✕
+                <X size={20} />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+            {/* Modal Body: Sheets Content */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50/50">
               {selectedRmSheet.sheets.length === 0 ? (
-                <div className="py-12 text-center text-slate-400 text-sm">
-                  No calling sheet assigned to this RM on {date}.
+                <div className="py-16 text-center bg-white rounded-2xl border border-slate-200 p-8">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                    <FileSpreadsheet size={26} />
+                  </div>
+                  <h4 className="text-base font-bold text-slate-800">No Calling Sheet Found</h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    No calling sheet has been assigned to {selectedRmSheet.rmName} for {date}.
+                  </p>
                 </div>
               ) : (
-                selectedRmSheet.sheets.map((sheet) => (
-                  <div key={sheet._id} className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
-                      <div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                          sheet.assignmentType === "PARTNER" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-blue-50 text-blue-700 border border-blue-200"
-                        }`}>
-                          {sheet.assignmentType} Calling Sheet
-                        </span>
-                        <h4 className="font-bold text-slate-800 text-sm mt-1">{sheet.sheetName}</h4>
-                      </div>
-                      <div className="text-right text-xs">
-                        <span className="font-bold text-slate-800">{sheet.stats?.called || 0} / {sheet.stats?.total || 0}</span> Calls Done
-                        <div className="text-[11px] text-emerald-700 font-semibold">{sheet.stats?.connected || 0} Connected</div>
-                      </div>
-                    </div>
+                selectedRmSheet.sheets.map((sheet) => {
+                  const totalCount = sheet.contacts?.length || 0;
+                  const calledCount = sheet.stats?.called || 0;
+                  const connectedCount = sheet.stats?.connected || 0;
+                  const pendingCount = Math.max(0, totalCount - calledCount);
+                  const progressPct = totalCount > 0 ? Math.round((calledCount / totalCount) * 100) : 0;
 
-                    {/* Contacts Table */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-                          <tr>
-                            <th className="p-2.5">Name</th>
-                            <th className="p-2.5">Phone</th>
-                            <th className="p-2.5">City / Details</th>
-                            <th className="p-2.5">Call Status</th>
-                            <th className="p-2.5">Duration</th>
-                            <th className="p-2.5">Last Call</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {sheet.contacts?.map((contact) => (
-                            <tr key={contact._id} className="hover:bg-slate-50/60">
-                              <td className="p-2.5 font-semibold text-slate-800">{contact.name}</td>
-                              <td className="p-2.5 font-mono text-slate-600">{contact.phone}</td>
-                              <td className="p-2.5 text-slate-500">{contact.city || contact.loanType || "—"}</td>
-                              <td className="p-2.5">
-                                {contact.status === "CONNECTED" ? (
-                                  <span className="px-2 py-0.5 rounded-full font-bold text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    ✅ Connected
-                                  </span>
-                                ) : contact.status === "UNANSWERED" ? (
-                                  <span className="px-2 py-0.5 rounded-full font-bold text-[11px] bg-amber-50 text-amber-700 border border-amber-200">
-                                    ⚠️ Unanswered
-                                  </span>
-                                ) : contact.status === "CALL_BACK" ? (
-                                  <span className="px-2 py-0.5 rounded-full font-bold text-[11px] bg-red-50 text-red-700 border border-red-200">
-                                    🚨 Call Back
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-0.5 rounded-full font-medium text-[11px] bg-slate-100 text-slate-600">
-                                    ⏳ Pending Call
-                                  </span>
-                                )}
-                              </td>
-                              <td className="p-2.5 font-mono font-bold text-slate-700">
-                                {formatDuration(contact.lastCallDuration)}
-                              </td>
-                              <td className="p-2.5 text-slate-400">
-                                {contact.lastCallTime ? new Date(contact.lastCallTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
-                              </td>
+                  // Filter contacts inside this sheet based on search and status filter
+                  const filteredContacts = (sheet.contacts || []).filter((c) => {
+                    if (sheetStatusFilter !== "ALL" && c.status !== sheetStatusFilter) return false;
+                    if (sheetSearch) {
+                      const q = sheetSearch.toLowerCase();
+                      const matches =
+                        c.name?.toLowerCase().includes(q) ||
+                        String(c.phone || "").includes(q) ||
+                        c.city?.toLowerCase().includes(q) ||
+                        c.loanType?.toLowerCase().includes(q);
+                      if (!matches) return false;
+                    }
+                    return true;
+                  });
+
+                  return (
+                    <div
+                      key={sheet._id}
+                      className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-xs space-y-4"
+                    >
+                      {/* Sheet Header & Performance Progress */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                                sheet.assignmentType === "PARTNER"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : "bg-blue-50 text-blue-700 border border-blue-200"
+                              }`}
+                            >
+                              {sheet.assignmentType === "PARTNER" ? "🤝 Channel Partner Sheet" : "📞 Customer Desk Sheet"}
+                            </span>
+                          </div>
+                          <h4 className="font-extrabold text-slate-900 text-base mt-1">
+                            {sheet.sheetName}
+                          </h4>
+                        </div>
+
+                        {/* Progress Metric Badge */}
+                        <div className="flex items-center gap-3 bg-slate-50 border border-slate-200/80 px-3.5 py-2 rounded-2xl">
+                          <div className="text-right">
+                            <div className="text-xs font-bold text-slate-800">
+                              <span className="text-emerald-700 text-sm font-black">{calledCount}</span> / {totalCount} Calls Done
+                            </div>
+                            <div className="text-[11px] text-emerald-600 font-semibold">
+                              {connectedCount} Connected ({progressPct}%)
+                            </div>
+                          </div>
+                          <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-xs text-slate-800 shadow-2xs">
+                            {progressPct}%
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Visual Progress Bar */}
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500 shadow-xs"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+
+                      {/* 4 Summary Stat Chips */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        <div className="bg-slate-50 border border-slate-200/70 p-2.5 rounded-xl text-center">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase">Total Leads</span>
+                          <p className="text-base font-black text-slate-800 mt-0.5">{totalCount}</p>
+                        </div>
+                        <div className="bg-emerald-50/60 border border-emerald-200/70 p-2.5 rounded-xl text-center">
+                          <span className="text-[10px] text-emerald-700 font-bold uppercase">Calls Made</span>
+                          <p className="text-base font-black text-emerald-800 mt-0.5">{calledCount}</p>
+                        </div>
+                        <div className="bg-blue-50/60 border border-blue-200/70 p-2.5 rounded-xl text-center">
+                          <span className="text-[10px] text-blue-700 font-bold uppercase">Connected</span>
+                          <p className="text-base font-black text-blue-800 mt-0.5">{connectedCount}</p>
+                        </div>
+                        <div className="bg-amber-50/60 border border-amber-200/70 p-2.5 rounded-xl text-center">
+                          <span className="text-[10px] text-amber-700 font-bold uppercase">Pending to Call</span>
+                          <p className="text-base font-black text-amber-800 mt-0.5">{pendingCount}</p>
+                        </div>
+                      </div>
+
+                      {/* Search & Status Filter Toolbar */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        {/* Search Input */}
+                        <div className="relative flex-1 min-w-[220px]">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Search lead name, phone, city, loan..."
+                            value={sheetSearch}
+                            onChange={(e) => setSheetSearch(e.target.value)}
+                            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                          />
+                        </div>
+
+                        {/* Filter Status Pills */}
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setSheetStatusFilter("ALL")}
+                            className={`px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] cursor-pointer ${
+                              sheetStatusFilter === "ALL"
+                                ? "bg-slate-900 text-white shadow-xs"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                          >
+                            All ({totalCount})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSheetStatusFilter("PENDING")}
+                            className={`px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] cursor-pointer ${
+                              sheetStatusFilter === "PENDING"
+                                ? "bg-slate-900 text-white shadow-xs"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                          >
+                            ⏳ Pending ({sheet.contacts?.filter((c) => c.status === "PENDING").length || 0})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSheetStatusFilter("CONNECTED")}
+                            className={`px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] cursor-pointer ${
+                              sheetStatusFilter === "CONNECTED"
+                                ? "bg-emerald-700 text-white shadow-xs"
+                                : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                            }`}
+                          >
+                            ✅ Connected ({sheet.contacts?.filter((c) => c.status === "CONNECTED").length || 0})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSheetStatusFilter("UNANSWERED")}
+                            className={`px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] cursor-pointer ${
+                              sheetStatusFilter === "UNANSWERED"
+                                ? "bg-amber-700 text-white shadow-xs"
+                                : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+                            }`}
+                          >
+                            ⚠️ Unanswered ({sheet.contacts?.filter((c) => c.status === "UNANSWERED").length || 0})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSheetStatusFilter("CALL_BACK")}
+                            className={`px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] cursor-pointer ${
+                              sheetStatusFilter === "CALL_BACK"
+                                ? "bg-rose-700 text-white shadow-xs"
+                                : "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                            }`}
+                          >
+                            🚨 Call Back ({sheet.contacts?.filter((c) => c.status === "CALL_BACK").length || 0})
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Contacts Table */}
+                      <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                            <tr>
+                              <th className="p-3">Lead / Customer</th>
+                              <th className="p-3">Loan Requirement</th>
+                              <th className="p-3">Contact &amp; Quick Dial</th>
+                              <th className="p-3">Calling Status</th>
+                              <th className="p-3">Duration &amp; Last Call</th>
+                              <th className="p-3 text-right">Actions</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 bg-white">
+                            {filteredContacts.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="p-8 text-center text-slate-400 text-xs">
+                                  No leads found matching the selected filters.
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredContacts.map((contact) => {
+                                const cleanPhone = String(contact.phone || "").replace(/\D/g, "").slice(-10);
+                                const loanBadge = getLoanTypeBadge(contact.loanType);
+
+                                return (
+                                  <tr key={contact._id} className="hover:bg-slate-50/80 transition-colors">
+                                    {/* Lead Name & City */}
+                                    <td className="p-3">
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                          {contact.name ? contact.name[0].toUpperCase() : "L"}
+                                        </div>
+                                        <div>
+                                          <div className="font-bold text-slate-900 text-xs sm:text-sm">
+                                            {contact.name}
+                                          </div>
+                                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                            {contact.city && (
+                                              <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                                                <MapPin size={10} className="text-slate-400" />
+                                                {contact.city}
+                                              </span>
+                                            )}
+                                            <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-medium">
+                                              {contact.leadSource || "Meta Ads"}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+
+                                    {/* Loan Requirement */}
+                                    <td className="p-3">
+                                      <span
+                                        className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold border ${loanBadge.tone}`}
+                                      >
+                                        {loanBadge.label}
+                                      </span>
+                                    </td>
+
+                                    {/* Contact & 1-Click Dialing */}
+                                    <td className="p-3">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-mono font-bold text-slate-800 text-xs">
+                                          {contact.phone}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                          {/* Direct Call Button */}
+                                          <a
+                                            href={`tel:${cleanPhone}`}
+                                            className="h-7 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs active:scale-95 transition cursor-pointer"
+                                            title={`Call ${contact.name}`}
+                                          >
+                                            <Phone size={11} /> Call
+                                          </a>
+
+                                          {/* WhatsApp Button */}
+                                          <a
+                                            href={getWhatsAppUrl(contact.phone, contact.name)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="h-7 w-7 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                                            title="Chat on WhatsApp"
+                                          >
+                                            <FaWhatsapp size={14} />
+                                          </a>
+                                        </div>
+                                      </div>
+                                    </td>
+
+                                    {/* Call Status Badge */}
+                                    <td className="p-3">
+                                      {getCallingStatusBadge(contact.status)}
+                                    </td>
+
+                                    {/* Duration & Last Call */}
+                                    <td className="p-3">
+                                      <div className="font-mono font-bold text-slate-700 text-xs">
+                                        {formatDuration(contact.lastCallDuration)}
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 mt-0.5">
+                                        {contact.lastCallTime
+                                          ? new Date(contact.lastCallTime).toLocaleTimeString([], {
+                                              hour: "2-digit",
+                                              minute: "2-digit",
+                                            })
+                                          : "—"}
+                                      </div>
+                                    </td>
+
+                                    {/* Actions: Update Status & Add Note */}
+                                    <td className="p-3 text-right">
+                                      <button
+                                        type="button"
+                                        onClick={() => openEditContactModal(sheet._id, contact)}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs active:scale-95 transition cursor-pointer"
+                                      >
+                                        <Edit3 size={12} className="text-slate-500" />
+                                        Update Outcome
+                                      </button>
+                                      {contact.notes && (
+                                        <div
+                                          className="text-[10px] text-slate-500 truncate max-w-[130px] ml-auto mt-0.5"
+                                          title={contact.notes}
+                                        >
+                                          Note: {contact.notes}
+                                        </div>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= SUB-MODAL: UPDATE CALL OUTCOME & REMARKS ================= */}
+      {editingContact && (
+        <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-100">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div>
+                <h4 className="font-extrabold text-slate-900 text-sm">
+                  Update Call Outcome
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                  {editingContact.contact.name} • {editingContact.contact.phone}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingContact(null)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Call Outcome Status
+                </label>
+                <select
+                  value={updateStatusVal}
+                  onChange={(e) => setUpdateStatusVal(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                >
+                  <option value="CONNECTED">✅ Connected (Spoke with Customer / Partner)</option>
+                  <option value="UNANSWERED">⚠️ Unanswered / Ringing</option>
+                  <option value="CALL_BACK">🚨 Call Back Scheduled</option>
+                  <option value="PENDING">⏳ Pending Call</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Follow-up Notes / Remarks
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Needs 5 Lakh Personal loan for renovation, call back on Friday..."
+                  value={updateNotesVal}
+                  onChange={(e) => setUpdateNotesVal(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingContact(null)}
+                  className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpdateContactStatus}
+                  disabled={savingContactStatus}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 active:scale-95 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {savingContactStatus && <RefreshCw size={12} className="animate-spin" />}
+                  Save Outcome
+                </button>
+              </div>
             </div>
           </div>
         </div>
