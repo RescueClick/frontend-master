@@ -16,6 +16,10 @@ import {
   Filter,
   UserPlus,
   Send,
+  Users,
+  CheckSquare,
+  Square,
+  Zap,
 } from "lucide-react";
 import { backendurl } from "../../feature/urldata";
 import { getAuthData } from "../../utils/localStorage";
@@ -76,7 +80,10 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [rmsList, setRmsList] = useState([]);
   const [loadingRms, setLoadingRms] = useState(false);
+  const [assignMode, setAssignMode] = useState("split"); // 'split' (Multi-RM) | 'single'
   const [assignRmId, setAssignRmId] = useState("");
+  const [selectedRmIds, setSelectedRmIds] = useState(new Set());
+  const [rmAllocations, setRmAllocations] = useState({});
   const [assignLeadSlice, setAssignLeadSlice] = useState("fresh"); // 'fresh' | 'noLoan' | 'partners' | 'filtered'
   const [assignDailyTarget, setAssignDailyTarget] = useState(25);
   const [assignSheetName, setAssignSheetName] = useState("");
@@ -166,66 +173,190 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
     }
   };
 
+  const availablePool = useMemo(() => {
+    if (assignLeadSlice === "fresh") {
+      return (result?.rows || []).filter((r) => r.systemStatus === "FRESH_LEAD");
+    } else if (assignLeadSlice === "noLoan") {
+      return (result?.rows || []).filter((r) => r.systemStatus === "CUSTOMER_NO_LOAN");
+    } else if (assignLeadSlice === "partners") {
+      return (result?.rows || []).filter((r) => r.systemStatus === "EXISTING_PARTNER");
+    }
+    return filteredRows || [];
+  }, [assignLeadSlice, result?.rows, filteredRows]);
+
+  const totalAllocated = useMemo(() => {
+    let sum = 0;
+    for (const id of selectedRmIds) {
+      sum += parseInt(rmAllocations[id] || 0, 10);
+    }
+    return sum;
+  }, [rmAllocations, selectedRmIds]);
+
+  const remainingLeads = availablePool.length - totalAllocated;
+
+  const handleDistributeEqually = () => {
+    const selected = Array.from(selectedRmIds);
+    if (!selected.length) return;
+    const total = availablePool.length;
+    const perRm = Math.floor(total / selected.length);
+    const rem = total % selected.length;
+    const nextAlloc = { ...rmAllocations };
+    selected.forEach((id, idx) => {
+      nextAlloc[id] = perRm + (idx < rem ? 1 : 0);
+    });
+    setRmAllocations(nextAlloc);
+  };
+
+  const toggleRmSelect = (rmId) => {
+    setSelectedRmIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rmId)) {
+        next.delete(rmId);
+      } else {
+        next.add(rmId);
+      }
+      return next;
+    });
+  };
+
+  const handleAllocationChange = (rmId, count) => {
+    const val = Math.max(0, parseInt(count, 10) || 0);
+    setRmAllocations((prev) => ({ ...prev, [rmId]: val }));
+    if (!selectedRmIds.has(rmId) && val > 0) {
+      setSelectedRmIds((prev) => new Set(prev).add(rmId));
+    }
+  };
+
   const openAssignModal = async () => {
     setShowAssignModal(true);
     setAssignSuccessMsg("");
     setAssignSheetName(fileName ? `Calling Sheet - ${fileName.replace(/\.csv$/i, "")}` : "Meta Calling Sheet");
-    if (rmsList.length === 0) {
-      setLoadingRms(true);
-      try {
-        const token = getAdminToken();
-        const res = await axios.get(`${backendurl}/calls/assignments/admin-overview`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.data?.success && res.data.rms) {
-          setRmsList(res.data.rms);
-          if (res.data.rms.length > 0) setAssignRmId(res.data.rms[0].rmId);
+    setLoadingRms(true);
+    try {
+      const token = getAdminToken();
+      const res = await axios.get(`${backendurl}/calls/assignments/admin-overview`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.success && res.data.rms) {
+        setRmsList(res.data.rms);
+        if (res.data.rms.length > 0) {
+          setAssignRmId(res.data.rms[0].rmId);
+
+          // By default, select all RMs and split leads equally
+          const initialSet = new Set(res.data.rms.map((r) => r.rmId));
+          setSelectedRmIds(initialSet);
+
+          const total = availablePool.length;
+          const perRm = Math.floor(total / res.data.rms.length);
+          const rem = total % res.data.rms.length;
+          const initialAlloc = {};
+          res.data.rms.forEach((rm, idx) => {
+            initialAlloc[rm.rmId] = perRm + (idx < rem ? 1 : 0);
+          });
+          setRmAllocations(initialAlloc);
         }
-      } catch (err) {
-        console.error("Failed to fetch RMs:", err);
-      } finally {
-        setLoadingRms(false);
       }
+    } catch (err) {
+      console.error("Failed to fetch RMs:", err);
+    } finally {
+      setLoadingRms(false);
     }
   };
 
+  // Rebalance equal split whenever slice changes while modal is open
+  useEffect(() => {
+    if (showAssignModal && rmsList.length > 0 && selectedRmIds.size > 0) {
+      const selected = Array.from(selectedRmIds);
+      const total = availablePool.length;
+      const perRm = Math.floor(total / selected.length);
+      const rem = total % selected.length;
+      const nextAlloc = {};
+      selected.forEach((id, idx) => {
+        nextAlloc[id] = perRm + (idx < rem ? 1 : 0);
+      });
+      setRmAllocations(nextAlloc);
+    }
+  }, [assignLeadSlice, availablePool.length]);
+
   const handleAssignToRm = async (e) => {
     e.preventDefault();
-    if (!assignRmId) {
-      alert("Please select an RM");
-      return;
-    }
 
-    let contactsToAssign = [];
-    let assignmentType = "CUSTOMER";
+    if (assignMode === "single") {
+      if (!assignRmId) {
+        alert("Please select an RM");
+        return;
+      }
 
-    if (assignLeadSlice === "fresh") {
-      contactsToAssign = (result?.rows || []).filter((r) => r.systemStatus === "FRESH_LEAD");
-    } else if (assignLeadSlice === "noLoan") {
-      contactsToAssign = (result?.rows || []).filter((r) => r.systemStatus === "CUSTOMER_NO_LOAN");
-    } else if (assignLeadSlice === "partners") {
-      contactsToAssign = (result?.rows || []).filter((r) => r.systemStatus === "EXISTING_PARTNER");
-      assignmentType = "PARTNER";
+      const contactsToAssign = availablePool;
+      if (!contactsToAssign.length) {
+        alert("No contacts found in selected group to assign.");
+        return;
+      }
+
+      const assignmentType = assignLeadSlice === "partners" ? "PARTNER" : "CUSTOMER";
+      setAssigning(true);
+      try {
+        const token = getAdminToken();
+        const res = await axios.post(
+          `${backendurl}/calls/assignments/create`,
+          {
+            rmId: assignRmId,
+            assignmentType,
+            sheetName: assignSheetName || "Meta Calling Sheet",
+            dailyTarget: parseInt(assignDailyTarget, 10) || 25,
+            contacts: contactsToAssign.map((r) => ({
+              name: r.name,
+              phone: r.phone,
+              city: r.city,
+              loanType: r.metaLoanType || r.loanInfo?.loanType,
+              leadSource: fileName || "Meta Ads",
+              partnerId: r.partnerInfo?.partnerId,
+              customerId: r.customerInfo?.customerId,
+            })),
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (res.data?.success) {
+          setAssignSuccessMsg(`✅ ${res.data.message}! The sheet is now active in the RM App and Call Tracker.`);
+          setTimeout(() => {
+            setShowAssignModal(false);
+            setAssignSuccessMsg("");
+          }, 2200);
+        }
+      } catch (err) {
+        alert(err.response?.data?.message || "Failed to assign leads to RM");
+      } finally {
+        setAssigning(false);
+      }
     } else {
-      contactsToAssign = filteredRows;
-    }
+      // Multi-RM Batch Split Mode
+      const selected = Array.from(selectedRmIds);
+      if (!selected.length) {
+        alert("Please select at least one RM from the list.");
+        return;
+      }
 
-    if (!contactsToAssign.length) {
-      alert("No contacts found in selected group to assign.");
-      return;
-    }
+      if (totalAllocated <= 0) {
+        alert("Please allocate at least 1 lead to an RM.");
+        return;
+      }
 
-    setAssigning(true);
-    try {
-      const token = getAdminToken();
-      const res = await axios.post(
-        `${backendurl}/calls/assignments/create`,
-        {
-          rmId: assignRmId,
-          assignmentType,
-          sheetName: assignSheetName || "Meta Calling Sheet",
-          dailyTarget: parseInt(assignDailyTarget, 10) || 25,
-          contacts: contactsToAssign.map((r) => ({
+      if (totalAllocated > availablePool.length) {
+        alert(`Cannot allocate ${totalAllocated} leads. Only ${availablePool.length} leads are available in this group.`);
+        return;
+      }
+
+      let offset = 0;
+      const allocationsPayload = [];
+      for (const rmId of selected) {
+        const count = parseInt(rmAllocations[rmId] || 0, 10);
+        if (count <= 0) continue;
+        const slice = availablePool.slice(offset, offset + count);
+        offset += count;
+        allocationsPayload.push({
+          rmId,
+          contacts: slice.map((r) => ({
             name: r.name,
             phone: r.phone,
             city: r.city,
@@ -234,21 +365,41 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
             partnerId: r.partnerInfo?.partnerId,
             customerId: r.customerInfo?.customerId,
           })),
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data?.success) {
-        setAssignSuccessMsg(`✅ ${res.data.message}! The sheet is now active in the RM App and Call Tracker.`);
-        setTimeout(() => {
-          setShowAssignModal(false);
-          setAssignSuccessMsg("");
-        }, 2200);
+        });
       }
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to assign leads to RM");
-    } finally {
-      setAssigning(false);
+
+      if (!allocationsPayload.length) {
+        alert("No valid RM allocations to submit.");
+        return;
+      }
+
+      const assignmentType = assignLeadSlice === "partners" ? "PARTNER" : "CUSTOMER";
+      setAssigning(true);
+      try {
+        const token = getAdminToken();
+        const res = await axios.post(
+          `${backendurl}/calls/assignments/bulk-split`,
+          {
+            sheetName: assignSheetName || "Meta Calling Sheet",
+            assignmentType,
+            dailyTarget: parseInt(assignDailyTarget, 10) || 25,
+            allocations: allocationsPayload,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (res.data?.success) {
+          setAssignSuccessMsg(`✅ ${res.data.message}! Each RM will now see their assigned calling sheet.`);
+          setTimeout(() => {
+            setShowAssignModal(false);
+            setAssignSuccessMsg("");
+          }, 2400);
+        }
+      } catch (err) {
+        alert(err.response?.data?.message || "Failed to split and assign leads to RMs");
+      } finally {
+        setAssigning(false);
+      }
     }
   };
 
@@ -899,91 +1050,280 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
       )}
       {/* Assign Leads to RM Calling Sheet Modal */}
       {showAssignModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-2">
-                <UserPlus className="text-purple-600" size={20} />
-                <h3 className="font-bold text-slate-900 text-base">Assign Calling Sheet to RM</h3>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 my-auto">
+            <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                  <UserPlus size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-slate-900 text-base leading-tight truncate">
+                    Assign Calling Sheet to Relationship Managers
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Allocate fresh leads or existing contacts to RMs with target tracking
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAssignModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-200"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200 transition shrink-0 ml-2"
+                aria-label="Close"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleAssignToRm} className="p-6 space-y-4">
+            <form onSubmit={handleAssignToRm} className="p-5 overflow-y-auto space-y-4 flex-1">
               {assignSuccessMsg ? (
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold text-center">
-                  {assignSuccessMsg}
+                <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold text-center space-y-1">
+                  <div>{assignSuccessMsg}</div>
+                  <p className="text-xs font-normal text-emerald-600">
+                    The leads are immediately available in the assigned RMs' Calling & Follow-Up Hub.
+                  </p>
                 </div>
               ) : (
                 <>
-                  {/* Select RM */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                      Select Relationship Manager (RM):
-                    </label>
-                    {loadingRms ? (
-                      <div className="text-xs text-slate-400">Loading RMs...</div>
-                    ) : (
-                      <select
-                        value={assignRmId}
-                        onChange={(e) => setAssignRmId(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                        required
-                      >
-                        {rmsList.map((rm) => {
-                          const deskLabel =
-                            rm.rmType === "CUSTOMER"
-                              ? "📞 [Customer RM - Inbound Leads]"
-                              : rm.rmType === "PARTNER"
-                              ? "🤝 [Partner RM - Channel/DSA]"
-                              : "🔄 [Hybrid RM]";
-                          const branch = rm.branchName ? ` • ${rm.branchName}` : "";
-                          return (
-                            <option key={rm.rmId} value={rm.rmId}>
-                              {deskLabel} {rm.rmName} ({rm.employeeId || rm.phone}){branch}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    )}
+                  {/* Mode Selector */}
+                  <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setAssignMode("split")}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        assignMode === "split"
+                          ? "bg-white text-purple-700 shadow-xs border border-purple-200"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <Users size={14} />
+                      Split Across Multiple RMs (e.g. 50 to RM 1, 50 to RM 2)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignMode("single")}
+                      className={`py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        assignMode === "single"
+                          ? "bg-white text-purple-700 shadow-xs border border-purple-200"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <UserCheck size={14} />
+                      Single RM
+                    </button>
                   </div>
 
                   {/* Which Group of Leads */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                      Which Contacts to Assign:
-                    </label>
-                    <select
-                      value={assignLeadSlice}
-                      onChange={(e) => setAssignLeadSlice(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-medium"
-                    >
-                      <option value="fresh">
-                        🔵 Fresh Leads Only ({result?.freshLeads || 0} leads - Recommended)
-                      </option>
-                      <option value="noLoan">
-                        🟠 Registered Customers (No Loan) ({result?.existingCustomersNoLoan || 0} leads)
-                      </option>
-                      <option value="partners">
-                        🟢 Existing Partners ({result?.existingPartners || 0} partners)
-                      </option>
-                      <option value="filtered">
-                        All Filtered Leads in Current View ({filteredRows.length} contacts)
-                      </option>
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Select Contacts Group:
+                      </label>
+                      <select
+                        value={assignLeadSlice}
+                        onChange={(e) => setAssignLeadSlice(e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                      >
+                        <option value="fresh">
+                          🔵 Fresh Leads Only ({result?.freshLeads || 0} leads)
+                        </option>
+                        <option value="noLoan">
+                          🟠 Registered Customers (No Loan) ({result?.existingCustomersNoLoan || 0} leads)
+                        </option>
+                        <option value="partners">
+                          🟢 Existing Partners ({result?.existingPartners || 0} partners)
+                        </option>
+                        <option value="filtered">
+                          All Filtered in Table ({filteredRows.length} contacts)
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Available Leads Pool:
+                      </label>
+                      <div className="px-3 py-2 text-xs font-bold rounded-xl bg-purple-50 border border-purple-200 text-purple-900 flex items-center justify-between">
+                        <span>Total in Selected Group:</span>
+                        <span className="text-sm px-2 py-0.5 rounded-md bg-purple-600 text-white font-extrabold">
+                          {availablePool.length}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Daily Target */}
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* MULTI-RM ALLOCATION TABLE */}
+                  {assignMode === "split" ? (
+                    <div className="space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                            RM Allocation List ({rmsList.length} RMs):
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleDistributeEqually}
+                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 transition flex items-center gap-1 shadow-2xs"
+                          title="Evenly divide available leads across selected RMs"
+                        >
+                          <Zap size={13} className="text-teal-600" />
+                          ⚡ Distribute Evenly
+                        </button>
+                      </div>
+
+                      {/* Live Allocation Summary Pill */}
+                      <div
+                        className={`p-2.5 rounded-xl border text-xs font-bold flex flex-wrap items-center justify-between gap-2 transition-colors ${
+                          remainingLeads === 0
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                            : remainingLeads > 0
+                            ? "bg-amber-50 border-amber-200 text-amber-900"
+                            : "bg-rose-50 border-rose-200 text-rose-800"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span>Total Available: <strong>{availablePool.length}</strong></span>
+                          <span>Allocated: <strong>{totalAllocated}</strong></span>
+                        </div>
+                        <div>
+                          {remainingLeads === 0 && (
+                            <span className="inline-flex items-center gap-1 text-emerald-700">
+                              <CheckCircle2 size={13} /> All {availablePool.length} leads assigned
+                            </span>
+                          )}
+                          {remainingLeads > 0 && (
+                            <span className="text-amber-800">
+                              ⚠️ {remainingLeads} leads remaining unallocated
+                            </span>
+                          )}
+                          {remainingLeads < 0 && (
+                            <span className="text-rose-700">
+                              ❌ Over-allocated by {Math.abs(remainingLeads)} leads! Please decrease count.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* RM List */}
+                      {loadingRms ? (
+                        <div className="py-6 text-center text-xs text-slate-400">Loading active RMs...</div>
+                      ) : rmsList.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-slate-400">No active RMs found.</div>
+                      ) : (
+                        <div className="border border-slate-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white shadow-2xs">
+                          {rmsList.map((rm) => {
+                            const isSelected = selectedRmIds.has(rm.rmId);
+                            const currentCount = rmAllocations[rm.rmId] || 0;
+                            const deskTag =
+                              rm.rmType === "CUSTOMER"
+                                ? { label: "📞 Customer Desk", color: "bg-emerald-50 text-emerald-800 border-emerald-200" }
+                                : rm.rmType === "PARTNER"
+                                ? { label: "🤝 Partner Desk", color: "bg-blue-50 text-blue-800 border-blue-200" }
+                                : { label: "⚡ Hybrid Desk", color: "bg-purple-50 text-purple-800 border-purple-200" };
+
+                            return (
+                              <div
+                                key={rm.rmId}
+                                className={`p-2.5 flex items-center justify-between gap-3 transition-colors ${
+                                  isSelected ? "bg-purple-50/40" : "hover:bg-slate-50"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleRmSelect(rm.rmId)}
+                                    className="p-1 rounded text-purple-700 hover:bg-purple-100 transition shrink-0"
+                                  >
+                                    {isSelected ? (
+                                      <CheckSquare size={17} className="text-purple-600" />
+                                    ) : (
+                                      <Square size={17} className="text-slate-400" />
+                                    )}
+                                  </button>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-xs font-bold text-slate-900 truncate">
+                                        {rm.rmName}
+                                      </span>
+                                      <span className="text-[10px] text-slate-500 font-mono">
+                                        ({rm.employeeId || rm.phone})
+                                      </span>
+                                      <span
+                                        className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-full border ${deskTag.color}`}
+                                      >
+                                        {deskTag.label}
+                                      </span>
+                                    </div>
+                                    {rm.branchName && (
+                                      <span className="text-[10px] text-slate-400 block truncate">
+                                        Branch: {rm.branchName}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Count Input */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <label className="text-[11px] font-bold text-slate-600">
+                                    Leads:
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={availablePool.length}
+                                    value={currentCount}
+                                    onChange={(e) => handleAllocationChange(rm.rmId, e.target.value)}
+                                    disabled={!isSelected}
+                                    className="w-20 px-2 py-1 text-xs font-bold text-center rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 disabled:opacity-40 disabled:bg-slate-100"
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* SINGLE RM MODE */
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        Daily Call Target:
+                        Select Relationship Manager (RM):
+                      </label>
+                      {loadingRms ? (
+                        <div className="text-xs text-slate-400">Loading RMs...</div>
+                      ) : (
+                        <select
+                          value={assignRmId}
+                          onChange={(e) => setAssignRmId(e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                          required
+                        >
+                          {rmsList.map((rm) => {
+                            const deskLabel =
+                              rm.rmType === "CUSTOMER"
+                                ? "📞 [Customer RM - Inbound Leads]"
+                                : rm.rmType === "PARTNER"
+                                ? "🤝 [Partner RM - Channel/DSA]"
+                                : "🔄 [Hybrid RM]";
+                            const branch = rm.branchName ? ` • ${rm.branchName}` : "";
+                            return (
+                              <option key={rm.rmId} value={rm.rmId}>
+                                {deskLabel} {rm.rmName} ({rm.employeeId || rm.phone}){branch}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Daily Target & Sheet Name */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Daily Call Target per RM:
                       </label>
                       <input
                         type="number"
@@ -991,25 +1331,25 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
                         max="200"
                         value={assignDailyTarget}
                         onChange={(e) => setAssignDailyTarget(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                         required
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        Sheet Name:
+                        Calling Sheet Name:
                       </label>
                       <input
                         type="text"
                         value={assignSheetName}
                         onChange={(e) => setAssignSheetName(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                  <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200">
                     <button
                       type="button"
                       onClick={() => setShowAssignModal(false)}
@@ -1019,11 +1359,15 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
                     </button>
                     <button
                       type="submit"
-                      disabled={assigning}
-                      className="px-5 py-2 text-xs font-bold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition shadow-md shadow-purple-500/20 flex items-center gap-1.5 disabled:opacity-60"
+                      disabled={assigning || (assignMode === "split" && (totalAllocated <= 0 || remainingLeads < 0))}
+                      className="px-5 py-2 text-xs font-bold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition shadow-md shadow-purple-500/20 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send size={13} />
-                      {assigning ? "Assigning..." : "Assign Sheet to RM"}
+                      {assigning
+                        ? "Assigning..."
+                        : assignMode === "split"
+                        ? `Assign ${totalAllocated} Leads to Selected RMs`
+                        : "Assign Sheet to RM"}
                     </button>
                   </div>
                 </>
