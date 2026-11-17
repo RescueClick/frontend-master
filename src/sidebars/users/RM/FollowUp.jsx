@@ -31,6 +31,7 @@ import {
 } from "../../../utils/followUpStatusConfig";
 import TableLoader from "../../../components/shared/TableLoader";
 import toast from "react-hot-toast";
+import { getAuthData } from "../../../utils/localStorage";
 import CustomerFollowUpTab from "./CustomerFollowUpTab";
 import AdminCallLogs from "../Admin/AdminCallLogs";
 
@@ -75,6 +76,13 @@ const FollowUp = () => {
     (state) => state.rm.partnersWithFollowUp
   );
 
+  const auth = useMemo(() => getAuthData(), []);
+  const rmProfile = useSelector((state) => state.rm?.profile?.data);
+  const activeRmUser = rmProfile || auth?.rmUser || {};
+  const rmType = activeRmUser?.rmType || "HYBRID";
+  const isCustomerDesk = rmType === "CUSTOMER";
+  const isPartnerDesk = rmType === "PARTNER";
+
   const [year, setYear] = useState("");
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
@@ -86,15 +94,25 @@ const FollowUp = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [followUpHubTab, setFollowUpHubTab] = useState(() => {
     try {
-      const auth = getAuthData();
-      if (auth?.rmUser?.rmType === "CUSTOMER") return "customer";
+      const a = getAuthData();
+      if (a?.rmUser?.rmType === "CUSTOMER") return "customer";
+      if (a?.rmUser?.rmType === "PARTNER") return "partner";
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
         if (params.get("tab") === "customer") return "customer";
       }
     } catch (_) {}
-    return "partner";
-  }); // 'partner' | 'customer'
+    return "customer";
+  }); // 'partner' | 'customer' | 'call-logs'
+
+  // Automatically keep the active tab aligned with RM desk type
+  useEffect(() => {
+    if (isCustomerDesk && followUpHubTab === "partner") {
+      setFollowUpHubTab("customer");
+    } else if (isPartnerDesk && followUpHubTab === "customer") {
+      setFollowUpHubTab("partner");
+    }
+  }, [isCustomerDesk, isPartnerDesk, followUpHubTab]);
 
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -120,8 +138,10 @@ const FollowUp = () => {
   }, [year, month, date]);
 
   useEffect(() => {
-    dispatch(fetchPartnersWithFollowUp(apiFilters));
-  }, [dispatch, apiFilters]);
+    if (!isCustomerDesk) {
+      dispatch(fetchPartnersWithFollowUp(apiFilters));
+    }
+  }, [dispatch, apiFilters, isCustomerDesk]);
 
   const followUps = (data || []).map((item, index) => ({
     id: index + 1,
@@ -421,19 +441,25 @@ const FollowUp = () => {
             <div>
               <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2 flex-wrap">
                 <span>Calling & Follow-Up Hub</span>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
-                  {followUpHubTab === "customer"
-                    ? "Customer Inbound Desk"
-                    : followUpHubTab === "partner"
-                    ? "Channel Partner Desk"
-                    : "Call Logs & Targets"}
+                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
+                  isCustomerDesk
+                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                    : isPartnerDesk
+                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                    : "bg-teal-50 text-teal-700 border-teal-200"
+                }`}>
+                  {isCustomerDesk
+                    ? "Customer Inbound Desk (B2C)"
+                    : isPartnerDesk
+                    ? "Channel Partner Desk (B2B)"
+                    : "Dual Desk (B2C & B2B)"}
                 </span>
               </h1>
               <p className="text-slate-600 mt-0.5 text-xs sm:text-sm">
                 Unified workspace for calling sheets, daily targets, loan form progress, and verified talk-time.
               </p>
             </div>
-            {followUpHubTab === "partner" && period?.label ? (
+            {!isCustomerDesk && followUpHubTab === "partner" && period?.label ? (
               <span className="self-start sm:self-auto inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">
                 Period: {period.label}
               </span>
@@ -443,30 +469,34 @@ const FollowUp = () => {
 
         {/* 3-in-1 Hub Tab Switcher */}
         <div className="flex border-b border-slate-200 gap-1 sm:gap-2 mb-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <button
-            type="button"
-            onClick={() => setFollowUpHubTab("customer")}
-            className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
-              followUpHubTab === "customer"
-                ? "border-teal-600 text-teal-800"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <FileCheck2 size={16} />
-            Customer Leads & Calling
-          </button>
-          <button
-            type="button"
-            onClick={() => setFollowUpHubTab("partner")}
-            className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
-              followUpHubTab === "partner"
-                ? "border-teal-600 text-teal-800"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <Users size={16} />
-            Partner Follow-up ({summary?.total ?? followUps.length})
-          </button>
+          {!isPartnerDesk && (
+            <button
+              type="button"
+              onClick={() => setFollowUpHubTab("customer")}
+              className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+                followUpHubTab === "customer"
+                  ? "border-teal-600 text-teal-800"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <FileCheck2 size={16} />
+              Customer Leads & Calling
+            </button>
+          )}
+          {!isCustomerDesk && (
+            <button
+              type="button"
+              onClick={() => setFollowUpHubTab("partner")}
+              className={`pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+                followUpHubTab === "partner"
+                  ? "border-teal-600 text-teal-800"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Users size={16} />
+              Partner Follow-up ({summary?.total ?? followUps.length})
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setFollowUpHubTab("call-logs")}

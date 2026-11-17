@@ -381,9 +381,15 @@ export default function CustomerFollowUpTab({ rmId }) {
                       </div>
                     </td>
 
-                    {/* Source / Partner */}
+                    {/* Source / Lead Origin */}
                     <td className="p-3">
-                      <span className="inline-flex items-center gap-1 font-medium text-xs text-slate-700 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200">
+                      <span className={`inline-flex items-center gap-1 font-semibold text-xs px-2.5 py-0.5 rounded-lg border ${
+                        String(c.partnerName).includes("Meta") || String(c.leadSource).includes("Meta")
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : String(c.partnerName).includes("Direct") || String(c.leadSource).includes("Direct")
+                          ? "bg-purple-50 text-purple-700 border-purple-200"
+                          : "bg-slate-50 text-slate-700 border-slate-200"
+                      }`}>
                         {c.partnerName}
                       </span>
                     </td>
