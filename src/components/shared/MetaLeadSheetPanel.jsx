@@ -89,9 +89,17 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
   const [assignSheetName, setAssignSheetName] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [assignSuccessMsg, setAssignSuccessMsg] = useState("");
+  const [modalDeskFilter, setModalDeskFilter] = useState("ALL"); // 'ALL' | 'CUSTOMER' | 'PARTNER'
 
   const getAdminToken = () => {
     const auth = getAuthData();
+    const pathname = typeof window !== "undefined" ? window.location.pathname.toLowerCase() : "";
+    if (pathname.startsWith("/rsm")) {
+      return auth.rsmToken || auth.rawRsmToken || auth.adminToken || auth.superAdminToken || "";
+    }
+    if (pathname.startsWith("/asm")) {
+      return auth.asmToken || auth.rawAsmToken || auth.adminToken || auth.superAdminToken || "";
+    }
     return (
       auth.superAdminToken ||
       auth.adminToken ||
@@ -272,14 +280,15 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
     setAssignSuccessMsg("");
     setAssignSheetName(fileName ? `Calling Sheet - ${fileName.replace(/\.csv$/i, "")}` : "Meta Calling Sheet");
 
-    // Smart default slice based on current view or where leads exist
+    let initialSlice = "fresh";
     if (activeFilter === "partners" || ((result?.freshLeads || 0) === 0 && (result?.existingPartners || 0) > 0)) {
-      setAssignLeadSlice("partners");
+      initialSlice = "partners";
     } else if (activeFilter === "noLoan" || ((result?.freshLeads || 0) === 0 && (result?.existingCustomersNoLoan || 0) > 0)) {
-      setAssignLeadSlice("noLoan");
+      initialSlice = "noLoan";
     } else {
-      setAssignLeadSlice("fresh");
+      initialSlice = "fresh";
     }
+    setAssignLeadSlice(initialSlice);
 
     setLoadingRms(true);
     try {
@@ -290,17 +299,30 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
       if (res.data?.success && res.data.rms) {
         setRmsList(res.data.rms);
         if (res.data.rms.length > 0) {
-          setAssignRmId(res.data.rms[0].rmId);
+          const hasCustomerRms = res.data.rms.some((r) => r.rmType === "CUSTOMER");
+          const defaultDesk =
+            initialSlice === "partners"
+              ? "PARTNER"
+              : hasCustomerRms && (initialSlice === "fresh" || initialSlice === "noLoan")
+              ? "CUSTOMER"
+              : "ALL";
+          setModalDeskFilter(defaultDesk);
 
-          // By default, select all RMs and split leads equally
-          const initialSet = new Set(res.data.rms.map((r) => r.rmId));
+          const filteredRms =
+            defaultDesk === "ALL"
+              ? res.data.rms
+              : res.data.rms.filter((r) => r.rmType === defaultDesk || r.rmType === "HYBRID");
+          const activePool = filteredRms.length > 0 ? filteredRms : res.data.rms;
+
+          setAssignRmId(activePool[0].rmId);
+          const initialSet = new Set(activePool.map((r) => r.rmId));
           setSelectedRmIds(initialSet);
 
           const total = availablePool.length;
-          const perRm = Math.floor(total / res.data.rms.length);
-          const rem = total % res.data.rms.length;
+          const perRm = Math.floor(total / activePool.length);
+          const rem = total % activePool.length;
           const initialAlloc = {};
-          res.data.rms.forEach((rm, idx) => {
+          activePool.forEach((rm, idx) => {
             initialAlloc[rm.rmId] = perRm + (idx < rem ? 1 : 0);
           });
           setRmAllocations(initialAlloc);
@@ -311,6 +333,26 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
     } finally {
       setLoadingRms(false);
     }
+  };
+
+  const handleFilterDesk = (desk) => {
+    setModalDeskFilter(desk);
+    const targetRms =
+      desk === "ALL"
+        ? rmsList
+        : rmsList.filter((r) => r.rmType === desk || r.rmType === "HYBRID");
+    const active = targetRms.length > 0 ? targetRms : rmsList;
+    const newSelected = new Set(active.map((r) => r.rmId));
+    setSelectedRmIds(newSelected);
+
+    const total = availablePool.length;
+    const perRm = Math.floor(total / active.length);
+    const rem = total % active.length;
+    const nextAlloc = {};
+    active.forEach((rm, idx) => {
+      nextAlloc[rm.rmId] = perRm + (idx < rem ? 1 : 0);
+    });
+    setRmAllocations(nextAlloc);
   };
 
   // Rebalance equal split whenever slice changes while modal is open
@@ -1376,6 +1418,45 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
                         </div>
                       </div>
 
+                      {/* Desk Filter Tabs */}
+                      {rmsList.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleFilterDesk("ALL")}
+                            className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                              modalDeskFilter === "ALL"
+                                ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                            }`}
+                          >
+                            All RMs ({rmsList.length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleFilterDesk("CUSTOMER")}
+                            className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition flex items-center gap-1 cursor-pointer ${
+                              modalDeskFilter === "CUSTOMER"
+                                ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                                : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                            }`}
+                          >
+                            📞 Customer Desk ({rmsList.filter((r) => r.rmType === "CUSTOMER").length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleFilterDesk("PARTNER")}
+                            className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition flex items-center gap-1 cursor-pointer ${
+                              modalDeskFilter === "PARTNER"
+                                ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                                : "bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100"
+                            }`}
+                          >
+                            🤝 Partner Desk ({rmsList.filter((r) => r.rmType === "PARTNER").length})
+                          </button>
+                        </div>
+                      )}
+
                       {/* RM List */}
                       {loadingRms ? (
                         <div className="py-6 text-center text-xs text-slate-400">Loading active RMs...</div>
@@ -1383,7 +1464,9 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
                         <div className="py-6 text-center text-xs text-slate-400">No active RMs found.</div>
                       ) : (
                         <div className="border border-slate-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white shadow-2xs">
-                          {rmsList.map((rm) => {
+                          {rmsList
+                            .filter((r) => modalDeskFilter === "ALL" || r.rmType === modalDeskFilter || r.rmType === "HYBRID")
+                            .map((rm) => {
                             const isSelected = selectedRmIds.has(rm.rmId);
                             const currentCount = rmAllocations[rm.rmId] || 0;
                             const deskTag =
