@@ -70,6 +70,8 @@ export default function AdminCallLogs({ defaultTab = "" }) {
   const [editingContact, setEditingContact] = useState(null); // { assignmentId, contact }
   const [updateStatusVal, setUpdateStatusVal] = useState("CONNECTED");
   const [updateNotesVal, setUpdateNotesVal] = useState("");
+  const [updateCallTypeVal, setUpdateCallTypeVal] = useState("OUTGOING");
+  const [updateDurationVal, setUpdateDurationVal] = useState(60);
   const [savingContactStatus, setSavingContactStatus] = useState(false);
 
   // Live logs state
@@ -268,6 +270,8 @@ export default function AdminCallLogs({ defaultTab = "" }) {
     setEditingContact({ assignmentId, contact });
     setUpdateStatusVal(contact.status || "CONNECTED");
     setUpdateNotesVal(contact.notes || "");
+    setUpdateCallTypeVal(contact.lastCallType || "OUTGOING");
+    setUpdateDurationVal(contact.lastCallDuration || 60);
   };
 
   const handleUpdateContactStatus = async () => {
@@ -282,18 +286,27 @@ export default function AdminCallLogs({ defaultTab = "" }) {
           contactPhone: editingContact.contact.phone,
           status: updateStatusVal,
           notes: updateNotesVal,
+          callType: updateCallTypeVal,
+          durationSeconds: updateDurationVal,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.data?.success) {
-        toast.success("Contact status updated!");
+        toast.success("Contact status & call direction updated!");
         setSelectedRmSheet((prev) => {
           if (!prev) return prev;
           const updatedSheets = prev.sheets.map((sheet) => {
             if (sheet._id !== editingContact.assignmentId) return sheet;
             const updatedContacts = sheet.contacts.map((c) =>
               c.phone === editingContact.contact.phone
-                ? { ...c, status: updateStatusVal, notes: updateNotesVal }
+                ? {
+                    ...c,
+                    status: updateStatusVal,
+                    notes: updateNotesVal,
+                    lastCallType: updateCallTypeVal,
+                    lastCallDuration: updateDurationVal,
+                    lastCallTime: new Date(),
+                  }
                 : c
             );
             const called = updatedContacts.filter((c) => c.status !== "PENDING").length;
@@ -313,6 +326,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         });
         setEditingContact(null);
         fetchOverview();
+        fetchLogs();
       }
     } catch (err) {
       console.error("Failed to update contact status:", err);
@@ -1840,10 +1854,26 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                                 {getCallingStatusBadge(contact.status)}
                               </td>
 
-                              {/* Duration & Last Call */}
+                              {/* Duration, Direction & Last Call */}
                               <td className="py-3 px-3">
-                                <div className="font-mono font-bold text-slate-700 text-xs">
-                                  {formatDuration(contact.lastCallDuration)}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {contact.lastCallType === "INCOMING" ? (
+                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                      <PhoneIncoming size={10} /> Incoming
+                                    </span>
+                                  ) : contact.lastCallType === "OUTGOING" ? (
+                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                      <PhoneOutgoing size={10} /> Outgoing
+                                    </span>
+                                  ) : contact.lastCallType === "MISSED" ? (
+                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                      <PhoneMissed size={10} /> Missed
+                                    </span>
+                                  ) : null}
+
+                                  <span className="font-mono font-bold text-slate-700 text-xs">
+                                    {formatDuration(contact.lastCallDuration)}
+                                  </span>
                                 </div>
                                 <div className="text-[10px] text-slate-400 mt-0.5">
                                   {contact.lastCallTime
@@ -1938,6 +1968,58 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                   <option value="PENDING">⏳ Pending Call</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Call Direction (Incoming ya Outgoing?)
+                </label>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setUpdateCallTypeVal("OUTGOING")}
+                    className={`py-2 px-3 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      updateCallTypeVal === "OUTGOING"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <PhoneOutgoing size={13} />
+                    📞 Outgoing (Maine lagaya)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUpdateCallTypeVal("INCOMING")}
+                    className={`py-2 px-3 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      updateCallTypeVal === "INCOMING"
+                        ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <PhoneIncoming size={13} />
+                    📥 Incoming (Client ka aaya)
+                  </button>
+                </div>
+              </div>
+
+              {updateStatusVal === "CONNECTED" && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Kitna Time Baat Hui? (Talk Time)
+                  </label>
+                  <select
+                    value={updateDurationVal}
+                    onChange={(e) => setUpdateDurationVal(Number(e.target.value))}
+                    className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  >
+                    <option value={30}>30 seconds</option>
+                    <option value={60}>1 minute (Quick brief)</option>
+                    <option value={120}>2 minutes (Good conversation)</option>
+                    <option value={180}>3 minutes (Detailed inquiry)</option>
+                    <option value={300}>5 minutes (Full discussion)</option>
+                    <option value={600}>10 minutes (Deep consultation)</option>
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
