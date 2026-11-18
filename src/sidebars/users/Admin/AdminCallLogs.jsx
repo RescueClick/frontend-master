@@ -28,6 +28,7 @@ import {
   AlertCircle,
   X,
   History,
+  Trash2,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import toast from "react-hot-toast";
@@ -207,6 +208,35 @@ export default function AdminCallLogs({ defaultTab = "" }) {
       alert("Failed to load sheet details for this RM");
     } finally {
       setLoadingSheetDetails(false);
+    }
+  };
+
+  const handleDeleteCallingAssignment = async (assignmentId, sheetName) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete calling assignment "${sheetName || "this sheet"}"? This will remove all leads assigned to this RM under this sheet.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const token = getAdminToken();
+      const res = await axios.delete(`${backendurl}/calls/assignments/${assignmentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.success) {
+        toast.success(res.data?.message || "Calling assignment deleted successfully");
+        setSelectedRmSheet((prev) => {
+          if (!prev) return null;
+          const remaining = (prev.sheets || []).filter((s) => s._id !== assignmentId);
+          if (remaining.length === 0) return null;
+          return { ...prev, sheets: remaining };
+        });
+        setSelectedSheetIndex(0);
+        fetchOverview();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete calling assignment");
     }
   };
 
@@ -1621,6 +1651,16 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                     >
                       <RefreshCw size={17} className={loadingSheetDetails ? "animate-spin" : ""} />
                     </button>
+                    {!isRm && activeSheet?._id && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCallingAssignment(activeSheet._id, activeSheet.sheetName)}
+                        className="p-1.5 sm:p-2 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition active:scale-95 cursor-pointer"
+                        title="Delete this Calling Sheet Assignment"
+                      >
+                        <Trash2 size={17} />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setSelectedRmSheet(null)}

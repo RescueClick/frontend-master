@@ -21,6 +21,7 @@ import {
   Square,
   Zap,
   Trash2,
+  X,
 } from "lucide-react";
 import { backendurl } from "../../feature/urldata";
 import { getAuthData } from "../../utils/localStorage";
@@ -793,14 +794,29 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
       </div>
 
       {fileName && (
-        <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-          <FileText size={14} className="text-blue-500" />
-          <span>Active Sheet: <strong className="text-slate-700">{fileName}</strong></span>
-          {result?.auditId && (
-            <span className="ml-2 inline-flex items-center text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">
-              Audit Saved in DB
-            </span>
-          )}
+        <div className="mt-3 flex items-center justify-between text-xs text-slate-600 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl">
+          <div className="flex items-center gap-2">
+            <FileText size={15} className="text-blue-500" />
+            <span>Active Sheet: <strong className="text-slate-800 font-semibold">{fileName}</strong></span>
+            {result?.auditId && (
+              <span className="ml-2 inline-flex items-center text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
+                Audit Saved in DB
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setResult(null);
+              setFileName("");
+              setOpen(false);
+            }}
+            title="Clear active sheet from view"
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1 rounded-lg transition"
+          >
+            <X size={13} />
+            Clear Active Sheet
+          </button>
         </div>
       )}
 
