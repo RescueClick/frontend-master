@@ -173,7 +173,7 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
   };
 
   const deleteHistoryItem = async (auditId, fileName) => {
-    if (!window.confirm(`Are you sure you want to delete uploaded sheet "${fileName}"? This will permanently remove the audit record and its associated calling sheet assignment.`)) {
+    if (!window.confirm(`Are you sure you want to delete uploaded sheet "${fileName}"? This will permanently remove the audit record and DELETE this sheet across ALL RMs everywhere.`)) {
       return;
     }
     setDeletingAuditId(auditId);

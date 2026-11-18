@@ -214,21 +214,21 @@ export default function AdminCallLogs({ defaultTab = "" }) {
   const handleDeleteCallingAssignment = async (assignmentId, sheetName) => {
     if (
       !window.confirm(
-        `Are you sure you want to delete calling assignment "${sheetName || "this sheet"}"? This will remove all leads assigned to this RM under this sheet.`
+        `Are you sure you want to delete sheet "${sheetName || "this sheet"}"? This will permanently delete this sheet and all its leads across ALL RMs everywhere.`
       )
     ) {
       return;
     }
     try {
       const token = getAdminToken();
-      const res = await axios.delete(`${backendurl}/calls/assignments/${assignmentId}`, {
+      const res = await axios.delete(`${backendurl}/calls/assignments/${assignmentId}?fromAll=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success) {
-        toast.success(res.data?.message || "Calling assignment deleted successfully");
+        toast.success(res.data?.message || "Sheet permanently deleted from all RMs successfully");
         setSelectedRmSheet((prev) => {
           if (!prev) return null;
-          const remaining = (prev.sheets || []).filter((s) => s._id !== assignmentId);
+          const remaining = (prev.sheets || []).filter((s) => s._id !== assignmentId && s.sheetName !== sheetName);
           if (remaining.length === 0) return null;
           return { ...prev, sheets: remaining };
         });
@@ -236,7 +236,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         fetchOverview();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete calling assignment");
+      toast.error(err.response?.data?.message || "Failed to delete calling sheet");
     }
   };
 
