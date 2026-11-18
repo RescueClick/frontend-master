@@ -20,6 +20,7 @@ import {
   CheckSquare,
   Square,
   Zap,
+  Trash2,
 } from "lucide-react";
 import { backendurl } from "../../feature/urldata";
 import { getAuthData } from "../../utils/localStorage";
@@ -75,6 +76,7 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
   const [tracePhone, setTracePhone] = useState("");
   const [traceResult, setTraceResult] = useState(null);
   const [loadingTrace, setLoadingTrace] = useState(false);
+  const [deletingAuditId, setDeletingAuditId] = useState(null);
 
   // Assign to RM State
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -166,6 +168,32 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
       setError(err.response?.data?.message || "Could not load this audit record.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteHistoryItem = async (auditId, fileName) => {
+    if (!window.confirm(`Are you sure you want to delete uploaded sheet "${fileName}"? This will permanently remove the audit record and its associated calling sheet assignment.`)) {
+      return;
+    }
+    setDeletingAuditId(auditId);
+    try {
+      const token = getAdminToken();
+      const res = await axios.delete(`${backendurl}/admin/meta-leads/history/${auditId}?deleteAssignments=true`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.success) {
+        setHistoryList((prev) => prev.filter((item) => item._id !== auditId));
+        if (result?.auditId === auditId) {
+          setResult(null);
+          setFileName("");
+          setOpen(false);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to delete sheet history:", err);
+      alert(err.response?.data?.message || "Failed to delete sheet history.");
+    } finally {
+      setDeletingAuditId(null);
     }
   };
 
@@ -1242,13 +1270,24 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
                           <td className="p-3 font-bold text-blue-700">{item.stats?.freshLeads || 0}</td>
                           <td className="p-3 font-bold text-emerald-700">{item.stats?.existingPartners || 0}</td>
                           <td className="p-3">
-                            <button
-                              type="button"
-                              onClick={() => loadPastAudit(item._id)}
-                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
-                            >
-                              Load Results
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => loadPastAudit(item._id)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition whitespace-nowrap"
+                              >
+                                Load Results
+                              </button>
+                              <button
+                                type="button"
+                                disabled={deletingAuditId === item._id}
+                                onClick={() => deleteHistoryItem(item._id, item.fileName)}
+                                title="Delete this uploaded sheet"
+                                className="p-1.5 text-xs rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition disabled:opacity-40"
+                              >
+                                <Trash2 size={15} className={deletingAuditId === item._id ? "animate-spin" : ""} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
