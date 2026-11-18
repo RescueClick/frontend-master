@@ -191,7 +191,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
     setLoadingSheetDetails(true);
     try {
       const token = getAdminToken();
-      const res = await axios.get(`${backendurl}/calls/assignments/rm-sheet?rmId=${rmId}&date=${date}`, {
+      const res = await axios.get(`${backendurl}/calls/assignments/rm-sheet?rmId=${rmId}&date=${date}&includePending=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success) {
@@ -1683,22 +1683,25 @@ export default function AdminCallLogs({ defaultTab = "" }) {
 
               {/* Multi-sheet switcher tabs (only if RM has more than 1 assigned sheet) */}
               {sheets.length > 1 && (
-                <div className="flex border-b border-slate-200 px-5 sm:px-6 gap-2 bg-slate-50/70 shrink-0 overflow-x-auto py-1">
-                  {sheets.map((s, idx) => (
-                    <button
-                      key={s._id}
-                      type="button"
-                      onClick={() => setSelectedSheetIndex(idx)}
-                      className={`py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                        (selectedSheetIndex || 0) === idx
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      <FileSpreadsheet size={13} />
-                      {s.sheetName} ({s.contacts?.length || 0})
-                    </button>
-                  ))}
+                <div className="flex border-b border-slate-200 px-5 sm:px-6 gap-2 bg-slate-50/70 shrink-0 overflow-x-auto py-1.5">
+                  {sheets.map((s, idx) => {
+                    const sPending = (s.contacts || []).filter((c) => c.status === "PENDING").length;
+                    return (
+                      <button
+                        key={s._id}
+                        type="button"
+                        onClick={() => setSelectedSheetIndex(idx)}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                          (selectedSheetIndex || 0) === idx
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        <FileSpreadsheet size={13} />
+                        {s.sheetName} • {s.date} ({s.contacts?.length || 0} leads • {sPending} left)
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
