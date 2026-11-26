@@ -550,35 +550,48 @@ export default function CustomerFollowUpTab({ rmId }) {
         </div>
       </div>
 
-      {/* Live Call-Status Filter Pills (Filter directly by call outcome) */}
-      {activeSourceTab === "sheet" && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {[
-            { key: "all", label: "All Calls" },
-            { key: "pending", label: "Pending" },
-            { key: "connected", label: "Connected" },
-            { key: "interested", label: "Interested" },
-            { key: "docs_pending", label: "Docs Pending" },
-            { key: "callback", label: "Call Back" },
-            { key: "unanswered", label: "Ringing / No Ans" },
-            { key: "not_interested", label: "Not Interested" },
-            { key: "called_today", label: "Called Today" },
-          ].map((pill) => (
-            <button
-              key={pill.key}
-              type="button"
-              onClick={() => setActiveFilter(pill.key)}
-              className={`px-3 py-1 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                activeFilter === pill.key
-                  ? "bg-teal-700 text-white border-teal-700 shadow-xs"
-                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              {pill.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Unified Live Call-Status Filter Pills with Counts (Synced with Calling Sheet) */}
+      {activeSourceTab === "sheet" && (() => {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const totalN = sheetItems.length;
+        const pendingN = sheetItems.filter((i) => !i.followUpStatus || i.followUpStatus === "PENDING" || i.followUpStatus === "NEW").length;
+        const connectedN = sheetItems.filter((i) => i.followUpStatus === "CONNECTED").length;
+        const interestedN = sheetItems.filter((i) => i.followUpStatus === "INTERESTED").length;
+        const docsN = sheetItems.filter((i) => i.followUpStatus === "DOCUMENTS_PENDING").length;
+        const callbackN = sheetItems.filter((i) => i.followUpStatus === "CALL_BACK" || i.followUpStatus === "CALL_BACK_SCHEDULED").length;
+        const unansweredN = sheetItems.filter((i) => ["UNANSWERED", "RINGING", "SWITCH_OFF", "NOT_REACHABLE"].includes(i.followUpStatus)).length;
+        const notIntN = sheetItems.filter((i) => i.followUpStatus === "NOT_INTERESTED" || i.followUpStatus === "WRONG_NUMBER").length;
+        const todayN = sheetItems.filter((i) => i.lastCallTime && new Date(i.lastCallTime).toISOString().slice(0, 10) === todayStr).length;
+
+        return (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              { key: "all", label: `All (${totalN})`, activeClass: "bg-slate-900 text-white border-slate-900" },
+              { key: "pending", label: `Pending (${pendingN})`, activeClass: "bg-slate-800 text-white border-slate-800" },
+              { key: "connected", label: `Connected (${connectedN})`, activeClass: "bg-emerald-700 text-white border-emerald-700" },
+              { key: "interested", label: `Interested (${interestedN})`, activeClass: "bg-blue-700 text-white border-blue-700" },
+              { key: "docs_pending", label: `Docs Pending (${docsN})`, activeClass: "bg-orange-700 text-white border-orange-700" },
+              { key: "callback", label: `Call Back (${callbackN})`, activeClass: "bg-purple-700 text-white border-purple-700" },
+              { key: "unanswered", label: `Ringing / No Ans (${unansweredN})`, activeClass: "bg-amber-700 text-white border-amber-700" },
+              { key: "not_interested", label: `Not Interested (${notIntN})`, activeClass: "bg-rose-700 text-white border-rose-700" },
+              { key: "called_today", label: `Called Today (${todayN})`, activeClass: "bg-teal-700 text-white border-teal-700" },
+            ].map((pill) => (
+              <button
+                key={pill.key}
+                type="button"
+                onClick={() => setActiveFilter(pill.key)}
+                className={`px-3 py-1 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                  activeFilter === pill.key
+                    ? `${pill.activeClass} shadow-xs`
+                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {error && (
         <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs sm:text-sm flex items-center gap-2">
@@ -914,7 +927,9 @@ export default function CustomerFollowUpTab({ rmId }) {
                             </div>
                             <div className="flex items-center gap-1 mt-0.5 font-mono text-[11px] text-slate-500">
                               <span>{formatDuration(c.lastCallDuration)}</span>
-                              {c.isVerified && <span className="text-emerald-600 font-bold">✓ Real Call</span>}
+                              {c.isVerified && c.lastCallDuration > 0 && !["UNANSWERED", "RINGING", "SWITCH_OFF", "NOT_REACHABLE"].includes(c.followUpStatus) && (
+                                <span className="text-emerald-600 font-bold">✓ Real Call</span>
+                              )}
                             </div>
                           </div>
                         ) : (

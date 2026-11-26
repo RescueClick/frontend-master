@@ -364,17 +364,39 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         </span>
       );
     }
-    if (s === "UNANSWERED" || s === "RINGING") {
+    if (s === "INTERESTED") {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-amber-50 text-amber-700 border border-amber-200">
-          <PhoneMissed size={12} className="text-amber-600" /> Unanswered
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-blue-50 text-blue-700 border border-blue-200">
+          <CheckCircle2 size={12} className="text-blue-600" /> Interested
         </span>
       );
     }
-    if (s === "CALL_BACK" || s.includes("CALLBACK")) {
+    if (s === "DOCUMENTS_PENDING") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-orange-50 text-orange-800 border border-orange-200">
+          <Clock size={12} className="text-orange-600" /> Docs Pending
+        </span>
+      );
+    }
+    if (s === "CALL_BACK" || s.includes("CALLBACK") || s === "CALL_BACK_SCHEDULED") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-purple-50 text-purple-700 border border-purple-200">
+          <Clock size={12} className="text-purple-600" /> Call Back
+        </span>
+      );
+    }
+    if (["UNANSWERED", "RINGING", "SWITCH_OFF", "NOT_REACHABLE"].includes(s)) {
+      const lbl = s === "RINGING" ? "Ringing" : s === "SWITCH_OFF" ? "Switch Off" : s === "NOT_REACHABLE" ? "Not Reachable" : "Unanswered";
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-amber-50 text-amber-700 border border-amber-200">
+          <PhoneMissed size={12} className="text-amber-600" /> {lbl}
+        </span>
+      );
+    }
+    if (s === "NOT_INTERESTED" || s === "WRONG_NUMBER") {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-rose-50 text-rose-700 border border-rose-200">
-          <Clock size={12} className="text-rose-600" /> Call Back
+          <X size={12} className="text-rose-600" /> {s === "WRONG_NUMBER" ? "Wrong No." : "Not Interested"}
         </span>
       );
     }
@@ -387,10 +409,12 @@ export default function AdminCallLogs({ defaultTab = "" }) {
 
   const openEditContactModal = (assignmentId, contact) => {
     setEditingContact({ assignmentId, contact });
-    setUpdateStatusVal(contact.status || "CONNECTED");
+    setUpdateStatusVal(
+      contact.status && contact.status !== "PENDING" ? contact.status : "CONNECTED"
+    );
     setUpdateNotesVal(contact.notes || "");
     setUpdateCallTypeVal(contact.lastCallType || "OUTGOING");
-    setUpdateDurationVal(contact.lastCallDuration || 60);
+    setUpdateDurationVal(contact.lastCallDuration || 0);
   };
 
   const handleUpdateContactStatus = async () => {
@@ -915,7 +939,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
   );
 
   return (
-    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className={isRm ? "space-y-4 sm:space-y-5" : "p-3 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-5"}>
       {!selectedRmSheet && (
         <>
       {/* Top Header */}
@@ -1645,19 +1669,33 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         const sheets = selectedRmSheet.sheets || [];
         const activeSheet = sheets[selectedSheetIndex] || sheets[0] || null;
         const contacts = activeSheet?.contacts || [];
+        const todayStr = new Date().toISOString().slice(0, 10);
         const totalCount = contacts.length;
-        const calledCount = activeSheet?.stats?.called ?? contacts.filter((c) => c.status !== "PENDING").length;
-        const connectedCount = activeSheet?.stats?.connected ?? contacts.filter((c) => c.status === "CONNECTED").length;
-        const unansweredCount = contacts.filter((c) => c.status === "UNANSWERED" || c.status === "RINGING").length;
-        const callBackCount = contacts.filter((c) => c.status === "CALL_BACK").length;
-        const pendingCount = Math.max(0, totalCount - calledCount);
+        const pendingCount = contacts.filter((c) => !c.status || c.status === "PENDING" || c.status === "NEW").length;
+        const calledCount = totalCount - pendingCount;
+        const connectedCount = contacts.filter((c) => c.status === "CONNECTED").length;
+        const interestedCount = contacts.filter((c) => c.status === "INTERESTED").length;
+        const docsPendingCount = contacts.filter((c) => c.status === "DOCUMENTS_PENDING").length;
+        const callBackCount = contacts.filter((c) => c.status === "CALL_BACK" || c.status === "CALL_BACK_SCHEDULED").length;
+        const unansweredCount = contacts.filter((c) => ["UNANSWERED", "RINGING", "SWITCH_OFF", "NOT_REACHABLE"].includes(c.status)).length;
+        const notInterestedCount = contacts.filter((c) => c.status === "NOT_INTERESTED" || c.status === "WRONG_NUMBER").length;
+        const calledTodayCount = contacts.filter((c) => c.lastCallTime && new Date(c.lastCallTime).toISOString().slice(0, 10) === todayStr).length;
         const progressPct = totalCount > 0 ? Math.round((calledCount / totalCount) * 100) : 0;
 
         const filteredContacts = contacts.filter((c) => {
+          const s = String(c.status || "PENDING").toUpperCase();
           if (sheetStatusFilter !== "ALL") {
-            if (sheetStatusFilter === "UNANSWERED") {
-              if (c.status !== "UNANSWERED" && c.status !== "RINGING") return false;
-            } else if (c.status !== sheetStatusFilter) {
+            if (sheetStatusFilter === "PENDING") {
+              if (s !== "PENDING" && s !== "NEW" && s !== "") return false;
+            } else if (sheetStatusFilter === "CALL_BACK") {
+              if (s !== "CALL_BACK" && s !== "CALL_BACK_SCHEDULED") return false;
+            } else if (sheetStatusFilter === "UNANSWERED") {
+              if (!["UNANSWERED", "RINGING", "SWITCH_OFF", "NOT_REACHABLE"].includes(s)) return false;
+            } else if (sheetStatusFilter === "NOT_INTERESTED") {
+              if (s !== "NOT_INTERESTED" && s !== "WRONG_NUMBER") return false;
+            } else if (sheetStatusFilter === "CALLED_TODAY") {
+              if (!c.lastCallTime || new Date(c.lastCallTime).toISOString().slice(0, 10) !== todayStr) return false;
+            } else if (s !== sheetStatusFilter) {
               return false;
             }
           }
@@ -1761,14 +1799,6 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                         <Trash2 size={17} />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={closeSheetView}
-                      className="text-slate-400 hover:text-slate-700 p-1.5 sm:p-2 rounded-xl hover:bg-slate-100 transition active:scale-95 cursor-pointer"
-                      title="Back to Overview"
-                    >
-                      <X size={20} />
-                    </button>
                   </div>
                 </div>
               </div>
@@ -1888,63 +1918,32 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                   )}
                 </div>
 
-                {/* Status Filter Pills */}
+                {/* Unified Status Filter Pills (Synced across all screens) */}
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setSheetStatusFilter("ALL")}
-                    className={`px-3 py-1 rounded-xl font-bold transition-all text-xs cursor-pointer ${
-                      sheetStatusFilter === "ALL"
-                        ? "bg-slate-900 text-white shadow-xs"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    All ({totalCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSheetStatusFilter("PENDING")}
-                    className={`px-3 py-1 rounded-xl font-bold transition-all text-xs cursor-pointer ${
-                      sheetStatusFilter === "PENDING"
-                        ? "bg-slate-900 text-white shadow-xs"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    ⏳ Pending ({pendingCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSheetStatusFilter("CONNECTED")}
-                    className={`px-3 py-1 rounded-xl font-bold transition-all text-xs cursor-pointer ${
-                      sheetStatusFilter === "CONNECTED"
-                        ? "bg-emerald-700 text-white shadow-xs"
-                        : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                    }`}
-                  >
-                    ✅ Connected ({connectedCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSheetStatusFilter("UNANSWERED")}
-                    className={`px-3 py-1 rounded-xl font-bold transition-all text-xs cursor-pointer ${
-                      sheetStatusFilter === "UNANSWERED"
-                        ? "bg-amber-700 text-white shadow-xs"
-                        : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
-                    }`}
-                  >
-                    ⚠️ Unanswered ({unansweredCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSheetStatusFilter("CALL_BACK")}
-                    className={`px-3 py-1 rounded-xl font-bold transition-all text-xs cursor-pointer ${
-                      sheetStatusFilter === "CALL_BACK"
-                        ? "bg-rose-700 text-white shadow-xs"
-                        : "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
-                    }`}
-                  >
-                    🚨 Call Back ({callBackCount})
-                  </button>
+                  {[
+                    { key: "ALL", label: `All (${totalCount})`, activeClass: "bg-slate-900 text-white border-slate-900" },
+                    { key: "PENDING", label: `Pending (${pendingCount})`, activeClass: "bg-slate-800 text-white border-slate-800" },
+                    { key: "CONNECTED", label: `Connected (${connectedCount})`, activeClass: "bg-emerald-700 text-white border-emerald-700" },
+                    { key: "INTERESTED", label: `Interested (${interestedCount})`, activeClass: "bg-blue-700 text-white border-blue-700" },
+                    { key: "DOCUMENTS_PENDING", label: `Docs Pending (${docsPendingCount})`, activeClass: "bg-orange-700 text-white border-orange-700" },
+                    { key: "CALL_BACK", label: `Call Back (${callBackCount})`, activeClass: "bg-purple-700 text-white border-purple-700" },
+                    { key: "UNANSWERED", label: `Ringing / No Ans (${unansweredCount})`, activeClass: "bg-amber-700 text-white border-amber-700" },
+                    { key: "NOT_INTERESTED", label: `Not Interested (${notInterestedCount})`, activeClass: "bg-rose-700 text-white border-rose-700" },
+                    { key: "CALLED_TODAY", label: `Called Today (${calledTodayCount})`, activeClass: "bg-teal-700 text-white border-teal-700" },
+                  ].map((pill) => (
+                    <button
+                      key={pill.key}
+                      type="button"
+                      onClick={() => setSheetStatusFilter(pill.key)}
+                      className={`px-3 py-1 rounded-xl font-bold border transition-all text-xs cursor-pointer ${
+                        sheetStatusFilter === pill.key
+                          ? `${pill.activeClass} shadow-xs`
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -2273,19 +2272,41 @@ export default function AdminCallLogs({ defaultTab = "" }) {
             {/* Body */}
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Call Outcome Status
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-2">
+                  Select Call Outcome (Tap one):
                 </label>
-                <select
-                  value={updateStatusVal}
-                  onChange={(e) => setUpdateStatusVal(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                >
-                  <option value="CONNECTED">✅ Connected (Spoke with Customer / Partner)</option>
-                  <option value="UNANSWERED">⚠️ Unanswered / Ringing</option>
-                  <option value="CALL_BACK">🚨 Call Back Scheduled</option>
-                  <option value="PENDING">⏳ Pending Call</option>
-                </select>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { value: "CONNECTED", label: "Connected", tone: "bg-emerald-50 text-emerald-800 border-emerald-300" },
+                    { value: "INTERESTED", label: "Interested", tone: "bg-blue-50 text-blue-800 border-blue-300" },
+                    { value: "DOCUMENTS_PENDING", label: "Docs Pending", tone: "bg-orange-50 text-orange-900 border-orange-300" },
+                    { value: "CALL_BACK", label: "Call Back", tone: "bg-purple-50 text-purple-800 border-purple-300" },
+                    { value: "RINGING", label: "Ringing / No Ans", tone: "bg-amber-50 text-amber-800 border-amber-300" },
+                    { value: "UNANSWERED", label: "Unanswered", tone: "bg-yellow-50 text-yellow-800 border-yellow-300" },
+                    { value: "NOT_REACHABLE", label: "Not Reachable", tone: "bg-rose-50 text-rose-800 border-rose-300" },
+                    { value: "NOT_INTERESTED", label: "Not Interested", tone: "bg-slate-100 text-slate-700 border-slate-300" },
+                  ].map((pill) => (
+                    <button
+                      key={pill.value}
+                      type="button"
+                      onClick={() => {
+                        setUpdateStatusVal(pill.value);
+                        if (["UNANSWERED", "RINGING", "SWITCH_OFF", "NOT_REACHABLE", "NOT_INTERESTED"].includes(pill.value)) {
+                          setUpdateDurationVal(0);
+                        } else if (updateDurationVal === 0) {
+                          setUpdateDurationVal(60);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer ${
+                        updateStatusVal === pill.value
+                          ? "bg-teal-700 text-white border-teal-700 shadow-sm ring-2 ring-teal-500/30"
+                          : `${pill.tone} hover:opacity-90`
+                      }`}
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -2320,16 +2341,17 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                 </div>
               </div>
 
-              {updateStatusVal === "CONNECTED" && (
+              {["CONNECTED", "INTERESTED", "DOCUMENTS_PENDING", "CALL_BACK"].includes(updateStatusVal) && (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Kitna Time Baat Hui? (Talk Time)
+                    Talk Time Duration
                   </label>
                   <select
                     value={updateDurationVal}
                     onChange={(e) => setUpdateDurationVal(Number(e.target.value))}
                     className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   >
+                    <option value={0}>0 seconds</option>
                     <option value={30}>30 seconds</option>
                     <option value={60}>1 minute (Quick brief)</option>
                     <option value={120}>2 minutes (Good conversation)</option>
