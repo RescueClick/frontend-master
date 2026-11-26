@@ -1980,29 +1980,46 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                   </div>
                 ) : (
                   <>
-                    {/* Mobile Phone Responsive Card View */}
-                    <div className="md:hidden divide-y divide-slate-100 bg-slate-50/40">
+                    {/* Mobile Phone Responsive Card View (Distinct Bordered Lead Boxes) */}
+                    <div className="md:hidden p-2.5 space-y-2.5 bg-slate-100/80">
                       {filteredContacts.length === 0 ? (
-                        <div className="py-12 text-center text-slate-400 text-xs">
+                        <div className="py-12 text-center text-slate-400 text-xs bg-white rounded-2xl border border-slate-200">
                           No leads found matching the selected filters.
                         </div>
                       ) : (
-                        filteredContacts.map((contact) => {
+                        filteredContacts.map((contact, idx) => {
                           const cleanPhone = String(contact.phone || "").replace(/\D/g, "").slice(-10);
                           const loanBadge = getLoanTypeBadge(contact.loanType, activeSheet?.sheetName);
                           const amtLabel = contact.loanAmountText || (Number(contact.loanAmount) > 0 ? `₹${Number(contact.loanAmount).toLocaleString("en-IN")}` : "");
                           const salLabel = contact.salaryText || (Number(contact.salary) > 0 ? `₹${Number(contact.salary).toLocaleString("en-IN")}/mo` : "");
+                          const st = String(contact.status || "PENDING").toUpperCase();
+                          const leftBorder =
+                            st === "CONNECTED" || st === "INTERESTED"
+                              ? "border-l-emerald-500"
+                              : st === "CALL_BACK" || st === "CALL_BACK_SCHEDULED"
+                              ? "border-l-purple-500"
+                              : ["UNANSWERED", "RINGING", "SWITCH_OFF", "NOT_REACHABLE"].includes(st)
+                              ? "border-l-amber-400"
+                              : st === "NOT_INTERESTED" || st === "WRONG_NUMBER"
+                              ? "border-l-rose-400"
+                              : "border-l-slate-300";
 
                           return (
-                            <div key={`mob-${contact._id || contact.phone}`} className="p-3.5 bg-white space-y-2.5">
+                            <div
+                              key={`mob-${contact._id || contact.phone}`}
+                              className={`p-3.5 bg-white rounded-2xl border border-slate-200 border-l-4 ${leftBorder} shadow-xs space-y-2.5`}
+                            >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-center gap-2.5 min-w-0">
-                                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
                                     {contact.name ? contact.name[0].toUpperCase() : "L"}
                                   </div>
                                   <div className="min-w-0">
-                                    <div className="font-bold text-slate-900 text-sm truncate">{contact.name}</div>
-                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 flex-wrap">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[10px] font-black text-slate-400">#{idx + 1}</span>
+                                      <span className="font-bold text-slate-900 text-sm truncate">{contact.name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 flex-wrap mt-0.5">
                                       {contact.city && (
                                         <span className="inline-flex items-center gap-0.5">
                                           <MapPin size={10} className="text-slate-400" />
@@ -2021,7 +2038,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                               </div>
 
                               {/* Loan Type, Amount & Salary Strip */}
-                              <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-xl p-2 text-xs">
+                              <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 border border-slate-200/70 rounded-xl p-2 text-xs">
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold border ${loanBadge.tone}`}>
                                   {loanBadge.label}
                                 </span>
@@ -2036,6 +2053,24 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                                   </span>
                                 )}
                               </div>
+
+                              {/* Last Call & Notes Strip (if called or noted) */}
+                              {(contact.lastCallTime || contact.notes) && (
+                                <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50/80 border border-slate-100 text-[11px] text-slate-600 flex-wrap">
+                                  {contact.lastCallTime && (
+                                    <span className="font-mono font-semibold">
+                                      {contact.lastCallType ? `${contact.lastCallType} • ` : ""}
+                                      {formatDuration(contact.lastCallDuration)} •{" "}
+                                      {new Date(contact.lastCallTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                  )}
+                                  {contact.notes && (
+                                    <span className="italic text-slate-500 truncate max-w-full">
+                                      Note: {contact.notes}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Quick Dial + Update Outcome */}
                               <div className="flex items-center justify-between gap-2 pt-0.5">

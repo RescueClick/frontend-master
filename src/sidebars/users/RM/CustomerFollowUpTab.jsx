@@ -625,7 +625,7 @@ export default function CustomerFollowUpTab({ rmId }) {
       {/* ========================================================================= */}
       {/* 1. MOBILE PHONE CALLING CARDS VIEW (Clean, Large Touch Targets, No Horizontal Scroll) */}
       {/* ========================================================================= */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-2.5 bg-slate-100/70 p-2 rounded-2xl border border-slate-200/70">
         {loading ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400 text-xs sm:text-sm">
             <RefreshCw size={24} className="animate-spin text-teal-600 mx-auto mb-2" />
@@ -647,7 +647,7 @@ export default function CustomerFollowUpTab({ rmId }) {
             return (
               <div
                 key={`mobile-lead-${c.id}`}
-                className="bg-white rounded-2xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs hover:border-slate-300 transition-all space-y-3"
+                className="bg-white rounded-2xl border border-slate-200 border-l-4 border-l-teal-500 p-3.5 sm:p-4 shadow-xs hover:border-slate-300 transition-all space-y-3"
               >
                 {/* Header: Customer Name + App ID + Source Pill */}
                 <div className="flex items-start justify-between gap-2">
