@@ -249,15 +249,15 @@ export default function AdminCallLogs({ defaultTab = "" }) {
     return `https://wa.me/91${clean}?text=${encodeURIComponent(msg)}`;
   };
 
-  const getLoanTypeBadge = (loanType) => {
-    const lt = String(loanType || "").toUpperCase();
+  const getLoanTypeBadge = (loanType, sheetName = "") => {
+    const lt = String(loanType || sheetName || "").toUpperCase();
     if (lt.includes("PERSONAL") || lt === "PL") {
       return { label: "Personal Loan", tone: "bg-blue-50 text-blue-700 border-blue-200" };
     }
     if (lt.includes("HOME") || lt === "HL") {
       return { label: "Home Loan", tone: "bg-emerald-50 text-emerald-700 border-emerald-200" };
     }
-    if (lt.includes("LAP") || lt.includes("PROPERTY")) {
+    if (lt.includes("LAP") || lt.includes("PROPERTY") || lt.includes("MORTGAGE")) {
       return { label: "LAP / Mortgage", tone: "bg-purple-50 text-purple-700 border-purple-200" };
     }
     if (lt.includes("BUSINESS") || lt === "BL") {
@@ -1581,8 +1581,8 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         });
 
         return (
-          <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 w-[98vw] max-w-7xl h-[94vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+          <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4 overflow-hidden animate-in fade-in duration-150">
+            <div className="bg-white rounded-none sm:rounded-3xl shadow-2xl border border-slate-200/90 w-full h-full sm:w-[98vw] sm:max-w-7xl sm:h-[94vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
               {/* 1. Modal Top Bar (Compact & Sleek) */}
               <div className="px-5 sm:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50 shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
@@ -1801,7 +1801,102 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                     </p>
                   </div>
                 ) : (
-                  <table className="w-full text-left text-xs border-collapse">
+                  <>
+                    {/* Mobile Phone Responsive Card View */}
+                    <div className="md:hidden divide-y divide-slate-100 bg-slate-50/40">
+                      {filteredContacts.length === 0 ? (
+                        <div className="py-12 text-center text-slate-400 text-xs">
+                          No leads found matching the selected filters.
+                        </div>
+                      ) : (
+                        filteredContacts.map((contact) => {
+                          const cleanPhone = String(contact.phone || "").replace(/\D/g, "").slice(-10);
+                          const loanBadge = getLoanTypeBadge(contact.loanType, activeSheet?.sheetName);
+                          const amtLabel = contact.loanAmountText || (Number(contact.loanAmount) > 0 ? `₹${Number(contact.loanAmount).toLocaleString("en-IN")}` : "");
+                          const salLabel = contact.salaryText || (Number(contact.salary) > 0 ? `₹${Number(contact.salary).toLocaleString("en-IN")}/mo` : "");
+
+                          return (
+                            <div key={`mob-${contact._id || contact.phone}`} className="p-3.5 bg-white space-y-2.5">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                    {contact.name ? contact.name[0].toUpperCase() : "L"}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-slate-900 text-sm truncate">{contact.name}</div>
+                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 flex-wrap">
+                                      {contact.city && (
+                                        <span className="inline-flex items-center gap-0.5">
+                                          <MapPin size={10} className="text-slate-400" />
+                                          {contact.city}
+                                        </span>
+                                      )}
+                                      <span className="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-medium text-[10px]">
+                                        {contact.leadSource && !contact.leadSource.endsWith(".csv")
+                                          ? contact.leadSource
+                                          : "Meta Ads"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="shrink-0">{getCallingStatusBadge(contact.status)}</div>
+                              </div>
+
+                              {/* Loan Type, Amount & Salary Strip */}
+                              <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-xl p-2 text-xs">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold border ${loanBadge.tone}`}>
+                                  {loanBadge.label}
+                                </span>
+                                {amtLabel && (
+                                  <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[11px]">
+                                    Amt: {amtLabel}
+                                  </span>
+                                )}
+                                {salLabel && (
+                                  <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 font-semibold text-[11px]">
+                                    Sal: {salLabel}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Quick Dial + Update Outcome */}
+                              <div className="flex items-center justify-between gap-2 pt-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <a
+                                    href={`tel:${cleanPhone}`}
+                                    className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition"
+                                  >
+                                    <Phone size={12} /> {contact.phone}
+                                  </a>
+                                  <a
+                                    href={getWhatsAppUrl(contact.phone, contact.name)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center justify-center active:scale-95 transition"
+                                    title="WhatsApp"
+                                  >
+                                    <FaWhatsapp size={15} />
+                                  </a>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => openEditContactModal(activeSheet._id, contact)}
+                                  className="h-8 px-3 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 flex items-center gap-1 active:scale-95 transition"
+                                >
+                                  <Edit3 size={12} className="text-slate-500" />
+                                  Update
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block">
+                      <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-slate-50/95 backdrop-blur-xs text-slate-700 font-bold border-b border-slate-200 sticky top-0 z-10 shadow-2xs">
                       <tr>
                         <th className="py-3 px-4 sm:px-6">Lead / Customer</th>
@@ -1822,7 +1917,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                       ) : (
                         filteredContacts.map((contact) => {
                           const cleanPhone = String(contact.phone || "").replace(/\D/g, "").slice(-10);
-                          const loanBadge = getLoanTypeBadge(contact.loanType);
+                          const loanBadge = getLoanTypeBadge(contact.loanType, activeSheet?.sheetName);
 
                           return (
                             <tr key={contact._id || contact.phone} className="hover:bg-slate-50/90 transition-colors">
@@ -1860,6 +1955,20 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                                 >
                                   {loanBadge.label}
                                 </span>
+                                {(contact.loanAmountText || Number(contact.loanAmount) > 0 || contact.salaryText || Number(contact.salary) > 0) && (
+                                  <div className="mt-1 space-y-0.5 text-[11px]">
+                                    {(contact.loanAmountText || Number(contact.loanAmount) > 0) && (
+                                      <div className="font-bold text-emerald-700">
+                                        Amt: {contact.loanAmountText || `₹${Number(contact.loanAmount).toLocaleString("en-IN")}`}
+                                      </div>
+                                    )}
+                                    {(contact.salaryText || Number(contact.salary) > 0) && (
+                                      <div className="font-medium text-slate-600">
+                                        Sal: {contact.salaryText || `₹${Number(contact.salary).toLocaleString("en-IN")}/mo`}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </td>
 
                               {/* Contact & 1-Click Dialing */}
@@ -1953,6 +2062,8 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                       )}
                     </tbody>
                   </table>
+                    </div>
+                  </>
                 )}
               </div>
 

@@ -430,6 +430,10 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
               phone: r.phone,
               city: r.city,
               loanType: r.metaLoanType || r.loanInfo?.loanType,
+              loanAmount: r.loanAmount || r.metaLoanAmount || r.loanInfo?.amount || 0,
+              metaLoanAmount: r.metaLoanAmount || "",
+              salary: r.salary || r.metaSalary || 0,
+              metaSalary: r.metaSalary || "",
               leadSource: fileName || "Meta Ads",
               partnerId: r.partnerInfo?.partnerId,
               customerId: r.customerInfo?.customerId,
@@ -482,6 +486,10 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
             phone: r.phone,
             city: r.city,
             loanType: r.metaLoanType || r.loanInfo?.loanType,
+            loanAmount: r.loanAmount || r.metaLoanAmount || r.loanInfo?.amount || 0,
+            metaLoanAmount: r.metaLoanAmount || "",
+            salary: r.salary || r.metaSalary || 0,
+            metaSalary: r.metaSalary || "",
             leadSource: fileName || "Meta Ads",
             partnerId: r.partnerInfo?.partnerId,
             customerId: r.customerInfo?.customerId,
@@ -730,9 +738,19 @@ export default function MetaLeadSheetPanel({ defaultOpen = false, embedded = fal
       title: "Meta Campaign / Type",
       key: "metaDetails",
       render: (_, row) => (
-        <div className="text-xs text-slate-500 max-w-[160px] truncate">
-          <div>{row.metaLoanType || "—"}</div>
-          {row.createdTime && <span className="text-[11px] text-slate-400">{row.createdTime}</span>}
+        <div className="text-xs text-slate-500 max-w-[190px]">
+          <div className="font-semibold text-slate-700 truncate">{row.metaLoanType || "—"}</div>
+          {(Number(row.loanAmount) > 0 || row.metaLoanAmount) && (
+            <div className="text-[11px] font-bold text-emerald-700">
+              Amt: {Number(row.loanAmount) > 0 ? `₹${Number(row.loanAmount).toLocaleString("en-IN")}` : row.metaLoanAmount}
+            </div>
+          )}
+          {(Number(row.salary) > 0 || row.metaSalary) && (
+            <div className="text-[11px] font-medium text-blue-700">
+              Sal: {Number(row.salary) > 0 ? `₹${Number(row.salary).toLocaleString("en-IN")}/mo` : row.metaSalary}
+            </div>
+          )}
+          {row.createdTime && <span className="text-[10px] text-slate-400">{row.createdTime}</span>}
         </div>
       ),
     },

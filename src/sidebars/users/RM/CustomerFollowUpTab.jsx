@@ -82,9 +82,17 @@ function formatDuration(seconds = 0) {
 }
 
 export default function CustomerFollowUpTab({ rmId }) {
-  const [items, setItems] = useState([]);
+  const [sheetItems, setSheetItems] = useState([]);
+  const [applicationItems, setApplicationItems] = useState([]);
+  const [activeSourceTab, setActiveSourceTab] = useState("sheet"); // 'sheet' | 'applications'
   const [summary, setSummary] = useState({
     total: 0,
+    sheetTotal: 0,
+    sheetPending: 0,
+    sheetConnected: 0,
+    sheetCallback: 0,
+    sheetCalledToday: 0,
+    appsTotal: 0,
     formFilled: 0,
     formIncomplete: 0,
     docsPending: 0,
@@ -95,7 +103,7 @@ export default function CustomerFollowUpTab({ rmId }) {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeFilter, setActiveFilter] = useState("all"); // 'all' | 'filled' | 'incomplete' | 'docs' | 'called_today'
+  const [activeFilter, setActiveFilter] = useState("all");
 
   // Update modal state
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -122,7 +130,8 @@ export default function CustomerFollowUpTab({ rmId }) {
       });
 
       if (res.data?.success) {
-        setItems(res.data.items || []);
+        setSheetItems(res.data.sheetItems || res.data.items || []);
+        setApplicationItems(res.data.applicationItems || []);
         if (res.data.summary) {
           setSummary(res.data.summary);
         }
@@ -215,19 +224,34 @@ export default function CustomerFollowUpTab({ rmId }) {
 
   // Filtered rows
   const filteredItems = useMemo(() => {
-    let list = items;
+    let list = activeSourceTab === "sheet" ? sheetItems : applicationItems;
 
-    if (activeFilter === "filled") {
-      list = list.filter((i) => i.formStatus === "FILLED");
-    } else if (activeFilter === "incomplete") {
-      list = list.filter((i) => i.formStatus !== "FILLED");
-    } else if (activeFilter === "docs") {
-      list = list.filter((i) => i.pendingDocsCount > 0);
-    } else if (activeFilter === "called_today") {
-      const todayStr = new Date().toISOString().slice(0, 10);
-      list = list.filter(
-        (i) => i.lastCallTime && new Date(i.lastCallTime).toISOString().slice(0, 10) === todayStr
-      );
+    if (activeSourceTab === "sheet") {
+      if (activeFilter === "pending") {
+        list = list.filter((i) => i.followUpStatus === "PENDING" || i.followUpStatus === "NEW");
+      } else if (activeFilter === "connected") {
+        list = list.filter((i) => i.followUpStatus === "CONNECTED");
+      } else if (activeFilter === "callback") {
+        list = list.filter((i) => i.followUpStatus === "CALL_BACK" || i.followUpStatus === "CALL_BACK_SCHEDULED");
+      } else if (activeFilter === "called_today") {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        list = list.filter(
+          (i) => i.lastCallTime && new Date(i.lastCallTime).toISOString().slice(0, 10) === todayStr
+        );
+      }
+    } else {
+      if (activeFilter === "filled") {
+        list = list.filter((i) => i.formStatus === "FILLED");
+      } else if (activeFilter === "incomplete") {
+        list = list.filter((i) => i.formStatus !== "FILLED");
+      } else if (activeFilter === "docs") {
+        list = list.filter((i) => i.pendingDocsCount > 0);
+      } else if (activeFilter === "called_today") {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        list = list.filter(
+          (i) => i.lastCallTime && new Date(i.lastCallTime).toISOString().slice(0, 10) === todayStr
+        );
+      }
     }
 
     if (searchTerm.trim()) {
@@ -253,82 +277,197 @@ export default function CustomerFollowUpTab({ rmId }) {
     }
 
     return list;
-  }, [items, activeFilter, searchTerm]);
+  }, [sheetItems, applicationItems, activeSourceTab, activeFilter, searchTerm]);
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* 5 Summary Stat Cards — Mobile Swipeable Strip + Desktop Grid */}
-      <div className="flex overflow-x-auto gap-2 pb-1 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* Category Switcher: Calling Sheet Leads vs Loan Form Follow-Ups */}
+      <div className="flex flex-wrap items-center gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200 w-fit">
         <button
           type="button"
-          onClick={() => setActiveFilter("all")}
-          className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
-            activeFilter === "all"
-              ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-800"
-              : "bg-white text-slate-800 border-slate-200 hover:bg-slate-50"
+          onClick={() => {
+            setActiveSourceTab("sheet");
+            setActiveFilter("all");
+          }}
+          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeSourceTab === "sheet"
+              ? "bg-teal-700 text-white shadow-sm"
+              : "text-slate-600 hover:bg-white hover:text-slate-900"
           }`}
         >
-          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-80 truncate">Total Leads</div>
-          <div className="text-xl sm:text-2xl font-black mt-1">{summary.total}</div>
-          <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-70 truncate">Assigned Direct Leads</div>
+          <PhoneCall size={14} />
+          <span>Calling Sheet Leads</span>
+          <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-black ${activeSourceTab === "sheet" ? "bg-teal-900/60 text-white" : "bg-slate-200 text-slate-700"}`}>
+            {summary.sheetTotal ?? sheetItems.length}
+          </span>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveFilter("filled")}
-          className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
-            activeFilter === "filled"
-              ? "bg-emerald-700 text-white border-emerald-700 shadow-md ring-2 ring-emerald-600"
-              : "bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100"
+          onClick={() => {
+            setActiveSourceTab("applications");
+            setActiveFilter("all");
+          }}
+          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeSourceTab === "applications"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "text-slate-600 hover:bg-white hover:text-slate-900"
           }`}
         >
-          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Form Filled</div>
-          <div className="text-xl sm:text-2xl font-black mt-1">{summary.formFilled}</div>
-          <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Applications submitted</div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveFilter("incomplete")}
-          className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
-            activeFilter === "incomplete"
-              ? "bg-amber-700 text-white border-amber-700 shadow-md ring-2 ring-amber-600"
-              : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
-          }`}
-        >
-          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Incomplete</div>
-          <div className="text-xl sm:text-2xl font-black mt-1">{summary.formIncomplete}</div>
-          <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Drop-off / In progress</div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveFilter("docs")}
-          className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
-            activeFilter === "docs"
-              ? "bg-orange-700 text-white border-orange-700 shadow-md ring-2 ring-orange-600"
-              : "bg-orange-50 text-orange-900 border-orange-200 hover:bg-orange-100"
-          }`}
-        >
-          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Docs Pending</div>
-          <div className="text-xl sm:text-2xl font-black mt-1">{summary.docsPending}</div>
-          <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Needs follow-up call</div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveFilter("called_today")}
-          className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
-            activeFilter === "called_today"
-              ? "bg-blue-700 text-white border-blue-700 shadow-md ring-2 ring-blue-600"
-              : "bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100"
-          }`}
-        >
-          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Called Today</div>
-          <div className="text-xl sm:text-2xl font-black mt-1">{summary.calledToday}</div>
-          <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Target progress</div>
+          <FileCheck2 size={14} />
+          <span>Loan Form Follow-Ups</span>
+          <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-black ${activeSourceTab === "applications" ? "bg-slate-700 text-white" : "bg-slate-200 text-slate-700"}`}>
+            {summary.appsTotal ?? applicationItems.length}
+          </span>
         </button>
       </div>
+
+      {/* 5 Summary Stat Cards — Context-aware per active category */}
+      {activeSourceTab === "sheet" ? (
+        <div className="flex overflow-x-auto gap-2 pb-1 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={() => setActiveFilter("all")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "all"
+                ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-800"
+                : "bg-white text-slate-800 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-80 truncate">Sheet Leads</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.sheetTotal ?? sheetItems.length}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-70 truncate">Assigned calling sheets</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("pending")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "pending"
+                ? "bg-amber-700 text-white border-amber-700 shadow-md ring-2 ring-amber-600"
+                : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Pending Call</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.sheetPending ?? 0}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Needs first dial</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("connected")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "connected"
+                ? "bg-emerald-700 text-white border-emerald-700 shadow-md ring-2 ring-emerald-600"
+                : "bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Connected</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.sheetConnected ?? 0}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Verified calls</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("callback")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "callback"
+                ? "bg-purple-700 text-white border-purple-700 shadow-md ring-2 ring-purple-600"
+                : "bg-purple-50 text-purple-900 border-purple-200 hover:bg-purple-100"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Call Back</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.sheetCallback ?? 0}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Follow-up scheduled</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("called_today")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "called_today"
+                ? "bg-blue-700 text-white border-blue-700 shadow-md ring-2 ring-blue-600"
+                : "bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Called Today</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.sheetCalledToday ?? 0}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Target progress</div>
+          </button>
+        </div>
+      ) : (
+        <div className="flex overflow-x-auto gap-2 pb-1 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={() => setActiveFilter("all")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "all"
+                ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-800"
+                : "bg-white text-slate-800 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-80 truncate">Total Forms</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.appsTotal ?? applicationItems.length}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-70 truncate">All customer files</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("filled")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "filled"
+                ? "bg-emerald-700 text-white border-emerald-700 shadow-md ring-2 ring-emerald-600"
+                : "bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Form Filled</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.formFilled}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Applications submitted</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("incomplete")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "incomplete"
+                ? "bg-amber-700 text-white border-amber-700 shadow-md ring-2 ring-amber-600"
+                : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Incomplete</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.formIncomplete}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Drop-off / In progress</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("docs")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "docs"
+                ? "bg-orange-700 text-white border-orange-700 shadow-md ring-2 ring-orange-600"
+                : "bg-orange-50 text-orange-900 border-orange-200 hover:bg-orange-100"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Docs Pending</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.docsPending}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Needs follow-up call</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("called_today")}
+            className={`min-w-[125px] shrink-0 sm:min-w-0 sm:shrink rounded-xl border p-2.5 sm:p-3.5 text-left transition active:scale-[0.98] ${
+              activeFilter === "called_today"
+                ? "bg-blue-700 text-white border-blue-700 shadow-md ring-2 ring-blue-600"
+                : "bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100"
+            }`}
+          >
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-90 truncate">Called Today</div>
+            <div className="text-xl sm:text-2xl font-black mt-1">{summary.calledToday}</div>
+            <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-80 truncate">Target progress</div>
+          </button>
+        </div>
+      )}
 
       {/* Toolbar: Search + Quick Mobile Filter Pills + Refresh */}
       <div className="bg-white p-2.5 sm:p-3.5 rounded-2xl border border-slate-200 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3 shadow-xs">
@@ -459,8 +598,13 @@ export default function CustomerFollowUpTab({ rmId }) {
                       {c.loanType || "Loan"}
                     </span>
                     <span className="font-bold text-emerald-800 text-xs block">
-                      {c.loanAmount > 0 ? `₹${c.loanAmount.toLocaleString("en-IN")}` : "Amount Not Set"}
+                      {c.loanAmountText || (c.loanAmount > 0 ? `₹${c.loanAmount.toLocaleString("en-IN")}` : "Amount Not Set")}
                     </span>
+                    {(c.salaryText || c.salary > 0) && (
+                      <span className="text-[11px] font-semibold text-blue-700 block">
+                        Sal: {c.salaryText || `₹${c.salary.toLocaleString("en-IN")}/mo`}
+                      </span>
+                    )}
                   </div>
 
                   <div>
@@ -619,8 +763,13 @@ export default function CustomerFollowUpTab({ rmId }) {
                       <td className="p-3">
                         <div className="font-semibold text-slate-800">{c.loanType}</div>
                         <div className="text-slate-500 text-xs">
-                          {c.loanAmount > 0 ? `₹${c.loanAmount.toLocaleString("en-IN")}` : "Amount Not Set"}
+                          {c.loanAmountText || (c.loanAmount > 0 ? `₹${c.loanAmount.toLocaleString("en-IN")}` : "Amount Not Set")}
                         </div>
+                        {(c.salaryText || c.salary > 0) && (
+                          <div className="text-blue-700 font-semibold text-[11px]">
+                            Sal: {c.salaryText || `₹${c.salary.toLocaleString("en-IN")}/mo`}
+                          </div>
+                        )}
                       </td>
 
                       {/* Source / Lead Origin */}
