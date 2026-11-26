@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import axios from "axios";
 import {
   Search,
@@ -110,15 +110,20 @@ export default function CustomerFollowUpTab({ rmId }) {
   const [modalStatus, setModalStatus] = useState("CONNECTED");
   const [modalRemarks, setModalRemarks] = useState("");
   const [modalCallbackDate, setModalCallbackDate] = useState("");
+  const [modalDuration, setModalDuration] = useState(0);
+  const [modalCallType, setModalCallType] = useState("OUTGOING");
   const [savingModal, setSavingModal] = useState(false);
+
+  // Live Call Detection state (tracks tel: dialer call start -> return focus)
+  const activeCallSession = useRef(null);
 
   const getToken = () => {
     const auth = getAuthData();
     return auth.rmToken || auth.superAdminToken || auth.adminToken || auth.token || "";
   };
 
-  const fetchCustomerFollowUps = async () => {
-    setLoading(true);
+  const fetchCustomerFollowUps = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError("");
     try {
       const token = getToken();
@@ -138,18 +143,56 @@ export default function CustomerFollowUpTab({ rmId }) {
       }
     } catch (err) {
       console.error("Failed to fetch customer follow-ups:", err);
-      setError(err.response?.data?.message || "Could not load customer follow-ups.");
+      if (!silent) setError(err.response?.data?.message || "Could not load customer follow-ups.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, [rmId]);
 
   useEffect(() => {
     fetchCustomerFollowUps();
-  }, [rmId]);
+  }, [fetchCustomerFollowUps]);
 
-  // Direct Call Handler: opens dialer & records call log with duration tracking
-  const handleCallCustomer = async (customer) => {
+  // Live Call Detection on return from dialer + 15s auto-sync polling
+  useEffect(() => {
+    const handleReturnFromCall = () => {
+      if (document.visibilityState && document.visibilityState !== "visible") return;
+      const session = activeCallSession.current;
+      if (session) {
+        activeCallSession.current = null;
+        const elapsedSec = Math.max(0, Math.round((Date.now() - session.startTime) / 1000));
+        fetchCustomerFollowUps(true);
+        if (elapsedSec >= 3) {
+          setSelectedCustomer(session.customer);
+          setModalStatus(elapsedSec >= 10 ? "CONNECTED" : "RINGING");
+          setModalRemarks(session.customer.remarks || "");
+          setModalDuration(elapsedSec);
+          setModalCallType("OUTGOING");
+          setModalCallbackDate("");
+          toast.success(`Call detected (${formatDuration(elapsedSec)}). Confirm outcome below.`);
+        }
+      } else {
+        fetchCustomerFollowUps(true);
+      }
+    };
+
+    window.addEventListener("focus", handleReturnFromCall);
+    document.addEventListener("visibilitychange", handleReturnFromCall);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchCustomerFollowUps(true);
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener("focus", handleReturnFromCall);
+      document.removeEventListener("visibilitychange", handleReturnFromCall);
+      clearInterval(interval);
+    };
+  }, [fetchCustomerFollowUps]);
+
+  // Direct Call Handler: opens dialer & activates live call detection
+  const handleCallCustomer = (customer) => {
     const phone = customer.phone;
     if (!phone) {
       toast.error("No phone number available");
@@ -157,39 +200,25 @@ export default function CustomerFollowUpTab({ rmId }) {
     }
 
     const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
-    const startTime = Date.now();
+    activeCallSession.current = {
+      customer,
+      startTime: Date.now(),
+    };
 
     // Trigger native dialer
     window.location.href = `tel:${cleanPhone}`;
-
-    // Prompt after call completes
-    setTimeout(async () => {
-      const durationSec = Math.round((Date.now() - startTime) / 1000);
-      try {
-        const token = getToken();
-        await axios.post(
-          `${backendurl}/calls/log`,
-          {
-            targetPhone: cleanPhone,
-            targetName: customer.customerName,
-            contactType: "customer",
-            callType: "OUTGOING",
-            durationSeconds: durationSec > 5 ? durationSec : 0,
-            source: "web_manual",
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        fetchCustomerFollowUps();
-      } catch (e) {
-        console.warn("Could not auto-log call:", e);
-      }
-    }, 1500);
   };
 
   const handleOpenModal = (customer) => {
     setSelectedCustomer(customer);
-    setModalStatus(customer.followUpStatus || "CONNECTED");
+    setModalStatus(
+      customer.followUpStatus && customer.followUpStatus !== "PENDING" && customer.followUpStatus !== "NEW"
+        ? customer.followUpStatus
+        : "CONNECTED"
+    );
     setModalRemarks(customer.remarks || "");
+    setModalDuration(customer.lastCallDuration || 0);
+    setModalCallType(customer.lastCallType || "OUTGOING");
     setModalCallbackDate(
       customer.nextFollowUpDate
         ? new Date(customer.nextFollowUpDate).toISOString().slice(0, 16)
@@ -209,12 +238,14 @@ export default function CustomerFollowUpTab({ rmId }) {
           status: modalStatus,
           remarks: modalRemarks,
           nextFollowUpDate: modalCallbackDate || null,
+          durationSeconds: Number(modalDuration) || 0,
+          callType: modalCallType || "OUTGOING",
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success("Customer follow-up updated!");
+      toast.success("Call outcome & status synced!");
       setSelectedCustomer(null);
-      fetchCustomerFollowUps();
+      fetchCustomerFollowUps(true);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update follow-up");
     } finally {
@@ -228,11 +259,19 @@ export default function CustomerFollowUpTab({ rmId }) {
 
     if (activeSourceTab === "sheet") {
       if (activeFilter === "pending") {
-        list = list.filter((i) => i.followUpStatus === "PENDING" || i.followUpStatus === "NEW");
+        list = list.filter((i) => !i.followUpStatus || i.followUpStatus === "PENDING" || i.followUpStatus === "NEW");
       } else if (activeFilter === "connected") {
         list = list.filter((i) => i.followUpStatus === "CONNECTED");
+      } else if (activeFilter === "interested") {
+        list = list.filter((i) => i.followUpStatus === "INTERESTED");
+      } else if (activeFilter === "docs_pending") {
+        list = list.filter((i) => i.followUpStatus === "DOCUMENTS_PENDING");
       } else if (activeFilter === "callback") {
         list = list.filter((i) => i.followUpStatus === "CALL_BACK" || i.followUpStatus === "CALL_BACK_SCHEDULED");
+      } else if (activeFilter === "unanswered") {
+        list = list.filter((i) => ["UNANSWERED", "RINGING", "SWITCH_OFF", "NOT_REACHABLE"].includes(i.followUpStatus));
+      } else if (activeFilter === "not_interested") {
+        list = list.filter((i) => i.followUpStatus === "NOT_INTERESTED" || i.followUpStatus === "WRONG_NUMBER");
       } else if (activeFilter === "called_today") {
         const todayStr = new Date().toISOString().slice(0, 10);
         list = list.filter(
@@ -491,14 +530,18 @@ export default function CustomerFollowUpTab({ rmId }) {
           )}
         </div>
 
-        {/* Action button */}
+        {/* Action button + Live Call Sync badge */}
         <div className="flex items-center justify-between sm:justify-end gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Live Call Sync
+          </span>
           <span className="text-xs text-slate-500 font-medium">
             Showing <strong className="text-slate-800">{filteredItems.length}</strong> leads
           </span>
           <button
             type="button"
-            onClick={fetchCustomerFollowUps}
+            onClick={() => fetchCustomerFollowUps(false)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition active:scale-95"
           >
             <RefreshCw size={13} className={loading ? "animate-spin text-teal-600" : ""} />
@@ -506,6 +549,36 @@ export default function CustomerFollowUpTab({ rmId }) {
           </button>
         </div>
       </div>
+
+      {/* Live Call-Status Filter Pills (Filter directly by call outcome) */}
+      {activeSourceTab === "sheet" && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[
+            { key: "all", label: "All Calls" },
+            { key: "pending", label: "Pending" },
+            { key: "connected", label: "Connected" },
+            { key: "interested", label: "Interested" },
+            { key: "docs_pending", label: "Docs Pending" },
+            { key: "callback", label: "Call Back" },
+            { key: "unanswered", label: "Ringing / No Ans" },
+            { key: "not_interested", label: "Not Interested" },
+            { key: "called_today", label: "Called Today" },
+          ].map((pill) => (
+            <button
+              key={pill.key}
+              type="button"
+              onClick={() => setActiveFilter(pill.key)}
+              className={`px-3 py-1 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                activeFilter === pill.key
+                  ? "bg-teal-700 text-white border-teal-700 shadow-xs"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {pill.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && (
         <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs sm:text-sm flex items-center gap-2">
@@ -942,6 +1015,36 @@ export default function CustomerFollowUpTab({ rmId }) {
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Call Duration & Direction (auto-detected or manual) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Call Direction:
+                  </label>
+                  <select
+                    value={modalCallType}
+                    onChange={(e) => setModalCallType(e.target.value)}
+                    className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  >
+                    <option value="OUTGOING">Outgoing</option>
+                    <option value="INCOMING">Incoming</option>
+                    <option value="MISSED">Missed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Duration (Seconds):
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={modalDuration}
+                    onChange={(e) => setModalDuration(e.target.value)}
+                    className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  />
                 </div>
               </div>
 
