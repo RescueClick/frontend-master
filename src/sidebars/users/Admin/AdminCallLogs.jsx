@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import {
   PhoneCall,
@@ -74,6 +74,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
   const [updateCallTypeVal, setUpdateCallTypeVal] = useState("OUTGOING");
   const [updateDurationVal, setUpdateDurationVal] = useState(60);
   const [savingContactStatus, setSavingContactStatus] = useState(false);
+  const activeCallSessionRef = useRef(null);
 
   // Live logs state
   const [logs, setLogs] = useState([]);
@@ -187,29 +188,81 @@ export default function AdminCallLogs({ defaultTab = "" }) {
     }
   };
 
-  const viewRmSheetDetails = async (rmId, rmName) => {
-    setLoadingSheetDetails(true);
+  const viewRmSheetDetails = async (rmId, rmName, silent = false) => {
+    if (!silent) setLoadingSheetDetails(true);
     try {
       const token = getAdminToken();
       const res = await axios.get(`${backendurl}/calls/assignments/rm-sheet?rmId=${rmId}&date=${date}&includePending=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success) {
-        setSelectedRmSheet({
+        setSelectedRmSheet((prev) => ({
           rmName,
           rmId,
           sheets: res.data.sheets || [],
-        });
-        setSelectedSheetIndex(0);
-        setSheetSearch("");
-        setSheetStatusFilter("ALL");
+        }));
+        if (!silent) {
+          setSelectedSheetIndex(0);
+          setSheetSearch("");
+          setSheetStatusFilter("ALL");
+        }
       }
     } catch (err) {
-      alert("Failed to load sheet details for this RM");
+      if (!silent) alert("Failed to load sheet details for this RM");
     } finally {
-      setLoadingSheetDetails(false);
+      if (!silent) setLoadingSheetDetails(false);
     }
   };
+
+  // Automatic call detection when dialing from Calling Sheet Modal + 15s live polling
+  const handleDialSheetContact = (assignmentId, contact) => {
+    const cleanPhone = String(contact?.phone || "").replace(/\D/g, "").slice(-10);
+    if (!cleanPhone) return;
+    activeCallSessionRef.current = {
+      assignmentId,
+      contact,
+      startTime: Date.now(),
+    };
+    window.location.href = `tel:${cleanPhone}`;
+  };
+
+  useEffect(() => {
+    if (!selectedRmSheet?.rmId) return undefined;
+
+    const handleReturn = () => {
+      if (document.visibilityState && document.visibilityState !== "visible") return;
+      const session = activeCallSessionRef.current;
+      if (session) {
+        activeCallSessionRef.current = null;
+        const elapsedSec = Math.max(0, Math.round((Date.now() - session.startTime) / 1000));
+        viewRmSheetDetails(selectedRmSheet.rmId, selectedRmSheet.rmName, true);
+        if (elapsedSec >= 3) {
+          setEditingContact({ assignmentId: session.assignmentId, contact: session.contact });
+          setUpdateStatusVal(elapsedSec >= 10 ? "CONNECTED" : "UNANSWERED");
+          setUpdateNotesVal(session.contact?.notes || "");
+          setUpdateCallTypeVal("OUTGOING");
+          setUpdateDurationVal(elapsedSec);
+          toast.success(`Call detected (${formatDuration(elapsedSec)}). Confirm outcome.`);
+        }
+      } else {
+        viewRmSheetDetails(selectedRmSheet.rmId, selectedRmSheet.rmName, true);
+      }
+    };
+
+    window.addEventListener("focus", handleReturn);
+    document.addEventListener("visibilitychange", handleReturn);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        viewRmSheetDetails(selectedRmSheet.rmId, selectedRmSheet.rmName, true);
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener("focus", handleReturn);
+      document.removeEventListener("visibilitychange", handleReturn);
+      clearInterval(timer);
+    };
+  }, [selectedRmSheet?.rmId, selectedRmSheet?.rmName, date]);
 
   const handleDeleteCallingAssignment = async (assignmentId, sheetName) => {
     if (
@@ -1917,6 +1970,10 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                                 <div className="flex items-center gap-1.5">
                                   <a
                                     href={`tel:${cleanPhone}`}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleDialSheetContact(activeSheet._id, contact);
+                                    }}
                                     className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition"
                                   >
                                     <Phone size={12} /> {contact.phone}
@@ -2032,6 +2089,10 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                                     {/* Direct Call Button */}
                                     <a
                                       href={`tel:${cleanPhone}`}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        handleDialSheetContact(activeSheet._id, contact);
+                                      }}
                                       className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs active:scale-95 transition cursor-pointer"
                                       title={`Call ${contact.name}`}
                                     >
