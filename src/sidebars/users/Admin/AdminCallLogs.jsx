@@ -1712,10 +1712,10 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         });
 
         return (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 w-full flex flex-col overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 w-full max-w-full min-w-0 flex flex-col overflow-hidden">
               {/* 1. Page Top Bar */}
-              <div className="px-3.5 sm:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50 shrink-0 gap-2">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="px-3 sm:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50 shrink-0 gap-2 min-w-0">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                   <button
                     type="button"
                     onClick={closeSheetView}
@@ -1727,15 +1727,15 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                   <div className="hidden sm:flex h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
                     <FileSpreadsheet size={18} />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight truncate">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+                      <h3 className="font-extrabold text-slate-900 text-xs sm:text-base tracking-tight truncate max-w-full">
                         {activeSheet?.sheetName || "Assigned Calling Sheet"}
                       </h3>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      <span className="hidden sm:inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                         👤 {selectedRmSheet.rmName}
                       </span>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="hidden sm:inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                         📅 {date}
                       </span>
                     </div>
@@ -1918,8 +1918,27 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                   )}
                 </div>
 
-                {/* Unified Status Filter Pills (Single swipeable row on mobile, wrapped on desktop) */}
-                <div className="flex overflow-x-auto flex-nowrap sm:flex-wrap items-center gap-1.5 pb-0.5 text-xs [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {/* Mobile: Clean 1-Tap Filter Dropdown (Zero clutter on phone) */}
+                <div className="sm:hidden">
+                  <select
+                    value={sheetStatusFilter}
+                    onChange={(e) => setSheetStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  >
+                    <option value="ALL">Filter: All Leads ({totalCount})</option>
+                    <option value="PENDING">Pending ({pendingCount})</option>
+                    <option value="CONNECTED">Connected ({connectedCount})</option>
+                    <option value="INTERESTED">Interested ({interestedCount})</option>
+                    <option value="DOCUMENTS_PENDING">Docs Pending ({docsPendingCount})</option>
+                    <option value="CALL_BACK">Call Back ({callBackCount})</option>
+                    <option value="UNANSWERED">Ringing / No Ans ({unansweredCount})</option>
+                    <option value="NOT_INTERESTED">Not Interested ({notInterestedCount})</option>
+                    <option value="CALLED_TODAY">Called Today ({calledTodayCount})</option>
+                  </select>
+                </div>
+
+                {/* Desktop/Tablet: Unified Status Filter Pills */}
+                <div className="hidden sm:flex flex-wrap items-center gap-1.5 text-xs">
                   {[
                     { key: "ALL", label: `All (${totalCount})`, activeClass: "bg-slate-900 text-white border-slate-900" },
                     { key: "PENDING", label: `Pending (${pendingCount})`, activeClass: "bg-slate-800 text-white border-slate-800" },

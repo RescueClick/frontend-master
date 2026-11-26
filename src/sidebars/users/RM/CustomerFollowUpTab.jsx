@@ -319,7 +319,7 @@ export default function CustomerFollowUpTab({ rmId }) {
   }, [sheetItems, applicationItems, activeSourceTab, activeFilter, searchTerm]);
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="w-full max-w-full min-w-0 overflow-x-hidden space-y-3 sm:space-y-4">
       {/* Category Switcher: Calling Sheet Leads vs Loan Form Follow-Ups */}
       <div className="grid grid-cols-2 sm:inline-flex items-center gap-1.5 sm:gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200 w-full sm:w-fit">
         <button
@@ -564,32 +564,54 @@ export default function CustomerFollowUpTab({ rmId }) {
         const todayN = sheetItems.filter((i) => i.lastCallTime && new Date(i.lastCallTime).toISOString().slice(0, 10) === todayStr).length;
 
         return (
-          <div className="flex overflow-x-auto flex-nowrap sm:flex-wrap items-center gap-1.5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[
-              { key: "all", label: `All (${totalN})`, activeClass: "bg-slate-900 text-white border-slate-900" },
-              { key: "pending", label: `Pending (${pendingN})`, activeClass: "bg-slate-800 text-white border-slate-800" },
-              { key: "connected", label: `Connected (${connectedN})`, activeClass: "bg-emerald-700 text-white border-emerald-700" },
-              { key: "interested", label: `Interested (${interestedN})`, activeClass: "bg-blue-700 text-white border-blue-700" },
-              { key: "docs_pending", label: `Docs Pending (${docsN})`, activeClass: "bg-orange-700 text-white border-orange-700" },
-              { key: "callback", label: `Call Back (${callbackN})`, activeClass: "bg-purple-700 text-white border-purple-700" },
-              { key: "unanswered", label: `Ringing / No Ans (${unansweredN})`, activeClass: "bg-amber-700 text-white border-amber-700" },
-              { key: "not_interested", label: `Not Interested (${notIntN})`, activeClass: "bg-rose-700 text-white border-rose-700" },
-              { key: "called_today", label: `Called Today (${todayN})`, activeClass: "bg-teal-700 text-white border-teal-700" },
-            ].map((pill) => (
-              <button
-                key={pill.key}
-                type="button"
-                onClick={() => setActiveFilter(pill.key)}
-                className={`shrink-0 whitespace-nowrap px-3 py-1.5 sm:py-1 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                  activeFilter === pill.key
-                    ? `${pill.activeClass} shadow-xs`
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                }`}
+          <>
+            {/* Mobile: Clean 1-Tap Filter Dropdown (Zero clutter on phone) */}
+            <div className="sm:hidden">
+              <select
+                value={activeFilter}
+                onChange={(e) => setActiveFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               >
-                {pill.label}
-              </button>
-            ))}
-          </div>
+                <option value="all">Filter: All ({totalN})</option>
+                <option value="pending">Pending ({pendingN})</option>
+                <option value="connected">Connected ({connectedN})</option>
+                <option value="interested">Interested ({interestedN})</option>
+                <option value="docs_pending">Docs Pending ({docsN})</option>
+                <option value="callback">Call Back ({callbackN})</option>
+                <option value="unanswered">Ringing / No Ans ({unansweredN})</option>
+                <option value="not_interested">Not Interested ({notIntN})</option>
+                <option value="called_today">Called Today ({todayN})</option>
+              </select>
+            </div>
+
+            {/* Desktop/Tablet: Unified Status Filter Pills */}
+            <div className="hidden sm:flex flex-wrap items-center gap-1.5">
+              {[
+                { key: "all", label: `All (${totalN})`, activeClass: "bg-slate-900 text-white border-slate-900" },
+                { key: "pending", label: `Pending (${pendingN})`, activeClass: "bg-slate-800 text-white border-slate-800" },
+                { key: "connected", label: `Connected (${connectedN})`, activeClass: "bg-emerald-700 text-white border-emerald-700" },
+                { key: "interested", label: `Interested (${interestedN})`, activeClass: "bg-blue-700 text-white border-blue-700" },
+                { key: "docs_pending", label: `Docs Pending (${docsN})`, activeClass: "bg-orange-700 text-white border-orange-700" },
+                { key: "callback", label: `Call Back (${callbackN})`, activeClass: "bg-purple-700 text-white border-purple-700" },
+                { key: "unanswered", label: `Ringing / No Ans (${unansweredN})`, activeClass: "bg-amber-700 text-white border-amber-700" },
+                { key: "not_interested", label: `Not Interested (${notIntN})`, activeClass: "bg-rose-700 text-white border-rose-700" },
+                { key: "called_today", label: `Called Today (${todayN})`, activeClass: "bg-teal-700 text-white border-teal-700" },
+              ].map((pill) => (
+                <button
+                  key={pill.key}
+                  type="button"
+                  onClick={() => setActiveFilter(pill.key)}
+                  className={`shrink-0 whitespace-nowrap px-3 py-1.5 sm:py-1 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                    activeFilter === pill.key
+                      ? `${pill.activeClass} shadow-xs`
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              ))}
+            </div>
+          </>
         );
       })()}
 

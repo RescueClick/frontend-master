@@ -433,8 +433,8 @@ const FollowUp = () => {
   ].filter(Boolean).length;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-1 sm:p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-3 sm:space-y-4">
+    <div className="min-h-screen bg-slate-50 px-2.5 py-2 sm:p-4 md:p-6 overflow-x-hidden">
+      <div className="max-w-7xl w-full min-w-0 mx-auto space-y-3 sm:space-y-4">
         {/* Page Header */}
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
