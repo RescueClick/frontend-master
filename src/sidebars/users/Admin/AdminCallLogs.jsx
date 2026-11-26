@@ -1673,35 +1673,88 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                 </div>
               </div>
 
-              {/* 2. Slim Progress Bar Line */}
-              <div className="w-full bg-slate-100 h-1 overflow-hidden shrink-0">
+              {/* 2. Slim Progress Bar Line + Mobile Compact Stats */}
+              <div className="w-full bg-slate-100 h-1.5 overflow-hidden shrink-0">
                 <div
                   className="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 h-full transition-all duration-500"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
+              {activeSheet && (
+                <div className="lg:hidden px-4 py-1.5 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between text-[11px] font-semibold text-slate-600 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span>Total: <strong className="text-slate-900">{totalCount}</strong></span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-emerald-700">Called: <strong>{calledCount}</strong></span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-amber-700">Left: <strong>{pendingCount}</strong></span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-900 text-white font-bold text-[10px]">
+                    {progressPct}% Done
+                  </span>
+                </div>
+              )}
 
-              {/* Multi-sheet switcher tabs (only if RM has more than 1 assigned sheet) */}
+              {/* Multi-sheet switcher (Clean Dropdown on Mobile + Wrapped Cards on Desktop) */}
               {sheets.length > 1 && (
-                <div className="flex border-b border-slate-200 px-5 sm:px-6 gap-2 bg-slate-50/70 shrink-0 overflow-x-auto py-1.5">
-                  {sheets.map((s, idx) => {
-                    const sPending = (s.contacts || []).filter((c) => c.status === "PENDING").length;
-                    return (
-                      <button
-                        key={s._id}
-                        type="button"
-                        onClick={() => setSelectedSheetIndex(idx)}
-                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                          (selectedSheetIndex || 0) === idx
-                            ? "bg-emerald-600 text-white shadow-xs"
-                            : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
-                        }`}
-                      >
-                        <FileSpreadsheet size={13} />
-                        {s.sheetName} • {s.date} ({s.contacts?.length || 0} leads • {sPending} left)
-                      </button>
-                    );
-                  })}
+                <div className="border-b border-slate-200 px-4 sm:px-6 py-2 bg-slate-50/80 shrink-0">
+                  {/* Mobile: Full-width sleek selector (no horizontal clipping) */}
+                  <div className="sm:hidden">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Select Calling Sheet ({sheets.length})
+                    </label>
+                    <select
+                      value={selectedSheetIndex || 0}
+                      onChange={(e) => setSelectedSheetIndex(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl border border-emerald-300 bg-white text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    >
+                      {sheets.map((s, idx) => {
+                        const sPending = (s.contacts || []).filter((c) => c.status === "PENDING").length;
+                        return (
+                          <option key={s._id} value={idx}>
+                            {s.sheetName} • {s.date} ({s.contacts?.length || 0} leads, {sPending} left)
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {/* Desktop/Tablet: Clean wrapped sheet cards */}
+                  <div className="hidden sm:flex flex-wrap gap-2">
+                    {sheets.map((s, idx) => {
+                      const sTotal = s.contacts?.length || 0;
+                      const sPending = (s.contacts || []).filter((c) => c.status === "PENDING").length;
+                      const isSelected = (selectedSheetIndex || 0) === idx;
+                      return (
+                        <button
+                          key={s._id}
+                          type="button"
+                          onClick={() => setSelectedSheetIndex(idx)}
+                          className={`px-3 py-2 rounded-xl text-left transition flex items-center gap-2.5 cursor-pointer border ${
+                            isSelected
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-500/20"
+                              : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-emerald-700/70 text-white" : "bg-slate-100 text-slate-500"}`}>
+                            <FileSpreadsheet size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold truncate max-w-[260px]">
+                              {s.sheetName}
+                            </div>
+                            <div className={`text-[10px] font-medium flex items-center gap-1.5 ${isSelected ? "text-emerald-100" : "text-slate-500"}`}>
+                              <span>{s.date}</span>
+                              <span>•</span>
+                              <span>{sTotal} leads</span>
+                              <span>•</span>
+                              <span className="font-bold">{sPending} left</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -1950,25 +2003,23 @@ export default function AdminCallLogs({ defaultTab = "" }) {
 
                               {/* Loan Requirement */}
                               <td className="py-3 px-3">
-                                <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold border ${loanBadge.tone}`}
-                                >
-                                  {loanBadge.label}
-                                </span>
-                                {(contact.loanAmountText || Number(contact.loanAmount) > 0 || contact.salaryText || Number(contact.salary) > 0) && (
-                                  <div className="mt-1 space-y-0.5 text-[11px]">
-                                    {(contact.loanAmountText || Number(contact.loanAmount) > 0) && (
-                                      <div className="font-bold text-emerald-700">
-                                        Amt: {contact.loanAmountText || `₹${Number(contact.loanAmount).toLocaleString("en-IN")}`}
-                                      </div>
-                                    )}
-                                    {(contact.salaryText || Number(contact.salary) > 0) && (
-                                      <div className="font-medium text-slate-600">
-                                        Sal: {contact.salaryText || `₹${Number(contact.salary).toLocaleString("en-IN")}/mo`}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                <div className="flex flex-wrap items-center gap-1.5 max-w-[260px]">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold border ${loanBadge.tone}`}
+                                  >
+                                    {loanBadge.label}
+                                  </span>
+                                  {(contact.loanAmountText || Number(contact.loanAmount) > 0) && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                      Amt: {contact.loanAmountText || `₹${Number(contact.loanAmount).toLocaleString("en-IN")}`}
+                                    </span>
+                                  )}
+                                  {(contact.salaryText || Number(contact.salary) > 0) && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+                                      Sal: {contact.salaryText || `₹${Number(contact.salary).toLocaleString("en-IN")}/mo`}
+                                    </span>
+                                  )}
+                                </div>
                               </td>
 
                               {/* Contact & 1-Click Dialing */}

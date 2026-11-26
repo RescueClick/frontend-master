@@ -761,15 +761,21 @@ export default function CustomerFollowUpTab({ rmId }) {
 
                       {/* Loan Request */}
                       <td className="p-3">
-                        <div className="font-semibold text-slate-800">{c.loanType}</div>
-                        <div className="text-slate-500 text-xs">
-                          {c.loanAmountText || (c.loanAmount > 0 ? `₹${c.loanAmount.toLocaleString("en-IN")}` : "Amount Not Set")}
+                        <div className="flex flex-wrap items-center gap-1.5 max-w-[240px]">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                            {c.loanType || "Loan"}
+                          </span>
+                          {(c.loanAmountText || c.loanAmount > 0) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              Amt: {c.loanAmountText || `₹${c.loanAmount.toLocaleString("en-IN")}`}
+                            </span>
+                          )}
+                          {(c.salaryText || c.salary > 0) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+                              Sal: {c.salaryText || `₹${c.salary.toLocaleString("en-IN")}/mo`}
+                            </span>
+                          )}
                         </div>
-                        {(c.salaryText || c.salary > 0) && (
-                          <div className="text-blue-700 font-semibold text-[11px]">
-                            Sal: {c.salaryText || `₹${c.salary.toLocaleString("en-IN")}/mo`}
-                          </div>
-                        )}
                       </td>
 
                       {/* Source / Lead Origin */}
