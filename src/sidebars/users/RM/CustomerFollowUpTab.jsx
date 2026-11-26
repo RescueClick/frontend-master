@@ -321,22 +321,22 @@ export default function CustomerFollowUpTab({ rmId }) {
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* Category Switcher: Calling Sheet Leads vs Loan Form Follow-Ups */}
-      <div className="flex flex-wrap items-center gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200 w-fit">
+      <div className="grid grid-cols-2 sm:inline-flex items-center gap-1.5 sm:gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200 w-full sm:w-fit">
         <button
           type="button"
           onClick={() => {
             setActiveSourceTab("sheet");
             setActiveFilter("all");
           }}
-          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+          className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-sm font-bold transition flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
             activeSourceTab === "sheet"
               ? "bg-teal-700 text-white shadow-sm"
               : "text-slate-600 hover:bg-white hover:text-slate-900"
           }`}
         >
-          <PhoneCall size={14} />
-          <span>Calling Sheet Leads</span>
-          <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-black ${activeSourceTab === "sheet" ? "bg-teal-900/60 text-white" : "bg-slate-200 text-slate-700"}`}>
+          <PhoneCall size={14} className="shrink-0" />
+          <span className="truncate">Calling Sheet</span>
+          <span className={`px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-black shrink-0 ${activeSourceTab === "sheet" ? "bg-teal-900/60 text-white" : "bg-slate-200 text-slate-700"}`}>
             {summary.sheetTotal ?? sheetItems.length}
           </span>
         </button>
@@ -347,15 +347,15 @@ export default function CustomerFollowUpTab({ rmId }) {
             setActiveSourceTab("applications");
             setActiveFilter("all");
           }}
-          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+          className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-sm font-bold transition flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
             activeSourceTab === "applications"
               ? "bg-slate-900 text-white shadow-sm"
               : "text-slate-600 hover:bg-white hover:text-slate-900"
           }`}
         >
-          <FileCheck2 size={14} />
-          <span>Loan Form Follow-Ups</span>
-          <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-black ${activeSourceTab === "applications" ? "bg-slate-700 text-white" : "bg-slate-200 text-slate-700"}`}>
+          <FileCheck2 size={14} className="shrink-0" />
+          <span className="truncate">Loan Forms</span>
+          <span className={`px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-black shrink-0 ${activeSourceTab === "applications" ? "bg-slate-700 text-white" : "bg-slate-200 text-slate-700"}`}>
             {summary.appsTotal ?? applicationItems.length}
           </span>
         </button>
@@ -564,7 +564,7 @@ export default function CustomerFollowUpTab({ rmId }) {
         const todayN = sheetItems.filter((i) => i.lastCallTime && new Date(i.lastCallTime).toISOString().slice(0, 10) === todayStr).length;
 
         return (
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex overflow-x-auto flex-nowrap sm:flex-wrap items-center gap-1.5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[
               { key: "all", label: `All (${totalN})`, activeClass: "bg-slate-900 text-white border-slate-900" },
               { key: "pending", label: `Pending (${pendingN})`, activeClass: "bg-slate-800 text-white border-slate-800" },
@@ -580,7 +580,7 @@ export default function CustomerFollowUpTab({ rmId }) {
                 key={pill.key}
                 type="button"
                 onClick={() => setActiveFilter(pill.key)}
-                className={`px-3 py-1 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                className={`shrink-0 whitespace-nowrap px-3 py-1.5 sm:py-1 rounded-xl text-xs font-bold border transition cursor-pointer ${
                   activeFilter === pill.key
                     ? `${pill.activeClass} shadow-xs`
                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"

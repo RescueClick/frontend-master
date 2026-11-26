@@ -1714,17 +1714,17 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         return (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 w-full flex flex-col overflow-hidden">
               {/* 1. Page Top Bar */}
-              <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50 shrink-0 gap-2">
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="px-3.5 sm:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50 shrink-0 gap-2">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <button
                     type="button"
                     onClick={closeSheetView}
-                    className="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 shrink-0 transition active:scale-95 cursor-pointer"
+                    className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 shrink-0 transition active:scale-95 cursor-pointer"
                     title="Back to Overview"
                   >
                     ← Back
                   </button>
-                  <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
+                  <div className="hidden sm:flex h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
                     <FileSpreadsheet size={18} />
                   </div>
                   <div className="min-w-0">
@@ -1895,10 +1895,10 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                 </div>
               )}
 
-              {/* 3. Search & Filter Bar (Compact Single Row) */}
-              <div className="px-5 sm:px-6 py-2.5 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-3 shrink-0">
+              {/* 3. Search & Filter Bar */}
+              <div className="px-3.5 sm:px-6 py-2.5 border-b border-slate-200 bg-white space-y-2 sm:space-y-2.5 shrink-0">
                 {/* Search Bar */}
-                <div className="relative flex-1 max-w-xs sm:max-w-sm min-w-[200px]">
+                <div className="relative w-full sm:max-w-sm">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
@@ -1918,8 +1918,8 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                   )}
                 </div>
 
-                {/* Unified Status Filter Pills (Synced across all screens) */}
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                {/* Unified Status Filter Pills (Single swipeable row on mobile, wrapped on desktop) */}
+                <div className="flex overflow-x-auto flex-nowrap sm:flex-wrap items-center gap-1.5 pb-0.5 text-xs [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {[
                     { key: "ALL", label: `All (${totalCount})`, activeClass: "bg-slate-900 text-white border-slate-900" },
                     { key: "PENDING", label: `Pending (${pendingCount})`, activeClass: "bg-slate-800 text-white border-slate-800" },
@@ -1935,7 +1935,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                       key={pill.key}
                       type="button"
                       onClick={() => setSheetStatusFilter(pill.key)}
-                      className={`px-3 py-1 rounded-xl font-bold border transition-all text-xs cursor-pointer ${
+                      className={`shrink-0 whitespace-nowrap px-3 py-1.5 sm:py-1 rounded-xl font-bold border transition-all text-xs cursor-pointer ${
                         sheetStatusFilter === pill.key
                           ? `${pill.activeClass} shadow-xs`
                           : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
