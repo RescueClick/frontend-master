@@ -188,6 +188,27 @@ export default function AdminCallLogs({ defaultTab = "" }) {
     }
   };
 
+  const syncSheetUrl = (rmId, rmName, sheetIdx = 0) => {
+    try {
+      const url = new URL(window.location.href);
+      if (rmId) {
+        url.searchParams.set("sheetRmId", rmId);
+        if (rmName) url.searchParams.set("sheetRmName", rmName);
+        url.searchParams.set("sheetIdx", String(sheetIdx || 0));
+      } else {
+        url.searchParams.delete("sheetRmId");
+        url.searchParams.delete("sheetRmName");
+        url.searchParams.delete("sheetIdx");
+      }
+      window.history.replaceState({}, "", url.toString());
+    } catch (_) {}
+  };
+
+  const closeSheetView = () => {
+    setSelectedRmSheet(null);
+    syncSheetUrl(null);
+  };
+
   const viewRmSheetDetails = async (rmId, rmName, silent = false) => {
     if (!silent) setLoadingSheetDetails(true);
     try {
@@ -196,15 +217,18 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success) {
-        setSelectedRmSheet((prev) => ({
+        setSelectedRmSheet({
           rmName,
           rmId,
           sheets: res.data.sheets || [],
-        }));
+        });
         if (!silent) {
-          setSelectedSheetIndex(0);
+          const urlIdx = Number(new URLSearchParams(window.location.search).get("sheetIdx") || 0);
+          const safeIdx = Number.isFinite(urlIdx) && urlIdx < (res.data.sheets?.length || 0) ? urlIdx : 0;
+          setSelectedSheetIndex(safeIdx);
           setSheetSearch("");
           setSheetStatusFilter("ALL");
+          syncSheetUrl(rmId, rmName, safeIdx);
         }
       }
     } catch (err) {
@@ -213,6 +237,18 @@ export default function AdminCallLogs({ defaultTab = "" }) {
       if (!silent) setLoadingSheetDetails(false);
     }
   };
+
+  // Restore Calling Sheet page automatically on browser refresh
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const savedRmId = params.get("sheetRmId");
+      const savedRmName = params.get("sheetRmName") || "Calling Sheet";
+      if (savedRmId) {
+        viewRmSheetDetails(savedRmId, savedRmName);
+      }
+    } catch (_) {}
+  }, []);
 
   // Automatic call detection when dialing from Calling Sheet Modal + 15s live polling
   const handleDialSheetContact = (assignmentId, contact) => {
@@ -879,7 +915,9 @@ export default function AdminCallLogs({ defaultTab = "" }) {
   );
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+      {!selectedRmSheet && (
+        <>
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
@@ -1599,8 +1637,10 @@ export default function AdminCallLogs({ defaultTab = "" }) {
       )}
         </>
       )}
+        </>
+      )}
 
-      {/* ================= MODAL: HIGH-IMPACT EXECUTIVE TELECALLER WORKSPACE ================= */}
+      {/* ================= FULL PAGE: HIGH-IMPACT EXECUTIVE TELECALLER WORKSPACE ================= */}
       {selectedRmSheet && (() => {
         const sheets = selectedRmSheet.sheets || [];
         const activeSheet = sheets[selectedSheetIndex] || sheets[0] || null;
@@ -1634,13 +1674,20 @@ export default function AdminCallLogs({ defaultTab = "" }) {
         });
 
         return (
-          <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-            <div className="bg-white rounded-none sm:rounded-3xl shadow-2xl border border-slate-200/90 w-full h-full sm:w-[98vw] sm:max-w-7xl sm:h-[94vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
-              {/* 1. Modal Top Bar (Compact & Sleek) */}
-              <div className="px-5 sm:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50 shrink-0">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
-                    <FileSpreadsheet size={20} />
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 w-full flex flex-col overflow-hidden">
+              {/* 1. Page Top Bar */}
+              <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50 shrink-0 gap-2">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={closeSheetView}
+                    className="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 shrink-0 transition active:scale-95 cursor-pointer"
+                    title="Back to Overview"
+                  >
+                    ← Back
+                  </button>
+                  <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
+                    <FileSpreadsheet size={18} />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1716,9 +1763,9 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                     )}
                     <button
                       type="button"
-                      onClick={() => setSelectedRmSheet(null)}
+                      onClick={closeSheetView}
                       className="text-slate-400 hover:text-slate-700 p-1.5 sm:p-2 rounded-xl hover:bg-slate-100 transition active:scale-95 cursor-pointer"
-                      title="Close"
+                      title="Back to Overview"
                     >
                       <X size={20} />
                     </button>
@@ -1758,7 +1805,11 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                     </label>
                     <select
                       value={selectedSheetIndex || 0}
-                      onChange={(e) => setSelectedSheetIndex(Number(e.target.value))}
+                      onChange={(e) => {
+                        const nextIdx = Number(e.target.value);
+                        setSelectedSheetIndex(nextIdx);
+                        syncSheetUrl(selectedRmSheet.rmId, selectedRmSheet.rmName, nextIdx);
+                      }}
                       className="w-full px-3 py-2 rounded-xl border border-emerald-300 bg-white text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                     >
                       {sheets.map((s, idx) => {
@@ -1782,7 +1833,10 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                         <button
                           key={s._id}
                           type="button"
-                          onClick={() => setSelectedSheetIndex(idx)}
+                          onClick={() => {
+                            setSelectedSheetIndex(idx);
+                            syncSheetUrl(selectedRmSheet.rmId, selectedRmSheet.rmName, idx);
+                          }}
                           className={`px-3 py-2 rounded-xl text-left transition flex items-center gap-2.5 cursor-pointer border ${
                             isSelected
                               ? "bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-500/20"
@@ -2180,7 +2234,7 @@ export default function AdminCallLogs({ defaultTab = "" }) {
               </div>
 
               {/* 5. Sleek Bottom Status Bar */}
-              <div className="px-5 sm:px-6 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between shrink-0">
+              <div className="px-5 sm:px-6 py-2.5 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between shrink-0">
                 <span className="font-medium text-[11px]">
                   Showing <strong className="text-slate-800">{filteredContacts.length}</strong> of{" "}
                   <strong className="text-slate-800">{totalCount}</strong> assigned leads
@@ -2189,7 +2243,6 @@ export default function AdminCallLogs({ defaultTab = "" }) {
                   💡 Verified call talk-times &amp; durations sync automatically with your Daily Target
                 </span>
               </div>
-            </div>
           </div>
         );
       })()}
